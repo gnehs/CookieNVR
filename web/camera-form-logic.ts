@@ -33,9 +33,11 @@ export function explainProbe(error: string, type: "tapo" | "rtsp"): ProbeHelp {
   return say(tapo ? "host" : "url", tapo ? "讀不到影像，請確認 IP 位址正確、相機已開機。" : "讀不到影像，請確認串流網址正確、相機的 RTSP 功能已開啟。");
 }
 
+const MASK = "••••";
+
 /** rtsp://帳號:密碼@主機 → rtsp://帳號:••••@主機；沒有密碼就原樣 */
 export function maskUrlPassword(url: string): string {
-  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/[^/@:\s]*:)([^/@\s]+)@/i, (_, head: string) => `${head}••••@`);
+  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/[^/@:\s]*:)([^/@\s]+)@/i, (_, head: string) => `${head}${MASK}@`);
 }
 
 /**
@@ -54,12 +56,9 @@ export function maskedField(initial: string) {
     blur() {
       focused = false;
     },
-    /** 只在聚焦時收得到；未聚焦時畫面上的是遮蔽值，不能拿來覆蓋 */
+    /** 未聚焦時畫面上可能是遮蔽值，帶著遮罩的內容不能拿來覆蓋真正的網址（例如沒先聚焦就觸發的自動填入） */
     input(v: string) {
-      if (focused) real = v;
-    },
-    set(v: string) {
-      real = v;
+      if (focused || !v.includes(MASK)) real = v;
     },
   };
 }

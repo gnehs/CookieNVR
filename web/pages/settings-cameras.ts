@@ -252,6 +252,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
     input.addEventListener("input", () => {
       masked.input(input.value);
       s[key] = masked.value();
+      if (document.activeElement !== input) input.value = masked.display();
       if (input.getAttribute("aria-invalid") === "true") clearErrors();
       refresh();
     });

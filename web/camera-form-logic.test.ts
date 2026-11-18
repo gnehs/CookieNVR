@@ -70,4 +70,11 @@ describe("maskedField", () => {
     f.input(f.display());
     expect(f.value()).toBe("rtsp://u:pw@h/s1");
   });
+
+  test("沒聚焦就填入的完整網址照收（例如自動填入）", () => {
+    const f = maskedField("");
+    f.input("rtsp://u:pw@h/s1");
+    expect(f.value()).toBe("rtsp://u:pw@h/s1");
+    expect(f.display()).toBe("rtsp://u:••••@h/s1");
+  });
 });
