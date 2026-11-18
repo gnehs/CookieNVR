@@ -2,18 +2,29 @@
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CameraDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { CameraDto, EventDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import index from "./index.html";
 
 const PORT = 48765;
 const cacheDir = join(tmpdir(), "cookienvr-web-mock");
 mkdirSync(cacheDir, { recursive: true });
-const segFile = join(cacheDir, "segment.mp4");
 const snapFile = join(cacheDir, "snap.jpg");
-if (!existsSync(segFile)) {
-  Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=15", "-t", "20", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "frag_keyframe+empty_moov+default_base_moof", segFile]);
-}
+// 三個 60 秒的 fMP4 輪流當作每分鐘的片段；色相不同，畫面上的計時器每段從 0 開始，方便看接縫
+const segFiles = [0, 120, 240].map((hue, i) => {
+  const file = join(cacheDir, `seg60-${i}.mp4`);
+  if (!existsSync(file)) {
+    Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", `testsrc2=size=640x360:rate=15,hue=h=${hue}`, "-f", "lavfi", "-i", `sine=frequency=${440 + i * 220}:sample_rate=48000`, "-t", "60", "-c:v", "libx264", "-preset", "veryfast", "-g", "30", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "64k", "-movflags", "frag_keyframe+empty_moov+default_base_moof", file]);
+  }
+  return file;
+});
+const thumbFiles = ["testsrc2", "smptebars", "rgbtestsrc", "testsrc2,hue=h=200"].map((src, i) => {
+  const file = join(cacheDir, `thumb-${i}.jpg`);
+  if (!existsSync(file)) {
+    Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", `${src.split(",")[0]}=size=320x180:rate=1${src.includes(",") ? `,${src.split(",")[1]}` : ""}`, "-frames:v", "1", file]);
+  }
+  return file;
+});
 if (!existsSync(snapFile)) {
   Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=1", "-frames:v", "1", snapFile]);
 }
@@ -49,23 +60,118 @@ addCam({ name: "車庫 <script>alert(1)</script>", enabled: true, connection: { 
 addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
 
-const segs: SegmentDto[] = [];
-{
-  let id = 1;
-  const base = new Date();
-  base.setSeconds(0, 0);
-  for (const cam of cams.slice(0, 2)) {
-    for (let d = 0; d < 3; d++) {
-      const dayStart = new Date(base.getFullYear(), base.getMonth(), base.getDate() - d).getTime();
-      const endLimit = d === 0 ? base.getTime() : dayStart + 86_400_000;
-      const from = d === 0 ? Math.max(dayStart, endLimit - 4 * 3600_000) : dayStart + 8 * 3600_000;
-      const to = d === 0 ? endLimit : dayStart + 20 * 3600_000;
-      for (let t = from; t < to; t += 60_000) {
-        const live = d === 0 && t + 60_000 >= endLimit && cam === cams[0];
-        segs.push({ id: id++, cameraId: cam.id, startMs: t, endMs: live ? null : t + 60_000, size: 1_800_000 + (id % 7) * 90_000 });
-      }
+// ---------- 假錄影與事件：依「距今第幾天」與當天分鐘數決定有沒有錄影 ----------
+const MIN = 60_000;
+const DAY = 86_400_000;
+const localMidnight = (ms: number) => {
+  const d = new Date(ms);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+};
+const daysAgo = (ms: number) => Math.round((localMidnight(now()) - localMidnight(ms)) / DAY);
+const hm = (h: number, m: number) => h * 60 + m;
+/** [開始分鐘, 結束分鐘) 的錄影時段；今天的錄影一路錄到現在 */
+const SCHEDULE: Record<string, [number, number][]> = {
+  "0:0": [[0, hm(2, 10)], [hm(2, 40), hm(9, 5)], [hm(9, 8), hm(11, 31)], [hm(11, 32), hm(13, 0)], [hm(13, 20), 1440]],
+  "0:1": [[hm(6, 0), hm(12, 0)], [hm(12, 30), 1440]],
+  "0:2": [[hm(8, 0), hm(20, 0)]],
+  "1:0": [[0, hm(5, 0)], [hm(7, 0), 1440]],
+  "1:1": [[hm(8, 0), hm(20, 0)]],
+  "1:2": [[hm(8, 0), hm(20, 0)]],
+};
+const SEG_ID_BASE = 1_000_000_000;
+
+function recorded(camIdx: number, t: number): boolean {
+  const ranges = SCHEDULE[`${camIdx}:${daysAgo(t)}`];
+  if (!ranges) return false;
+  const minute = Math.floor((t - localMidnight(t)) / MIN);
+  return ranges.some(([a, b]) => minute >= a && minute < b);
+}
+
+function segmentsIn(cameraId: string, start: number, end: number): SegmentDto[] {
+  const camIdx = cams.findIndex((c) => c.id === cameraId);
+  if (camIdx < 0 || camIdx > 1) return [];
+  const out: SegmentDto[] = [];
+  const t0 = now();
+  for (let m = Math.floor(start / MIN) - 1; m * MIN < end; m++) {
+    const t = m * MIN;
+    if (t > t0) break;
+    if (t + MIN <= start || !recorded(camIdx, t)) continue;
+    const live = t + MIN > t0;
+    out.push({ id: camIdx * SEG_ID_BASE + m, cameraId: cameraId as CameraId, startMs: t, endMs: live ? null : t + MIN, size: 1_800_000 + (m % 7) * 90_000 });
+  }
+  return out;
+}
+
+function recordedDays(cameraId: string, tz: string): string[] {
+  const camIdx = cams.findIndex((c) => c.id === cameraId);
+  if (camIdx < 0 || camIdx > 1) return [];
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+  return [2, 1, 0].map((d) => fmt.format(localMidnight(now()) - d * DAY + 12 * 3600_000));
+}
+
+function rng(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const LABEL_SETS = [["person"], ["person"], ["car"], ["cat"], ["person", "car"], ["dog"], ["package", "person"], [], []];
+const eventCache = new Map<string, EventDto[]>();
+
+/** 某台攝影機某一天的假事件：零散分布的幾十筆，加上 18:00 起一段密集的 */
+function dayEvents(camIdx: number, dayStart: number): EventDto[] {
+  const key = `${camIdx}:${dayStart}`;
+  const hit = eventCache.get(key);
+  if (hit) return hit;
+  const r = rng(dayStart / MIN + camIdx * 7919);
+  const out: EventDto[] = [];
+  const cameraId = cams[camIdx]!.id;
+  const push = (start: number, length: number) => {
+    if (!recorded(camIdx, start)) return;
+    const labels = LABEL_SETS[Math.floor(r() * LABEL_SETS.length)]!;
+    out.push({ id: 0, cameraId, source: r() < 0.8 ? "pixel" : "onvif", startMs: start, endMs: start + length, score: Math.round((0.05 + r() * 0.55) * 100) / 100, labels, hasThumb: r() < 0.9 });
+  };
+  const length = () => {
+    const x = r();
+    return Math.round(x < 0.6 ? 3_000 + r() * 27_000 : x < 0.9 ? 30_000 + r() * 90_000 : 120_000 + r() * 240_000);
+  };
+  const count = camIdx === 0 ? 42 : 12;
+  for (let i = 0; i < count; i++) push(dayStart + Math.floor(r() * 1440) * MIN + Math.floor(r() * 60_000), length());
+  if (camIdx === 0) {
+    let t = dayStart + hm(18, 0) * MIN;
+    for (let i = 0; i < 26; i++) {
+      push(t, 3_000 + Math.round(r() * 17_000));
+      t += 15_000 + Math.round(r() * 75_000);
     }
   }
+  out.sort((a, b) => a.startMs - b.startMs);
+  out.forEach((e, i) => (e.id = camIdx * 1_000_000 + daysAgo(dayStart) * 1_000 + i + 1));
+  eventCache.set(key, out);
+  return out;
+}
+
+function eventsIn(cameraId: string | null, start: number, end: number, limit: number): EventDto[] {
+  const t0 = now();
+  const out: EventDto[] = [];
+  cams.slice(0, 2).forEach((c, camIdx) => {
+    if (cameraId && c.id !== cameraId) return;
+    for (let d = localMidnight(start); d < end; d += DAY) {
+      if (daysAgo(d) < 0 || daysAgo(d) > 2) continue;
+      for (const e of dayEvents(camIdx, localMidnight(d + 3_600_000))) {
+        if (e.endMs! > t0) continue;
+        if (e.startMs < end && e.endMs! > start) out.push(e);
+      }
+    }
+    // 一筆進行中的事件，45 秒前開始
+    const live: EventDto = { id: camIdx * 1_000_000 + 999, cameraId: c.id, source: "pixel", startMs: Math.floor(t0 / 1000) * 1000 - 45_000, endMs: null, score: 0.42, labels: ["person"], hasThumb: true };
+    if (camIdx === 0 && live.startMs < end && t0 > start) out.push(live);
+  });
+  return out.sort((a, b) => a.startMs - b.startMs || a.id - b.id).slice(0, limit);
 }
 
 const workers: WorkerStatus[] = [
@@ -118,16 +224,23 @@ const withCookie = (res: Response, sid: string) => {
   return res;
 };
 
-async function serveSegment(req: Request): Promise<Response> {
-  const file = Bun.file(segFile);
-  const size = file.size;
+/** 錄製中的片段只回應「已經錄到」的比例，模擬檔案持續變大 */
+async function serveSegment(req: Request, id: number): Promise<Response> {
+  const m = id % SEG_ID_BASE;
+  const startMs = m * MIN;
+  const file = Bun.file(segFiles[m % segFiles.length]!);
+  const full = file.size;
+  const elapsed = now() - startMs;
+  const size = elapsed >= MIN ? full : Math.max(4096, Math.floor((full * elapsed) / MIN));
+  const headers = { "content-type": "video/mp4", "accept-ranges": "bytes", "cache-control": elapsed >= MIN ? "private, max-age=86400" : "no-store" };
   const range = req.headers.get("range")?.match(/bytes=(\d*)-(\d*)/);
-  if (!range) return new Response(file, { headers: { "content-type": "video/mp4", "accept-ranges": "bytes" } });
+  if (!range) return new Response(file.slice(0, size), { headers: { ...headers, "content-length": String(size) } });
   const start = range[1] ? Number(range[1]) : 0;
+  if (start >= size) return new Response(null, { status: 416, headers: { ...headers, "content-range": `bytes */${size}` } });
   const end = range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
   return new Response(file.slice(start, end + 1), {
     status: 206,
-    headers: { "content-type": "video/mp4", "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${size}` },
+    headers: { ...headers, "content-range": `bytes ${start}-${end}/${size}` },
   });
 }
 
@@ -213,19 +326,20 @@ async function api(req: Request, url: URL): Promise<Response> {
     return new Response(Bun.file(snapFile), { headers: { "content-type": "image/jpeg", "cache-control": "no-store" } });
   }
   mm = path.match(/^\/cameras\/([^/]+)\/days$/);
-  if (mm && m === "GET") {
-    const tz = url.searchParams.get("tz") ?? "UTC";
-    const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
-    return json([...new Set(segs.filter((s) => s.cameraId === mm![1]).map((s) => fmt.format(s.startMs)))].sort());
-  }
+  if (mm && m === "GET") return json(recordedDays(mm[1]!, url.searchParams.get("tz") ?? "UTC"));
   mm = path.match(/^\/cameras\/([^/]+)\/recordings$/);
-  if (mm && m === "GET") {
-    const start = Number(url.searchParams.get("start"));
-    const end = Number(url.searchParams.get("end"));
-    return json(segs.filter((s) => s.cameraId === mm![1] && s.startMs >= start && s.startMs < end));
-  }
+  if (mm && m === "GET") return json(segmentsIn(mm[1]!, Number(url.searchParams.get("start")), Number(url.searchParams.get("end"))));
   mm = path.match(/^\/segments\/(\d+)$/);
-  if (mm && m === "GET") return serveSegment(req);
+  if (mm && m === "GET") return serveSegment(req, Number(mm[1]));
+  if (path === "/events" && m === "GET") {
+    const q = url.searchParams;
+    return json(eventsIn(q.get("camera"), Number(q.get("start") ?? 0), Number(q.get("end") ?? Number.MAX_SAFE_INTEGER), Number(q.get("limit") ?? 1000)));
+  }
+  mm = path.match(/^\/events\/(\d+)\/thumb\.jpg$/);
+  if (mm && m === "GET") {
+    const id = Number(mm[1]);
+    return new Response(Bun.file(thumbFiles[id % thumbFiles.length]!), { headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=3600" } });
+  }
 
   const denied = path.startsWith("/cameras") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
   if (denied) return denied;
