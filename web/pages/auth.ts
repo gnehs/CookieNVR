@@ -96,7 +96,7 @@ export function setupPage(_ctx: PageCtx): Node {
     onSubmit: async (u, p) => {
       state.me = await api.setup(u, p);
       state.info = await api.info();
-      navigate("/settings/cameras/new?welcome=1");
+      navigate("/welcome");
     },
   });
 }

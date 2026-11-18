@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { CameraDto, EventDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
+import { explainFailure } from "../src/camera/probe.ts";
 import index from "./index.html";
 
 const PORT = Number(process.env.PORT ?? 48765);
@@ -348,8 +349,13 @@ async function api(req: Request, url: URL): Promise<Response> {
   if (path === "/cameras" && m === "POST") return json(camDto(addCam(body), true), 201);
   if (path === "/cameras/test" && m === "POST") {
     await Bun.sleep(900);
-    const host = body.type === "tapo" ? body.host : body.mainUrl;
-    if (String(host).includes("fail")) return json({ ok: false, error: "無法連線到相機：Connection refused" } satisfies ProbeResult);
+    // 失敗訊息走真後端同一個 explainFailure，兩邊看到的措辭一致：
+    // 主機或網址含 fail → 連線被拒絕、含 timeout → 逾時、含 404 → 找不到串流；密碼是 wrong → 帳密錯誤
+    const tapo = body.type === "tapo";
+    const host = String(tapo ? body.host : body.mainUrl);
+    const password = tapo ? String(body.password) : (host.match(/:\/\/[^:@/]*:([^@/]*)@/)?.[1] ?? "");
+    const stderr = password === "wrong" ? "401 Unauthorized" : host.includes("fail") ? "Connection refused" : host.includes("404") ? "404 Not Found" : host.includes("weird") ? "method DESCRIBE failed: Weird Thing" : "";
+    if (stderr || host.includes("timeout")) return json({ ok: false, error: `主碼流：${explainFailure(stderr, !stderr, tapo)}` } satisfies ProbeResult);
     return json({
       ok: true,
       main: { videoCodec: "h264", width: 2560, height: 1440, fps: 15, audioCodec: "pcm_alaw" },

@@ -1,5 +1,5 @@
 import { api, setUnauthorizedHandler } from "./api.ts";
-import { errMsg, errorBox, h, icon, spinner } from "./dom.ts";
+import { errMsg, errorBox, h, icon, PageError, pageErrorBox, spinner } from "./dom.ts";
 import { matchRoute, navigate, parseHash, type PageCtx, type Route } from "./router.ts";
 import { state } from "./state.ts";
 import { onHealth, startHealthWatch, stopHealthWatch } from "./health-watch.ts";
@@ -20,6 +20,7 @@ const routes: Route[] = [
   { pattern: "/cameras", page: camerasPage, access: "user", section: "cameras" },
   { pattern: "/recordings", page: recordingsPage, access: "user", section: "recordings" },
   { pattern: "/settings/cameras", page: settingsCamerasPage, access: "admin", section: "settings" },
+  { pattern: "/welcome", page: (c) => cameraFormPage(c, null, "welcome"), access: "admin", bare: true },
   { pattern: "/settings/cameras/new", page: (c) => cameraFormPage(c, null), access: "admin", section: "settings" },
   { pattern: "/settings/cameras/:id", page: (c) => cameraFormPage(c, c.params.id!), access: "admin", section: "settings" },
   { pattern: "/settings/storage", page: settingsStoragePage, access: "admin", section: "settings" },
@@ -141,6 +142,17 @@ async function render() {
   if (route.access === "admin" && state.me.role !== "admin") return navigate("/cameras", true);
   if (state.me.role === "admin") startHealthWatch();
 
+  if (route.bare) {
+    shell = null;
+    document.title = state.siteName;
+    app.replaceChildren(spinner());
+    const content = await runPage(route, params, query, token);
+    if (token !== renderToken) return;
+    app.replaceChildren(enter(content));
+    window.scrollTo(0, 0);
+    return;
+  }
+
   const s = shell ?? buildShell();
   if (!app.contains(s.root)) app.replaceChildren(s.root);
   currentSection = route.section;
@@ -162,7 +174,7 @@ async function runPage(route: Route, params: Record<string, string>, query: URLS
   try {
     return await route.page(makeCtx(params, query, token));
   } catch (e) {
-    return errorBox(errMsg(e), () => void render());
+    return e instanceof PageError ? pageErrorBox(e) : errorBox(errMsg(e), () => void render());
   }
 }
 

@@ -16,6 +16,8 @@ export interface Route {
   access: "public" | "user" | "admin";
   /** 頁籤高亮用的導覽區塊 */
   section?: "cameras" | "recordings" | "settings" | "account";
+  /** 不放導覽外殼的獨立畫面（例如第一次使用的引導） */
+  bare?: boolean;
 }
 
 export function parseHash(): { path: string; query: URLSearchParams } {

@@ -318,6 +318,17 @@ function stateBox(kind: "empty" | "error", iconName: string, title: string, body
   );
 }
 
+/** 頁面載入時的已知錯誤（例如找不到資料），自帶標題與主要動作；其他錯誤當成暫時性的，給「重新載入」 */
+export class PageError extends Error {
+  constructor(
+    readonly title: string,
+    message: string,
+    readonly action: { label: string; href: string },
+  ) {
+    super(message);
+  }
+}
+
 export function errorBox(message: string, retry?: () => void): HTMLElement {
   return stateBox(
     "error",
@@ -326,6 +337,10 @@ export function errorBox(message: string, retry?: () => void): HTMLElement {
     message,
     retry ? h("button", { class: "btn", type: "button", onclick: retry }, icon("refresh", 16), "重新載入") : null,
   );
+}
+
+export function pageErrorBox(e: PageError): HTMLElement {
+  return stateBox("error", "alert", e.title, e.message, h("a", { class: "btn primary", href: e.action.href }, e.action.label));
 }
 
 export function emptyState(title: string, body?: string, action?: Node, iconName = "film"): HTMLElement {
