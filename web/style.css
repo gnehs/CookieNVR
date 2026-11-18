@@ -912,7 +912,7 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
 @media (max-width: 560px) {
   .health-head { padding: 16px; }
   .issue-row { grid-template-columns: auto minmax(0, 1fr); padding: 14px 16px; column-gap: 12px; }
-  .issue-row > .btn { grid-column: 2; justify-self: start; margin-top: 8px; }
+  .issue-row > .btn { grid-column: 2; justify-self: start; margin-top: 14px; }
   .issue-thumb { width: 56px; height: 36px; }
   .issue-thumbs:has(> :nth-child(2)) .issue-thumb { width: 48px; height: 32px; }
   .issue-thumb + .issue-thumb { margin-left: -36px; }
@@ -929,8 +929,8 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
   .pill-nav a { min-height: 44px; }
   .segmented span { min-height: 44px; display: flex; align-items: center; justify-content: center; }
   /* 視覺上維持小尺寸，用偽元素把點擊區撐到 44×44 */
-  .btn.small, .back-btn, details.spec-details > summary, .issue-why > summary, details.more > summary, .text-link { position: relative; }
-  :is(.btn.small, .back-btn, details.spec-details > summary, .issue-why > summary, details.more > summary, .text-link)::after {
+  .btn.small, .back-btn, details.spec-details > summary, .issue-why > summary, details.more > summary, .text-link, .disk-nums a { position: relative; }
+  :is(.btn.small, .back-btn, details.spec-details > summary, .issue-why > summary, details.more > summary, .text-link, .disk-nums a)::after {
     content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); translate: -50% -50%;
   }
   .home-alert { min-height: 48px; }
