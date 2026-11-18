@@ -78,6 +78,7 @@ const ICONS: Record<string, string> = {
   "check-circle": '<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.8 2.8 5.2-5.6"/>',
   "alert-circle": '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/>',
   "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  selector: '<path d="M8 9.5l4-4 4 4M8 14.5l4 4 4-4"/>',
   power: '<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0"/>',
 };
 
@@ -366,60 +367,94 @@ export interface MenuItem {
   label: string;
   icon?: string;
   danger?: boolean;
-  onSelect: () => void;
+  /** 有 href 的項目是連結；沒有的是按鈕，選了呼叫 onSelect */
+  href?: string;
+  current?: boolean;
+  /** 項目右邊的數字或提示（例如問題數） */
+  badge?: string;
+  badgeLabel?: string;
+  onSelect?: () => void;
 }
 
+/** 選單裡的一組，帶一個小標題（例如「設定」底下的分頁） */
+export interface MenuGroup {
+  heading: string;
+  items: MenuItem[];
+}
+
+export type MenuEntry = MenuItem | MenuGroup | null;
+
 /**
- * 「更多」選單：popover 放在 top layer，不會被面板的 overflow 裁掉；
- * 方向鍵在項目間移動，Esc 與點外面關閉並把焦點還給按鈕。
+ * 把觸發按鈕接上一個 popover 選單：放在 top layer，不會被面板的 overflow 裁掉；
+ * 方向鍵在項目間移動，Esc 與點外面關閉並把焦點還給按鈕。手機上是底部面板（CSS）。
  */
-export function menuButton(label: string, items: (MenuItem | null)[]): HTMLElement {
+export function attachMenu(btn: HTMLButtonElement, label: string, entries: MenuEntry[], opts: { align?: "start" | "end"; side?: "auto" | "top" } = {}): { menu: HTMLElement; wrap: HTMLElement } {
   const id = nextId("menu");
-  const list = items.filter((i): i is MenuItem => i !== null);
-  const btn = h("button", { class: "btn small icon-only ghost menu-btn", type: "button", "aria-label": label, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": id }, icon("more", 18));
-  const buttons = list.map((it) =>
-    h(
-      "button",
-      { class: `menu-item${it.danger ? " danger" : ""}`, type: "button", role: "menuitem", tabindex: "-1", onclick: () => {
-        menu.hidePopover();
-        it.onSelect();
-      } },
+  btn.setAttribute("aria-haspopup", "menu");
+  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-controls", id);
+  const focusables: HTMLElement[] = [];
+  const item = (it: MenuItem) => {
+    const body = [
       it.icon ? icon(it.icon, 16) : null,
-      h("span", null, it.label),
-    ),
-  );
+      h("span", { class: "menu-label" }, it.label),
+      it.badge ? h("span", { class: "menu-count", "aria-label": it.badgeLabel ?? null }, it.badge) : null,
+    ];
+    const cls = `menu-item${it.danger ? " danger" : ""}`;
+    const el = it.href
+      ? h("a", { class: cls, href: it.href, role: "menuitem", tabindex: "-1", "aria-current": it.current ? "page" : null, onclick: () => menu.hidePopover() }, body)
+      : h("button", { class: cls, type: "button", role: "menuitem", tabindex: "-1", onclick: () => {
+          menu.hidePopover();
+          it.onSelect?.();
+        } }, body);
+    focusables.push(el);
+    return el;
+  };
+  const children = entries.filter((e): e is MenuItem | MenuGroup => e !== null).map((e) => {
+    if (!("heading" in e)) return item(e);
+    const hid = nextId("mg");
+    return h("div", { class: "menu-group", role: "group", "aria-labelledby": hid }, h("div", { class: "menu-heading", id: hid }, e.heading), e.items.map(item));
+  });
   // 手機上是底部面板，面板頂端顯示選單在操作哪一列
-  const menu = h("div", { class: "menu", id, role: "menu", "aria-label": label, popover: "auto" }, h("div", { class: "menu-title", "aria-hidden": "true" }, label), buttons);
+  const menu = h("div", { class: "menu", id, role: "menu", "aria-label": label, popover: "auto" }, h("div", { class: "menu-title", "aria-hidden": "true" }, label), children);
   const place = () => {
     const r = btn.getBoundingClientRect();
     const w = menu.offsetWidth;
     const hgt = menu.offsetHeight;
-    const below = r.bottom + 6 + hgt <= innerHeight - 8;
-    menu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.right - w))}px`;
+    const below = opts.side !== "top" && r.bottom + 6 + hgt <= innerHeight - 8;
+    const left = opts.align === "start" ? r.left : r.right - w;
+    menu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, left))}px`;
     menu.style.top = `${below ? r.bottom + 6 : Math.max(8, r.top - 6 - hgt)}px`;
     menu.dataset.side = below ? "bottom" : "top";
+    menu.dataset.align = opts.align ?? "end";
   };
   menu.addEventListener("toggle", (e) => {
     const open = (e as ToggleEvent).newState === "open";
     btn.setAttribute("aria-expanded", String(open));
     if (open) {
       place();
-      buttons[0]?.focus();
+      focusables[0]?.focus();
     } else if (menu.contains(document.activeElement) || document.activeElement === document.body) btn.focus();
   });
   menu.addEventListener("keydown", (e) => {
-    const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
-    const go = (n: number) => buttons[(n + buttons.length) % buttons.length]?.focus();
+    const i = focusables.indexOf(document.activeElement as HTMLElement);
+    const go = (n: number) => focusables[(n + focusables.length) % focusables.length]?.focus();
     if (e.key === "ArrowDown") go(i + 1);
     else if (e.key === "ArrowUp") go(i - 1);
     else if (e.key === "Home") go(0);
-    else if (e.key === "End") go(buttons.length - 1);
+    else if (e.key === "End") go(focusables.length - 1);
     else if (e.key === "Tab") menu.hidePopover();
     else return;
     e.preventDefault();
   });
   btn.addEventListener("click", () => menu.togglePopover());
-  return h("span", { class: "menu-wrap" }, btn, menu);
+  return { menu, wrap: h("span", { class: "menu-wrap" }, btn, menu) };
+}
+
+/** 列上的「更多」選單 */
+export function menuButton(label: string, items: (MenuItem | null)[]): HTMLElement {
+  const btn = h("button", { class: "btn small icon-only ghost menu-btn", type: "button", "aria-label": label }, icon("more", 18));
+  return attachMenu(btn, label, items).wrap;
 }
 
 /** 巢狀面板：外框帶標題列，內面板放 section，底部可選動作列 */

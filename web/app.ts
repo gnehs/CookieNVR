@@ -1,5 +1,5 @@
 import { api, setUnauthorizedHandler } from "./api.ts";
-import { errMsg, errorBox, h, icon, PageError, pageErrorBox, spinner } from "./dom.ts";
+import { attachMenu, errMsg, errorBox, h, icon, PageError, pageErrorBox, spinner } from "./dom.ts";
 import { matchRoute, navigate, parseHash, type PageCtx, type Route } from "./router.ts";
 import { state } from "./state.ts";
 import { onHealth, startHealthWatch, stopHealthWatch } from "./health-watch.ts";
@@ -12,6 +12,7 @@ import { settingsStoragePage } from "./pages/settings-storage.ts";
 import { settingsSystemPage } from "./pages/settings-system.ts";
 import { settingsUsersPage } from "./pages/settings-users.ts";
 import { settingsStatusPage } from "./pages/settings-status.ts";
+import { SETTINGS_TABS } from "./pages/settings-shell.ts";
 import { accountPage } from "./pages/account.ts";
 
 const routes: Route[] = [
@@ -61,15 +62,15 @@ function makeCtx(params: Record<string, string>, query: URLSearchParams, token: 
 }
 
 const NAV = [
-  { section: "cameras", href: "#/cameras", label: "攝影機", icon: "camera", admin: false },
-  { section: "recordings", href: "#/recordings", label: "錄影", icon: "film", admin: false },
-  { section: "settings", href: "#/settings/cameras", label: "設定", icon: "settings", admin: true },
-  { section: "account", href: "#/account", label: "帳號", icon: "user", admin: false },
+  { section: "cameras", href: "#/cameras", label: "攝影機", icon: "camera" },
+  { section: "recordings", href: "#/recordings", label: "錄影", icon: "film" },
 ] as const;
 
 let issueCount = 0;
 onHealth(({ health }) => {
   if (health.issues.length === issueCount) return;
+  // 選單開著時不重畫，免得把它關掉；下一次輪詢再更新
+  if (shell?.nav.querySelector(".menu:popover-open")) return;
   issueCount = health.issues.length;
   renderNav(currentSection);
 });
@@ -83,30 +84,60 @@ function buildShell() {
   return shell;
 }
 
+async function logout() {
+  await api.logout().catch(() => {});
+  state.me = null;
+  navigate("/login");
+  location.reload();
+}
+
+/** 帳號、設定與登出收在側欄底部（手機是底部列的「我的」）的使用者選單；問題提示點掛在這裡 */
+function userMenu(active: string | undefined): HTMLElement | null {
+  const me = state.me;
+  if (!me) return null;
+  const isAdmin = me.role === "admin";
+  const alert = isAdmin && issueCount > 0;
+  const here = active === "settings" || active === "account";
+  const { path } = parseHash();
+  const btn = h(
+    "button",
+    { class: "user-btn", type: "button", "data-current": here ? "" : null, "aria-label": `${me.username}，${isAdmin ? "管理員" : "一般使用者"}，帳號${isAdmin ? "與設定" : ""}選單${alert ? `，有 ${issueCount} 件事需要處理` : ""}` },
+    h("span", { class: "nav-ico" }, h("span", { class: "avatar", "aria-hidden": "true" }, me.username.slice(0, 1)), alert ? h("i", { class: "nav-dot", "aria-hidden": "true" }) : null),
+    h("span", { class: "who", "aria-hidden": "true" }, h("b", null, me.username), h("small", null, isAdmin ? "管理員" : "一般使用者")),
+    h("span", { class: "user-label", "aria-hidden": "true" }, "我的"),
+    icon("selector", 16),
+  );
+  const { wrap } = attachMenu(
+    btn,
+    isAdmin ? "帳號與設定" : "帳號",
+    [
+      { label: "帳號", icon: "user", href: "#/account", current: active === "account" },
+      isAdmin
+        ? {
+            heading: "設定",
+            items: SETTINGS_TABS.map(([key, label]) => ({
+              label,
+              href: `#/settings/${key}`,
+              current: path === `/settings/${key}`,
+              badge: key === "status" && alert ? String(issueCount) : undefined,
+              badgeLabel: key === "status" && alert ? `${issueCount} 件事需要處理` : undefined,
+            })),
+          }
+        : null,
+      { label: "登出", icon: "logout", onSelect: () => void logout() },
+    ],
+    { align: "start", side: "top" },
+  );
+  wrap.classList.add("sidebar-foot");
+  return wrap;
+}
+
 function renderNav(active?: string) {
   if (!shell) return;
-  const me = state.me;
-  const isAdmin = me?.role === "admin";
   shell.nav.replaceChildren(
     h("div", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 17)), h("span", null, state.siteName)),
-    ...NAV.filter((n) => !n.admin || isAdmin).map((n) => {
-      const alert = n.section === "settings" && issueCount > 0;
-      return h(
-        "a",
-        { class: "nav-link", href: n.href, "aria-current": n.section === active ? "page" : null },
-        h("span", { class: "nav-ico" }, icon(n.icon, 20), alert ? h("i", { class: "nav-dot", "aria-hidden": "true" }) : null),
-        n.label,
-        alert ? h("span", { class: "sr-only" }, `，有 ${issueCount} 件事需要處理`) : null,
-      );
-    }),
-    ...(me
-      ? [h(
-          "div",
-          { class: "sidebar-foot" },
-          h("span", { class: "avatar", "aria-hidden": "true" }, me.username.slice(0, 1)),
-          h("div", { class: "who" }, h("b", null, me.username), h("small", null, isAdmin ? "管理員" : "一般使用者")),
-        )]
-      : []),
+    ...NAV.map((n) => h("a", { class: "nav-link", href: n.href, "aria-current": n.section === active ? "page" : null }, h("span", { class: "nav-ico" }, icon(n.icon, 20)), n.label)),
+    ...[userMenu(active)].filter((n): n is HTMLElement => n !== null),
   );
 }
 

@@ -1,6 +1,6 @@
 import { h, icon, pageHeader } from "../dom.ts";
 
-const TABS = [
+export const SETTINGS_TABS = [
   ["cameras", "攝影機"],
   ["storage", "錄影與儲存"],
   ["system", "一般"],
@@ -8,7 +8,7 @@ const TABS = [
   ["status", "狀態"],
 ] as const;
 
-export type SettingsTab = (typeof TABS)[number][0];
+export type SettingsTab = (typeof SETTINGS_TABS)[number][0];
 
 export function settingsLayout(active: SettingsTab, content: Node): HTMLElement {
   return h(
@@ -18,7 +18,7 @@ export function settingsLayout(active: SettingsTab, content: Node): HTMLElement 
     h(
       "nav",
       { class: "pill-nav", "aria-label": "設定分頁" },
-      TABS.map(([key, label]) => h("a", { href: `#/settings/${key}`, "aria-current": key === active ? "page" : null }, label)),
+      SETTINGS_TABS.map(([key, label]) => h("a", { href: `#/settings/${key}`, "aria-current": key === active ? "page" : null }, label)),
     ),
     content,
   );

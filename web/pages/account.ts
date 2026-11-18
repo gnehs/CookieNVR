@@ -2,7 +2,7 @@ import type { CreatedTokenDto, SessionDto, TokenDto } from "../../src/api-types.
 import { api } from "../api.ts";
 import { confirmDialog, copyButton, errMsg, errorBox, field, formatAgo, h, icon, nextId, panel, panelSection, spinner, toast } from "../dom.ts";
 import { ACCENTS, type ColorMode, getAccent, getMode, setAccent, setMode, systemPrefersDark } from "../theme.ts";
-import { navigate, type PageCtx } from "../router.ts";
+import type { PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 
 function passwordSection(): HTMLElement {
@@ -269,13 +269,6 @@ function appearanceSection(ctx: PageCtx): HTMLElement {
 }
 
 export function accountPage(ctx: PageCtx): Node {
-  const logout = h("button", { class: "btn", type: "button" }, icon("logout"), "登出");
-  logout.addEventListener("click", async () => {
-    await api.logout().catch(() => {});
-    state.me = null;
-    navigate("/login");
-    location.reload();
-  });
   const me = state.me;
   return h(
     "div",
@@ -289,7 +282,6 @@ export function accountPage(ctx: PageCtx): Node {
         h("span", { class: "avatar", style: "width:48px;height:48px;font-size:20px", "aria-hidden": "true" }, me?.username.slice(0, 1) ?? ""),
         h("div", null, h("h1", null, me?.username ?? "帳號"), h("p", null, me?.role === "admin" ? "管理員" : "一般使用者")),
       ),
-      h("div", { class: "page-actions" }, logout),
     ),
     h("div", { class: "stack" }, appearanceSection(ctx), passwordSection(), sessionsSection(), tokensSection()),
   );
