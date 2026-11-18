@@ -22,7 +22,7 @@ const MIXES = { "event-hover": "color-mix(in srgb, var(--tl-event) 72%, var(--te
 type ColorName = (typeof COLORS)[number] | keyof typeof MIXES;
 
 /** Layout of the horizontal strip, CSS px */
-const H = { labelY: 14, tickTop: 20, trackTop: 30, trackH: 44, height: 92, eventInset: 5, minEventPx: 8 };
+const H = { labelY: 14, tickTop: 20, trackTop: 30, trackH: 44, height: 92, eventInset: 5, minEventPx: 4, hitSlop: 3 };
 /** Layout of the vertical strip, CSS px */
 const V = { labelRight: 40, tickLeft: 48, trackLeft: 56, trackW: 18, cardLeft: 86, cardH: 60, cardGap: 6, minEventPx: 6 };
 
@@ -507,7 +507,7 @@ export class Timeline {
     if (c.count === 1) {
       const end = first.endMs;
       tip.replaceChildren(
-        ...(first.hasThumb ? [h("img", { src: this.opts.thumbUrl(first), alt: "", width: "176", height: "99" })] : []),
+        ...(first.hasThumb ? [h("img", { src: this.opts.thumbUrl(first), alt: "", width: "112", height: "63" })] : []),
         h("div", { class: "tl-tip-body" },
           h("b", null, labelText(first.labels)),
           h("span", { class: "num" }, `${formatClock(first.startMs)} – ${end === null ? "進行中" : formatClock(end)}`),
@@ -691,7 +691,8 @@ export class Timeline {
         ctx.fillStyle = colors["--tl-event-fg"];
         ctx.fillText(String(c.count), (a0 + a1) / 2, (b0 + b1) / 2 + 0.5);
       }
-      this.hits.push({ a0, a1, b0: top - 4, b1: bottom + 4, cluster: c });
+      // 4px 寬的事件不好瞄準，命中範圍左右各放寬一點
+      this.hits.push({ a0: a0 - H.hitSlop, a1: a1 + H.hitSlop, b0: top - 4, b1: bottom + 4, cluster: c });
     }
     this.refreshHover();
     this.drawPlayhead(4, bottom + 6);
@@ -710,6 +711,7 @@ export class Timeline {
     const clusters = clusterEvents(this.events, this.now, view, V.cardH, V.cardGap, "anchored");
     this.hits = [];
     const cardRight = this.w - 2;
+    const cards: { c: Cluster; top: number }[] = [];
     for (const c of clusters) {
       const a0 = this.pos(c.start);
       const evEnd = Math.max(a0 + V.minEventPx, this.pos(Math.min(c.end, this.lastEnd(c))));
@@ -721,10 +723,12 @@ export class Timeline {
       if (bottom < 0 || top > this.hgt) continue;
       ctx.fillStyle = colors["--tl-event"];
       ctx.fillRect(right, top + 10, V.cardLeft - right, 2);
-      this.drawCard(c, top, V.cardLeft, cardRight);
+      cards.push({ c, top });
       this.hits.push({ a0: top, a1: bottom, b0: left - 6, b1: cardRight, cluster: c });
     }
+    // 播放頭先畫，卡片再蓋上去：線只出現在卡片之間的空隙，不會壓到卡片上的字
     this.drawPlayhead(0, this.w);
+    for (const { c, top } of cards) this.drawCard(c, top, V.cardLeft, cardRight);
   }
 
   private lastEnd(c: Cluster) {

@@ -420,11 +420,12 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .thumb-split > .thumb-inner.dark { clip-path: inset(0 0 0 50%); }
 
 /* 色票 */
-.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 七個色票永遠排成一列：寬度平分，手機上縮小間距 */
+.swatches { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; max-width: 520px; }
 .swatch { --c: var(--accent); --c-fg: var(--accent-fg); position: relative; cursor: pointer; }
 .swatch > input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .swatch-face {
-  display: grid; justify-items: center; gap: 6px; padding: 9px 10px 7px; min-width: 56px; border-radius: 12px;
+  display: grid; justify-items: center; gap: 6px; padding: 9px 2px 7px; border-radius: 12px;
   border: 1.5px solid transparent; font-size: 12.5px; color: var(--muted); font-weight: 550;
   transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
 }
@@ -498,12 +499,13 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .probe h4 { font-size: 13px; margin-bottom: 6px; }
 
 /* ---------- playback ---------- */
-.pb-head { align-items: flex-start; }
-.pb-toolbar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; min-width: 0; }
+.pb-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .pb-toolbar select { min-height: 38px; width: auto; max-width: 100%; }
-.pb-date { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cam-pick { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cam-pick .icon { color: var(--muted); }
+.cam-pick select { width: auto; max-width: min(240px, 100%); min-width: 0; font-weight: 600; text-overflow: ellipsis; }
+.pb-date { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .pb-date select { font-variant-numeric: tabular-nums; font-weight: 600; }
-.pb-rate { display: flex; align-items: center; gap: 8px; min-width: 0; }
 
 .pb-grid {
   display: grid; gap: 16px; min-width: 0;
@@ -546,6 +548,16 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-time { display: grid; line-height: 1.2; min-width: 0; }
 .pb-clock { font-size: 19px; font-weight: 700; letter-spacing: 0.01em; }
 .pb-time small { color: var(--muted); font-size: 12px; }
+.pb-ctl-text { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 600; }
+/* 倍速：原生 select 保留鍵盤與螢幕閱讀器行為，外觀做成跟其他播放鈕一致 */
+select.pb-rate {
+  appearance: none; width: auto; min-height: 40px; padding: 0 12px; border: 0; border-radius: 11px; background: transparent;
+  color: var(--text-2); font-weight: 650; font-variant-numeric: tabular-nums; cursor: pointer; box-shadow: none;
+  transition: background-color 150ms ease;
+}
+@media (hover: hover) { select.pb-rate:hover { background: var(--fill); color: var(--text); } }
+select.pb-rate:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; box-shadow: none; }
+select.pb-rate option { background: var(--surface); color: var(--text); }
 .pb-note { font-size: 12.5px; color: var(--warn); font-weight: 600; }
 
 .pb-timeline .panel-head { gap: 8px 12px; }
@@ -557,15 +569,17 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .tl-canvas { display: block; width: 100%; height: 92px; }
 .tl[data-orient="v"] .tl-canvas { height: max(300px, calc(100dvh - var(--pb-player-h, 280px) - 230px)); }
 .tl-probe { position: absolute; width: 0; height: 0; overflow: hidden; }
+/* 事件提示放在軌道下方，蓋住的是圖例而不是上方的縮放控制 */
 .tl-tip {
-  position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 6; width: 188px; pointer-events: none;
-  padding: 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+  position: absolute; left: 0; top: 80px; z-index: 6; display: flex; align-items: center; gap: 10px; width: max-content; max-width: 300px; pointer-events: none;
+  padding: 6px 12px 6px 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
   font-size: 12.5px; color: var(--text-2);
-  transition: opacity 120ms var(--ease-out);
+  transition: opacity var(--dur-1) var(--ease-out);
   @starting-style { opacity: 0; }
 }
-.tl-tip img { display: block; width: 176px; height: 99px; object-fit: cover; border-radius: 9px; background: var(--fill); margin-bottom: 6px; }
-.tl-tip-body { display: grid; gap: 1px; padding: 0 4px 2px; }
+.tl-tip img { display: block; width: 112px; height: 63px; flex: none; object-fit: cover; border-radius: 9px; background: var(--fill); }
+.tl-tip-body { display: grid; gap: 1px; padding: 2px 0 2px 6px; min-width: 0; }
+.tl-tip img + .tl-tip-body { padding-left: 0; }
 .tl-tip-body b { color: var(--text); font-size: 13.5px; font-weight: 650; }
 .pb-legend { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; padding: 8px 2px 0; font-size: 12.5px; color: var(--muted); }
 .pb-legend > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -601,18 +615,14 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
   .pb-toolbar .cam-pick select { flex: 1; }
   .pb-date { flex: 1 1 100%; }
   .pb-date select { flex: 1; min-width: 0; }
-  .pb-rate { flex: 1; }
-  .pb-rate .segmented { flex: 1; }
-  .pb-rate .segmented label { flex: 1; text-align: center; }
-  .pb-rate .segmented span { padding: 5px 4px; }
-  .pb-toolbar > .btn { padding: 0 11px; }
+  .pb-ctl-text span { display: none; }
+  .pb-ctl-text { padding: 0; width: 40px; justify-content: center; }
   .pb-grid { gap: 12px; }
   .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -8px; border-radius: 0 0 var(--r-xl) var(--r-xl); border-top: 0; }
   .pb-timeline .panel-body { padding: 8px 6px; }
   .pb-timeline .panel-head .segmented { order: 3; flex: 1 1 100%; }
   .pb-timeline .panel-head .segmented label { flex: 1; text-align: center; }
   .pb-legend-keys { display: none; }
-  .pb-rate .hint { display: none; }
 }
 
 /* ---------- dialog + toast ---------- */

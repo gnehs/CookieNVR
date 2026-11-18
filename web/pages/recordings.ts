@@ -3,7 +3,7 @@ import { api } from "../api.ts";
 import { emptyState, errMsg, formatClock, formatDuration, h, icon, segmented, toast } from "../dom.ts";
 import { Player, type PlayerSource, type PlayerStatus } from "../playback/player.ts";
 import type { PageCtx } from "../router.ts";
-import { browserTz } from "../state.ts";
+import { browserTz, state } from "../state.ts";
 import { EVENT_PREROLL_MS, eventAt, labelText, nextEvent, playableFrom, prevEvent, segEnd } from "../timeline/model.ts";
 import { Timeline } from "../timeline/timeline.ts";
 
@@ -44,7 +44,20 @@ const sortSegs = (list: SegmentDto[]) => list.slice().sort((a, b) => a.startMs -
 
 export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   const cams = await api.cameras();
-  if (cams.length === 0) return h("div", null, h("header", { class: "page-head" }, h("h1", null, "錄影")), emptyState("還沒有攝影機", "新增攝影機後，錄影會出現在這裡。", undefined, "camera"));
+  if (cams.length === 0) {
+    const admin = state.me?.role === "admin";
+    return h(
+      "div",
+      null,
+      h("header", { class: "page-head" }, h("h1", null, "錄影")),
+      emptyState(
+        "還沒有攝影機",
+        admin ? "加入攝影機後就會開始錄影，錄好的影片會出現在這裡。" : "請管理員加入攝影機，錄好的影片會出現在這裡。",
+        admin ? h("a", { class: "btn primary", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機") : undefined,
+        "camera",
+      ),
+    );
+  }
 
   const wanted = ctx.query.get("camera");
   const cam: CameraDto = cams.find((c) => c.id === wanted) ?? cams[0]!;
@@ -60,7 +73,13 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
       "div",
       null,
       h("header", { class: "page-head" }, h("h1", null, "錄影"), camPick),
-      emptyState("這台攝影機還沒有錄影", cam.config.record.enabled ? "開始錄影後，片段會顯示在這裡。" : "這台攝影機沒有開啟錄影。"),
+      emptyState(
+        "這台攝影機還沒有錄影",
+        !cam.config.enabled ? "這台攝影機已停用。" : cam.config.record.enabled ? "錄影開始後，幾分鐘內就能在這裡回放。" : "這台攝影機沒有開啟全天候錄影。",
+        state.me?.role === "admin" && (!cam.config.enabled || !cam.config.record.enabled)
+          ? h("a", { class: "btn", href: `#/settings/cameras/${encodeURIComponent(cam.id)}` }, icon("edit", 16), "到攝影機設定開啟")
+          : undefined,
+      ),
     );
   }
   if (!Player.supported()) {
@@ -68,7 +87,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
       "div",
       null,
       h("header", { class: "page-head" }, h("h1", null, "錄影"), camPick),
-      h("div", { class: "callout warn", role: "alert" }, icon("alert"), h("div", null, h("p", null, "這個瀏覽器不支援 Media Source Extensions，無法回放錄影。"), h("p", { class: "hint" }, "iPhone 需要 iOS 17.1 以上；也可以改用電腦或 Android 上的 Chrome、Edge、Firefox、Safari。"))),
+      emptyState("這個瀏覽器無法播放錄影", "iPhone 請更新到 iOS 17.1 以上；也可以改用電腦或 Android 上的 Chrome、Edge、Firefox 或 Safari。", undefined, "alert"),
     );
   }
 
@@ -88,16 +107,11 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     nextDay.disabled = i < 0 || i >= days.length - 1;
   };
 
-  const rateCtl = segmented("倍速", RATES.map((r) => ({ value: String(r), label: `${r}×` })), "1", (v) => player.setRate(Number(v)));
-  const nowBtn = h("button", { class: "btn", type: "button", onclick: () => goLive() }, icon("skip-end", 16), "回到現在");
-  const toolbar = h(
-    "div",
-    { class: "pb-toolbar" },
-    camPick,
-    h("div", { class: "pb-date" }, prevDay, dateSelect, nextDay),
-    h("div", { class: "pb-rate" }, h("span", { class: "hint", "aria-hidden": "true" }, "倍速"), rateCtl),
-    nowBtn,
-  );
+  // 最常用的是換日期與換攝影機，放在標題列；倍速與「回到最新」跟著播放器走
+  const rateSelect = h("select", { class: "pb-rate", "aria-label": "播放速度" }, RATES.map((r) => h("option", { value: String(r) }, `${r}×`)));
+  rateSelect.addEventListener("change", () => player.setRate(Number(rateSelect.value)));
+  const nowBtn = h("button", { class: "pb-ctl pb-ctl-text", type: "button", "aria-label": "回到最新", onclick: () => goLive() }, icon("skip-end", 16), h("span", null, "回到最新"));
+  const toolbar = h("div", { class: "pb-toolbar" }, camPick, h("div", { class: "pb-date", role: "group", "aria-label": "日期" }, prevDay, dateSelect, nextDay));
 
   const video = h("video", { playsinline: true, muted: true, "aria-label": `${cam.config.name} 的錄影` });
   video.muted = true;
@@ -120,6 +134,8 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     liveBadge,
     note,
     h("span", { class: "spacer" }),
+    nowBtn,
+    rateSelect,
     muteBtn,
     fsBtn,
   );

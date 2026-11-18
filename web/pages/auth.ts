@@ -89,9 +89,9 @@ export function loginPage(_ctx: PageCtx): Node {
 
 export function setupPage(_ctx: PageCtx): Node {
   return authForm({
-    title: "初始設定",
-    intro: "第一次使用，請建立管理員帳號。",
-    submitLabel: "建立並登入",
+    title: "歡迎",
+    intro: "第一次使用，先建立管理員帳號，接著就能加入攝影機。",
+    submitLabel: "建立帳號",
     confirm: true,
     onSubmit: async (u, p) => {
       state.me = await api.setup(u, p);
