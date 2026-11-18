@@ -111,7 +111,7 @@ async function render() {
     if (path === "/login" && state.me) return navigate("/cameras", true);
     shell = null;
     document.title = state.siteName;
-    app.replaceChildren(await runPage(route, params, query, token));
+    app.replaceChildren(enter(await runPage(route, params, query, token)));
     return;
   }
 
@@ -132,8 +132,14 @@ async function render() {
   s.main.replaceChildren(spinner());
   const content = await runPage(route, params, query, token);
   if (token !== renderToken) return;
-  s.main.replaceChildren(content);
+  s.main.replaceChildren(enter(content));
   window.scrollTo(0, 0);
+}
+
+/** 換頁時新內容淡入；只加在最外層，頁面內部的輪詢更新不會重播 */
+function enter(node: Node): Node {
+  if (node instanceof HTMLElement) node.classList.add("page-enter");
+  return node;
 }
 
 async function runPage(route: Route, params: Record<string, string>, query: URLSearchParams, token: number): Promise<Node> {
@@ -161,6 +167,7 @@ async function boot() {
   app.replaceChildren(spinner());
   try {
     state.info = await api.info();
+    state.siteName = state.info.siteName;
   } catch (e) {
     app.replaceChildren(h("div", { class: "auth" }, errorBox(errMsg(e), () => void boot())));
     return;
@@ -168,10 +175,6 @@ async function boot() {
   if (!state.info.needsSetup) {
     try {
       state.me = await api.me();
-      if (state.me.role === "admin") {
-        const s = await api.settings().catch(() => null);
-        if (s) state.siteName = s.siteName;
-      }
     } catch {}
   }
   await render();

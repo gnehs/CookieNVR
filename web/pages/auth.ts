@@ -82,10 +82,6 @@ export function loginPage(_ctx: PageCtx): Node {
     confirm: false,
     onSubmit: async (u, p) => {
       state.me = await api.login(u, p);
-      if (state.me.role === "admin") {
-        const s = await api.settings().catch(() => null);
-        if (s) state.siteName = s.siteName;
-      }
       navigate("/cameras");
     },
   });

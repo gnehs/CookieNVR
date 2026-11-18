@@ -74,6 +74,11 @@ const ICONS: Record<string, string> = {
   crosshair: '<circle cx="12" cy="12" r="7.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.5"/>',
   "skip-end": '<path d="M6 5l9 7-9 7z"/><path d="M18 5v14"/>',
   rec: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/>',
+  more: '<circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/>',
+  "check-circle": '<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.8 2.8 5.2-5.6"/>',
+  "alert-circle": '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/>',
+  "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  power: '<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0"/>',
 };
 
 export function icon(name: keyof typeof ICONS | string, size = 18): HTMLSpanElement {
@@ -89,25 +94,40 @@ export function toast(message: string, kind: "ok" | "error" = "ok") {
   if (!root) return;
   const el = h("div", { class: `toast ${kind}` }, icon(kind === "ok" ? "check" : "alert"), h("span", null, message));
   root.appendChild(el);
-  setTimeout(() => el.remove(), kind === "error" ? 6000 : 3000);
+  const leave = () => {
+    el.classList.add("leaving");
+    // 減少動態效果時沒有 transition，transitionend 不會觸發
+    setTimeout(() => el.remove(), 260);
+  };
+  setTimeout(leave, kind === "error" ? 6000 : 3200);
 }
 
 export function openDialog<T>(title: string, build: (close: (v?: T) => void) => Node): Promise<T | undefined> {
   return new Promise((resolve) => {
     let result: T | undefined;
-    const dlg = h("dialog", { class: "dlg", "aria-labelledby": "dlg-title" });
+    let closing = false;
+    const titleId = nextId("dlg");
+    const dlg = h("dialog", { class: "dlg", "aria-labelledby": titleId });
     const close = (v?: T) => {
+      if (closing) return;
+      closing = true;
       result = v;
-      dlg.close();
+      // 先播淡出再真的關閉；Esc 與點背景也走這條路
+      dlg.dataset.closing = "";
+      setTimeout(() => dlg.close(), matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 140);
     };
+    dlg.addEventListener("cancel", (e) => {
+      e.preventDefault();
+      close();
+    });
     dlg.addEventListener("close", () => {
       dlg.remove();
       resolve(result);
     });
     dlg.addEventListener("click", (e) => {
-      if (e.target === dlg) dlg.close();
+      if (e.target === dlg) close();
     });
-    dlg.append(h("h2", { id: "dlg-title" }, title), build(close));
+    dlg.append(h("h2", { id: titleId }, title), build(close));
     document.body.appendChild(dlg);
     dlg.showModal();
   });
@@ -161,6 +181,41 @@ export async function copyText(text: string): Promise<boolean> {
 export async function copyWithToast(text: string, label: string) {
   if (await copyText(text)) toast(`已複製${label}`);
   else toast("無法複製，請手動選取", "error");
+}
+
+/**
+ * 複製按鈕：按下後在按鈕上換成打勾與「已複製」，同時用 toast 告知（toast 容器是 live region）。
+ * 不在回饋期間停用按鈕，失敗後可以直接再按一次。
+ */
+export function copyButton(
+  label: string,
+  getText: () => string | Promise<string>,
+  opts: { done?: string; class?: string; ariaLabel?: string } = {},
+): HTMLButtonElement {
+  const face = h("span", { class: "copy-face" }, icon("copy", 16), h("span", null, label));
+  const btn = h("button", { class: `btn copy-btn ${opts.class ?? ""}`.trim(), type: "button", "aria-label": opts.ariaLabel }, face);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let busy = false;
+  btn.addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    btn.setAttribute("aria-busy", "true");
+    let ok = false;
+    try {
+      ok = await copyText(await getText());
+    } catch {}
+    busy = false;
+    btn.removeAttribute("aria-busy");
+    clearTimeout(timer);
+    face.replaceChildren(icon(ok ? "check" : "alert", 16), h("span", null, ok ? "已複製" : "複製失敗"));
+    btn.dataset.state = ok ? "done" : "failed";
+    toast(ok ? (opts.done ?? "已複製") : "無法複製，請再試一次", ok ? "ok" : "error");
+    timer = setTimeout(() => {
+      face.replaceChildren(icon("copy", 16), h("span", null, label));
+      delete btn.dataset.state;
+    }, 2200);
+  });
+  return btn;
 }
 
 export function formatBytes(n: number): string {
@@ -237,25 +292,97 @@ export function badge(text: string, kind: "ok" | "bad" | "warn" | "muted" = "mut
   return h("span", { class: `badge ${kind}` }, text);
 }
 
-export function spinner(): HTMLElement {
-  return h("div", { class: "loading", role: "status" }, h("span", { class: "spin" }), "載入中");
+export function spinner(label = "載入中…"): HTMLElement {
+  return h("div", { class: "state loading", role: "status" }, h("span", { class: "spin" }), h("span", null, label));
+}
+
+/** 整頁的載入、空白、錯誤三種狀態共用同一個置中版面 */
+function stateBox(kind: "empty" | "error", iconName: string, title: string, body?: string, ...actions: Child[]): HTMLElement {
+  return h(
+    "div",
+    { class: `state ${kind}`, role: kind === "error" ? "alert" : null },
+    h("span", { class: "state-ico" }, icon(iconName, 22)),
+    h("h3", null, title),
+    body ? h("p", null, body) : null,
+    actions.some(Boolean) ? h("div", { class: "state-actions" }, actions) : null,
+  );
 }
 
 export function errorBox(message: string, retry?: () => void): HTMLElement {
-  return h(
-    "div",
-    { class: "callout bad", role: "alert" },
-    icon("alert"),
-    h("div", null, h("p", null, message), retry && h("button", { class: "btn small", type: "button", onclick: retry }, "重試")),
+  return stateBox(
+    "error",
+    "alert",
+    "這裡暫時打不開",
+    message,
+    retry ? h("button", { class: "btn", type: "button", onclick: retry }, icon("refresh", 16), "重新載入") : null,
   );
 }
 
 export function emptyState(title: string, body?: string, action?: Node, iconName = "film"): HTMLElement {
-  return h("div", { class: "empty" }, h("span", { class: "empty-ico" }, icon(iconName, 22)), h("h3", null, title), body && h("p", null, body), action);
+  return stateBox("empty", iconName, title, body, action);
 }
 
 export function pageHeader(title: string, ...actions: Child[]): HTMLElement {
-  return h("header", { class: "page-head" }, h("h1", null, title), h("div", { class: "page-actions" }, actions));
+  return h("header", { class: "page-head" }, h("h1", null, title), actions.some(Boolean) ? h("div", { class: "page-actions" }, actions) : null);
+}
+
+export interface MenuItem {
+  label: string;
+  icon?: string;
+  danger?: boolean;
+  onSelect: () => void;
+}
+
+/**
+ * 「更多」選單：popover 放在 top layer，不會被面板的 overflow 裁掉；
+ * 方向鍵在項目間移動，Esc 與點外面關閉並把焦點還給按鈕。
+ */
+export function menuButton(label: string, items: (MenuItem | null)[]): HTMLElement {
+  const id = nextId("menu");
+  const list = items.filter((i): i is MenuItem => i !== null);
+  const btn = h("button", { class: "btn small icon-only ghost menu-btn", type: "button", "aria-label": label, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": id }, icon("more", 18));
+  const buttons = list.map((it) =>
+    h(
+      "button",
+      { class: `menu-item${it.danger ? " danger" : ""}`, type: "button", role: "menuitem", tabindex: "-1", onclick: () => {
+        menu.hidePopover();
+        it.onSelect();
+      } },
+      it.icon ? icon(it.icon, 16) : null,
+      h("span", null, it.label),
+    ),
+  );
+  const menu = h("div", { class: "menu", id, role: "menu", "aria-label": label, popover: "auto" }, buttons);
+  const place = () => {
+    const r = btn.getBoundingClientRect();
+    const w = menu.offsetWidth;
+    const hgt = menu.offsetHeight;
+    const below = r.bottom + 6 + hgt <= innerHeight - 8;
+    menu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.right - w))}px`;
+    menu.style.top = `${below ? r.bottom + 6 : Math.max(8, r.top - 6 - hgt)}px`;
+    menu.dataset.side = below ? "bottom" : "top";
+  };
+  menu.addEventListener("toggle", (e) => {
+    const open = (e as ToggleEvent).newState === "open";
+    btn.setAttribute("aria-expanded", String(open));
+    if (open) {
+      place();
+      buttons[0]?.focus();
+    } else if (menu.contains(document.activeElement) || document.activeElement === document.body) btn.focus();
+  });
+  menu.addEventListener("keydown", (e) => {
+    const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const go = (n: number) => buttons[(n + buttons.length) % buttons.length]?.focus();
+    if (e.key === "ArrowDown") go(i + 1);
+    else if (e.key === "ArrowUp") go(i - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(buttons.length - 1);
+    else if (e.key === "Tab") menu.hidePopover();
+    else return;
+    e.preventDefault();
+  });
+  btn.addEventListener("click", () => menu.togglePopover());
+  return h("span", { class: "menu-wrap" }, btn, menu);
 }
 
 /** 巢狀面板：外框帶標題列，內面板放 section，底部可選動作列 */

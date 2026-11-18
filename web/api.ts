@@ -94,5 +94,10 @@ export const api = {
   eventThumbUrl: (id: number) => `/api/events/${id}/thumb.jpg`,
   snapshotUrl: (id: string, t: number) => `/api/cameras/${encodeURIComponent(id)}/snapshot.jpg?t=${t}`,
   system: () => get<SystemDto>("/system"),
+  diagnostics: async (camera?: string): Promise<string> => {
+    const res = await fetch(`/api/system/diagnostics${camera ? `?camera=${encodeURIComponent(camera)}` : ""}`, { credentials: "same-origin" });
+    if (!res.ok) throw new ApiError(res.status, ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? `錯誤 ${res.status}`);
+    return res.text();
+  },
   restartWorker: (id: string) => post<void>(`/system/workers/${encodeURIComponent(id)}/restart`),
 };
