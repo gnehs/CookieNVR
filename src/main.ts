@@ -99,10 +99,14 @@ const routes = [
     version: pkg.version,
     system,
     probe: (conn) => probeCamera(conn, env),
-    cameraStatus: (id) => ({
-      online: online.get(id) ?? false,
-      recording: supervisor.status().some((w) => w.id === `record:${id}` && w.state === "running"),
-    }),
+    cameraStatus: (id) => {
+      const isOnline = online.get(id) ?? false;
+      // "starting" 涵蓋卡死偵測的 30 秒寬限期，這段時間 ffmpeg 其實已經在寫檔；
+      // 以相機上線為前提，才不會把連不上而反覆重啟的 worker 當成錄影中。
+      const worker = supervisor.status().find((w) => w.id === `record:${id}`);
+      const active = worker?.state === "running" || worker?.state === "starting";
+      return { online: isOnline, recording: isOnline && active };
+    },
     rtspUrls: (id, req) => {
       const host = new URL(req.url).hostname;
       const camera = cameras.get(id);
