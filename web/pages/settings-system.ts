@@ -17,7 +17,17 @@ export async function settingsSystemPage(_ctx: PageCtx): Promise<Node> {
     panelSection(
       null,
       null,
-      switchRow(rtsp, "讓其他裝置讀取攝影機畫面", "開啟後，VLC、Home Assistant 或其他 NVR 可以用你的帳號或 API Token 讀取畫面。不影響錄影。"),
+      switchRow(rtsp, "讓其他 App 讀取攝影機畫面", "開啟後，家裡其他裝置上的影音或智慧家庭 App 也能看到即時畫面。不影響錄影。"),
+      h(
+        "details",
+        { class: "more" },
+        h("summary", null, "怎麼使用？"),
+        h(
+          "p",
+          null,
+          "每台攝影機的串流網址在「攝影機 → 編輯 → 進階設定」裡可以複製。像 VLC、Home Assistant 或另一套 NVR 這類 App 連線時，用你的帳號密碼，或在「帳號 → 連接其他 App」為它建立一組密鑰（API Token）。",
+        ),
+      ),
     ),
   );
   form.addEventListener("submit", async (e) => {

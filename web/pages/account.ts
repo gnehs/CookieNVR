@@ -1,6 +1,6 @@
 import type { CreatedTokenDto, SessionDto, TokenDto } from "../../src/api-types.ts";
 import { api } from "../api.ts";
-import { badge, confirmDialog, copyButton, errMsg, errorBox, field, formatAgo, h, icon, nextId, panel, panelSection, spinner, toast } from "../dom.ts";
+import { confirmDialog, copyButton, errMsg, errorBox, field, formatAgo, h, icon, nextId, panel, panelSection, spinner, toast } from "../dom.ts";
 import { ACCENTS, type ColorMode, getAccent, getMode, setAccent, setMode, systemPrefersDark } from "../theme.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
@@ -43,23 +43,31 @@ function sessionsSection(): HTMLElement {
   const box = h("div", null, spinner());
   const load = async () => {
     try {
-      const list = await api.sessions();
+      // 目前這台置頂；其他裝置用瀏覽器與系統命名，同名時在副標題補上來源位址分辨
+      const list = (await api.sessions()).slice().sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeenAt - a.lastSeenAt);
+      const names = list.map((s) => describeUa(s.userAgent));
+      const dup = (n: string) => names.filter((x) => x === n).length > 1;
       box.replaceChildren(
         h(
           "div",
           { class: "row-list" },
-          list.map((s: SessionDto) =>
+          list.map((s: SessionDto, i) =>
             h(
               "div",
-              { class: "row-item" },
+              { class: "row-item cam-row" },
               h(
                 "div",
                 { class: "row-main" },
                 h("span", { class: "row-ico" }, icon("monitor", 18)),
-                h("div", { class: "row-text" }, h("b", null, describeUa(s.userAgent)), h("small", null, s.current ? "就是你現在用的這台" : `上次使用 ${formatAgo(s.lastSeenAt)}`)),
+                h(
+                  "div",
+                  { class: "row-text" },
+                  h("b", { class: "truncate" }, s.current ? "這台裝置" : names[i]),
+                  h("small", { class: "truncate" }, s.current ? names[i] : [`上次使用 ${formatAgo(s.lastSeenAt)}`, dup(names[i]!) ? `來自 ${s.ip}` : null].filter(Boolean).join("・")),
+                ),
               ),
               s.current
-                ? badge("目前裝置", "ok")
+                ? null
                 : h(
                     "button",
                     {
@@ -94,22 +102,23 @@ function sessionsSection(): HTMLElement {
 function describeUa(ua: string): string {
   const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
   const br = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "";
-  return [os, br].filter(Boolean).join(" 上的 ") || "其他裝置";
+  return [os, br].filter(Boolean).join(" 上的 ") || "不明的瀏覽器";
 }
 
 function tokensSection(): HTMLElement {
   const list = h("div", null, spinner());
   const created = h("div", { "aria-live": "polite" });
   const name = h("input", { type: "text", name: "tokenName", maxlength: 60, placeholder: "例如：Home Assistant", autocomplete: "off" });
+  const nameField = field("App 名稱", name);
   const error = h("p", { class: "form-error", role: "alert" });
-  const submit = h("button", { class: "btn primary", type: "submit" }, icon("plus"), "建立 Token");
+  const submit = h("button", { class: "btn primary", type: "submit" }, icon("plus"), "建立連線密鑰");
 
   const load = async () => {
     try {
       const tokens = await api.tokens();
       list.replaceChildren(
         tokens.length === 0
-          ? h("p", { class: "muted", style: "padding:16px 22px" }, "還沒有建立任何 Token。")
+          ? h("p", { class: "muted", style: "padding:16px 22px" }, "還沒有連接任何 App。")
           : h(
               "div",
               { class: "row-list" },
@@ -129,7 +138,7 @@ function tokensSection(): HTMLElement {
                       class: "btn small danger",
                       type: "button",
                       onclick: async () => {
-                        if (!(await confirmDialog(`撤銷「${t.name}」？`, "用這個 Token 連線的程式會立刻無法存取。", { confirmLabel: "撤銷", danger: true }))) return;
+                        if (!(await confirmDialog(`撤銷「${t.name}」？`, "用這組密鑰連線的 App 會立刻無法存取。", { confirmLabel: "撤銷", danger: true }))) return;
                         try {
                           await api.revokeToken(t.id);
                           toast(`已撤銷「${t.name}」`);
@@ -151,13 +160,13 @@ function tokensSection(): HTMLElement {
     }
   };
 
-  const form = h("form", { class: "form", novalidate: true }, h("div", { class: "form-actions", style: "align-items:end" }, h("div", { style: "flex:1;min-width:200px" }, field("用途", name)), submit), error);
+  const form = h("form", { class: "form", novalidate: true }, h("div", { class: "form-actions", style: "align-items:end" }, h("div", { style: "flex:1;min-width:200px" }, nameField), submit), error);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     error.textContent = "";
     if (!name.value.trim()) {
       name.focus();
-      return void (error.textContent = "請寫下這個 Token 要給什麼用");
+      return void (error.textContent = "請寫下要連接的 App 名稱");
     }
     submit.disabled = true;
     try {
@@ -171,13 +180,13 @@ function tokensSection(): HTMLElement {
           h(
             "div",
             { style: "flex:1;min-width:0" },
-            h("b", null, `「${t.name}」的 Token 只會顯示這一次`),
-            h("p", null, "現在複製起來，貼到那個程式的設定裡。離開這頁後就看不到完整內容了。"),
+            h("b", null, `「${t.name}」的密鑰只會顯示這一次`),
+            h("p", null, "現在複製起來，貼到那個 App 的設定裡。離開這頁後就看不到完整內容了。"),
             h(
               "div",
               { class: "secret-box", style: "margin-top:8px" },
               h("code", { translate: "no" }, t.token),
-              copyButton("複製", () => t.token, { class: "small", done: "已複製 Token" }),
+              copyButton("複製", () => t.token, { class: "small", done: "已複製密鑰" }),
               h("button", { class: "btn small", type: "button", onclick: () => created.replaceChildren() }, "我已經存好了"),
             ),
           ),
@@ -191,11 +200,19 @@ function tokensSection(): HTMLElement {
     }
   });
   void load();
-  const listSection = h("div", { class: "panel-section", style: "padding:0" }, list);
-  return panel(
-    { title: "API Token" },
-    panelSection(null, "讓 Home Assistant 等其他程式不用你的密碼也能存取，權限和你的帳號相同。不用時可以隨時撤銷。", created, form),
-    listSection,
+  // 大多數人用不到，預設收合；技術名稱（API Token）只出現在說明的最後
+  return h(
+    "details",
+    { class: "card disclosure connect-apps" },
+    h("summary", null, icon("chevron", 16), "連接其他 App", h("small", null, "例如 Home Assistant")),
+    h(
+      "div",
+      { class: "disclosure-body" },
+      h("p", { class: "hint" }, "幫每個 App 建立一組專用的密鑰，它就能讀取攝影機，不需要知道你的密碼。權限和你的帳號相同，不用時可以隨時撤銷。（技術上稱為 API Token）"),
+      created,
+      form,
+      h("div", { class: "card-inset" }, list),
+    ),
   );
 }
 

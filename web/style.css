@@ -821,6 +821,17 @@ details.disclosure:not([open])::details-content { block-size: 0; }
   details.disclosure > .disclosure-body { padding: 4px 16px 18px; }
 }
 
+/* 收合成一張卡（帳號頁「連接其他 App」） */
+details.card.disclosure { border-top: 1px solid var(--border); }
+details.card.disclosure > summary { border-radius: var(--r-xl); padding: 18px 22px; }
+details.card.disclosure[open] > summary { border-radius: var(--r-xl) var(--r-xl) 0 0; }
+.card-inset { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.card-inset .row-item:last-child { border-bottom: 0; }
+/* 一般用語的說明後面接「細節」，需要時才展開 */
+details.more { font-size: 13.5px; color: var(--muted); }
+details.more > summary { cursor: pointer; width: fit-content; color: var(--accent-text); font-weight: 600; padding: 4px 0; }
+details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
+
 /* ---------- 預設選項＋自訂（保留天數等） ---------- */
 .choice { display: grid; gap: 10px; min-width: 0; }
 .choice .segmented { justify-self: start; }
