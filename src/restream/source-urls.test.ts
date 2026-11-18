@@ -32,3 +32,15 @@ test("通用 RTSP 直接使用填入的網址，沒填子碼流就是 null", () 
   expect(sourceUrls({ type: "rtsp", mainUrl: "rtsp://h/a", transport: "udp" }).sub).toBeNull();
   expect(sourceUrls({ type: "rtsp", mainUrl: "rtsp://h/a", subUrl: "", transport: "udp" }).sub).toBeNull();
 });
+
+import { splitHostPort } from "./source-urls.ts";
+
+test("Tapo 主機欄可以帶自訂埠，不會被當成 IPv6", () => {
+  const tapo = (host: string) => sourceUrls({ type: "tapo", host, username: "u", password: "p" }).main;
+  expect(tapo("127.0.0.1:28555")).toBe("rtsp://u:p@127.0.0.1:28555/stream1");
+  expect(tapo("cam.local:8554")).toBe("rtsp://u:p@cam.local:8554/stream1");
+  expect(tapo(" 192.168.1.20 ")).toBe("rtsp://u:p@192.168.1.20:554/stream1");
+  expect(tapo("fe80::1")).toBe("rtsp://u:p@[fe80::1]:554/stream1");
+  expect(tapo("[fe80::1]:8554")).toBe("rtsp://u:p@[fe80::1]:8554/stream1");
+  expect(splitHostPort("[fe80::1]")).toEqual({ host: "[fe80::1]", port: 554 });
+});
