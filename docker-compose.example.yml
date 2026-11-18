@@ -1,0 +1,15 @@
+services:
+  cookienvr:
+    image: ghcr.io/<owner>/cookienvr:latest
+    restart: unless-stopped
+    ports: ["8765:8765", "8554:8554"]
+    # 啟用 HKSV 時改用 host 網路（拿掉 ports）：
+    # network_mode: host
+    volumes:
+      - /mnt/user/appdata/cookienvr:/data
+      - /mnt/user/recordings:/recordings
+    # 物件辨識用 Intel 內顯：
+    # devices: ["/dev/dri:/dev/dri"]
+    # 物件辨識用 Nvidia：映像改用 :latest-nvidia，並加上
+    # runtime: nvidia
+    # environment: ["NVIDIA_VISIBLE_DEVICES=all"]

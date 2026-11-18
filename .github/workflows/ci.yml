@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  MEDIAMTX_VERSION: "1.21.4"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Install MediaMTX
+        run: |
+          file="mediamtx_v${MEDIAMTX_VERSION}_linux_amd64.tar.gz"
+          base="https://github.com/bluenviron/mediamtx/releases/download/v${MEDIAMTX_VERSION}"
+          curl -fsSL --retry 3 -O "${base}/${file}" -O "${base}/checksums.sha256"
+          grep "[ *]${file}\$" checksums.sha256 | sha256sum -c -
+          sudo tar -xzf "${file}" -C /usr/local/bin mediamtx
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
