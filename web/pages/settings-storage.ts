@@ -1,79 +1,75 @@
 import type { Settings } from "../../src/types.ts";
 import { api } from "../api.ts";
-import { errMsg, formatBytes, h, nextId, panel, panelSection, stepper, toast } from "../dom.ts";
+import { choice, errMsg, field, formatBytes, h, icon, panel, panelSection, toast } from "../dom.ts";
 import type { PageCtx } from "../router.ts";
+import { estimateDays } from "../retention-estimate.ts";
 import { settingsLayout } from "./settings-shell.ts";
 
 const GB = 1024 ** 3;
-
-function numberInput(value: number, opts: { min: number; step?: string }) {
-  const input = h("input", { type: "number", min: opts.min, step: opts.step ?? "1", inputmode: "decimal", required: true });
-  input.value = String(value);
-  return input;
-}
-
-export async function settingsStoragePage(ctx: PageCtx): Promise<Node> {
+export async function settingsStoragePage(_ctx: PageCtx): Promise<Node> {
   const [settings, sys, cams] = await Promise.all([api.settings(), api.system(), api.cameras()]);
-  const path = h("input", { type: "text", required: true, spellcheck: "false", autocapitalize: "off" });
+  const r = settings.retention;
+  const cont = choice("連續錄影保留天數", [3, 7, 14, 30].map((d) => ({ value: d, label: `${d} 天` })).concat({ value: 0, label: "不限" }), r.continuousDays, "天");
+  const evt = choice("事件片段保留天數", [7, 30, 90].map((d) => ({ value: d, label: `${d} 天` })).concat({ value: 0, label: "不限" }), r.eventDays, "天");
+  const free = choice("最低剩餘空間", [2, 5, 10, 20].map((g) => ({ value: g, label: `${g} GB` })), Math.round((r.minFreeBytes / GB) * 10) / 10, "GB", { step: 0.1 });
+  const path = h("input", { type: "text", required: true, spellcheck: "false", autocapitalize: "off", autocomplete: "off", name: "storagePath" });
   path.value = settings.storagePath;
-  const cont = numberInput(settings.retention.continuousDays, { min: 0 });
-  const evt = numberInput(settings.retention.eventDays, { min: 0 });
-  const free = numberInput(Math.round((settings.retention.minFreeBytes / GB) * 10) / 10, { min: 0, step: "0.1" });
   const error = h("p", { class: "form-error", role: "alert" });
   const save = h("button", { class: "btn primary", type: "submit" }, "儲存變更");
 
-  const retentionField = (label: string, input: HTMLInputElement, presets: number[], hint: string) => {
-    const id = nextId();
-    input.id = id;
-    const chips = presets.map((n) =>
-      h("button", { type: "button", class: "preset", "aria-pressed": "false", onclick: () => {
-        input.value = String(n);
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      } }, `${n} 天`),
-    );
-    const sync = () => chips.forEach((c, i) => c.setAttribute("aria-pressed", String(Number(input.value) === presets[i])));
-    input.addEventListener("input", sync);
-    sync();
-    return h(
-      "div",
-      { class: "field" },
-      h("label", { for: id }, label),
-      stepper(input, "天", label),
-      h("div", { class: "presets", role: "group", "aria-label": `${label}快速選擇` }, chips),
-      h("small", { class: "hint" }, hint),
+  const estimate = h("div", { "aria-live": "polite" });
+  const paintEstimate = () => {
+    const minFree = free.value() * GB;
+    const days = estimateDays(sys, Number.isFinite(minFree) ? minFree : r.minFreeBytes);
+    const keep = cont.value();
+    if (days === null) {
+      estimate.replaceChildren(
+        h("div", { class: "estimate" }, icon("clock", 22), h("div", null, h("b", null, "錄影一段時間後，這裡會估算可以保留幾天"), h("small", null, "空間不夠時，會從最舊的錄影開始刪除。"))),
+      );
+      return;
+    }
+    const d = Math.floor(days);
+    const detail =
+      keep > 0 && keep <= d
+        ? `會保留最近 ${keep} 天，硬碟還有餘裕。`
+        : keep > d
+          ? `設定的 ${keep} 天比硬碟能存的多，空間不夠時會先刪除最舊的錄影。`
+          : "沒有天數上限，空間不夠時會從最舊的錄影開始刪除。";
+    estimate.replaceChildren(
+      h("div", { class: "estimate" }, icon("hdd", 22), h("div", null, h("b", { class: "num" }, `以最近的用量，大約可以保留 ${d} 天的錄影`), h("small", null, detail))),
     );
   };
+  paintEstimate();
 
-  const freeId = nextId();
-  free.id = freeId;
   const form = panel(
-    { tag: "form", class: "sticky-foot", title: "錄影與儲存", foot: [error, save] },
-    panelSection("儲存路徑", "容器內的錄影根目錄。變更後所有錄影 worker 會重啟，舊錄影留在原處，仍可回放。", h("div", { class: "narrow" }, path)),
-    panelSection(
-      "保留期限",
-      "超過天數的錄影會自動刪除。設為 0 表示不依天數刪除。",
+    { tag: "form", class: "sticky-foot", foot: [error, save] },
+    panelSection("連續錄影", "全天候錄下的影片要保留多久，超過就自動刪除。", cont.el, estimate),
+    panelSection("事件片段", "偵測到動靜時的片段，通常可以保留得比連續錄影久。", evt.el),
+    h(
+      "details",
+      { class: "disclosure" },
+      h("summary", null, icon("chevron", 16), "進階設定", h("small", null, "儲存位置與保留空間")),
       h(
         "div",
-        { class: "retention" },
-        retentionField("連續錄影", cont, [3, 7, 14, 30], "全天候的連續片段"),
-        retentionField("事件", evt, [7, 30, 90], "偵測到事件時保留的片段"),
+        { class: "disclosure-body" },
+        h("div", { class: "field" }, h("span", { class: "legend" }, "最低剩餘空間"), free.el, h("small", { class: "hint" }, "硬碟剩下的空間少於這個值時，會先刪除最舊的錄影。")),
+        h("div", { class: "narrow" }, field("儲存位置", path, "錄影存放的資料夾。改了之後新的錄影會存到新位置，舊的留在原處，仍然可以回放。")),
       ),
     ),
-    panelSection(
-      "最低剩餘空間",
-      "剩餘空間低於此值時，會從最舊的連續錄影開始刪除。",
-      h("div", { class: "field" }, h("label", { for: freeId, class: "sr-only" }, "最低剩餘空間"), stepper(free, "GB", "最低剩餘空間")),
-    ),
   );
-  path.setAttribute("aria-label", "儲存路徑");
+  form.addEventListener("input", paintEstimate);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     error.textContent = "";
-    const c = Number(cont.value);
-    const ev = Number(evt.value);
-    const f = Number(free.value);
-    if (!path.value.trim()) return void (error.textContent = "請填寫儲存路徑");
-    if (![c, ev, f].every((n) => Number.isFinite(n) && n >= 0)) return void (error.textContent = "天數與剩餘空間需為不小於 0 的數字");
+    const c = cont.value();
+    const ev = evt.value();
+    const f = free.value();
+    if (![c, ev, f].every((n) => Number.isFinite(n) && n >= 0)) return void (error.textContent = "天數與空間請填 0 或更大的數字");
+    if (!path.value.trim()) {
+      path.closest("details")!.open = true;
+      path.focus();
+      return void (error.textContent = "請填寫儲存位置");
+    }
     const patch: Partial<Settings> = {
       storagePath: path.value.trim(),
       retention: { continuousDays: Math.floor(c), eventDays: Math.floor(ev), minFreeBytes: Math.round(f * GB) },
@@ -81,7 +77,7 @@ export async function settingsStoragePage(ctx: PageCtx): Promise<Node> {
     save.disabled = true;
     try {
       await api.updateSettings(patch);
-      toast("已儲存");
+      toast("已儲存錄影與儲存設定");
     } catch (err) {
       error.textContent = errMsg(err);
     } finally {
@@ -93,10 +89,9 @@ export async function settingsStoragePage(ctx: PageCtx): Promise<Node> {
   const total = sys.usage.reduce((a, u) => a + u.bytes, 0);
   const max = Math.max(1, ...sys.usage.map((u) => u.bytes));
   const usedPct = sys.disk.totalBytes ? ((sys.disk.totalBytes - sys.disk.freeBytes) / sys.disk.totalBytes) * 100 : 0;
-  const diskBar = h("div", { class: `bar${usedPct > 95 ? " bad" : usedPct > 85 ? " warn" : ""}` }, h("i", { style: `width:${usedPct.toFixed(1)}%` }));
 
   const usage = panel(
-    { title: "用量" },
+    { title: "空間使用" },
     panelSection(
       null,
       null,
@@ -104,8 +99,8 @@ export async function settingsStoragePage(ctx: PageCtx): Promise<Node> {
         "div",
         { class: "disk" },
         h("div", { class: "disk-big" }, h("b", null, formatBytes(sys.disk.freeBytes)), h("span", { class: "muted" }, `可用，共 ${formatBytes(sys.disk.totalBytes)}`)),
-        diskBar,
-        h("div", { class: "disk-nums" }, h("span", { class: "mono" }, sys.disk.path), h("span", null, `已用 ${usedPct.toFixed(0)}%`)),
+        h("div", { class: `bar${usedPct > 95 ? " bad" : usedPct > 85 ? " warn" : ""}`, role: "img", "aria-label": `已用 ${usedPct.toFixed(0)}%` }, h("i", { style: `width:${usedPct.toFixed(1)}%` })),
+        h("div", { class: "disk-nums" }, h("span", { class: "num" }, `已用 ${usedPct.toFixed(0)}%`), h("span", { class: "num" }, `錄影共 ${formatBytes(total)}`)),
       ),
     ),
     panelSection(
@@ -120,15 +115,13 @@ export async function settingsStoragePage(ctx: PageCtx): Promise<Node> {
               h(
                 "div",
                 { class: "usage-row" },
-                h("span", null, names.get(u.cameraId) ?? u.cameraId),
-                h("div", { class: "bar" }, h("i", { style: `width:${((u.bytes / max) * 100).toFixed(1)}%` })),
+                h("span", { title: names.get(u.cameraId) ?? "已刪除的攝影機" }, names.get(u.cameraId) ?? "已刪除的攝影機"),
+                h("div", { class: "bar", "aria-hidden": "true" }, h("i", { style: `width:${((u.bytes / max) * 100).toFixed(1)}%` })),
                 h("span", { class: "num" }, formatBytes(u.bytes)),
               ),
             ),
-            h("div", { class: "usage-row" }, h("b", null, "合計"), h("span"), h("b", { class: "num" }, formatBytes(total))),
           ),
     ),
   );
-  void ctx;
   return settingsLayout("storage", h("div", { class: "stack" }, form, usage));
 }

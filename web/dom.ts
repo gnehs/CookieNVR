@@ -479,22 +479,29 @@ export function segmented<V extends string>(label: string, options: { value: V; 
   );
 }
 
-/** 帶 −／＋ 的數值輸入，回傳容器；值仍從 input 讀 */
-export function stepper(input: HTMLInputElement, unit: string, label: string): HTMLElement {
-  const step = Number(input.step) || 1;
-  const min = input.min === "" ? -Infinity : Number(input.min);
-  const bump = (dir: 1 | -1) => {
-    const cur = Number(input.value) || 0;
-    const next = Math.max(min, Math.round((cur + dir * step) * 1000) / 1000);
-    input.value = String(next);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  };
-  return h(
-    "div",
-    { class: "stepper" },
-    h("button", { type: "button", "aria-label": `減少${label}`, onclick: () => bump(-1) }, icon("minus", 16)),
-    input,
-    h("span", { class: "unit", "aria-hidden": "true" }, unit),
-    h("button", { type: "button", "aria-label": `增加${label}`, onclick: () => bump(1) }, icon("plus", 16)),
-  );
+/**
+ * 常用值＋自訂：先給幾個好選的選項，真的需要才展開數字欄位。
+ * 回傳的 value() 一律讀目前選到的數值；自訂欄位不合法時回傳 NaN。
+ */
+export function choice(
+  label: string,
+  presets: { value: number; label: string }[],
+  initial: number,
+  unit: string,
+  opts: { step?: number } = {},
+): { el: HTMLElement; value: () => number; input: HTMLInputElement } {
+  const custom = h("input", { type: "number", min: 0, step: String(opts.step ?? 1), inputmode: "decimal", "aria-label": `${label}（自訂，單位 ${unit}）` });
+  custom.value = String(initial);
+  const isPreset = presets.some((p) => p.value === initial);
+  let picked: string = isPreset ? String(initial) : "custom";
+  const customRow = h("div", { class: "choice-custom", hidden: picked !== "custom" }, custom, h("span", { class: "unit" }, unit));
+  const seg = segmented(label, [...presets.map((p) => ({ value: String(p.value), label: p.label })), { value: "custom", label: "自訂" }], picked, (v) => {
+    picked = v;
+    customRow.hidden = v !== "custom";
+    if (v === "custom") custom.focus();
+    else custom.value = v;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  const el = h("div", { class: "choice" }, seg, customRow);
+  return { el, input: custom, value: () => (picked === "custom" ? (custom.value.trim() === "" ? NaN : Number(custom.value)) : Number(picked)) };
 }

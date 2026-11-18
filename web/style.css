@@ -435,27 +435,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .swatch > input:checked + .swatch-face .icon { visibility: visible; }
 .swatch > input:focus-visible + .swatch-face { outline: 2px solid var(--c); outline-offset: 2px; }
 
-/* 數值步進 */
-.stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface); overflow: hidden; width: fit-content; }
-.stepper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, var(--surface)); }
-.stepper button { width: 42px; border: 0; background: var(--fill); color: var(--text-2); cursor: pointer; display: grid; place-items: center; transition: background-color 150ms ease; }
-@media (hover: hover) { .stepper button:hover { background: var(--fill-2); } }
-.stepper button:active { background: var(--fill-2); }
-.stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.stepper input[type="number"] {
-  width: 76px; border: 0; border-radius: 0; text-align: center; font-weight: 650; font-size: 16px; min-height: 42px;
-  appearance: textfield; -moz-appearance: textfield; font-variant-numeric: tabular-nums; box-shadow: none;
-}
-.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { appearance: none; margin: 0; }
-.stepper input:focus-visible { box-shadow: none; }
-.stepper .unit { display: grid; place-items: center; padding: 0 12px 0 2px; color: var(--muted); font-size: 14px; background: var(--surface); }
-.presets { display: flex; gap: 6px; flex-wrap: wrap; }
-.preset { border: 1px solid var(--border); background: var(--surface); color: var(--text-2); border-radius: 99px; padding: 3px 11px; font-size: 13px; cursor: pointer; transition: background-color 150ms ease; }
-@media (hover: hover) { .preset:hover { background: var(--fill); } }
-.preset[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); font-weight: 600; }
-.retention { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.retention > .field { padding: 16px; border-radius: var(--r); background: var(--frame); border: 1px solid var(--border); gap: 10px; align-content: start; }
-
 /* ---------- rows / lists ---------- */
 .row-list { display: grid; }
 .row-item { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; min-width: 0; }
@@ -466,6 +445,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .row-text small { display: block; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .row-ico { width: 36px; height: 36px; border-radius: 11px; flex: none; display: grid; place-items: center; background: var(--fill); color: var(--text-2); }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.user-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .truncate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-text .truncate { overflow-wrap: normal; }
 .row-link { color: inherit; text-decoration: none; border-radius: 12px; }
