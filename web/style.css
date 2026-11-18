@@ -66,6 +66,7 @@
   --shadow: 0 1px 2px light-dark(rgb(20 20 30 / 0.04), rgb(0 0 0 / 0.35)), 0 6px 24px -8px light-dark(rgb(20 20 30 / 0.08), rgb(0 0 0 / 0.5));
   --shadow-lg: 0 24px 64px -16px light-dark(rgb(20 20 30 / 0.22), rgb(0 0 0 / 0.7));
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --font: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -857,13 +858,58 @@ details.disclosure:not([open])::details-content { block-size: 0; }
   .issue { padding: 14px; gap: 4px 10px; }
 }
 
+/* ---------- 手機：點擊區至少 44×44，對話框與選單改成底部面板 ---------- */
+@media (pointer: coarse), (max-width: 760px) {
+  .btn, .row-item select, select.pb-rate, .pb-toolbar select, .menu-item, .switch-row { min-height: 44px; }
+  input[type="text"], input[type="password"], input[type="number"], input[type="url"], select { min-height: 44px; }
+  .pb-ctl { width: 44px; height: 44px; }
+  .swatches { gap: 0; }
+  .btn.icon-only:not(.small) { width: 44px; }
+  .pill-nav a { min-height: 44px; }
+  .segmented span { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  /* 視覺上維持小尺寸，用偽元素把點擊區撐到 44×44 */
+  .btn.small, .back-btn, details.spec-details > summary, .text-link { position: relative; }
+  :is(.btn.small, .back-btn, details.spec-details > summary, .text-link)::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); translate: -50% -50%;
+  }
+  .home-alert { min-height: 48px; }
+}
+@media (max-width: 560px) {
+  /* 底部面板：只有上方圓角，主要動作在最下面靠近拇指 */
+  dialog.dlg {
+    margin: auto 0 0; width: 100%; max-width: 100%; max-height: calc(100dvh - 24px - var(--kb, 0px));
+    border-radius: var(--r-xl) var(--r-xl) 0 0; border-width: 1px 0 0;
+    padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+    translate: 0 calc(-1 * var(--kb, 0px));
+    transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-3) var(--ease-drawer);
+    @starting-style { opacity: 1; transform: translateY(100%); }
+  }
+  dialog.dlg::before { content: ""; display: block; width: 36px; height: 5px; border-radius: 99px; background: var(--border-strong); margin: 0 auto 14px; }
+  dialog.dlg[data-closing] { opacity: 1; transform: translateY(100%); }
+  .dlg-actions { flex-direction: column; align-items: stretch; }
+  .dlg-actions .btn { width: 100%; }
+
+  .menu {
+    inset: auto 0 0 0 !important; width: 100%; max-width: 100%; min-width: 0;
+    border-radius: var(--r-xl) var(--r-xl) 0 0; border-width: 1px 0 0; padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+    transform-origin: bottom center; transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-3) var(--ease-drawer);
+    @starting-style { opacity: 1; transform: translateY(100%); }
+  }
+  .menu::backdrop { background: rgb(8 8 12 / 0.45); }
+  .menu .menu-title { display: block; }
+  .menu-item { min-height: 50px; font-size: 15.5px; padding: 0 12px; border-radius: 12px; }
+}
+.menu-title { display: none; padding: 6px 12px 8px; color: var(--muted); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-property: opacity, background-color, border-color, color, box-shadow !important; }
   .page-enter { animation-name: fade-in; }
   .copy-btn[data-state] .copy-face { animation-name: fade-in; }
   .spin { animation-duration: 2s; }
-  dialog.dlg, .toast, .menu { @starting-style { transform: none; } }
-  .toast.leaving, dialog.dlg[data-closing] { transform: none; }
+  dialog.dlg, .toast, .menu { @starting-style { transform: none; opacity: 0; } }
+  .toast.leaving, dialog.dlg[data-closing] { transform: none; opacity: 0; }
+  /* ::details-content 不在上面 *::before/::after 的範圍內，要另外關掉展開動畫 */
+  details.disclosure::details-content { transition: none; }
   .pb-ctl:active { transform: none; }
   .badge.live::before { animation: none; }
 }

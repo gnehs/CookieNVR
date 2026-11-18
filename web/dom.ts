@@ -120,7 +120,18 @@ export function openDialog<T>(title: string, build: (close: (v?: T) => void) => 
       e.preventDefault();
       close();
     });
+    // 手機的底部面板要避開螢幕鍵盤：iOS 開鍵盤時只縮 visualViewport，不會推動 fixed 的 dialog
+    const vv = window.visualViewport;
+    const avoidKeyboard = () => {
+      if (!vv) return;
+      const kb = Math.max(0, innerHeight - vv.height - vv.offsetTop);
+      dlg.style.setProperty("--kb", `${Math.round(kb)}px`);
+    };
+    vv?.addEventListener("resize", avoidKeyboard);
+    vv?.addEventListener("scroll", avoidKeyboard);
     dlg.addEventListener("close", () => {
+      vv?.removeEventListener("resize", avoidKeyboard);
+      vv?.removeEventListener("scroll", avoidKeyboard);
       dlg.remove();
       resolve(result);
     });
@@ -377,7 +388,8 @@ export function menuButton(label: string, items: (MenuItem | null)[]): HTMLEleme
       h("span", null, it.label),
     ),
   );
-  const menu = h("div", { class: "menu", id, role: "menu", "aria-label": label, popover: "auto" }, buttons);
+  // 手機上是底部面板，面板頂端顯示選單在操作哪一列
+  const menu = h("div", { class: "menu", id, role: "menu", "aria-label": label, popover: "auto" }, h("div", { class: "menu-title", "aria-hidden": "true" }, label), buttons);
   const place = () => {
     const r = btn.getBoundingClientRect();
     const w = menu.offsetWidth;
