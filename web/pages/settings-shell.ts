@@ -3,7 +3,7 @@ import { h, pageHeader } from "../dom.ts";
 const TABS = [
   ["cameras", "攝影機"],
   ["storage", "錄影與儲存"],
-  ["system", "系統"],
+  ["system", "一般"],
   ["users", "使用者"],
   ["status", "狀態"],
 ] as const;
