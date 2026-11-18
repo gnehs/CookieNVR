@@ -6,6 +6,7 @@ import pkg from "../package.json";
 import type { SystemDto } from "./api-types.ts";
 import { createAuth } from "./auth/index.ts";
 import { probeCamera } from "./camera/probe.ts";
+import { createSnapshots } from "./camera/snapshot.ts";
 import { openDb } from "./db.ts";
 import { readEnv } from "./env.ts";
 import { coreRoutes, createRouter, HttpError } from "./http/index.ts";
@@ -119,6 +120,15 @@ const routes = [
     },
   }),
   ...recordingRoutes({ db }),
+  createSnapshots({
+    env,
+    sourceUrl: (id) => {
+      const camera = cameras.get(id);
+      if (!camera?.config.enabled) return null;
+      const hasSub = sourceUrls(camera.config.connection).sub !== null;
+      return restream.internalUrl(id, hasSub ? "sub" : "main");
+    },
+  }).route(),
   restream.rtspAuthRoute({
     verify: async (username, secret) => (await auth.verifyCredentials(username, secret)) !== null,
     externalEnabled: () => settings.get().rtsp.externalEnabled,
