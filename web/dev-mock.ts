@@ -7,7 +7,7 @@ import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../sr
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import index from "./index.html";
 
-const PORT = 48765;
+const PORT = Number(process.env.PORT ?? 48765);
 const cacheDir = join(tmpdir(), "cookienvr-web-mock");
 mkdirSync(cacheDir, { recursive: true });
 const snapFile = join(cacheDir, "snap.jpg");

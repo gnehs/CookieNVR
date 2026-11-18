@@ -201,9 +201,19 @@ export function copyButton(
     busy = true;
     btn.setAttribute("aria-busy", "true");
     let ok = false;
+    const pending = Promise.resolve().then(getText);
     try {
-      ok = await copyText(await getText());
+      // 內容要等網路回來時，Safari 只接受在點擊當下交出 ClipboardItem（內容可以是之後才完成的 Promise）
+      if (window.isSecureContext && "ClipboardItem" in window && navigator.clipboard?.write) {
+        await navigator.clipboard.write([new ClipboardItem({ "text/plain": pending.then((t) => new Blob([t], { type: "text/plain" })) })]);
+        ok = true;
+      }
     } catch {}
+    if (!ok) {
+      try {
+        ok = await copyText(await pending);
+      } catch {}
+    }
     busy = false;
     btn.removeAttribute("aria-busy");
     clearTimeout(timer);
