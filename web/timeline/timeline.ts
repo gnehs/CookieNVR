@@ -215,7 +215,6 @@ export class Timeline {
     return Math.max(this.bounds.start, Math.min(s, this.bounds.end - this.span));
   }
 
-  // ---------- geometry ----------
 
   private get axisLen() {
     return this.orient === "h" ? this.w : this.hgt;
@@ -290,7 +289,6 @@ export class Timeline {
     this.hatch = this.ctx.createPattern(off, "repeat");
   }
 
-  // ---------- input ----------
 
   private down(e: PointerEvent) {
     if (e.button !== 0) return;
@@ -496,7 +494,6 @@ export class Timeline {
     this.dirty = true;
   }
 
-  // ---------- tooltip ----------
 
   private renderTip(hit: Hit | null) {
     const tip = this.tip;
@@ -540,7 +537,6 @@ export class Timeline {
     this.tip.style.transform = `translate(${Math.round(x)}px, 0)`;
   }
 
-  // ---------- drawing ----------
 
   private loop = () => {
     this.raf = requestAnimationFrame(this.loop);
@@ -723,7 +719,6 @@ export class Timeline {
       const top = a0;
       const bottom = a0 + V.cardH;
       if (bottom < 0 || top > this.hgt) continue;
-      // connector from the bar to the card
       ctx.fillStyle = colors["--tl-event"];
       ctx.fillRect(right, top + 10, V.cardLeft - right, 2);
       this.drawCard(c, top, V.cardLeft, cardRight);

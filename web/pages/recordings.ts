@@ -77,7 +77,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   let segs: SegmentDto[] = [];
   let events: EventDto[] = [];
 
-  // ---------- toolbar ----------
   const dateSelect = h("select", { "aria-label": "日期" });
   const prevDay = h("button", { class: "btn icon-only", type: "button", "aria-label": "前一天", onclick: () => stepDay(-1) }, icon("left", 18));
   const nextDay = h("button", { class: "btn icon-only", type: "button", "aria-label": "後一天", onclick: () => stepDay(1) }, icon("right", 18));
@@ -100,7 +99,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     nowBtn,
   );
 
-  // ---------- player ----------
   const video = h("video", { playsinline: true, muted: true, "aria-label": `${cam.config.name} 的錄影` });
   video.muted = true;
   const overlay = h("div", { class: "pb-overlay", role: "status", "aria-live": "polite" });
@@ -157,7 +155,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     }
   }
 
-  // ---------- data source ----------
   let seekDir: 1 | -1 = 1;
   const source: PlayerSource = {
     async locate(w) {
@@ -176,7 +173,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   };
   const player = new Player(video, source, showStatus);
 
-  // ---------- timeline ----------
   const followBtn = h("button", { class: "btn small", type: "button", hidden: true, onclick: () => timeline.recenter() }, icon("crosshair", 16), "回到播放位置");
   const zoomCtl = segmented("時間軸範圍", ZOOMS, String(24 * HOUR), (v) => timeline.setSpan(Number(v)));
   const zoomInputs = [...zoomCtl.querySelectorAll("input")];
@@ -207,7 +203,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     h("div", { class: "panel-body" }, timeline.el, legend),
   );
 
-  // ---------- events list ----------
   const evCount = h("span", { class: "hint" });
   const evList = h("ol", { class: "ev-list", "aria-label": "事件清單" });
   const evPanel = h("section", { class: "panel pb-events" }, h("div", { class: "panel-head" }, h("h2", null, "事件"), evCount), h("div", { class: "panel-body" }, evList));
@@ -255,7 +250,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     }
   }
 
-  // ---------- navigation ----------
   function seekTo(w: number, dir: 1 | -1 = 1, play = true) {
     const now = Date.now();
     const local = playableFrom(segs, w, now, dir);
@@ -332,7 +326,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     }
   }
 
-  // ---------- keyboard ----------
   const onKey = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || !ctx.isCurrent()) return;
     const t = e.target instanceof Element ? e.target : document.body;
@@ -353,7 +346,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   };
   document.addEventListener("keydown", onKey);
 
-  // ---------- playhead every frame; clock, events and day changes on timeupdate ----------
   let lastShownSec = -1;
   let prevWall: number | null = null;
   let prevTick = performance.now();
@@ -399,7 +391,6 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   };
   for (const type of ["timeupdate", "seeked", "playing", "pause"]) video.addEventListener(type, tick);
 
-  // ---------- responsive orientation ----------
   const narrow = matchMedia("(max-width: 760px)");
   const applyOrient = () => timeline.setOrientation(narrow.matches ? "v" : "h");
   narrow.addEventListener("change", applyOrient);
