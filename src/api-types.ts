@@ -83,3 +83,15 @@ export interface SystemDto {
 }
 
 export type SettingsDto = Settings;
+
+export interface EventDto {
+  id: number;
+  cameraId: CameraId;
+  source: "pixel" | "onvif";
+  startMs: number;
+  /** null = 進行中 */
+  endMs: number | null;
+  score: number;
+  labels: string[];
+  hasThumb: boolean;
+}

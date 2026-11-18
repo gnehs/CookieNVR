@@ -8,6 +8,7 @@ import { createAuth } from "./auth/index.ts";
 import { probeCamera } from "./camera/probe.ts";
 import { createSnapshots } from "./camera/snapshot.ts";
 import { openDb } from "./db.ts";
+import { eventRoutes } from "./events/index.ts";
 import { readEnv } from "./env.ts";
 import { coreRoutes, createRouter, HttpError } from "./http/index.ts";
 import {
@@ -124,6 +125,7 @@ const routes = [
     },
   }),
   ...recordingRoutes({ db }),
+  ...eventRoutes({ db, dataDir: env.dataDir }),
   createSnapshots({
     env,
     sourceUrl: (id) => {
