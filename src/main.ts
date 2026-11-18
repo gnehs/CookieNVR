@@ -3,11 +3,12 @@ import { statfs } from "node:fs/promises";
 import { join } from "node:path";
 import index from "../web/index.html";
 import pkg from "../package.json";
-import type { SystemDto } from "./api-types.ts";
+import type { ProbeResult, SystemDto } from "./api-types.ts";
 import { createAuth } from "./auth/index.ts";
 import { probeCamera } from "./camera/probe.ts";
 import { createSnapshots } from "./camera/snapshot.ts";
 import { openDb } from "./db.ts";
+import { buildDiagnostics } from "./diagnostics.ts";
 import { eventRoutes } from "./events/index.ts";
 import { readEnv } from "./env.ts";
 import { coreRoutes, createRouter, HttpError } from "./http/index.ts";
@@ -22,7 +23,7 @@ import {
 } from "./recording/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore } from "./stores/index.ts";
-import type { CameraId, WorkerSpec } from "./types.ts";
+import type { CameraConnection, CameraId, WorkerSpec } from "./types.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
 
@@ -92,6 +93,51 @@ async function system(): Promise<SystemDto> {
   };
 }
 
+// 診斷報告用：以連線設定為 key 記住最近一次測試結果，碼流編碼與解析度只能從這裡得知
+const probes = new Map<string, { at: number; result: ProbeResult }>();
+async function probe(conn: CameraConnection): Promise<ProbeResult> {
+  const result = await probeCamera(conn, env);
+  probes.set(JSON.stringify(conn), { at: Date.now(), result });
+  return result;
+}
+
+function cameraStatus(id: CameraId) {
+  const isOnline = online.get(id) ?? false;
+  // "starting" 涵蓋卡死偵測的 30 秒寬限期，這段時間 ffmpeg 其實已經在寫檔；
+  // 以相機上線為前提，才不會把連不上而反覆重啟的 worker 當成錄影中。
+  const worker = supervisor.status().find((w) => w.id === `record:${id}`);
+  const active = worker?.state === "running" || worker?.state === "starting";
+  return { online: isOnline, recording: isOnline && active };
+}
+
+async function diagnostics(only: string | null): Promise<string> {
+  const list = cameras.list();
+  if (only !== null && !list.some((c) => c.id === only)) throw new HttpError(404, "找不到攝影機");
+  const sys = await system();
+  return buildDiagnostics({
+    now: Date.now(),
+    version: pkg.version,
+    runtime: {
+      bun: Bun.version,
+      platform: process.platform,
+      arch: process.arch,
+      uptimeMs: Math.round(process.uptime() * 1000),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+    settings: settings.get(),
+    cameras: list.map((camera) => ({
+      camera,
+      ...cameraStatus(camera.id),
+      probe: probes.get(JSON.stringify(camera.config.connection)) ?? null,
+    })),
+    only: only as CameraId | null,
+    workers: sys.workers,
+    restarts: readRestartLog(logDir, 50),
+    disk: sys.disk,
+    usage: sys.usage,
+  });
+}
+
 const routes = [
   ...coreRoutes({
     auth,
@@ -99,15 +145,9 @@ const routes = [
     settings,
     version: pkg.version,
     system,
-    probe: (conn) => probeCamera(conn, env),
-    cameraStatus: (id) => {
-      const isOnline = online.get(id) ?? false;
-      // "starting" 涵蓋卡死偵測的 30 秒寬限期，這段時間 ffmpeg 其實已經在寫檔；
-      // 以相機上線為前提，才不會把連不上而反覆重啟的 worker 當成錄影中。
-      const worker = supervisor.status().find((w) => w.id === `record:${id}`);
-      const active = worker?.state === "running" || worker?.state === "starting";
-      return { online: isOnline, recording: isOnline && active };
-    },
+    diagnostics,
+    probe,
+    cameraStatus,
     rtspUrls: (id, req) => {
       const host = new URL(req.url).hostname;
       const camera = cameras.get(id);

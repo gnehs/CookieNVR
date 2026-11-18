@@ -10,6 +10,8 @@ export interface AdminDeps {
   auth: Auth;
   settings: SettingsStore;
   system: () => Promise<SystemDto>;
+  /** 給使用者貼給 AI 除錯的純文字報告，密碼等機密已遮蔽；camera 為 null 時涵蓋整個系統 */
+  diagnostics: (camera: string | null) => Promise<string>;
   supervisor: Pick<Supervisor, "restart">;
 }
 
@@ -19,7 +21,7 @@ function userId(raw: string | undefined): number {
   return id;
 }
 
-export function adminRoutes({ auth, settings, system, supervisor }: AdminDeps): Route[] {
+export function adminRoutes({ auth, settings, system, diagnostics, supervisor }: AdminDeps): Route[] {
   const roles = ["user", "admin"] as const;
 
   return [
@@ -74,6 +76,15 @@ export function adminRoutes({ auth, settings, system, supervisor }: AdminDeps): 
       },
     },
     { method: "GET", path: "/api/system", access: "admin", handler: async () => json(await system()) },
+    {
+      method: "GET",
+      path: "/api/system/diagnostics",
+      access: "admin",
+      async handler(ctx) {
+        const text = await diagnostics(ctx.url.searchParams.get("camera") || null);
+        return new Response(text, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
+      },
+    },
     {
       method: "POST",
       path: "/api/system/workers/:id/restart",

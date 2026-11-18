@@ -10,5 +10,5 @@ export interface CoreDeps extends AdminDeps, CameraDeps {
 }
 
 export function coreRoutes(deps: CoreDeps): Route[] {
-  return [...authRoutes(deps.auth, deps.version), ...adminRoutes(deps), ...cameraRoutes(deps)];
+  return [...authRoutes(deps.auth, deps.version, () => deps.settings.get().siteName), ...adminRoutes(deps), ...cameraRoutes(deps)];
 }

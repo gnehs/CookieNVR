@@ -105,9 +105,9 @@ export function retentionCandidates(db: Database, now: number, bufferMs: number)
 }
 
 /** Total recorded bytes per camera, for the status page. */
-export function usageByCamera(db: Database): { cameraId: CameraId; bytes: number }[] {
+export function usageByCamera(db: Database): { cameraId: CameraId; bytes: number; oldestMs: number | null }[] {
   const rows = db
-    .query(`SELECT camera_id, SUM(size) AS bytes FROM segments GROUP BY camera_id ORDER BY camera_id`)
-    .all() as { camera_id: string; bytes: number }[];
-  return rows.map((r) => ({ cameraId: r.camera_id as CameraId, bytes: r.bytes }));
+    .query(`SELECT camera_id, SUM(size) AS bytes, MIN(start_ms) AS oldest FROM segments GROUP BY camera_id ORDER BY camera_id`)
+    .all() as { camera_id: string; bytes: number; oldest: number | null }[];
+  return rows.map((r) => ({ cameraId: r.camera_id as CameraId, bytes: r.bytes, oldestMs: r.oldest }));
 }

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CameraDto, EventDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
+import { buildDiagnostics } from "../src/diagnostics.ts";
 import index from "./index.html";
 
 const PORT = 48765;
@@ -250,7 +251,7 @@ async function api(req: Request, url: URL): Promise<Response> {
   const body: any = m === "GET" || m === "DELETE" ? null : await req.json().catch(() => ({}));
   await Bun.sleep(80);
 
-  if (path === "/info" && m === "GET") return json({ version: "0.1.0-mock", apiVersion: 1, needsSetup: users.length === 0 });
+  if (path === "/info" && m === "GET") return json({ version: "0.1.0-mock", apiVersion: 1, needsSetup: users.length === 0, siteName: settings.siteName });
   if (path === "/auth/setup" && m === "POST") {
     if (users.length) return err(409, "已經有帳號了");
     if (!body.username || String(body.password ?? "").length < 8) return err(400, "密碼至少 8 個字元");
@@ -407,10 +408,30 @@ async function api(req: Request, url: URL): Promise<Response> {
     const sys: SystemDto = {
       workers,
       disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: 1.6 * 1024 ** 4 },
-      usage: cams.slice(0, 2).map((c, i) => ({ cameraId: c.id, bytes: (180 - i * 90) * 1024 ** 3 })),
+      usage: cams.slice(0, 2).map((c, i) => ({ cameraId: c.id, bytes: (180 - i * 90) * 1024 ** 3, oldestMs: now() - (6 - i * 3) * DAY })),
       logs: Array.from({ length: 60 }, (_, i) => `${new Date(now() - (60 - i) * 5000).toISOString()} INFO tick ${i} worker ok`),
     };
     return json(sys);
+  }
+  if (path === "/system/diagnostics" && m === "GET") {
+    const only = url.searchParams.get("camera");
+    if (only && !cams.some((c) => c.id === only)) return err(404, "找不到攝影機");
+    const text = buildDiagnostics({
+      now: now(),
+      version: "0.1.0-mock",
+      runtime: { bun: Bun.version, platform: process.platform, arch: process.arch, uptimeMs: Math.round(process.uptime() * 1000), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+      settings,
+      cameras: cams.map((c) => {
+        const dto = camDto(c, true);
+        return { camera: { ...c, createdAt: now(), updatedAt: now() }, online: dto.online, recording: dto.recording, probe: null };
+      }),
+      only: only as CameraId | null,
+      workers,
+      restarts: [],
+      disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: 1.6 * 1024 ** 4 },
+      usage: [],
+    });
+    return new Response(text, { headers: { "content-type": "text/plain; charset=utf-8" } });
   }
   mm = path.match(/^\/system\/workers\/([^/]+)\/restart$/);
   if (mm && m === "POST") {

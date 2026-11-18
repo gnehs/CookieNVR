@@ -10,6 +10,8 @@ export interface InfoDto {
   version: string;
   apiVersion: number;
   needsSetup: boolean;
+  /** 顯示在登入頁、初始設定頁與側欄的站點名稱 */
+  siteName: string;
 }
 
 export interface MeDto {
@@ -78,7 +80,8 @@ export interface SegmentDto {
 export interface SystemDto {
   workers: WorkerStatus[];
   disk: { path: string; totalBytes: number; freeBytes: number };
-  usage: { cameraId: CameraId; bytes: number }[];
+  /** oldestMs 是這台攝影機最早一段錄影的開始時間，給「大約可保留幾天」的估算用 */
+  usage: { cameraId: CameraId; bytes: number; oldestMs: number | null }[];
   logs: string[];
 }
 

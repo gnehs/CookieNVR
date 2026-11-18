@@ -18,7 +18,7 @@ function me(ctx: RouteContext): Principal {
   return ctx.principal;
 }
 
-export function authRoutes(auth: Auth, version: string): Route[] {
+export function authRoutes(auth: Auth, version: string, siteName: () => string): Route[] {
   const credentials = async (ctx: RouteContext) => {
     const body = asObject(await readJson(ctx.req));
     return { username: str(body, "username", { max: 256 }), password: str(body, "password", { max: 1024, allowEmpty: true }) };
@@ -32,7 +32,7 @@ export function authRoutes(auth: Auth, version: string): Route[] {
       method: "GET",
       path: "/api/info",
       access: "public",
-      handler: () => json({ version, apiVersion: API_VERSION, needsSetup: auth.needsSetup() } satisfies InfoDto),
+      handler: () => json({ version, apiVersion: API_VERSION, needsSetup: auth.needsSetup(), siteName: siteName() } satisfies InfoDto),
     },
     {
       method: "POST",

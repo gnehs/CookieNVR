@@ -26,6 +26,7 @@ const tapo: CameraConfig = {
 };
 
 let restarted: string[];
+let diagnosed: (string | null)[];
 let probed: unknown[];
 let call: (path: string, init?: RequestInit & { ip?: string; json?: unknown }) => Promise<Response>;
 let adminCookie: string;
@@ -53,6 +54,7 @@ function cookieOf(res: Response): string {
 
 beforeEach(async () => {
   restarted = [];
+  diagnosed = [];
   probed = [];
   const db = openDb(":memory:");
   const auth = createAuth({ db });
@@ -74,6 +76,10 @@ beforeEach(async () => {
         usage: [],
         logs: ["hello"],
       }),
+      diagnostics: async (only) => {
+        diagnosed.push(only);
+        return `report for ${only ?? "all"}`;
+      },
       cameraStatus: () => ({ online: true, recording: false }),
       rtspUrls: (id) => ({ main: `rtsp://nvr:8554/${id}/main`, sub: `rtsp://nvr:8554/${id}/sub` }),
       supervisor: { restart: (id) => void restarted.push(id) },
@@ -118,6 +124,7 @@ describe("權限矩陣", () => {
     { method: "POST", path: "/api/cameras", json: camera, access: "admin" },
     { method: "POST", path: "/api/cameras/test", json: camera.connection, access: "admin" },
     { method: "GET", path: "/api/system", access: "admin" },
+    { method: "GET", path: "/api/system/diagnostics", access: "admin" },
     { method: "POST", path: "/api/system/workers/record:abc/restart", access: "admin" },
   ];
 
@@ -143,6 +150,23 @@ describe("權限矩陣", () => {
     expect((await call("/internal/ping", { ip: "::1" })).status).toBe(200);
     expect((await call("/internal/ping", { ip: "192.168.1.9" })).status).toBe(403);
     expect((await call("/internal/ping", { headers: { "x-forwarded-for": "8.8.8.8" } })).status).toBe(403);
+  });
+});
+
+describe("站點名稱與診斷資訊", () => {
+  test("/api/info 帶站點名稱，改名後立刻反映", async () => {
+    expect(((await (await call("/api/info")).json()) as { siteName: string }).siteName).toBe("CookieNVR");
+    await call("/api/settings", { method: "PUT", ...as(adminCookie), json: { siteName: "我家" } });
+    expect(((await (await call("/api/info")).json()) as { siteName: string }).siteName).toBe("我家");
+  });
+
+  test("診斷資訊是純文字，?camera= 只帶那一台", async () => {
+    const all = await call("/api/system/diagnostics", as(adminCookie));
+    expect(all.headers.get("content-type")).toStartWith("text/plain");
+    expect(await all.text()).toBe("report for all");
+    const one = await call("/api/system/diagnostics?camera=cam9", as(adminCookie));
+    expect(await one.text()).toBe("report for cam9");
+    expect(diagnosed).toEqual([null, "cam9"]);
   });
 });
 
@@ -200,7 +224,7 @@ describe("路由與錯誤", () => {
 
 describe("認證流程", () => {
   test("info 反映是否需要初始設定", async () => {
-    expect(await (await call("/api/info")).json()).toEqual({ version: "1.2.3", apiVersion: 1, needsSetup: false });
+    expect(await (await call("/api/info")).json()).toEqual({ version: "1.2.3", apiVersion: 1, needsSetup: false, siteName: "CookieNVR" });
   });
 
   test("setup 在已有帳號時回 409", async () => {

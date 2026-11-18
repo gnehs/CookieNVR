@@ -70,7 +70,7 @@ test("low disk space evicts the oldest segments regardless of events, never the 
   free = 0;
   await retention.runOnce(NOW);
   expect(remaining()).toEqual([recording]);
-  expect(usageByCamera(db)).toEqual([{ cameraId: "cam1" as never, bytes: 500 }]);
+  expect(usageByCamera(db)).toEqual([{ cameraId: "cam1" as never, bytes: 500, oldestMs: NOW - 30_000 }]);
 });
 
 test("empty past day directories are removed but today's and tomorrow's are kept", async () => {
