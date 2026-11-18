@@ -1,4 +1,7 @@
 // 開發用假後端：bun run web/dev-mock.ts，之後開 http://localhost:48765
+// 開發用假後端的示範登入：啟動時就建好這兩個帳號，不會進到初始設定頁（MOCK_FRESH=1 時不建，用來測初始設定）
+const DEMO_ADMIN = { username: "admin", password: "admin1234" };
+const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,6 +41,12 @@ const now = () => Date.now();
 interface MockUser { id: number; username: string; password: string; role: Role; createdAt: number; lastLoginAt: number | null }
 const users: MockUser[] = [];
 let nextUserId = 1;
+const FRESH = process.env.MOCK_FRESH === "1";
+if (!FRESH) {
+  for (const [demo, role] of [[DEMO_ADMIN, "admin"], [DEMO_USER, "user"]] as const) {
+    users.push({ id: nextUserId++, username: demo.username, password: hash(demo.password), role, createdAt: now(), lastLoginAt: null });
+  }
+}
 const sessions = new Map<string, { userId: number; ua: string; ip: string; lastSeenAt: number }>();
 const tokens: { id: number; userId: number; name: string; prefix: string; createdAt: number; lastUsedAt: number | null }[] = [];
 let nextTokenId = 1;
@@ -470,3 +479,5 @@ Bun.serve({
   },
 });
 console.log(`mock NVR on http://localhost:${PORT}`);
+if (FRESH) console.log("MOCK_FRESH=1：沒有預建帳號，開啟後會進到初始設定");
+else console.log(`示範登入：${DEMO_ADMIN.username} / ${DEMO_ADMIN.password}（管理員），${DEMO_USER.username} / ${DEMO_USER.password}（一般使用者）`);
