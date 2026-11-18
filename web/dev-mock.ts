@@ -1,0 +1,322 @@
+// 開發用假後端：bun run web/dev-mock.ts，之後開 http://localhost:48765
+import { mkdirSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { CameraDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
+import index from "./index.html";
+
+const PORT = 48765;
+const cacheDir = join(tmpdir(), "cookienvr-web-mock");
+mkdirSync(cacheDir, { recursive: true });
+const segFile = join(cacheDir, "segment.mp4");
+const snapFile = join(cacheDir, "snap.jpg");
+if (!existsSync(segFile)) {
+  Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=15", "-t", "20", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "frag_keyframe+empty_moov+default_base_moof", segFile]);
+}
+if (!existsSync(snapFile)) {
+  Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=1", "-frames:v", "1", snapFile]);
+}
+const snapB64 = existsSync(snapFile) ? Buffer.from(await Bun.file(snapFile).arrayBuffer()).toString("base64") : null;
+
+const hash = (s: string) => new Bun.CryptoHasher("sha256").update(s).digest("hex");
+const now = () => Date.now();
+
+interface MockUser { id: number; username: string; password: string; role: Role; createdAt: number; lastLoginAt: number | null }
+const users: MockUser[] = [];
+let nextUserId = 1;
+const sessions = new Map<string, { userId: number; ua: string; ip: string; lastSeenAt: number }>();
+const tokens: { id: number; userId: number; name: string; prefix: string; createdAt: number; lastUsedAt: number | null }[] = [];
+let nextTokenId = 1;
+const fails = new Map<string, number>();
+
+let settings: Settings = {
+  siteName: "CookieNVR",
+  storagePath: "/data/recordings",
+  retention: { continuousDays: 7, eventDays: 30, minFreeBytes: 5 * 1024 ** 3 },
+  rtsp: { externalEnabled: true },
+};
+
+const cams: { id: CameraId; position: number; config: CameraConfig }[] = [];
+let camSeq = 1;
+function addCam(config: CameraConfig) {
+  const id = `cam${camSeq++}` as CameraId;
+  cams.push({ id, position: cams.length, config });
+  return cams[cams.length - 1]!;
+}
+addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
+addCam({ name: "車庫 <script>alert(1)</script>", enabled: true, connection: { type: "rtsp", mainUrl: "rtsp://u:p@192.168.1.60/s1", subUrl: "rtsp://u:p@192.168.1.60/s2", transport: "tcp" }, record: { enabled: true, audio: false, direct: true } });
+addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
+
+const segs: SegmentDto[] = [];
+{
+  let id = 1;
+  const base = new Date();
+  base.setSeconds(0, 0);
+  for (const cam of cams.slice(0, 2)) {
+    for (let d = 0; d < 3; d++) {
+      const dayStart = new Date(base.getFullYear(), base.getMonth(), base.getDate() - d).getTime();
+      const endLimit = d === 0 ? base.getTime() : dayStart + 86_400_000;
+      const from = d === 0 ? Math.max(dayStart, endLimit - 4 * 3600_000) : dayStart + 8 * 3600_000;
+      const to = d === 0 ? endLimit : dayStart + 20 * 3600_000;
+      for (let t = from; t < to; t += 60_000) {
+        const live = d === 0 && t + 60_000 >= endLimit && cam === cams[0];
+        segs.push({ id: id++, cameraId: cam.id, startMs: t, endMs: live ? null : t + 60_000, size: 1_800_000 + (id % 7) * 90_000 });
+      }
+    }
+  }
+}
+
+const workers: WorkerStatus[] = [
+  { id: "restream", kind: "restream", state: "running", unstable: false, pid: 4101, startedAt: now() - 3 * 3600_000, restarts: 0, lastRestart: null, stderrTail: [] },
+  ...cams.slice(0, 2).map((c, i): WorkerStatus => ({ id: `record:${c.id}`, kind: "record", state: i ? "backoff" : "running", unstable: i === 1, pid: i ? null : 4200 + i, startedAt: now() - 600_000, restarts: i ? 14 : 2, lastRestart: { reason: i ? "exit" : "stall", at: now() - 120_000, exitCode: i ? 1 : null }, stderrTail: i ? ["[tcp @ 0x1] Connection timed out", "rtsp://u:***@192.168.1.60/s1: Operation timed out"] : [] })),
+];
+
+function userDto(u: MockUser): UserDto {
+  return { id: u.id, username: u.username, role: u.role, createdAt: u.createdAt, lastLoginAt: u.lastLoginAt };
+}
+
+function camDto(c: (typeof cams)[number], admin: boolean): CameraDto {
+  const cfg: CameraConfig = admin ? c.config : JSON.parse(JSON.stringify(c.config).replace(/"password":"[^"]*"/g, '"password":""'));
+  const idx = cams.indexOf(c);
+  return {
+    id: c.id,
+    position: c.position,
+    config: cfg,
+    online: c.config.enabled && idx !== 1,
+    recording: c.config.enabled && c.config.record.enabled && idx === 0,
+    rtsp: { main: `rtsp://${"localhost"}:8554/${c.id}/main`, sub: `rtsp://localhost:8554/${c.id}/sub` },
+  };
+}
+
+const json = (data: unknown, status = 200) => Response.json(data, { status });
+const err = (status: number, error: string) => Response.json({ error }, { status });
+const noContent = () => new Response(null, { status: 204 });
+
+function cookieOf(req: Request, name: string) {
+  return req.headers.get("cookie")?.split(/;\s*/).map((p) => p.split("=")).find(([k]) => k === name)?.[1];
+}
+
+function principal(req: Request): MockUser | null {
+  const sid = cookieOf(req, "sid");
+  const s = sid ? sessions.get(sid) : undefined;
+  if (!s) return null;
+  s.lastSeenAt = now();
+  return users.find((u) => u.id === s.userId) ?? null;
+}
+
+function startSession(req: Request, u: MockUser): string {
+  const sid = crypto.randomUUID().replaceAll("-", "");
+  sessions.set(sid, { userId: u.id, ua: req.headers.get("user-agent") ?? "", ip: "127.0.0.1", lastSeenAt: now() });
+  u.lastLoginAt = now();
+  return sid;
+}
+
+const withCookie = (res: Response, sid: string) => {
+  res.headers.append("set-cookie", `sid=${sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+  return res;
+};
+
+async function serveSegment(req: Request): Promise<Response> {
+  const file = Bun.file(segFile);
+  const size = file.size;
+  const range = req.headers.get("range")?.match(/bytes=(\d*)-(\d*)/);
+  if (!range) return new Response(file, { headers: { "content-type": "video/mp4", "accept-ranges": "bytes" } });
+  const start = range[1] ? Number(range[1]) : 0;
+  const end = range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+  return new Response(file.slice(start, end + 1), {
+    status: 206,
+    headers: { "content-type": "video/mp4", "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${size}` },
+  });
+}
+
+async function api(req: Request, url: URL): Promise<Response> {
+  const path = url.pathname.slice(4);
+  const m = req.method;
+  const body: any = m === "GET" || m === "DELETE" ? null : await req.json().catch(() => ({}));
+  await Bun.sleep(80);
+
+  if (path === "/info" && m === "GET") return json({ version: "0.1.0-mock", apiVersion: 1, needsSetup: users.length === 0 });
+  if (path === "/auth/setup" && m === "POST") {
+    if (users.length) return err(409, "已經有帳號了");
+    if (!body.username || String(body.password ?? "").length < 8) return err(400, "密碼至少 8 個字元");
+    const u: MockUser = { id: nextUserId++, username: body.username, password: hash(body.password), role: "admin", createdAt: now(), lastLoginAt: null };
+    users.push(u);
+    return withCookie(json({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
+  }
+  if (path === "/auth/login" && m === "POST") {
+    const key = String(body.username);
+    if ((fails.get(key) ?? 0) >= 5) return err(429, "嘗試次數過多，請稍後再試");
+    const u = users.find((x) => x.username === body.username && x.password === hash(String(body.password)));
+    if (!u) {
+      fails.set(key, (fails.get(key) ?? 0) + 1);
+      return err(401, "帳號或密碼錯誤");
+    }
+    fails.delete(key);
+    return withCookie(json({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
+  }
+  if (path === "/auth/logout" && m === "POST") {
+    const sid = cookieOf(req, "sid");
+    if (sid) sessions.delete(sid);
+    return noContent();
+  }
+
+  const me = principal(req);
+  if (!me) return err(401, "請先登入");
+  const admin = me.role === "admin";
+  const needAdmin = () => (admin ? null : err(403, "需要管理員權限"));
+
+  if (path === "/me") {
+    if (m === "GET") return json({ id: me.id, username: me.username, role: me.role });
+    if (m === "PUT") {
+      if (me.password !== hash(String(body.currentPassword))) return err(403, "目前密碼不正確");
+      if (String(body.newPassword ?? "").length < 8) return err(400, "新密碼至少 8 個字元");
+      me.password = hash(body.newPassword);
+      const cur = cookieOf(req, "sid");
+      for (const [k, s] of sessions) if (s.userId === me.id && k !== cur) sessions.delete(k);
+      return noContent();
+    }
+  }
+  if (path === "/me/sessions" && m === "GET") {
+    const cur = cookieOf(req, "sid");
+    return json([...sessions].filter(([, s]) => s.userId === me.id).map(([id, s]) => ({ id, current: id === cur, userAgent: s.ua, ip: s.ip, lastSeenAt: s.lastSeenAt })));
+  }
+  let mm = path.match(/^\/me\/sessions\/(\w+)$/);
+  if (mm && m === "DELETE") {
+    sessions.delete(mm[1]!);
+    return noContent();
+  }
+  if (path === "/tokens") {
+    if (m === "GET") return json(tokens.filter((t) => t.userId === me.id));
+    if (m === "POST") {
+      const raw = `cnvr_${crypto.randomUUID().replaceAll("-", "")}`;
+      const t = { id: nextTokenId++, userId: me.id, name: String(body.name), prefix: raw.slice(0, 9), createdAt: now(), lastUsedAt: null };
+      tokens.push(t);
+      return json({ ...t, token: raw }, 201);
+    }
+  }
+  mm = path.match(/^\/tokens\/(\d+)$/);
+  if (mm && m === "DELETE") {
+    const i = tokens.findIndex((t) => t.id === Number(mm![1]));
+    if (i >= 0) tokens.splice(i, 1);
+    return noContent();
+  }
+
+  if (path === "/cameras" && m === "GET") return json(cams.map((c) => camDto(c, admin)));
+  mm = path.match(/^\/cameras\/([^/]+)\/days$/);
+  if (mm && m === "GET") {
+    const tz = url.searchParams.get("tz") ?? "UTC";
+    const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+    return json([...new Set(segs.filter((s) => s.cameraId === mm![1]).map((s) => fmt.format(s.startMs)))].sort());
+  }
+  mm = path.match(/^\/cameras\/([^/]+)\/recordings$/);
+  if (mm && m === "GET") {
+    const start = Number(url.searchParams.get("start"));
+    const end = Number(url.searchParams.get("end"));
+    return json(segs.filter((s) => s.cameraId === mm![1] && s.startMs >= start && s.startMs < end));
+  }
+  mm = path.match(/^\/segments\/(\d+)$/);
+  if (mm && m === "GET") return serveSegment(req);
+
+  const denied = path.startsWith("/cameras") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
+  if (denied) return denied;
+
+  if (path === "/cameras" && m === "POST") return json(camDto(addCam(body), true), 201);
+  if (path === "/cameras/test" && m === "POST") {
+    await Bun.sleep(900);
+    const host = body.type === "tapo" ? body.host : body.mainUrl;
+    if (String(host).includes("fail")) return json({ ok: false, error: "無法連線到相機：Connection refused" } satisfies ProbeResult);
+    return json({
+      ok: true,
+      main: { videoCodec: "h264", width: 2560, height: 1440, fps: 15, audioCodec: "pcm_alaw" },
+      sub: body.type === "rtsp" && !body.subUrl ? null : { videoCodec: "h264", width: 640, height: 360, fps: 15, audioCodec: null },
+      snapshotJpegBase64: snapB64,
+    } satisfies ProbeResult);
+  }
+  mm = path.match(/^\/cameras\/([^/]+)$/);
+  if (mm) {
+    const c = cams.find((x) => x.id === mm![1]);
+    if (!c) return err(404, "找不到攝影機");
+    if (m === "PUT") {
+      c.config = body;
+      return json(camDto(c, true));
+    }
+    if (m === "DELETE") {
+      cams.splice(cams.indexOf(c), 1);
+      return noContent();
+    }
+  }
+
+  if (path === "/users") {
+    if (m === "GET") return json(users.map(userDto));
+    if (m === "POST") {
+      if (users.some((u) => u.username === body.username)) return err(409, "帳號已存在");
+      const u: MockUser = { id: nextUserId++, username: body.username, password: hash(body.password), role: body.role, createdAt: now(), lastLoginAt: null };
+      users.push(u);
+      return json(userDto(u), 201);
+    }
+  }
+  mm = path.match(/^\/users\/(\d+)$/);
+  if (mm) {
+    const u = users.find((x) => x.id === Number(mm![1]));
+    if (!u) return err(404, "找不到使用者");
+    if (m === "PUT") {
+      if (body.role && u.role === "admin" && body.role !== "admin" && users.filter((x) => x.role === "admin").length === 1) return err(409, "至少要保留一位管理員");
+      if (body.role) u.role = body.role;
+      if (body.password) u.password = hash(body.password);
+      return json(userDto(u));
+    }
+    if (m === "DELETE") {
+      if (u.id === me.id) return err(409, "不能刪除自己");
+      users.splice(users.indexOf(u), 1);
+      return noContent();
+    }
+  }
+
+  if (path === "/settings") {
+    if (m === "GET") return json(settings);
+    if (m === "PUT") {
+      settings = { ...settings, ...body, retention: { ...settings.retention, ...body.retention }, rtsp: { ...settings.rtsp, ...body.rtsp } };
+      return json(settings);
+    }
+  }
+  if (path === "/system" && m === "GET") {
+    const sys: SystemDto = {
+      workers,
+      disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: 1.6 * 1024 ** 4 },
+      usage: cams.slice(0, 2).map((c, i) => ({ cameraId: c.id, bytes: (180 - i * 90) * 1024 ** 3 })),
+      logs: Array.from({ length: 60 }, (_, i) => `${new Date(now() - (60 - i) * 5000).toISOString()} INFO tick ${i} worker ok`),
+    };
+    return json(sys);
+  }
+  mm = path.match(/^\/system\/workers\/([^/]+)\/restart$/);
+  if (mm && m === "POST") {
+    const w = workers.find((x) => x.id === decodeURIComponent(mm![1]!));
+    if (!w) return err(404, "找不到 worker");
+    w.restarts++;
+    w.state = "running";
+    w.unstable = false;
+    w.startedAt = now();
+    w.lastRestart = { reason: "manual", at: now(), exitCode: null };
+    return noContent();
+  }
+  return err(404, "找不到路徑");
+}
+
+Bun.serve({
+  port: PORT,
+  routes: { "/": index },
+  development: true,
+  async fetch(req) {
+    const url = new URL(req.url);
+    if (url.pathname.startsWith("/api/")) {
+      try {
+        return await api(req, url);
+      } catch (e) {
+        return err(500, String(e));
+      }
+    }
+    return err(404, "not found");
+  },
+});
+console.log(`mock NVR on http://localhost:${PORT}`);
