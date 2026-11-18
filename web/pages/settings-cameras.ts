@@ -1,20 +1,32 @@
 import type { CameraDto, ProbeResult, StreamInfo } from "../../src/api-types.ts";
 import type { CameraConfig, CameraConnection } from "../../src/types.ts";
 import { api } from "../api.ts";
-import { badge, confirmDialog, copyWithToast, emptyState, errMsg, field, h, icon, toast } from "../dom.ts";
+import { badge, confirmDialog, copyWithToast, emptyState, errMsg, field, h, icon, panel, panelSection, switchInput, switchRow, tiles, toast } from "../dom.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { settingsLayout } from "./settings-shell.ts";
 
 export async function settingsCamerasPage(ctx: PageCtx): Promise<Node> {
   const box = h("div");
+  const count = h("span", { class: "hint" });
   const load = async () => {
     const cams = await api.cameras();
     if (!ctx.isCurrent()) return;
-    box.replaceChildren(cams.length === 0 ? emptyState("還沒有攝影機", "點右上角新增，支援 Tapo 與通用 RTSP。") : h("div", { class: "card flush" }, h("div", { class: "row-list" }, cams.map((c) => row(c, load)))));
+    count.textContent = cams.length ? `${cams.length} 台` : "";
+    box.replaceChildren(
+      cams.length === 0
+        ? h("div", { style: "padding:16px" }, emptyState("還沒有攝影機", "點右上角新增，支援 Tapo 與通用 RTSP。", undefined, "camera"))
+        : h("div", { class: "row-list" }, cams.map((c) => row(c, load))),
+    );
   };
   await load();
   ctx.every(5000, () => void load().catch(() => {}));
-  return settingsLayout("cameras", "攝影機", box, h("a", { class: "btn primary", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機"));
+  return settingsLayout(
+    "cameras",
+    panel(
+      { title: "攝影機", actions: [count, h("a", { class: "btn primary small", href: "#/settings/cameras/new" }, icon("plus", 15), "新增攝影機")] },
+      box,
+    ),
+  );
 }
 
 function row(cam: CameraDto, reload: () => Promise<void>): HTMLElement {
@@ -38,24 +50,31 @@ function row(cam: CameraDto, reload: () => Promise<void>): HTMLElement {
       toast(errMsg(e), "error");
     }
   };
+  const isTapo = c.connection.type === "tapo";
   return h(
     "div",
-    { class: "row-item", style: "flex-wrap:wrap" },
+    { class: "row-item" },
     h(
       "div",
       { class: "row-main" },
-      h("b", null, c.name),
-      h("small", null, c.connection.type === "tapo" ? `Tapo · ${c.connection.host}` : "通用 RTSP"),
+      h("span", { class: "row-ico" }, icon(isTapo ? "tapo" : "link", 18)),
+      h("div", { class: "row-text" }, h("b", null, c.name), h("small", null, c.connection.type === "tapo" ? `Tapo · ${c.connection.host}` : "通用 RTSP")),
     ),
-    h("div", { class: "badges" }, !c.enabled ? badge("已停用") : [badge(cam.online ? "上線" : "離線", cam.online ? "ok" : "bad"), badge(c.record.enabled ? (cam.recording ? "錄影中" : "未在錄影") : "錄影關閉", cam.recording ? "ok" : "muted")]),
     h(
       "div",
-      { class: "page-actions" },
+      { class: "badges" },
+      !c.enabled
+        ? badge("已停用")
+        : [badge(cam.online ? "上線" : "離線", cam.online ? "ok" : "warn"), badge(c.record.enabled ? (cam.recording ? "錄影中" : "未在錄影") : "錄影關閉", cam.recording ? "bad" : "muted")],
+    ),
+    h(
+      "div",
+      { class: "row-actions" },
       h("button", { class: "btn small", type: "button", onclick: () => copyWithToast(cam.rtsp.main, "主碼流網址") }, icon("copy", 15), "主碼流"),
       cam.rtsp.sub ? h("button", { class: "btn small", type: "button", onclick: () => copyWithToast(cam.rtsp.sub!, "子碼流網址") }, icon("copy", 15), "子碼流") : null,
       h("a", { class: "btn small", href: `#/settings/cameras/${encodeURIComponent(cam.id)}` }, icon("edit", 15), "編輯"),
       h("button", { class: "btn small", type: "button", onclick: toggle }, c.enabled ? "停用" : "啟用"),
-      h("button", { class: "btn small danger", type: "button", "aria-label": `刪除 ${c.name}`, onclick: remove }, icon("trash", 15)),
+      h("button", { class: "btn small icon-only danger", type: "button", "aria-label": `刪除 ${c.name}`, onclick: remove }, icon("trash", 15)),
     ),
   );
 }
@@ -141,7 +160,7 @@ function describeStream(label: string, s: StreamInfo): HTMLElement {
   return h(
     "div",
     null,
-    h("h3", null, label),
+    h("h4", null, label),
     h(
       "dl",
       null,
@@ -186,26 +205,27 @@ export async function cameraFormPage(_ctx: PageCtx, id: string | null): Promise<
     });
     return input;
   };
-  const check = (key: "enabled" | "onvifOn" | "recEnabled" | "recAudio" | "recDirect", title: string, desc?: string) => {
-    const input = h("input", { type: "checkbox", checked: s[key] });
-    input.addEventListener("change", () => {
-      s[key] = input.checked;
-      refresh();
-    });
-    return h("label", { class: "check" }, input, h("span", null, h("b", null, title), desc && h("small", null, desc)));
-  };
-
-  const typeSeg = h(
-    "div",
-    { class: "seg", role: "radiogroup", "aria-label": "攝影機類型" },
-    (["tapo", "rtsp"] as const).map((t) => {
-      const input = h("input", { type: "radio", name: "cam-type", value: t, checked: s.type === t });
-      input.addEventListener("change", () => {
-        s.type = t;
+  const check = (key: "enabled" | "onvifOn" | "recEnabled" | "recAudio" | "recDirect", title: string, desc?: string) =>
+    switchRow(
+      switchInput(s[key], (v) => {
+        s[key] = v;
         refresh();
-      });
-      return h("label", null, input, h("span", null, t === "tapo" ? "Tapo" : "通用 RTSP"));
-    }),
+      }),
+      title,
+      desc,
+    );
+
+  const typeTiles = tiles(
+    "攝影機類型",
+    [
+      { value: "tapo", label: "Tapo", desc: "填 IP 與相機帳號，其餘自動推導", icon: "tapo" },
+      { value: "rtsp", label: "通用 RTSP", desc: "任何支援 RTSP 的攝影機", icon: "link" },
+    ],
+    s.type,
+    (v) => {
+      s.type = v;
+      refresh();
+    },
   );
 
   const tapoNotes = h(
@@ -228,7 +248,7 @@ export async function cameraFormPage(_ctx: PageCtx, id: string | null): Promise<
 
   const tapoSection = h(
     "div",
-    { class: "group" },
+    { class: "form" },
     tapoNotes,
     field("相機 IP", text("tapoHost", { placeholder: "192.168.1.50", inputmode: "decimal" })),
     h("div", { class: "field-row" }, field("相機帳號", text("tapoUser", { autocomplete: "off" })), field("相機密碼", secret("tapoPass"))),
@@ -237,22 +257,28 @@ export async function cameraFormPage(_ctx: PageCtx, id: string | null): Promise<
 
   const onvifFields = h(
     "div",
-    { class: "group" },
+    { class: "form" },
     h("div", { class: "field-row" }, field("ONVIF 主機", text("ovHost", { placeholder: "192.168.1.50" })), field("Port", text("ovPort", { inputmode: "numeric" }))),
     h("div", { class: "field-row" }, field("ONVIF 帳號", text("ovUser")), field("ONVIF 密碼", secret("ovPass"))),
   );
-  const transportSelect = h("select", null, h("option", { value: "tcp" }, "TCP（建議）"), h("option", { value: "udp" }, "UDP"));
-  transportSelect.value = s.transport;
-  transportSelect.addEventListener("change", () => {
-    s.transport = transportSelect.value as "tcp" | "udp";
-    refresh();
-  });
+  const transportTiles = tiles(
+    "傳輸方式",
+    [
+      { value: "tcp", label: "TCP", desc: "建議。穩定、不掉封包" },
+      { value: "udp", label: "UDP", desc: "延遲較低，網路不穩時易花屏" },
+    ],
+    s.transport,
+    (v) => {
+      s.transport = v;
+      refresh();
+    },
+  );
   const rtspSection = h(
     "div",
-    { class: "group" },
+    { class: "form" },
     field("主碼流網址", text("mainUrl", { placeholder: "rtsp://帳號:密碼@192.168.1.60:554/stream1" }), "必填。帳密可直接寫在網址裡。"),
     field("子碼流網址", text("subUrl", { placeholder: "rtsp://…/stream2" }), "選填。留空時偵測會用主碼流縮小處理。"),
-    field("傳輸方式", transportSelect),
+    h("div", { class: "field" }, h("span", { class: "legend" }, "傳輸方式"), transportTiles),
     check("onvifOn", "啟用 ONVIF", "填了就能使用 PTZ 與相機事件。"),
     onvifFields,
   );
@@ -263,7 +289,7 @@ export async function cameraFormPage(_ctx: PageCtx, id: string | null): Promise<
   const errorEl = h("p", { class: "form-error", role: "alert" });
   const testBtn = h("button", { class: "btn", type: "button" }, icon("activity"), "測試連線");
   const saveBtn = h("button", { class: "btn primary", type: "submit" }, existing ? "儲存變更" : "新增攝影機");
-  const saveHint = h("small", { class: "hint" });
+  const saveHint = h("small", { class: "hint", "aria-live": "polite" });
 
   function refresh() {
     tapoSection.hidden = s.type !== "tapo";
@@ -305,8 +331,8 @@ export async function cameraFormPage(_ctx: PageCtx, id: string | null): Promise<
                 "div",
                 { class: "probe", style: "margin-top:10px" },
                 describeStream("主碼流", res.main),
-                res.sub ? describeStream("子碼流", res.sub) : h("div", null, h("h3", null, "子碼流"), h("p", { class: "muted" }, "未提供")),
-                res.snapshotJpegBase64 ? h("div", null, h("h3", null, "快照"), h("img", { alt: "相機快照", src: `data:image/jpeg;base64,${res.snapshotJpegBase64}` })) : null,
+                res.sub ? describeStream("子碼流", res.sub) : h("div", null, h("h4", null, "子碼流"), h("p", { class: "muted" }, "未提供")),
+                res.snapshotJpegBase64 ? h("div", null, h("h4", null, "快照"), h("img", { alt: "相機快照", src: `data:image/jpeg;base64,${res.snapshotJpegBase64}` })) : null,
               ),
             ),
           ),
@@ -321,28 +347,31 @@ export async function cameraFormPage(_ctx: PageCtx, id: string | null): Promise<
     }
   });
 
-  const form = h(
-    "form",
-    { class: "form wide", novalidate: true },
-    field("名稱", name),
-    h("div", { class: "field" }, h("span", { class: "legend" }, "類型"), typeSeg),
-    tapoSection,
-    rtspSection,
-    h("div", { class: "form-actions" }, testBtn),
-    resultBox,
-    h(
-      "div",
-      { class: "group" },
-      h("span", { class: "legend" }, "啟用與錄影"),
-      check("enabled", "啟用這台攝影機", "停用後會停止所有處理，但保留設定。"),
-      check("recEnabled", "連續錄影"),
-      check("recAudio", "錄製音訊"),
-      check("recDirect", "錄影直連相機", "不經 RTSP 轉發層，轉發層出問題時錄影不受影響；但會多佔相機一條連線。"),
+  const form = panel(
+    {
+      tag: "form",
+      class: "sticky-foot",
+      title: existing ? `編輯「${existing.config.name}」` : "新增攝影機",
+      back: "#/settings/cameras",
+      foot: [saveHint, errorEl, h("a", { class: "btn", href: "#/settings/cameras" }, "取消"), saveBtn],
+    },
+    panelSection("名稱", "顯示在攝影機列表與錄影頁。", h("div", { class: "narrow" }, name)),
+    panelSection("連線方式", null, typeTiles, tapoSection, rtspSection),
+    panelSection("測試連線", "儲存前必須先測試成功，確認碼流可以讀取。", h("div", { class: "form-actions" }, testBtn), resultBox),
+    panelSection(
+      "啟用與錄影",
+      null,
+      h(
+        "div",
+        { class: "switch-list" },
+        check("enabled", "啟用這台攝影機", "停用後會停止所有處理，但保留設定。"),
+        check("recEnabled", "連續錄影"),
+        check("recAudio", "錄製音訊"),
+        check("recDirect", "錄影直連相機", "不經 RTSP 轉發層，轉發層出問題時錄影不受影響；但會多佔相機一條連線。"),
+      ),
     ),
-    errorEl,
-    h("div", { class: "form-actions" }, saveBtn, h("a", { class: "btn", href: "#/settings/cameras" }, "取消")),
-    saveHint,
   );
+  name.setAttribute("aria-label", "名稱");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -376,5 +405,5 @@ export async function cameraFormPage(_ctx: PageCtx, id: string | null): Promise<
   });
 
   refresh();
-  return settingsLayout("cameras", existing ? `編輯「${existing.config.name}」` : "新增攝影機", form, h("a", { class: "btn small", href: "#/settings/cameras" }, icon("left", 15), "返回清單"));
+  return settingsLayout("cameras", form);
 }

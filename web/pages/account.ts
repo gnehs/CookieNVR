@@ -1,6 +1,7 @@
 import type { CreatedTokenDto, SessionDto, TokenDto } from "../../src/api-types.ts";
 import { api } from "../api.ts";
-import { badge, confirmDialog, copyWithToast, errMsg, field, formatAgo, h, icon, pageHeader, toast } from "../dom.ts";
+import { badge, confirmDialog, copyWithToast, errMsg, field, formatAgo, h, icon, nextId, panel, panelSection, toast } from "../dom.ts";
+import { ACCENTS, type ColorMode, getAccent, getMode, setAccent, setMode, systemPrefersDark } from "../theme.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 
@@ -10,14 +11,13 @@ function passwordSection(): HTMLElement {
   const again = h("input", { type: "password", autocomplete: "new-password", required: true });
   const error = h("p", { class: "form-error", role: "alert" });
   const submit = h("button", { class: "btn primary", type: "submit" }, "更新密碼");
-  const form = h(
-    "form",
-    { class: "form", novalidate: true },
-    field("目前密碼", cur),
-    field("新密碼", next, "至少 8 個字元。更新後，其他裝置會被登出。"),
-    field("再次輸入新密碼", again),
-    error,
-    h("div", null, submit),
+  const form = panel(
+    { tag: "form", title: "改密碼", foot: [error, submit] },
+    panelSection(
+      null,
+      null,
+      h("div", { class: "form narrow" }, field("目前密碼", cur), field("新密碼", next, "至少 8 個字元。更新後，其他裝置會被登出。"), field("再次輸入新密碼", again)),
+    ),
   );
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -28,7 +28,7 @@ function passwordSection(): HTMLElement {
     submit.disabled = true;
     try {
       await api.changePassword(cur.value, next.value);
-      form.reset();
+      (form as HTMLFormElement).reset();
       toast("已更新密碼");
     } catch (err) {
       error.textContent = errMsg(err);
@@ -36,11 +36,11 @@ function passwordSection(): HTMLElement {
       submit.disabled = false;
     }
   });
-  return h("section", { class: "section" }, h("h2", null, "改密碼"), h("div", { class: "card" }, form));
+  return form;
 }
 
 function sessionsSection(): HTMLElement {
-  const box = h("div", { class: "card flush" });
+  const box = h("div");
   const load = async () => {
     try {
       const list = await api.sessions();
@@ -52,7 +52,12 @@ function sessionsSection(): HTMLElement {
             h(
               "div",
               { class: "row-item" },
-              h("div", { class: "row-main" }, h("b", null, describeUa(s.userAgent)), h("small", null, `${s.ip} · 最近使用 ${formatAgo(s.lastSeenAt)}`)),
+              h(
+                "div",
+                { class: "row-main" },
+                h("span", { class: "row-ico" }, icon("monitor", 18)),
+                h("div", { class: "row-text" }, h("b", null, describeUa(s.userAgent)), h("small", null, `${s.ip} · 最近使用 ${formatAgo(s.lastSeenAt)}`)),
+              ),
               s.current
                 ? badge("目前裝置", "ok")
                 : h(
@@ -79,11 +84,11 @@ function sessionsSection(): HTMLElement {
         ),
       );
     } catch (e) {
-      box.replaceChildren(h("p", { class: "form-error", style: "padding:14px" }, errMsg(e)));
+      box.replaceChildren(h("p", { class: "form-error", style: "padding:16px" }, errMsg(e)));
     }
   };
   void load();
-  return h("section", { class: "section" }, h("h2", null, "登入裝置"), box);
+  return panel({ title: "登入裝置" }, box);
 }
 
 function describeUa(ua: string): string {
@@ -93,7 +98,7 @@ function describeUa(ua: string): string {
 }
 
 function tokensSection(): HTMLElement {
-  const list = h("div", { class: "card flush" });
+  const list = h("div");
   const created = h("div", { "aria-live": "polite" });
   const name = h("input", { type: "text", maxlength: 60, placeholder: "例如：Home Assistant", autocomplete: "off" });
   const error = h("p", { class: "form-error", role: "alert" });
@@ -104,7 +109,7 @@ function tokensSection(): HTMLElement {
       const tokens = await api.tokens();
       list.replaceChildren(
         tokens.length === 0
-          ? h("p", { class: "muted", style: "padding:14px" }, "還沒有 API Token。")
+          ? h("p", { class: "muted", style: "padding:16px 22px" }, "還沒有 API Token。")
           : h(
               "div",
               { class: "row-list" },
@@ -112,7 +117,12 @@ function tokensSection(): HTMLElement {
                 h(
                   "div",
                   { class: "row-item" },
-                  h("div", { class: "row-main" }, h("b", null, t.name), h("small", null, `${t.prefix}…  ·  建立於 ${formatAgo(t.createdAt)}  ·  最後使用 ${formatAgo(t.lastUsedAt)}`)),
+                  h(
+                    "div",
+                    { class: "row-main" },
+                    h("span", { class: "row-ico" }, icon("key", 18)),
+                    h("div", { class: "row-text" }, h("b", null, t.name), h("small", null, `${t.prefix}… · 建立於 ${formatAgo(t.createdAt)} · 最後使用 ${formatAgo(t.lastUsedAt)}`)),
+                  ),
                   h(
                     "button",
                     {
@@ -137,11 +147,11 @@ function tokensSection(): HTMLElement {
             ),
       );
     } catch (e) {
-      list.replaceChildren(h("p", { class: "form-error", style: "padding:14px" }, errMsg(e)));
+      list.replaceChildren(h("p", { class: "form-error", style: "padding:16px" }, errMsg(e)));
     }
   };
 
-  const form = h("form", { class: "form", style: "max-width:none", novalidate: true }, h("div", { class: "form-actions" }, h("div", { style: "flex:1;min-width:200px" }, field("新增 Token 名稱", name)), h("div", { style: "align-self:end" }, submit)), error);
+  const form = h("form", { class: "form", novalidate: true }, h("div", { class: "form-actions", style: "align-items:end" }, h("div", { style: "flex:1;min-width:200px" }, field("新增 Token 名稱", name)), submit), error);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     error.textContent = "";
@@ -153,7 +163,7 @@ function tokensSection(): HTMLElement {
       created.replaceChildren(
         h(
           "div",
-          { class: "callout warn", style: "margin-bottom:12px" },
+          { class: "callout warn" },
           icon("key"),
           h(
             "div",
@@ -178,10 +188,67 @@ function tokensSection(): HTMLElement {
     }
   });
   void load();
-  return h("section", { class: "section" }, h("h2", null, "API Token"), h("p", { class: "hint", style: "margin-bottom:10px" }, "給 Home Assistant、電視牆或腳本使用。Token 繼承你的角色，用法是 Authorization: Bearer <token>。"), created, h("div", { class: "card", style: "margin-bottom:10px" }, form), list);
+  const listSection = h("div", { class: "panel-section", style: "padding:0" }, list);
+  return panel(
+    { title: "API Token" },
+    panelSection(null, "給 Home Assistant、電視牆或腳本使用。Token 繼承你的角色，用法是 Authorization: Bearer <token>。", created, form),
+    listSection,
+  );
 }
 
-export function accountPage(_ctx: PageCtx): Node {
+function modeThumb(mode: ColorMode): HTMLElement {
+  const pane = (dark: boolean) => h("span", { class: `thumb-inner${dark ? " dark" : ""}` }, h("i"), h("i"));
+  return h("span", { class: "thumb", "aria-hidden": "true" }, mode === "system" ? h("span", { class: "thumb-split" }, pane(false), pane(true)) : pane(mode === "dark"));
+}
+
+function appearanceSection(ctx: PageCtx): HTMLElement {
+  const modeName = nextId("mode");
+  const systemNow = h("small");
+  const syncSystem = () => (systemNow.textContent = `目前為${systemPrefersDark.matches ? "深色" : "淺色"}`);
+  syncSystem();
+  systemPrefersDark.addEventListener("change", syncSystem);
+  ctx.onCleanup(() => systemPrefersDark.removeEventListener("change", syncSystem));
+  const current = getMode();
+  const modes: [ColorMode, string][] = [
+    ["light", "淺色"],
+    ["dark", "深色"],
+    ["system", "跟隨系統"],
+  ];
+  const modeGroup = h(
+    "div",
+    { class: "tiles modes", role: "radiogroup", "aria-label": "色彩模式" },
+    modes.map(([value, label]) => {
+      const input = h("input", { type: "radio", name: modeName, value, checked: value === current, "aria-label": label });
+      input.addEventListener("change", () => input.checked && setMode(value));
+      return h("label", { class: "tile" }, input, modeThumb(value), h("span", { class: "tile-label" }, label, value === "system" ? systemNow : null));
+    }),
+  );
+
+  const accentName = nextId("accent");
+  const accent = getAccent();
+  const swatches = h(
+    "div",
+    { class: "swatches", role: "radiogroup", "aria-label": "主色" },
+    ACCENTS.map((a) => {
+      const input = h("input", { type: "radio", name: accentName, value: a.id, checked: a.id === accent, "aria-label": a.label });
+      input.addEventListener("change", () => input.checked && setAccent(a.id));
+      return h(
+        "label",
+        { class: "swatch", "data-accent": a.id },
+        input,
+        h("span", { class: "swatch-face" }, h("span", { class: "swatch-dot", "aria-hidden": "true" }, icon("check", 15)), a.label),
+      );
+    }),
+  );
+
+  return panel(
+    { title: "外觀", actions: h("span", { class: "hint" }, "只套用在這個瀏覽器") },
+    panelSection("色彩模式", "切換淺色或深色，或讓 CookieNVR 跟著系統設定自動切換。", modeGroup),
+    panelSection("主色", "用在按鈕、選取狀態與導覽的強調色。", swatches),
+  );
+}
+
+export function accountPage(ctx: PageCtx): Node {
   const logout = h("button", { class: "btn", type: "button" }, icon("logout"), "登出");
   logout.addEventListener("click", async () => {
     await api.logout().catch(() => {});
@@ -189,13 +256,21 @@ export function accountPage(_ctx: PageCtx): Node {
     navigate("/login");
     location.reload();
   });
+  const me = state.me;
   return h(
     "div",
     null,
-    pageHeader("帳號", logout),
-    h("p", { class: "muted" }, `${state.me?.username}（${state.me?.role === "admin" ? "管理員" : "一般使用者"}）`),
-    passwordSection(),
-    sessionsSection(),
-    tokensSection(),
+    h(
+      "header",
+      { class: "page-head" },
+      h(
+        "div",
+        { class: "row-main", style: "flex:none" },
+        h("span", { class: "avatar", style: "width:48px;height:48px;font-size:20px", "aria-hidden": "true" }, me?.username.slice(0, 1) ?? ""),
+        h("div", null, h("h1", null, me?.username ?? "帳號"), h("p", null, me?.role === "admin" ? "管理員" : "一般使用者")),
+      ),
+      h("div", { class: "page-actions" }, logout),
+    ),
+    h("div", { class: "stack" }, appearanceSection(ctx), passwordSection(), sessionsSection(), tokensSection()),
   );
 }

@@ -46,6 +46,7 @@ function addCam(config: CameraConfig) {
 }
 addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 addCam({ name: "車庫 <script>alert(1)</script>", enabled: true, connection: { type: "rtsp", mainUrl: "rtsp://u:p@192.168.1.60/s1", subUrl: "rtsp://u:p@192.168.1.60/s2", transport: "tcp" }, record: { enabled: true, audio: false, direct: true } });
+addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
 
 const segs: SegmentDto[] = [];
@@ -203,6 +204,14 @@ async function api(req: Request, url: URL): Promise<Response> {
   }
 
   if (path === "/cameras" && m === "GET") return json(cams.map((c) => camDto(c, admin)));
+  mm = path.match(/^\/cameras\/([^/]+)\/snapshot\.jpg$/);
+  if (mm && m === "GET") {
+    const c = cams.find((x) => x.id === mm![1]);
+    if (!c) return err(404, "找不到攝影機");
+    const dto = camDto(c, admin);
+    if (!dto.online || !existsSync(snapFile)) return err(503, "目前沒有快照");
+    return new Response(Bun.file(snapFile), { headers: { "content-type": "image/jpeg", "cache-control": "no-store" } });
+  }
   mm = path.match(/^\/cameras\/([^/]+)\/days$/);
   if (mm && m === "GET") {
     const tz = url.searchParams.get("tz") ?? "UTC";

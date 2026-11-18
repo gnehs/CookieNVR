@@ -52,6 +52,23 @@ const ICONS: Record<string, string> = {
   activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   hdd: '<rect x="3" y="13" width="18" height="7" rx="2"/><path d="M3 13l3-8h12l3 8M7 16.5v.01"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c2 .7 3.5 2.3 3.5 5.2"/>',
+  minus: '<path d="M5 12h14"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  "mic-off": '<path d="M15 9.5V6a3 3 0 0 0-5.8-1M9 9v2a3 3 0 0 0 4.6 2.5M5 11a7 7 0 0 0 11.3 5.5M19 11a7 7 0 0 1-.6 2.8M12 18v3M4 4l16 16"/>',
+  "wifi-off": '<path d="M2 8.8a15 15 0 0 1 4.2-2.6M10.7 5.1A15 15 0 0 1 22 8.8M5 12.5a10 10 0 0 1 5.2-2.7M16.3 10.7a10 10 0 0 1 2.7 1.8M8.5 16a5 5 0 0 1 7 0M12 19.5v.01M3 3l18 18"/>',
+  pause: '<rect x="6.5" y="5" width="3.5" height="14" rx="1"/><rect x="14" y="5" width="3.5" height="14" rx="1"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  route: '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  server: '<rect x="3.5" y="4" width="17" height="7" rx="2"/><rect x="3.5" y="13" width="17" height="7" rx="2"/><path d="M7.5 7.5v.01M7.5 16.5v.01"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/>',
+  tapo: '<rect x="6" y="3" width="12" height="13" rx="6"/><circle cx="12" cy="9.5" r="2.5"/><path d="M9 21h6M12 16v5"/>',
+  rec: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/>',
 };
 
 export function icon(name: keyof typeof ICONS | string, size = 18): HTMLSpanElement {
@@ -228,10 +245,124 @@ export function errorBox(message: string, retry?: () => void): HTMLElement {
   );
 }
 
-export function emptyState(title: string, body?: string, action?: Node): HTMLElement {
-  return h("div", { class: "empty" }, h("h3", null, title), body && h("p", null, body), action);
+export function emptyState(title: string, body?: string, action?: Node, iconName = "film"): HTMLElement {
+  return h("div", { class: "empty" }, h("span", { class: "empty-ico" }, icon(iconName, 22)), h("h3", null, title), body && h("p", null, body), action);
 }
 
 export function pageHeader(title: string, ...actions: Child[]): HTMLElement {
   return h("header", { class: "page-head" }, h("h1", null, title), h("div", { class: "page-actions" }, actions));
+}
+
+/** 巢狀面板：外框帶標題列，內面板放 section，底部可選動作列 */
+export function panel(
+  opts: { title?: Child; back?: string; actions?: Child; foot?: Child; tag?: "section" | "form"; class?: string; flush?: boolean },
+  ...sections: Child[]
+): HTMLElement {
+  const head =
+    opts.title || opts.back || opts.actions
+      ? h(
+          "div",
+          { class: "panel-head" },
+          opts.back ? h("a", { class: "back-btn", href: opts.back, "aria-label": "返回" }, icon("left", 16)) : null,
+          opts.title ? h("h2", null, opts.title) : h("span", { style: "flex:1" }),
+          opts.actions,
+        )
+      : null;
+  return h(
+    opts.tag ?? "section",
+    { class: `panel${opts.class ? ` ${opts.class}` : ""}`, novalidate: opts.tag === "form" ? true : null },
+    head,
+    h("div", { class: `panel-body${opts.flush ? " flush" : ""}` }, sections),
+    opts.foot ? h("div", { class: "panel-foot" }, opts.foot) : null,
+  );
+}
+
+export function panelSection(title: string | null, desc: string | null, ...content: Child[]): HTMLElement {
+  return h(
+    "div",
+    { class: "panel-section" },
+    title || desc ? h("header", null, title && h("h3", null, title), desc && h("p", null, desc)) : null,
+    content,
+  );
+}
+
+export function switchInput(checked: boolean, onChange?: (v: boolean) => void): HTMLInputElement {
+  const input = h("input", { type: "checkbox", class: "switch", role: "switch", checked });
+  if (onChange) input.addEventListener("change", () => onChange(input.checked));
+  return input;
+}
+
+export function switchRow(input: HTMLInputElement, title: string, desc?: string): HTMLLabelElement {
+  return h("label", { class: "switch-row" }, h("span", null, h("b", null, title), desc && h("small", null, desc)), input);
+}
+
+export interface TileOption<V extends string> {
+  value: V;
+  label: string;
+  desc?: string;
+  icon?: string;
+}
+
+/** 選項磚：用原生 radio 保留方向鍵切換與 radiogroup 語意 */
+export function tiles<V extends string>(
+  label: string,
+  options: TileOption<V>[],
+  value: V,
+  onChange: (v: V) => void,
+): HTMLElement {
+  const name = nextId("tile");
+  return h(
+    "div",
+    { class: "tiles", role: "radiogroup", "aria-label": label },
+    options.map((o) => {
+      const input = h("input", { type: "radio", name, value: o.value, checked: o.value === value, "aria-label": o.desc ? `${o.label}，${o.desc}` : o.label });
+      input.addEventListener("change", () => input.checked && onChange(o.value));
+      return h(
+        "label",
+        { class: "tile" },
+        input,
+        h(
+          "span",
+          { class: "tile-face" },
+          o.icon ? h("span", { class: "tile-ico" }, icon(o.icon, 18)) : null,
+          h("b", null, o.label),
+          o.desc && h("small", null, o.desc),
+        ),
+      );
+    }),
+  );
+}
+
+/** 膠囊分段控制，適合 2–5 個短選項（例如時間軸的縮放級距） */
+export function segmented<V extends string>(label: string, options: { value: V; label: string }[], value: V, onChange: (v: V) => void): HTMLElement {
+  const name = nextId("seg");
+  return h(
+    "div",
+    { class: "segmented", role: "radiogroup", "aria-label": label },
+    options.map((o) => {
+      const input = h("input", { type: "radio", name, value: o.value, checked: o.value === value });
+      input.addEventListener("change", () => input.checked && onChange(o.value));
+      return h("label", null, input, h("span", null, o.label));
+    }),
+  );
+}
+
+/** 帶 −／＋ 的數值輸入，回傳容器；值仍從 input 讀 */
+export function stepper(input: HTMLInputElement, unit: string, label: string): HTMLElement {
+  const step = Number(input.step) || 1;
+  const min = input.min === "" ? -Infinity : Number(input.min);
+  const bump = (dir: 1 | -1) => {
+    const cur = Number(input.value) || 0;
+    const next = Math.max(min, Math.round((cur + dir * step) * 1000) / 1000);
+    input.value = String(next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  return h(
+    "div",
+    { class: "stepper" },
+    h("button", { type: "button", "aria-label": `減少${label}`, onclick: () => bump(-1) }, icon("minus", 16)),
+    input,
+    h("span", { class: "unit", "aria-hidden": "true" }, unit),
+    h("button", { type: "button", "aria-label": `增加${label}`, onclick: () => bump(1) }, icon("plus", 16)),
+  );
 }

@@ -1,5 +1,5 @@
 import { api } from "../api.ts";
-import { errMsg, field, h, icon } from "../dom.ts";
+import { errMsg, field, h, icon, panel } from "../dom.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 
@@ -61,15 +61,16 @@ function authForm(opts: {
   queueMicrotask(() => username.focus());
 
   return h(
-    "div",
+    "main",
     { class: "auth" },
-    h(
-      "div",
-      { class: "card auth-card" },
-      h("div", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 16)), state.siteName),
-      h("h1", null, opts.title),
-      opts.intro && h("p", { class: "muted" }, opts.intro),
-      form,
+    panel(
+      { title: h("span", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 17)), h("span", null, state.siteName)) },
+      h(
+        "div",
+        { class: "panel-section" },
+        h("header", null, h("h1", { class: "auth-title" }, opts.title), opts.intro && h("p", null, opts.intro)),
+        form,
+      ),
     ),
   );
 }

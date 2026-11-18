@@ -88,6 +88,7 @@ export const api = {
   recordings: (id: string, start: number, end: number) =>
     get<SegmentDto[]>(`/cameras/${encodeURIComponent(id)}/recordings?start=${start}&end=${end}`),
   segmentUrl: (id: number) => `/api/segments/${id}`,
+  snapshotUrl: (id: string, t: number) => `/api/cameras/${encodeURIComponent(id)}/snapshot.jpg?t=${t}`,
   system: () => get<SystemDto>("/system"),
   restartWorker: (id: string) => post<void>(`/system/workers/${encodeURIComponent(id)}/restart`),
 };

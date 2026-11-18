@@ -2,6 +2,7 @@ import { api, setUnauthorizedHandler } from "./api.ts";
 import { errMsg, errorBox, h, icon, spinner } from "./dom.ts";
 import { matchRoute, navigate, parseHash, type PageCtx, type Route } from "./router.ts";
 import { state } from "./state.ts";
+import "./theme.ts";
 import { loginPage, setupPage } from "./pages/auth.ts";
 import { camerasPage } from "./pages/cameras.ts";
 import { recordingsPage } from "./pages/recordings.ts";
@@ -75,13 +76,21 @@ function buildShell() {
 
 function renderNav(active?: string) {
   if (!shell) return;
-  const isAdmin = state.me?.role === "admin";
+  const me = state.me;
+  const isAdmin = me?.role === "admin";
   shell.nav.replaceChildren(
-    h("div", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 16)), state.siteName),
+    h("div", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 17)), h("span", null, state.siteName)),
     ...NAV.filter((n) => !n.admin || isAdmin).map((n) =>
       h("a", { class: "nav-link", href: n.href, "aria-current": n.section === active ? "page" : null }, icon(n.icon, 20), n.label),
     ),
-    h("div", { class: "sidebar-foot" }, icon("user", 16), state.me?.username ?? ""),
+    ...(me
+      ? [h(
+          "div",
+          { class: "sidebar-foot" },
+          h("span", { class: "avatar", "aria-hidden": "true" }, me.username.slice(0, 1)),
+          h("div", { class: "who" }, h("b", null, me.username), h("small", null, isAdmin ? "管理員" : "一般使用者")),
+        )]
+      : []),
   );
 }
 
