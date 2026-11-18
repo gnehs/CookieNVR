@@ -410,6 +410,8 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null): Promise<N
       record: { enabled: s.recEnabled, audio: s.recAudio, direct: s.recDirect },
     };
     const testing = needsTest();
+    // 上一次的失敗訊息在重新測試時先收起來，免得跟「正在測試」同時出現
+    resultSlot.hidden = true;
     saveBtn.setAttribute("aria-busy", "true");
     saveBtn.disabled = true;
     saveLabel.replaceChildren(h("span", { class: "spin", "aria-hidden": "true" }), testing ? " 正在測試連線…" : " 儲存中…");
