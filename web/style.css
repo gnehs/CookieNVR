@@ -170,6 +170,7 @@ button, a, summary, label { touch-action: manipulation; }
   .user-btn .who, .user-btn > .icon { display: none; }
   .user-btn .user-label { display: block; }
   .user-btn[data-current] { background: var(--accent-soft); box-shadow: none; color: var(--accent-text); --nav-bg: var(--accent-soft); }
+  .user-btn[data-current] .avatar { background: var(--surface); }
   .sidebar { --nav-bg: var(--surface); }
   .nav-link[aria-current="page"] { --nav-bg: var(--accent-soft); }
   .nav-link { flex: 1; flex-direction: column; gap: 2px; padding: 7px 4px 6px; font-size: 12px; border-radius: 16px; align-items: center; min-width: 0; }
@@ -283,20 +284,18 @@ button, a, summary, label { touch-action: manipulation; }
 .cam-tile[data-tone="warn"] .cam-status { background: var(--warn-soft); color: var(--warn-text); }
 .cam-tile[data-tone="warn"] .cam-status > i { background: var(--warn-text); }
 
-/* 有問題時首頁頁首的一條提醒，點了到狀態頁 */
+/* 有問題時首頁頁首的一條提醒：中性底色，紅點＋文字，右邊「查看」 */
 .home-alert {
-  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 14px; margin: -6px 0 20px;
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 14px 10px 16px; margin: -6px 0 20px;
   border-radius: var(--r); text-decoration: none; font-weight: 600; font-size: 14.5px;
-  background: var(--bad-soft); color: var(--bad-text); border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--border));
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
   transition: background-color 150ms ease, transform var(--dur-1) var(--ease-out);
 }
-.home-alert[data-tone="warn"] { background: var(--warn-soft); color: var(--warn-text); border-color: color-mix(in srgb, var(--warn) 32%, var(--border)); }
+.home-alert-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); flex: none; }
+.home-alert[data-tone="warn"] .home-alert-dot { background: var(--warn); }
 .home-alert-text { flex: 1; min-width: 0; }
-.home-alert-go { display: inline-flex; align-items: center; gap: 2px; font-size: 13.5px; flex: none; }
-@media (hover: hover) {
-  .home-alert:hover { background: color-mix(in srgb, var(--bad) 16%, var(--surface)); }
-  .home-alert[data-tone="warn"]:hover { background: color-mix(in srgb, var(--warn) 18%, var(--surface)); }
-}
+.home-alert-go { display: inline-flex; align-items: center; gap: 2px; font-size: 13.5px; flex: none; color: var(--muted); }
+@media (hover: hover) { .home-alert:hover { background: var(--fill); } }
 .home-alert:active { transform: scale(0.99); }
 .cam-name { padding: 9px 8px 11px; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -872,42 +871,52 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
 .estimate small { display: block; color: var(--text-2); font-size: 13px; margin-top: 2px; }
 
 /* ---------- 狀態頁 ---------- */
-.health {
-  display: flex; align-items: center; gap: 16px; padding: 20px 22px; border-radius: var(--r-xl);
-  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); min-width: 0;
+/* 總結與問題清單同一張卡：小圓點＋一句話，每個問題一列，紅色只在膠囊與圓點 */
+.health { overflow: hidden; }
+.health-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 20px 22px; }
+.health-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); flex: none; align-self: center; }
+.health[data-tone="bad"] .health-dot { background: var(--bad); }
+.health[data-tone="warn"] .health-dot { background: var(--warn); }
+.health-head h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.health-head p { color: var(--muted); font-size: 14px; }
+.issue-list { border-top: 1px solid var(--border); }
+.issue-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 16px 22px; }
+.issue-row + .issue-row { border-top: 1px solid var(--border); }
+.issue-thumbs { display: flex; align-self: start; }
+.issue-thumb {
+  width: 72px; height: 44px; border-radius: 10px; overflow: hidden; flex: none; display: grid; place-items: center;
+  background: var(--fill); box-shadow: 0 0 0 2px var(--surface);
 }
-.health-ico { width: 48px; height: 48px; border-radius: 15px; flex: none; display: grid; place-items: center; background: var(--ok-soft); color: var(--ok-text); }
-.health[data-tone="bad"] .health-ico { background: var(--bad-soft); color: var(--bad-text); }
-.health[data-tone="warn"] .health-ico { background: var(--warn-soft); color: var(--warn-text); }
-.health-text { flex: 1; min-width: 0; }
-.health-text h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; overflow-wrap: anywhere; }
-.health-text p { color: var(--muted); font-size: 14px; margin-top: 2px; }
-.issues { display: grid; gap: 12px; }
-.issue {
-  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; padding: 16px 18px; border-radius: var(--r-lg);
-  background: var(--surface); border: 1px solid color-mix(in srgb, var(--bad) 32%, var(--border));
-  box-shadow: inset 3px 0 0 var(--bad);
-}
-.issue[data-tone="warn"] { border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); box-shadow: inset 3px 0 0 var(--warn); }
-.issue > .icon { grid-row: span 3; margin-top: 2px; color: var(--bad-text); }
-.issue[data-tone="warn"] > .icon { color: var(--warn-text); }
-.issue h3 { font-size: 15.5px; font-weight: 650; overflow-wrap: anywhere; }
-.issue p { color: var(--text-2); font-size: 14px; max-width: 70ch; text-wrap: pretty; }
-.issue-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.status-list { display: grid; }
-.status-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 13px 18px; min-width: 0; }
+.issue-thumb + .issue-thumb { margin-left: -46px; }
+.issue-thumbs:has(> :nth-child(2)) .issue-thumb { width: 60px; height: 40px; }
+.issue-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.issue-thumb.sys { color: var(--text-2); }
+.issue-main { min-width: 0; display: grid; gap: 2px; }
+.issue-main h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; font-weight: 650; }
+.issue-who { overflow-wrap: anywhere; }
+.issue-next { color: var(--text-2); font-size: 14px; }
+.issue-why { font-size: 13px; color: var(--muted); }
+.issue-why > summary { cursor: pointer; width: fit-content; padding: 2px 0; }
+@media (hover: hover) { .issue-why > summary:hover { color: var(--text-2); } }
+.issue-why > p { margin-top: 4px; max-width: 62ch; color: var(--text-2); text-wrap: pretty; }
+.status-list { display: grid; border-top: 1px solid var(--border); }
+.card-title { font-size: 15px; font-weight: 650; padding: 16px 22px 14px; }
+.card-body { padding: 4px 22px 20px; }
+@media (max-width: 560px) { .card-title { padding: 14px 16px 12px; } .card-body { padding: 4px 16px 16px; } }
+.status-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 13px 22px; min-width: 0; }
 .status-row + .status-row { border-top: 1px solid var(--border); }
 .status-row b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .status-row small { display: block; color: var(--muted); font-size: 13px; }
 .status-row .badges { justify-content: flex-end; }
 .status-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; color: var(--muted); font-size: 13px; padding: 2px 4px; }
 @media (max-width: 560px) {
-  .health { padding: 16px; gap: 12px; }
-  .health-ico { width: 42px; height: 42px; border-radius: 13px; }
-  .health-text h2 { font-size: 18px; }
-  .status-row { padding: 12px 14px; grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .status-row .badges { justify-content: flex-start; }
-  .issue { padding: 14px; gap: 4px 10px; }
+  .health-head { padding: 16px; }
+  .issue-row { grid-template-columns: auto minmax(0, 1fr); padding: 14px 16px; column-gap: 12px; }
+  .issue-row > .btn { grid-column: 2; justify-self: start; margin-top: 8px; }
+  .issue-thumb { width: 56px; height: 36px; }
+  .issue-thumbs:has(> :nth-child(2)) .issue-thumb { width: 48px; height: 32px; }
+  .issue-thumb + .issue-thumb { margin-left: -36px; }
+  .status-row { padding: 12px 16px; }
 }
 
 /* ---------- 手機：點擊區至少 44×44，對話框與選單改成底部面板 ---------- */
@@ -920,8 +929,8 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
   .pill-nav a { min-height: 44px; }
   .segmented span { min-height: 44px; display: flex; align-items: center; justify-content: center; }
   /* 視覺上維持小尺寸，用偽元素把點擊區撐到 44×44 */
-  .btn.small, .back-btn, details.spec-details > summary, .text-link { position: relative; }
-  :is(.btn.small, .back-btn, details.spec-details > summary, .text-link)::after {
+  .btn.small, .back-btn, details.spec-details > summary, .issue-why > summary, details.more > summary, .text-link { position: relative; }
+  :is(.btn.small, .back-btn, details.spec-details > summary, .issue-why > summary, details.more > summary, .text-link)::after {
     content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); translate: -50% -50%;
   }
   .home-alert { min-height: 48px; }

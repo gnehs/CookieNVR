@@ -67,9 +67,12 @@ function addCam(config: CameraConfig) {
   return cams[cams.length - 1]!;
 }
 addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
-addCam({ name: "車庫 <script>alert(1)</script>", enabled: true, connection: { type: "rtsp", mainUrl: "rtsp://u:p@192.168.1.60/s1", subUrl: "rtsp://u:p@192.168.1.60/s2", transport: "tcp" }, record: { enabled: true, audio: false, direct: true } });
+addCam({ name: "車庫", enabled: true, connection: { type: "rtsp", mainUrl: "rtsp://u:p@192.168.1.60/s1", subUrl: "rtsp://u:p@192.168.1.60/s2", transport: "tcp" }, record: { enabled: true, audio: false, direct: true } });
 addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
+addCam({ name: "車道", enabled: true, connection: { type: "tapo", host: "192.168.1.53", username: "nvr", password: "secret123" }, record: { enabled: true, audio: false, direct: false } });
+// MOCK_XSS=1：多一台名稱是 HTML 的攝影機，用來確認所有頁面都把名稱當文字顯示；給使用者看的假後端不加
+if (process.env.MOCK_XSS === "1") addCam({ name: `<img src=x onerror="window.__xss=1">車庫<script>window.__xss=1</script>`, enabled: true, connection: { type: "tapo", host: "192.168.1.70", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 
 // ---------- 假錄影與事件：依「距今第幾天」與當天分鐘數決定有沒有錄影 ----------
 const MIN = 60_000;

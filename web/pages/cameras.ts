@@ -64,7 +64,7 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
   const list = h("div");
   const grid = h("div", { class: "cam-grid" });
   const alertText = h("span", { class: "home-alert-text" });
-  const alert = h("a", { class: "home-alert", href: "#/settings/status", hidden: true }, icon("alert-circle", 18), alertText, h("span", { class: "home-alert-go" }, "查看", icon("chevron", 16)));
+  const alert = h("a", { class: "home-alert", href: "#/settings/status", hidden: true }, h("i", { class: "home-alert-dot", "aria-hidden": "true" }), alertText, h("span", { class: "home-alert-go" }, "查看", icon("chevron", 16)));
   const isAdmin = state.me?.role === "admin";
   const tiles = new Map<string, Tile>();
 
