@@ -1,6 +1,7 @@
+import type { SystemDto } from "../../src/api-types.ts";
 import type { Settings } from "../../src/types.ts";
 import { api } from "../api.ts";
-import { choice, errMsg, field, formatBytes, h, icon, panel, panelSection, toast } from "../dom.ts";
+import { choice, confirmDialog, errMsg, field, formatBytes, h, icon, panel, panelSection, toast } from "../dom.ts";
 import type { PageCtx } from "../router.ts";
 import { estimateDays } from "../retention-estimate.ts";
 import { settingsLayout } from "./settings-shell.ts";
@@ -86,42 +87,72 @@ export async function settingsStoragePage(_ctx: PageCtx): Promise<Node> {
   });
 
   const names = new Map(cams.map((c) => [c.id as string, c.config.name]));
-  const total = sys.usage.reduce((a, u) => a + u.bytes, 0);
-  const max = Math.max(1, ...sys.usage.map((u) => u.bytes));
-  const usedPct = sys.disk.totalBytes ? ((sys.disk.totalBytes - sys.disk.freeBytes) / sys.disk.totalBytes) * 100 : 0;
-
-  const usage = panel(
-    { title: "空間使用" },
-    panelSection(
-      null,
-      null,
-      h(
-        "div",
-        { class: "disk" },
-        h("div", { class: "disk-big" }, h("b", null, formatBytes(sys.disk.freeBytes)), h("span", { class: "muted" }, `可用，共 ${formatBytes(sys.disk.totalBytes)}`)),
-        h("div", { class: `bar${usedPct > 95 ? " bad" : usedPct > 85 ? " warn" : ""}`, role: "img", "aria-label": `已用 ${usedPct.toFixed(0)}%` }, h("i", { style: `width:${usedPct.toFixed(1)}%` })),
-        h("div", { class: "disk-nums" }, h("span", { class: "num" }, `已用 ${usedPct.toFixed(0)}%`), h("span", { class: "num" }, `錄影共 ${formatBytes(total)}`)),
+  const buildUsage = (sys: SystemDto): HTMLElement => {
+    const total = sys.usage.reduce((a, u) => a + u.bytes, 0);
+    const orphaned = sys.usage.filter((u) => !names.has(u.cameraId));
+    const orphanBytes = orphaned.reduce((a, u) => a + u.bytes, 0);
+    // 已刪除的攝影機可能不只一台，但使用者只需要看到一列，清除也是一次全清
+    const rows = [
+      ...sys.usage.filter((u) => names.has(u.cameraId)).map((u) => ({ name: names.get(u.cameraId)!, bytes: u.bytes, orphan: false })),
+      ...(orphaned.length > 0 ? [{ name: "已刪除的攝影機", bytes: orphanBytes, orphan: true }] : []),
+    ];
+    const max = Math.max(1, ...rows.map((r) => r.bytes));
+    const usedPct = sys.disk.totalBytes ? ((sys.disk.totalBytes - sys.disk.freeBytes) / sys.disk.totalBytes) * 100 : 0;
+    const clearOrphans = async (button: HTMLButtonElement) => {
+      const ok = await confirmDialog(
+        "清除已刪除攝影機的錄影？",
+        `這些攝影機已經不在了，錄影會立刻永久刪除，無法復原，並釋放 ${formatBytes(orphanBytes)}。其他攝影機的錄影不受影響。`,
+        { confirmLabel: "清除錄影", danger: true },
+      );
+      if (!ok) return;
+      button.disabled = true;
+      try {
+        const res = await api.purgeOrphanedRecordings();
+        toast(`已清除，釋放 ${formatBytes(res.bytes)}`);
+        usageEl.replaceWith((usageEl = buildUsage(await api.system())));
+      } catch (err) {
+        toast(errMsg(err), "error");
+        button.disabled = false;
+      }
+    };
+    return panel(
+      { title: "空間使用" },
+      panelSection(
+        null,
+        null,
+        h(
+          "div",
+          { class: "disk" },
+          h("div", { class: "disk-big" }, h("b", null, formatBytes(sys.disk.freeBytes)), h("span", { class: "muted" }, `可用，共 ${formatBytes(sys.disk.totalBytes)}`)),
+          h("div", { class: `bar${usedPct > 95 ? " bad" : usedPct > 85 ? " warn" : ""}`, role: "img", "aria-label": `已用 ${usedPct.toFixed(0)}%` }, h("i", { style: `width:${usedPct.toFixed(1)}%` })),
+          h("div", { class: "disk-nums" }, h("span", { class: "num" }, `已用 ${usedPct.toFixed(0)}%`), h("span", { class: "num" }, `錄影共 ${formatBytes(total)}`)),
+        ),
       ),
-    ),
-    panelSection(
-      "各攝影機",
-      null,
-      sys.usage.length === 0
-        ? h("p", { class: "muted" }, "還沒有錄影。")
-        : h(
-            "div",
-            null,
-            ...sys.usage.map((u) =>
-              h(
-                "div",
-                { class: "usage-row" },
-                h("span", { title: names.get(u.cameraId) ?? "已刪除的攝影機" }, names.get(u.cameraId) ?? "已刪除的攝影機"),
-                h("div", { class: "bar", "aria-hidden": "true" }, h("i", { style: `width:${((u.bytes / max) * 100).toFixed(1)}%` })),
-                h("span", { class: "num" }, formatBytes(u.bytes)),
-              ),
+      panelSection(
+        "各攝影機",
+        null,
+        rows.length === 0
+          ? h("p", { class: "muted" }, "還沒有錄影。")
+          : h(
+              "div",
+              null,
+              ...rows.map((r) => {
+                const clear = !r.orphan
+                  ? null
+                  : h("button", { class: "btn small danger", type: "button", "aria-label": "清除已刪除攝影機的錄影", onclick: (e: Event) => void clearOrphans(e.currentTarget as HTMLButtonElement) }, "清除");
+                return h(
+                  "div",
+                  { class: `usage-row${clear ? " has-action" : ""}` },
+                  h("span", { title: r.name }, r.name),
+                  h("div", { class: "bar", "aria-hidden": "true" }, h("i", { style: `width:${((r.bytes / max) * 100).toFixed(1)}%` })),
+                  h("span", { class: "num" }, formatBytes(r.bytes)),
+                  clear,
+                );
+              }),
             ),
-          ),
-    ),
-  );
-  return settingsLayout("storage", h("div", { class: "stack" }, form, usage));
+      ),
+    );
+  };
+  let usageEl = buildUsage(sys);
+  return settingsLayout("storage", h("div", { class: "stack" }, form, usageEl));
 }

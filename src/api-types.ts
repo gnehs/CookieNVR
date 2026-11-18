@@ -85,6 +85,13 @@ export interface SystemDto {
   logs: string[];
 }
 
+/** 清除錄影的結果；bytes 是釋放的空間 */
+export interface PurgeDto {
+  segments: number;
+  events: number;
+  bytes: number;
+}
+
 export type SettingsDto = Settings;
 
 export interface EventDto {

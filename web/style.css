@@ -596,6 +596,11 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .disk-nums { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); flex-wrap: wrap; gap: 4px 12px; }
 .disk-nums .mono { overflow-wrap: anywhere; }
 .usage-row { display: grid; grid-template-columns: minmax(70px, 160px) 1fr auto; gap: 14px; align-items: center; padding: 11px 0; }
+.usage-row.has-action { grid-template-columns: minmax(70px, 160px) 1fr auto auto; }
+@media (max-width: 560px) {
+  .usage-row.has-action { grid-template-columns: 1fr auto auto; }
+  .usage-row.has-action .bar { display: none; }
+}
 .usage-row + .usage-row { border-top: 1px solid var(--border); }
 .usage-row > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .usage-row .num { text-align: right; }
@@ -768,6 +773,8 @@ dialog.dlg::backdrop { background: rgb(8 8 12 / 0.45); transition: opacity var(-
 dialog.dlg[data-closing]::backdrop { opacity: 0; }
 dialog.dlg h2 { font-size: 17px; font-weight: 650; margin-bottom: 10px; overflow-wrap: anywhere; }
 .dlg-text { margin-bottom: 18px; color: var(--text-2); overflow-wrap: anywhere; }
+.dlg-text:has(+ .dlg-option) { margin-bottom: 12px; }
+.dlg-option { padding-top: 14px; border-top: 1px solid var(--border); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
 #toasts { position: fixed; right: 16px; top: 16px; z-index: 100; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); pointer-events: none; }
 @media (max-width: 760px) { #toasts { top: auto; right: 16px; bottom: calc(92px + env(safe-area-inset-bottom)); } }

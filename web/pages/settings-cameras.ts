@@ -1,7 +1,7 @@
 import type { CameraDto, ProbeResult, StreamInfo } from "../../src/api-types.ts";
 import type { CameraConfig, CameraConnection } from "../../src/types.ts";
 import { api } from "../api.ts";
-import { badge, confirmDialog, copyButton, emptyState, errMsg, field, h, icon, menuButton, PageError, panel, panelSection, switchInput, switchRow, tiles, toast } from "../dom.ts";
+import { badge, copyButton, emptyState, errMsg, field, formatBytes, h, icon, menuButton, openDialog, PageError, panel, panelSection, switchInput, switchRow, tiles, toast } from "../dom.ts";
 import { explainProbe, maskedField, type ProbeField } from "../camera-form-logic.ts";
 import { cameraStatus } from "../health.ts";
 import { navigate, type PageCtx } from "../router.ts";
@@ -48,8 +48,8 @@ export async function settingsCamerasPage(ctx: PageCtx): Promise<Node> {
   return settingsLayout("cameras", h("div", null, toolbar, box));
 }
 
-/** 刪除攝影機只移除設定；已錄的片段留在硬碟上，照保留天數與最低剩餘空間清除，但介面上已經沒有入口可以回放 */
-async function deleteMessage(): Promise<string> {
+/** 不勾選時，刪除攝影機只移除設定；已錄的片段留在硬碟上，照保留天數與最低剩餘空間清除，但介面上已經沒有入口可以回放 */
+async function keepMessage(): Promise<string> {
   const lead = "會停止錄影並移除這台攝影機。已錄的影片會留在硬碟上，但之後無法再回放，";
   try {
     const { continuousDays: c, eventDays: e } = (await api.settings()).retention;
@@ -59,6 +59,30 @@ async function deleteMessage(): Promise<string> {
   } catch {
     return `${lead}會繼續佔用空間，直到超過保留天數才自動刪除。`;
   }
+}
+
+const PURGE_MESSAGE = "會停止錄影並移除這台攝影機，這台所有的錄影也會立刻永久刪除，無法復原。";
+
+/** 回傳 null 表示取消；true 表示連同錄影一起刪除。這台沒有任何錄影（bytes === 0）時不顯示勾選項。 */
+async function confirmDeleteCamera(name: string, bytes: number | undefined): Promise<boolean | null> {
+  const keep = await keepMessage();
+  const result = await openDialog<boolean>(`刪除「${name}」？`, (close) => {
+    const text = h("p", { class: "dlg-text", "aria-live": "polite" }, keep);
+    const confirm = h("button", { class: "btn danger solid", type: "button", autofocus: true }, "刪除攝影機");
+    const purge = switchInput(false, (on) => {
+      text.textContent = on ? PURGE_MESSAGE : keep;
+      confirm.textContent = on ? "刪除攝影機與錄影" : "刪除攝影機";
+    });
+    confirm.addEventListener("click", () => close(purge.checked));
+    return h(
+      "div",
+      null,
+      text,
+      bytes === 0 ? null : h("div", { class: "dlg-option" }, switchRow(purge, "同時刪除這台的錄影", bytes === undefined ? undefined : `會釋放 ${formatBytes(bytes)}`)),
+      h("div", { class: "dlg-actions" }, h("button", { class: "btn", type: "button", onclick: () => close() }, "取消"), confirm),
+    );
+  });
+  return result === undefined ? null : result;
 }
 
 function row(cam: CameraDto, reload: () => Promise<void>): HTMLElement {
@@ -73,9 +97,11 @@ function row(cam: CameraDto, reload: () => Promise<void>): HTMLElement {
     }
   };
   const remove = async () => {
-    if (!(await confirmDialog(`刪除「${c.name}」？`, await deleteMessage(), { confirmLabel: "刪除攝影機", danger: true }))) return;
+    const usage = await api.system().then((s) => s.usage.find((u) => u.cameraId === cam.id)?.bytes ?? 0, () => undefined);
+    const purge = await confirmDeleteCamera(c.name, usage);
+    if (purge === null) return;
     try {
-      await api.deleteCamera(cam.id);
+      await api.deleteCamera(cam.id, purge);
       toast(`已刪除「${c.name}」`);
       await reload();
     } catch (e) {

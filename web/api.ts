@@ -5,6 +5,7 @@ import type {
   InfoDto,
   MeDto,
   ProbeResult,
+  PurgeDto,
   SegmentDto,
   SessionDto,
   SettingsDto,
@@ -82,7 +83,9 @@ export const api = {
   cameras: () => get<CameraDto[]>("/cameras"),
   createCamera: (config: CameraConfig) => post<CameraDto>("/cameras", config),
   updateCamera: (id: string, config: CameraConfig) => put<CameraDto>(`/cameras/${encodeURIComponent(id)}`, config),
-  deleteCamera: (id: string) => del(`/cameras/${encodeURIComponent(id)}`),
+  deleteCamera: (id: string, deleteRecordings = false) =>
+    del(`/cameras/${encodeURIComponent(id)}${deleteRecordings ? "?recordings=delete" : ""}`),
+  purgeOrphanedRecordings: () => request<PurgeDto>("DELETE", "/recordings/orphaned"),
   testCamera: (connection: CameraConnection) => post<ProbeResult>("/cameras/test", connection),
   days: (id: string, tz: string) =>
     get<string[]>(`/cameras/${encodeURIComponent(id)}/days?tz=${encodeURIComponent(tz)}`),

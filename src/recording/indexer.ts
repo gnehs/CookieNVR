@@ -26,11 +26,20 @@ export interface Indexer {
   scanOnce(now: number): Promise<void>;
   /** Full startup reconciliation between disk and the segments table. */
   reconcile(now: number): Promise<void>;
+  /** Runs `fn` while no scan or reconcile is in flight, so it cannot be undone by a scan that read the disk earlier. */
+  exclusive<T>(fn: () => Promise<T>): Promise<T>;
 }
 
 export function createIndexer(deps: { db: Database; settings: () => Settings }): Indexer {
   const { db } = deps;
   const root = () => resolve(deps.settings().storagePath);
+
+  let tail: Promise<unknown> = Promise.resolve();
+  function exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const run = tail.then(fn, fn);
+    tail = run.catch(() => {});
+    return run;
+  }
 
   async function scan(days: (cameraDays: DayKey[]) => DayKey[]): Promise<DiskSegment[]> {
     const found: DiskSegment[] = [];
@@ -68,23 +77,27 @@ export function createIndexer(deps: { db: Database; settings: () => Settings }):
   }
 
   return {
-    async scanOnce(now) {
-      const wanted = new Set([dayKey(now - DAY_MS), dayKey(now)]);
-      apply(await scan((present) => present.filter((d) => wanted.has(d))), now);
-    },
+    exclusive,
 
-    async reconcile(now) {
-      const found = await scan((present) => present);
-      const onDisk = new Set(found.map((s) => s.path));
-      const missing: number[] = [];
-      for (const s of allSegments(db)) {
-        if (onDisk.has(s.path)) continue;
-        // Rows outside the current storagePath (it was changed) are checked individually.
-        if (!(await stat(s.path).then((st) => st.isFile(), () => false))) missing.push(s.id);
-      }
-      db.transaction(() => missing.forEach((id) => deleteSegment(db, id)))();
-      apply(found, now);
-    },
+    scanOnce: (now) =>
+      exclusive(async () => {
+        const wanted = new Set([dayKey(now - DAY_MS), dayKey(now)]);
+        apply(await scan((present) => present.filter((d) => wanted.has(d))), now);
+      }),
+
+    reconcile: (now) =>
+      exclusive(async () => {
+        const found = await scan((present) => present);
+        const onDisk = new Set(found.map((s) => s.path));
+        const missing: number[] = [];
+        for (const s of allSegments(db)) {
+          if (onDisk.has(s.path)) continue;
+          // Rows outside the current storagePath (it was changed) are checked individually.
+          if (!(await stat(s.path).then((st) => st.isFile(), () => false))) missing.push(s.id);
+        }
+        db.transaction(() => missing.forEach((id) => deleteSegment(db, id)))();
+        apply(found, now);
+      }),
   };
 }
 

@@ -3,3 +3,4 @@ export { createRetention, statfsFreeBytes, type FreeBytes, type Retention, type 
 export { recordingRoutes } from "./routes.ts";
 export { usageByCamera } from "./store.ts";
 export { ensureDayDirs, isRecording, recordWorkerSpec } from "./worker.ts";
+export { purgeCamera, purgeOrphans, type PurgeDeps, type PurgeResult } from "./purge.ts";

@@ -71,6 +71,10 @@ addCam({ name: "車庫", enabled: true, connection: { type: "rtsp", mainUrl: "rt
 addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
 addCam({ name: "車道", enabled: true, connection: { type: "tapo", host: "192.168.1.53", username: "nvr", password: "secret123" }, record: { enabled: true, audio: false, direct: false } });
+// 每台攝影機佔用的錄影空間；攝影機刪掉後沒清除的錄影會留在這裡，成為「已刪除的攝影機」
+const usage = new Map<string, { bytes: number; oldestMs: number }>(
+  cams.slice(0, 2).map((c, i) => [c.id, { bytes: (180 - i * 90) * 1024 ** 3, oldestMs: now() - (6 - i * 3) * 86_400_000 }]),
+);
 // MOCK_XSS=1：多一台名稱是 HTML 的攝影機，用來確認所有頁面都把名稱當文字顯示；給使用者看的假後端不加
 if (process.env.MOCK_XSS === "1") addCam({ name: `<img src=x onerror="window.__xss=1">車庫<script>window.__xss=1</script>`, enabled: true, connection: { type: "tapo", host: "192.168.1.70", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 
@@ -384,7 +388,10 @@ async function api(req: Request, url: URL): Promise<Response> {
       return json(camDto(c, true));
     }
     if (m === "DELETE") {
+      const recordings = url.searchParams.get("recordings");
+      if (recordings !== null && recordings !== "delete") return err(400, "recordings 只接受 delete");
       cams.splice(cams.indexOf(c), 1);
+      if (recordings === "delete") usage.delete(c.id);
       return noContent();
     }
   }
@@ -422,11 +429,22 @@ async function api(req: Request, url: URL): Promise<Response> {
       return json(settings);
     }
   }
+  if (path === "/recordings/orphaned" && m === "DELETE") {
+    let bytes = 0;
+    let segments = 0;
+    for (const [id, u] of [...usage]) {
+      if (cams.some((c) => c.id === id)) continue;
+      bytes += u.bytes;
+      segments += Math.round(u.bytes / 1_800_000);
+      usage.delete(id);
+    }
+    return json({ segments, events: 0, bytes });
+  }
   if (path === "/system" && m === "GET") {
     const sys: SystemDto = {
       workers,
       disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: 1.6 * 1024 ** 4 },
-      usage: cams.slice(0, 2).map((c, i) => ({ cameraId: c.id, bytes: (180 - i * 90) * 1024 ** 3, oldestMs: now() - (6 - i * 3) * DAY })),
+      usage: [...usage].map(([cameraId, u]) => ({ cameraId: cameraId as CameraId, ...u })),
       logs: Array.from({ length: 60 }, (_, i) => `${new Date(now() - (60 - i) * 5000).toISOString()} INFO tick ${i} worker ok`),
     };
     return json(sys);

@@ -10,6 +10,8 @@ export interface CameraDeps {
   probe: (conn: CameraConnection) => Promise<ProbeResult>;
   cameraStatus: (id: CameraId) => { online: boolean; recording: boolean };
   rtspUrls: (id: CameraId, req: Request) => { main: string; sub: string | null };
+  /** 攝影機已移除後呼叫；實際清除在背景進行，失敗由實作寫入日誌。 */
+  purgeRecordings: (id: CameraId) => void;
 }
 
 const stripUrlCredentials = (url: string) => url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/?#]*@/i, "$1");
@@ -28,7 +30,7 @@ export function redactConfig(config: CameraConfig): CameraConfig {
   return { ...config, connection };
 }
 
-export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls }: CameraDeps): Route[] {
+export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeRecordings }: CameraDeps): Route[] {
   const toDto = (camera: Camera, req: Request, admin: boolean): CameraDto => ({
     id: camera.id,
     position: camera.position,
@@ -85,7 +87,11 @@ export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls }: CameraD
       path: "/api/cameras/:id",
       access: "admin",
       handler(ctx) {
-        cameras.remove(find(ctx.params.id).id);
+        const recordings = ctx.url.searchParams.get("recordings");
+        if (recordings !== null && recordings !== "delete") throw new HttpError(400, "recordings 只接受 delete");
+        const { id } = find(ctx.params.id);
+        cameras.remove(id);
+        if (recordings === "delete") purgeRecordings(id);
         return noContent();
       },
     },

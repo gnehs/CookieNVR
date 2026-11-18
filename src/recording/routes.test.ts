@@ -10,7 +10,7 @@ import { tempSettings, writeSegment } from "./test-helpers.ts";
 async function setup() {
   const settings = await tempSettings();
   const db = openDb(":memory:");
-  const routes = recordingRoutes({ db });
+  const routes = recordingRoutes({ db, purgeOrphans: async () => ({ segments: 0, events: 0, bytes: 0 }) });
   const call = (path: string, routePath: string, params: Record<string, string>, headers: HeadersInit = {}) => {
     const route = routes.find((r) => r.path === routePath) as Route;
     const url = new URL(`http://nvr${path}`);
@@ -19,8 +19,10 @@ async function setup() {
   return { settings, db, call, indexer: createIndexer({ db, settings: () => settings }) };
 }
 
-test("every route requires a signed-in user", () => {
-  expect(recordingRoutes({ db: openDb(":memory:") }).map((r) => [r.method, r.path, r.access])).toEqual([
+test("route access levels", () => {
+  const routes = recordingRoutes({ db: openDb(":memory:"), purgeOrphans: async () => ({ segments: 0, events: 0, bytes: 0 }) });
+  expect(routes.map((r) => [r.method, r.path, r.access])).toEqual([
+    ["DELETE", "/api/recordings/orphaned", "admin"],
     ["GET", "/api/cameras/:id/days", "user"],
     ["GET", "/api/cameras/:id/recordings", "user"],
     ["GET", "/api/segments/:id", "user"],
@@ -94,4 +96,13 @@ test("segment download honours Range against the file's current size", async () 
   expect(past.headers.get("content-range")).toBe("bytes */16");
 
   expect((await call("/api/segments/999", "/api/segments/:id", { id: "999" })).status).toBe(404);
+});
+
+test("DELETE /api/recordings/orphaned reports what the purge freed", async () => {
+  const db = openDb(":memory:");
+  const route = recordingRoutes({ db, purgeOrphans: async () => ({ segments: 2, events: 1, bytes: 30 }) })[0] as Route;
+  const url = new URL("http://nvr/api/recordings/orphaned");
+  const res = await route.handler({ req: new Request(url, { method: "DELETE" }), url, params: {}, principal: null, ip: "127.0.0.1" });
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({ segments: 2, events: 1, bytes: 30 });
 });

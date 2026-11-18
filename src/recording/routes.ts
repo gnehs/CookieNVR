@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { stat } from "node:fs/promises";
-import type { ErrorDto, SegmentDto } from "../api-types.ts";
+import type { ErrorDto, PurgeDto, SegmentDto } from "../api-types.ts";
 import type { CameraId, Route, Segment } from "../types.ts";
 import { getSegment, quarterHourBuckets, segmentsInRange } from "./store.ts";
 
@@ -53,9 +53,17 @@ export function parseRange(header: string | null, size: number): ByteRange | "un
   return { start, end };
 }
 
-export function recordingRoutes(deps: { db: Database }): Route[] {
+export function recordingRoutes(deps: { db: Database; purgeOrphans: () => Promise<PurgeDto> }): Route[] {
   const { db } = deps;
   return [
+    {
+      method: "DELETE",
+      path: "/api/recordings/orphaned",
+      access: "admin",
+      async handler() {
+        return json(await deps.purgeOrphans());
+      },
+    },
     {
       method: "GET",
       path: "/api/cameras/:id/days",

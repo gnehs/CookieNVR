@@ -26,6 +26,7 @@ const tapo: CameraConfig = {
 };
 
 let restarted: string[];
+let purged: string[];
 let diagnosed: (string | null)[];
 let probed: unknown[];
 let call: (path: string, init?: RequestInit & { ip?: string; json?: unknown }) => Promise<Response>;
@@ -54,6 +55,7 @@ function cookieOf(res: Response): string {
 
 beforeEach(async () => {
   restarted = [];
+  purged = [];
   diagnosed = [];
   probed = [];
   const db = openDb(":memory:");
@@ -82,6 +84,7 @@ beforeEach(async () => {
       },
       cameraStatus: () => ({ online: true, recording: false }),
       rtspUrls: (id) => ({ main: `rtsp://nvr:8554/${id}/main`, sub: `rtsp://nvr:8554/${id}/sub` }),
+      purgeRecordings: (id) => void purged.push(id),
       supervisor: { restart: (id) => void restarted.push(id) },
     }),
     { method: "GET", path: "/internal/ping", access: "internal", handler: () => new Response("pong") },
@@ -381,6 +384,23 @@ describe("攝影機", () => {
     expect(user[0]?.rtsp.main).toBe(`rtsp://nvr:8554/${user[0]?.id}/main`);
   });
 
+  test("刪除時帶 recordings=delete 才會清錄影", async () => {
+    const create = async () =>
+      ((await (await call("/api/cameras", { method: "POST", ...as(adminCookie), json: camera })).json()) as CameraDto).id;
+    const keep = await create();
+    const drop = await create();
+    expect((await call(`/api/cameras/${keep}`, { method: "DELETE", ...as(adminCookie) })).status).toBe(204);
+    expect(purged).toEqual([]);
+    expect((await call(`/api/cameras/${drop}?recordings=keep`, { method: "DELETE", ...as(adminCookie) })).status).toBe(400);
+    expect(purged).toEqual([]);
+    expect((await call(`/api/cameras/${drop}?recordings=delete`, { method: "DELETE", ...as(userCookie) })).status).toBe(403);
+    expect(purged).toEqual([]);
+    expect((await call(`/api/cameras/${drop}?recordings=delete`, { method: "DELETE", ...as(adminCookie) })).status).toBe(204);
+    expect(purged).toEqual([drop]);
+    expect((await call(`/api/cameras/${drop}?recordings=delete`, { method: "DELETE", ...as(adminCookie) })).status).toBe(404);
+    expect(purged).toEqual([drop]);
+  });
+
   test("修改與刪除，找不到回 404", async () => {
     const { id } = (await (
       await call("/api/cameras", { method: "POST", ...as(adminCookie), json: camera })
@@ -395,6 +415,7 @@ describe("攝影機", () => {
     expect((await call(`/api/cameras/${id}`, { method: "DELETE", ...as(adminCookie) })).status).toBe(204);
     expect((await call(`/api/cameras/${id}`, { method: "DELETE", ...as(adminCookie) })).status).toBe(404);
     expect(await (await call("/api/cameras", as(adminCookie))).json()).toEqual([]);
+    expect(purged).toEqual([]);
   });
 
   test("驗證外部輸入", async () => {

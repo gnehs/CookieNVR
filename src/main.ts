@@ -17,6 +17,8 @@ import {
   createRetention,
   ensureDayDirs,
   isRecording,
+  purgeCamera,
+  purgeOrphans,
   recordingRoutes,
   recordWorkerSpec,
   usageByCamera,
@@ -50,6 +52,38 @@ const retention = createRetention({ db, settings: settings.get });
 
 function log(scope: string, error: unknown): void {
   console.error(`[${scope}]`, error instanceof Error ? error.message : error);
+}
+
+const purgeDeps = { db, storagePath: () => settings.get().storagePath, dataDir: env.dataDir };
+
+const recordWorkerId = (id: CameraId) => `record:${id}`;
+const hasRecordWorker = (id: CameraId) => supervisor.status().some((w) => w.id === recordWorkerId(id));
+
+/**
+ * The camera row is already gone, but its ffmpeg may still be writing until the supervisor has
+ * stopped it. Purging earlier would race the writer, and the indexer would register the new
+ * files again. So wait for the worker to be gone, then purge while no index scan is running.
+ */
+async function waitForRecordWorkerGone(id: CameraId): Promise<void> {
+  while (hasRecordWorker(id)) {
+    await new Promise<void>((resolve) => {
+      const unsubscribe = supervisor.subscribe((s) => {
+        if (s.id !== recordWorkerId(id) || s.state !== "stopped") return;
+        unsubscribe();
+        resolve();
+      });
+      if (!hasRecordWorker(id)) {
+        unsubscribe();
+        resolve();
+      }
+    });
+  }
+}
+
+function purgeCameraRecordings(id: CameraId): void {
+  void waitForRecordWorkerGone(id)
+    .then(() => indexer.exclusive(() => purgeCamera(purgeDeps, id)))
+    .catch((e) => log("purge", e));
 }
 
 function desiredWorkers(): WorkerSpec[] {
@@ -157,6 +191,7 @@ const routes = [
         sub: hasSub ? restream.externalUrl(host, id, "sub") : null,
       };
     },
+    purgeRecordings: purgeCameraRecordings,
     supervisor: {
       restart(id, reason) {
         if (!supervisor.status().some((w) => w.id === id)) throw new HttpError(404, "找不到這個 worker");
@@ -164,7 +199,11 @@ const routes = [
       },
     },
   }),
-  ...recordingRoutes({ db }),
+  ...recordingRoutes({
+    db,
+    purgeOrphans: () =>
+      indexer.exclusive(() => purgeOrphans(purgeDeps, (id) => cameras.get(id) !== null || hasRecordWorker(id))),
+  }),
   ...eventRoutes({ db, dataDir: env.dataDir }),
   createSnapshots({
     env,
