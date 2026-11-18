@@ -6,7 +6,7 @@ import { state } from "../state.ts";
 
 type Tone = "rec" | "idle" | "off" | "stop";
 
-const STATUS: Record<Tone, string> = { rec: "錄影中", idle: "未錄影", off: "離線", stop: "已停用" };
+const STATUS: Record<Tone, string> = { rec: "錄影中", idle: "未錄影", off: "連不上", stop: "已停用" };
 
 function toneOf(cam: CameraDto): Tone {
   if (!cam.config.enabled) return "stop";
@@ -70,7 +70,7 @@ function summary(cams: CameraDto[]): string {
   const rec = cams.filter((c) => toneOf(c) === "rec").length;
   const off = cams.filter((c) => toneOf(c) === "off").length;
   const parts = [`${cams.length} 台攝影機`, `${rec} 台錄影中`];
-  if (off) parts.push(`${off} 台離線`);
+  if (off) parts.push(`${off} 台連不上`);
   return parts.join("，");
 }
 
@@ -89,7 +89,7 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
       list.replaceChildren(
         emptyState(
           "還沒有攝影機",
-          isAdmin ? "新增第一台攝影機後就會開始錄影。" : "請管理員新增攝影機。",
+          isAdmin ? "加入第一台攝影機，馬上就會開始錄影。" : "請管理員加入攝影機。",
           isAdmin ? h("a", { class: "btn primary", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機") : undefined,
           "camera",
         ),
@@ -129,7 +129,7 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
       "header",
       { class: "page-head" },
       h("div", null, h("h1", null, "攝影機"), sub),
-      isAdmin ? h("div", { class: "page-actions" }, h("a", { class: "btn", href: "#/settings/cameras/new" }, icon("plus"), "新增")) : null,
+      isAdmin ? h("div", { class: "page-actions" }, h("a", { class: "btn", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機")) : null,
     ),
     list,
   );

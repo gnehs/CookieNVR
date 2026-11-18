@@ -86,8 +86,9 @@ function row(cam: CameraDto, reload: () => Promise<void>): HTMLElement {
     h(
       "div",
       { class: "row-actions" },
-      h("a", { class: "btn small", href: edit, "aria-label": `編輯「${c.name}」` }, "編輯"),
+      h("a", { class: "btn small edit-btn", href: edit, "aria-label": `編輯「${c.name}」` }, "編輯"),
       menuButton(`「${c.name}」的更多動作`, [
+        { label: "編輯", icon: "edit", onSelect: () => navigate(edit.slice(1)) },
         { label: "複製串流網址", icon: "copy", onSelect: () => void copyWithToast(cam.rtsp.main, "串流網址") },
         cam.rtsp.sub ? { label: "複製低畫質串流網址", icon: "copy", onSelect: () => void copyWithToast(cam.rtsp.sub!, "低畫質串流網址") } : null,
         { label: c.enabled ? "停用" : "啟用", icon: "power", onSelect: () => void toggle() },

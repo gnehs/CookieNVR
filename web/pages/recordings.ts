@@ -133,11 +133,8 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     h("div", { class: "pb-time" }, clock, clockDate),
     liveBadge,
     note,
-    h("span", { class: "spacer" }),
-    nowBtn,
-    rateSelect,
-    muteBtn,
-    fsBtn,
+    // 換行時整組靠右，不會散成左邊一排
+    h("div", { class: "pb-actions" }, nowBtn, rateSelect, muteBtn, fsBtn),
   );
   const playerPanel = h("section", { class: "panel pb-player", "aria-label": "播放器" }, h("div", { class: "panel-body" }, stage, controls));
 

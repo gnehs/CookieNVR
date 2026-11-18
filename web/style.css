@@ -169,6 +169,11 @@ button, a, summary, label { touch-action: manipulation; }
 }
 @media (hover: hover) { .pill-nav a:hover { color: var(--text); } }
 .pill-nav a[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+/* 手機上五個分頁平分整列，不需要橫向捲動才看得到「狀態」 */
+@media (max-width: 560px) {
+  .pill-nav { width: 100%; margin-bottom: 16px; }
+  .pill-nav a { flex: 1 1 auto; justify-content: center; padding: 6px 8px; font-size: 13.5px; }
+}
 
 /* ---------- nested panel（外框＋內面板＋動作列） ---------- */
 .panel {
@@ -455,10 +460,12 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 /* 攝影機清單：名稱、狀態、編輯＋更多，手機上也維持一列 */
 .cam-row { flex-wrap: nowrap; }
 .cam-row .row-main { flex: 1 1 auto; }
+.cam-row .row-actions { flex-wrap: nowrap; flex: none; }
 @media (max-width: 560px) {
   .row-item { padding: 12px 14px; gap: 10px; }
   .cam-row .row-ico { display: none; }
-  .cam-row .badge { order: 0; }
+  /* 名稱本身就連到編輯頁，「編輯」也在更多選單裡 */
+  .cam-row .edit-btn { display: none; }
 }
 
 /* 新增攝影機成功：快照＋碼流摘要 */
@@ -534,7 +541,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-overlay .callout { max-width: 420px; pointer-events: auto; }
 
 .pb-controls { display: flex; align-items: center; gap: 4px 10px; padding: 6px 2px 0; min-width: 0; flex-wrap: wrap; }
-.pb-controls .spacer { flex: 1; }
+.pb-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .pb-ctl {
   width: 40px; height: 40px; border-radius: 11px; border: 0; background: transparent; color: var(--text-2);
   display: grid; place-items: center; cursor: pointer; flex: none;
@@ -615,7 +622,7 @@ select.pb-rate option { background: var(--surface); color: var(--text); }
   .pb-toolbar .cam-pick select { flex: 1; }
   .pb-date { flex: 1 1 100%; }
   .pb-date select { flex: 1; min-width: 0; }
-  .pb-ctl-text span { display: none; }
+  .pb-ctl-text > span:not(.icon) { display: none; }
   .pb-ctl-text { padding: 0; width: 40px; justify-content: center; }
   .pb-grid { gap: 12px; }
   .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -8px; border-radius: 0 0 var(--r-xl) var(--r-xl); border-top: 0; }
