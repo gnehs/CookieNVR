@@ -1,7 +1,7 @@
 import type { UserDto } from "../../src/api-types.ts";
 import type { Role } from "../../src/types.ts";
 import { api } from "../api.ts";
-import { badge, confirmDialog, errMsg, field, formatAgo, h, icon, menuButton, openDialog, panel, segmented, tiles, toast } from "../dom.ts";
+import { confirmDialog, errMsg, field, formatAgo, h, icon, menuButton, openDialog, tiles, toast } from "../dom.ts";
 import type { PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 import { settingsLayout } from "./settings-shell.ts";
@@ -61,7 +61,7 @@ export async function settingsUsersPage(ctx: PageCtx): Promise<Node> {
     const users = await api.users();
     if (!ctx.isCurrent()) return;
     count.textContent = `共 ${users.length} 位`;
-    box.replaceChildren(h("div", { class: "row-list", role: "list" }, users.map((u) => userRow(u, load))));
+    box.replaceChildren(h("div", { class: "card row-list", role: "list" }, users.map((u) => userRow(u, load))));
   };
   await load();
   const add = h("button", { class: "btn primary small", type: "button" }, icon("plus", 15), "新增使用者");
@@ -76,7 +76,7 @@ export async function settingsUsersPage(ctx: PageCtx): Promise<Node> {
       toast(errMsg(e), "error");
     }
   });
-  return settingsLayout("users", panel({ actions: [count, add] }, box));
+  return settingsLayout("users", h("div", null, h("div", { class: "list-toolbar" }, count, add), box));
 }
 
 async function resetPassword(u: UserDto) {
@@ -101,45 +101,36 @@ async function remove(u: UserDto, reload: () => Promise<void>) {
   }
 }
 
+async function setRole(u: UserDto, role: Role, reload: () => Promise<void>) {
+  try {
+    await api.updateUser(u.id, { role });
+    toast(`「${u.username}」現在是${ROLE_LABEL[role]}`);
+  } catch (e) {
+    toast(errMsg(e), "error");
+  }
+  await reload();
+}
+
+/** 跟攝影機列同一種排法：頭像＋名稱＋副標題、更多選單，手機上也維持一列；角色寫在副標題，在選單裡改 */
 function userRow(u: UserDto, reload: () => Promise<void>): HTMLElement {
   const self = u.id === state.me?.id;
-  const roleCtl = segmented(
-    `${u.username} 的角色`,
-    [
-      { value: "user", label: "一般使用者" },
-      { value: "admin", label: "管理員" },
-    ],
-    u.role,
-    async (role: Role) => {
-      try {
-        await api.updateUser(u.id, { role });
-        toast(`「${u.username}」現在是${ROLE_LABEL[role]}`);
-      } catch (e) {
-        toast(errMsg(e), "error");
-      }
-      await reload();
-    },
-  );
+  const other: Role = u.role === "admin" ? "user" : "admin";
+  const sub = [self ? "你" : null, ROLE_LABEL[u.role], u.lastLoginAt ? `上次登入 ${formatAgo(u.lastLoginAt)}` : "還沒登入過"].filter(Boolean).join("・");
   return h(
     "div",
-    { class: "row-item", role: "listitem" },
+    { class: "row-item cam-row", role: "listitem" },
     h(
       "div",
       { class: "row-main" },
       h("span", { class: "avatar", "aria-hidden": "true" }, u.username.slice(0, 1)),
-      h(
-        "div",
-        { class: "row-text" },
-        h("b", { class: "user-name" }, h("span", { class: "truncate" }, u.username), self ? h("span", { class: "badge accent plain" }, "你") : null),
-        h("small", null, u.lastLoginAt ? `上次登入 ${formatAgo(u.lastLoginAt)}` : "還沒登入過"),
-      ),
+      h("div", { class: "row-text" }, h("b", { class: "truncate" }, u.username), h("small", { class: "truncate" }, sub)),
     ),
-    self ? badge(ROLE_LABEL[u.role], "muted") : roleCtl,
     h(
       "div",
       { class: "row-actions" },
       menuButton(`「${u.username}」的更多動作`, [
         { label: "重設密碼", icon: "key", onSelect: () => void resetPassword(u) },
+        self ? null : { label: other === "admin" ? "改成管理員" : "改成一般使用者", icon: "user", onSelect: () => void setRole(u, other, reload) },
         self ? null : { label: "刪除", icon: "trash", danger: true, onSelect: () => void remove(u, reload) },
       ]),
     ),

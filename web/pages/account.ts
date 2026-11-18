@@ -262,7 +262,7 @@ export function accountPage(ctx: PageCtx): Node {
   const me = state.me;
   return h(
     "div",
-    null,
+    { class: "form-page" },
     h(
       "header",
       { class: "page-head" },
