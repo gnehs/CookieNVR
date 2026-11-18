@@ -726,8 +726,8 @@ export class Timeline {
       cards.push({ c, top });
       this.hits.push({ a0: top, a1: bottom, b0: left - 6, b1: cardRight, cluster: c });
     }
-    // 播放頭先畫，卡片再蓋上去：線只出現在卡片之間的空隙，不會壓到卡片上的字
-    this.drawPlayhead(V.tickLeft - 10, this.w);
+    // 播放頭先畫，卡片再蓋上去：線只出現在卡片之間的空隙；起點在刻度文字右邊，不會壓到時間標籤
+    this.drawPlayhead(V.tickLeft - 4, this.w);
     for (const { c, top } of cards) this.drawCard(c, top, V.cardLeft, cardRight);
   }
 

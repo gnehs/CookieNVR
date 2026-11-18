@@ -623,7 +623,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-msg { padding: 8px 14px; border-radius: 99px; background: #18181b; color: #f4f4f5; font-size: 13px; font-weight: 550; }
 .pb-overlay .callout { max-width: 420px; pointer-events: auto; }
 
-.pb-controls { display: flex; align-items: center; gap: 4px 10px; padding: 6px 2px 0; min-width: 0; flex-wrap: wrap; }
+.pb-controls { display: flex; align-items: center; gap: 10px; padding: 6px 2px 0; min-width: 0; }
 .pb-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .pb-ctl {
   width: 40px; height: 40px; border-radius: 11px; border: 0; background: transparent; color: var(--text-2);
@@ -635,7 +635,9 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 .pb-controls > .pb-ctl:first-child { background: var(--accent); color: var(--accent-fg); }
 @media (hover: hover) { .pb-controls > .pb-ctl:first-child:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); color: var(--accent-fg); } }
-.pb-time { display: grid; line-height: 1.2; min-width: 0; }
+.pb-time { display: grid; line-height: 1.2; min-width: 0; flex: 1; }
+.pb-sub { display: flex; align-items: center; min-width: 0; white-space: nowrap; }
+.pb-sub .badge { padding: 0 8px; font-size: 11.5px; margin-top: 2px; }
 .pb-clock { font-size: 19px; font-weight: 700; letter-spacing: 0.01em; }
 .pb-time small { color: var(--muted); font-size: 12px; }
 .pb-ctl-text { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 600; }
@@ -648,7 +650,8 @@ select.pb-rate {
 @media (hover: hover) { select.pb-rate:hover { background: var(--fill); color: var(--text); } }
 select.pb-rate:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; box-shadow: none; }
 select.pb-rate option { background: var(--surface); color: var(--text); }
-.pb-note { font-size: 12.5px; color: var(--warn); font-weight: 600; }
+/* 跳過缺片的提示浮在畫面左下角，不佔控制列的位置 */
+.pb-note { position: absolute; left: 10px; bottom: 10px; padding: 5px 11px; border-radius: 99px; background: #18181b; color: #f6c46b; font-size: 12.5px; font-weight: 600; pointer-events: none; }
 
 .pb-timeline .panel-head { gap: 8px 12px; }
 .pb-timeline .panel-head h2 { flex: 1 1 auto; }
@@ -699,20 +702,38 @@ select.pb-rate option { background: var(--surface); color: var(--text); }
 .ev-text span { color: var(--muted); font-size: 12.5px; }
 
 @media (max-width: 760px) {
-  .pb-head { margin-bottom: 14px; }
-  .pb-toolbar { width: 100%; }
-  .pb-toolbar .cam-pick { flex: 1 1 100%; }
-  .pb-toolbar .cam-pick select { flex: 1; }
-  .pb-date { flex: 1 1 100%; }
+  /* 標題留給螢幕閱讀器；攝影機、日期、播放器在同一個黏在頂端的容器裡，中間沒有縫 */
+  .pb-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }
+  .main:has(> .pb) { padding-top: 0; }
+  .pb-player > .pb-toolbar { flex-wrap: nowrap; gap: 6px; padding: calc(4px + env(safe-area-inset-top)) 0 8px; }
+  .pb-toolbar .cam-pick { flex: 1 1 0; min-width: 0; }
+  .pb-toolbar .cam-pick .icon { display: none; }
+  .pb-toolbar .cam-pick select { flex: 1; max-width: none; }
+  .pb-date { flex: 1.5 1 0; gap: 2px; }
   .pb-date select { flex: 1; min-width: 0; }
+  .pb-date .btn.icon-only { width: 40px; flex: none; padding: 0; }
   .pb-ctl-text > span:not(.icon) { display: none; }
-  .pb-ctl-text { padding: 0; width: 40px; justify-content: center; }
+  .pb-ctl-text { padding: 0; justify-content: center; }
+  .pb-actions { gap: 0; }
+  .pb-clock { font-size: 17px; }
   .pb-grid { gap: 12px; }
-  .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -8px; border-radius: 0 0 var(--r-xl) var(--r-xl); border-top: 0; }
+  .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -16px; border-radius: 0 0 var(--r-xl) var(--r-xl); border-top: 0; padding: 6px 10px 6px; }
   .pb-timeline .panel-body { padding: 8px 6px; }
+  .pb-timeline .panel-head { padding-top: 6px; min-height: 0; }
+  .pb-timeline .panel-head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .pb-timeline .panel-head .segmented { order: 3; flex: 1 1 100%; }
   .pb-timeline .panel-head .segmented label { flex: 1; text-align: center; }
   .pb-legend-keys { display: none; }
+}
+
+/* 手機橫拿：畫面高度只有 375 左右，播放器連同控制列要能完整放進一個畫面 */
+@media (max-height: 520px) and (min-width: 761px) {
+  .main:has(> .pb) { padding-top: 10px; padding-bottom: 24px; }
+  .pb-head { margin-bottom: 8px; }
+  .pb-head h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .pb-toolbar { flex-wrap: nowrap; }
+  .pb-stage { max-height: calc(100dvh - 140px); margin-inline: auto; }
+  .pb-controls { padding-top: 2px; }
 }
 
 /* ---------- dialog + toast ---------- */

@@ -32,12 +32,14 @@ const dateOf = (ms: number) => {
 };
 const todayString = () => dateOf(Date.now());
 
-function dayLabel(date: string): string {
+function dayLabel(date: string, short = false): string {
   const [y, m, d] = date.split("-").map(Number) as [number, number, number];
   const dt = new Date(y, m - 1, d);
   const yesterday = dateOf(Date.now() - 86_400_000);
-  const tag = date === todayString() ? "（今天）" : date === yesterday ? "（昨天）" : "";
-  return `${m}/${d} 週${WEEKDAY[dt.getDay()]}${tag}`;
+  const rel = date === todayString() ? "今天" : date === yesterday ? "昨天" : "";
+  // 手機上的日期選單很窄，今天、昨天只寫一個詞
+  if (short && rel) return rel;
+  return `${m}/${d} 週${WEEKDAY[dt.getDay()]}${rel ? `（${rel}）` : ""}`;
 }
 
 const sortSegs = (list: SegmentDto[]) => list.slice().sort((a, b) => a.startMs - b.startMs);
@@ -101,7 +103,8 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   const nextDay = h("button", { class: "btn icon-only", type: "button", "aria-label": "後一天", onclick: () => stepDay(1) }, icon("right", 18));
   dateSelect.addEventListener("change", () => setDate(dateSelect.value, true));
   const renderDays = () => {
-    dateSelect.replaceChildren(...days.map((d) => h("option", { value: d, selected: d === date }, dayLabel(d))));
+    const short = matchMedia("(max-width: 760px)").matches;
+    dateSelect.replaceChildren(...days.map((d) => h("option", { value: d, selected: d === date }, dayLabel(d, short))));
     const i = days.indexOf(date);
     prevDay.disabled = i <= 0;
     nextDay.disabled = i < 0 || i >= days.length - 1;
@@ -116,12 +119,12 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   const video = h("video", { playsinline: true, muted: true, "aria-label": `${cam.config.name} 的錄影` });
   video.muted = true;
   const overlay = h("div", { class: "pb-overlay", role: "status", "aria-live": "polite" });
-  const stage = h("div", { class: "pb-stage" }, video, overlay);
+  const note = h("span", { class: "pb-note", role: "status", hidden: true });
+  const stage = h("div", { class: "pb-stage" }, video, overlay, note);
   const playIcon = h("span", null, icon("play", 20));
   const playBtn = h("button", { class: "pb-ctl", type: "button", "aria-label": "播放", onclick: () => player.toggle() }, playIcon);
   const clock = h("b", { class: "pb-clock num" }, "--:--:--");
   const clockDate = h("small", null, "");
-  const note = h("span", { class: "pb-note", hidden: true });
   const liveBadge = h("span", { class: "badge live", hidden: true }, "錄製中");
   const muteIcon = h("span", null, icon("volume-off", 20));
   const muteBtn = h("button", { class: "pb-ctl", type: "button", "aria-label": "開啟聲音", "aria-pressed": "false", onclick: () => toggleMute() }, muteIcon);
@@ -130,9 +133,8 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     "div",
     { class: "pb-controls" },
     playBtn,
-    h("div", { class: "pb-time" }, clock, clockDate),
-    liveBadge,
-    note,
+    // 錄製中時，時間下面那行換成「錄製中」，日期已經在上面的日期選單裡
+    h("div", { class: "pb-time" }, clock, h("span", { class: "pb-sub" }, clockDate, liveBadge)),
     // 換行時整組靠右，不會散成左邊一排
     h("div", { class: "pb-actions" }, nowBtn, rateSelect, muteBtn, fsBtn),
   );
@@ -379,6 +381,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
         clock.textContent = formatClock(w);
         clockDate.textContent = dayLabel(dateOf(w)).replace(/（.*）/, "");
         liveBadge.hidden = !player.live;
+        clockDate.hidden = player.live;
         markCurrentEvent(w);
       }
       // a forward jump far beyond what the playback rate explains is a skipped gap
@@ -404,8 +407,15 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   };
   for (const type of ["timeupdate", "seeked", "playing", "pause"]) video.addEventListener(type, tick);
 
+  const head = h("header", { class: "page-head pb-head" }, h("h1", null, "錄影"), toolbar);
   const narrow = matchMedia("(max-width: 760px)");
-  const applyOrient = () => timeline.setOrientation(narrow.matches ? "v" : "h");
+  // 手機上攝影機與日期收進播放器上方，跟播放器一起黏在頂端
+  const applyOrient = () => {
+    timeline.setOrientation(narrow.matches ? "v" : "h");
+    if (narrow.matches) playerPanel.prepend(toolbar);
+    else head.append(toolbar);
+    renderDays();
+  };
   narrow.addEventListener("change", applyOrient);
   applyOrient();
   // a whole day on a phone-height strip leaves room for only a few event cards
@@ -430,12 +440,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     player.destroy();
   });
 
-  const root = h(
-    "div",
-    { class: "pb" },
-    h("header", { class: "page-head pb-head" }, h("h1", null, "錄影"), toolbar),
-    h("div", { class: "pb-grid" }, playerPanel, evPanel, tlPanel),
-  );
+  const root = h("div", { class: "pb" }, head, h("div", { class: "pb-grid" }, playerPanel, evPanel, tlPanel));
 
   renderDays();
   const [start, end] = dayRange(date);
