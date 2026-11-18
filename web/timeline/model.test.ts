@@ -33,6 +33,9 @@ test("a click inside a recording plays from there; a click in a gap skips to the
   expect(playableFrom(segs, T - 5_000, now)).toEqual({ seg: segs[0]!, wall: T });
   expect(playableFrom(segs, T + 550_000, now)).toEqual({ seg: segs[4]!, wall: T + 550_000 });
   expect(playableFrom(segs, now + 1, now)).toBeNull();
+  // stepping backwards out of a gap lands at the end of the previous recording
+  expect(playableFrom(segs, T + 200_000, now, -1)).toEqual({ seg: segs[2]!, wall: T + 179_000 });
+  expect(playableFrom(segs, T - 5_000, now, -1)).toEqual({ seg: segs[0]!, wall: T });
 });
 
 test("short events get a minimum width, and nearby ones merge at low zoom", () => {

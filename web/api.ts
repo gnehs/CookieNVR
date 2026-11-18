@@ -1,6 +1,7 @@
 import type {
   CameraDto,
   CreatedTokenDto,
+  EventDto,
   InfoDto,
   MeDto,
   ProbeResult,
@@ -88,6 +89,9 @@ export const api = {
   recordings: (id: string, start: number, end: number) =>
     get<SegmentDto[]>(`/cameras/${encodeURIComponent(id)}/recordings?start=${start}&end=${end}`),
   segmentUrl: (id: number) => `/api/segments/${id}`,
+  events: (camera: string, start: number, end: number) =>
+    get<EventDto[]>(`/events?camera=${encodeURIComponent(camera)}&start=${start}&end=${end}`),
+  eventThumbUrl: (id: number) => `/api/events/${id}/thumb.jpg`,
   snapshotUrl: (id: string, t: number) => `/api/cameras/${encodeURIComponent(id)}/snapshot.jpg?t=${t}`,
   system: () => get<SystemDto>("/system"),
   restartWorker: (id: string) => post<void>(`/system/workers/${encodeURIComponent(id)}/restart`),

@@ -36,9 +36,15 @@ export function recordedSpans(segs: readonly SegmentDto[], now: number): Span[] 
 
 /**
  * Where playback for wall time w should start: inside the segment covering w,
- * or at the start of the next segment when w falls in a gap. Null past the last one.
+ * or, when w falls in a gap, at the start of the next recording (dir 1) or just
+ * before the end of the previous one (dir -1, for stepping backwards).
  */
-export function playableFrom(segs: readonly SegmentDto[], w: number, now: number): { seg: SegmentDto; wall: number } | null {
+export function playableFrom(
+  segs: readonly SegmentDto[],
+  w: number,
+  now: number,
+  dir: 1 | -1 = 1,
+): { seg: SegmentDto; wall: number } | null {
   let lo = 0;
   let hi = segs.length - 1;
   let i = -1;
@@ -51,6 +57,7 @@ export function playableFrom(segs: readonly SegmentDto[], w: number, now: number
   }
   const cur = i >= 0 ? segs[i]! : null;
   if (cur && w < segEnd(cur, now)) return { seg: cur, wall: w };
+  if (dir < 0 && cur) return { seg: cur, wall: Math.max(cur.startMs, segEnd(cur, now) - 1_000) };
   const next = segs[i + 1];
   return next ? { seg: next, wall: next.startMs } : null;
 }
