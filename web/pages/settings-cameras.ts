@@ -2,6 +2,7 @@ import type { CameraDto, ProbeResult, StreamInfo } from "../../src/api-types.ts"
 import type { CameraConfig, CameraConnection } from "../../src/types.ts";
 import { api } from "../api.ts";
 import { badge, confirmDialog, copyButton, copyWithToast, emptyState, errMsg, field, h, icon, menuButton, panel, panelSection, switchInput, switchRow, tiles, toast } from "../dom.ts";
+import { cameraStatus } from "../health.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 import { settingsLayout } from "./settings-shell.ts";
@@ -16,11 +17,8 @@ function hostOf(url: string): string {
 }
 
 function statusBadge(cam: CameraDto): HTMLElement {
-  const c = cam.config;
-  if (!c.enabled) return badge("已停用");
-  if (!cam.online) return badge("連不上", "bad");
-  if (!c.record.enabled) return badge("只看畫面");
-  return cam.recording ? badge("錄影中", "ok") : badge("沒有在錄影", "warn");
+  const st = cameraStatus(cam);
+  return badge(st.label, st.tone);
 }
 
 export async function settingsCamerasPage(ctx: PageCtx): Promise<Node> {

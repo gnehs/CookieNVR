@@ -122,7 +122,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   const clock = h("b", { class: "pb-clock num" }, "--:--:--");
   const clockDate = h("small", null, "");
   const note = h("span", { class: "pb-note", hidden: true });
-  const liveBadge = h("span", { class: "badge bad", hidden: true }, "錄製中");
+  const liveBadge = h("span", { class: "badge live", hidden: true }, "錄製中");
   const muteIcon = h("span", null, icon("volume-off", 20));
   const muteBtn = h("button", { class: "pb-ctl", type: "button", "aria-label": "開啟聲音", "aria-pressed": "false", onclick: () => toggleMute() }, muteIcon);
   const fsBtn = h("button", { class: "pb-ctl", type: "button", "aria-label": "全螢幕", onclick: () => fullscreen() }, icon("expand", 18));
@@ -238,7 +238,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
           { type: "button", class: "ev-item", "aria-label": `${formatClock(e.startMs)}，${labelText(e.labels)}，${e.endMs === null ? "進行中" : dur}`, onclick: () => jumpToEvent(e) },
           h("span", { class: "ev-thumb" }, e.hasThumb ? h("img", { src: api.eventThumbUrl(e.id), alt: "", loading: "lazy", decoding: "async", width: "96", height: "54" }) : icon("activity", 18)),
           h("span", { class: "ev-text" }, h("b", null, labelText(e.labels)), h("span", { class: "num" }, formatClock(e.startMs), " · ", dur)),
-          e.endMs === null ? h("span", { class: "badge bad" }, "進行中") : null,
+          e.endMs === null ? h("span", { class: "badge accent live" }, "進行中") : null,
         );
         evButtons.set(e.id, btn);
         return h("li", null, btn);

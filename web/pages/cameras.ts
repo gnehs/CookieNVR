@@ -1,18 +1,10 @@
 import type { CameraDto } from "../../src/api-types.ts";
 import { api } from "../api.ts";
 import { emptyState, h, icon } from "../dom.ts";
+import { alertSummary, cameraStatus } from "../health.ts";
+import { onHealth } from "../health-watch.ts";
 import type { PageCtx } from "../router.ts";
 import { state } from "../state.ts";
-
-type Tone = "rec" | "idle" | "off" | "stop";
-
-const STATUS: Record<Tone, string> = { rec: "錄影中", idle: "未錄影", off: "連不上", stop: "已停用" };
-
-function toneOf(cam: CameraDto): Tone {
-  if (!cam.config.enabled) return "stop";
-  if (cam.recording) return "rec";
-  return cam.online ? "idle" : "off";
-}
 
 interface Tile {
   el: HTMLAnchorElement;
@@ -51,13 +43,15 @@ function tile(initial: CameraDto): Tile {
   const update = (next: CameraDto) => {
     const wasEnabled = cam.config.enabled;
     cam = next;
-    const tone = toneOf(cam);
+    const st = cameraStatus(cam);
     el.href = `#/recordings?camera=${encodeURIComponent(cam.id)}`;
-    el.dataset.tone = tone;
+    el.dataset.status = st.kind;
+    el.dataset.tone = st.tone;
     el.title = cam.config.name;
-    el.setAttribute("aria-label", `${cam.config.name}，${STATUS[tone]}，查看錄影`);
+    el.setAttribute("aria-label", st.quiet ? `${cam.config.name}，查看錄影` : `${cam.config.name}，${st.label}，查看錄影`);
     name.textContent = cam.config.name;
-    status.lastElementChild!.textContent = STATUS[tone];
+    status.hidden = st.quiet;
+    status.lastElementChild!.textContent = st.label;
     if (wasEnabled !== cam.config.enabled) refreshSnapshot();
   };
 
@@ -66,24 +60,17 @@ function tile(initial: CameraDto): Tile {
   return { el, update, refreshSnapshot };
 }
 
-function summary(cams: CameraDto[]): string {
-  const rec = cams.filter((c) => toneOf(c) === "rec").length;
-  const off = cams.filter((c) => toneOf(c) === "off").length;
-  const parts = [`${cams.length} 台攝影機`, `${rec} 台錄影中`];
-  if (off) parts.push(`${off} 台連不上`);
-  return parts.join("，");
-}
-
 export async function camerasPage(ctx: PageCtx): Promise<Node> {
   const list = h("div");
   const grid = h("div", { class: "cam-grid" });
-  const sub = h("p");
+  const alertText = h("span", { class: "home-alert-text" });
+  const alert = h("a", { class: "home-alert", href: "#/settings/status", hidden: true }, icon("alert-circle", 18), alertText, h("span", { class: "home-alert-go" }, "查看", icon("chevron", 16)));
   const isAdmin = state.me?.role === "admin";
   const tiles = new Map<string, Tile>();
 
   // 每 5 秒的清單輪詢只更新既有卡片，畫面不重建、快照不重抓
   const render = (cams: CameraDto[]) => {
-    sub.textContent = cams.length ? summary(cams) : "";
+    addBtn.hidden = cams.length === 0;
     if (cams.length === 0) {
       tiles.clear();
       list.replaceChildren(
@@ -114,7 +101,18 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
     if (!list.contains(grid)) list.replaceChildren(grid);
   };
 
+  const addBtn = h("a", { class: "btn", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機");
   render(await api.cameras());
+  if (isAdmin) {
+    ctx.onCleanup(
+      onHealth(({ health }) => {
+        const text = alertSummary(health.issues);
+        alert.hidden = text === null;
+        alert.dataset.tone = health.issues.some((i) => i.tone === "bad") ? "bad" : "warn";
+        alertText.textContent = text ?? "";
+      }),
+    );
+  }
   ctx.every(5000, () => {
     api.cameras().then((c) => ctx.isCurrent() && render(c), () => {});
   });
@@ -128,9 +126,10 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
     h(
       "header",
       { class: "page-head" },
-      h("div", null, h("h1", null, "攝影機"), sub),
-      isAdmin ? h("div", { class: "page-actions" }, h("a", { class: "btn", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機")) : null,
+      h("h1", null, "攝影機"),
+      isAdmin ? h("div", { class: "page-actions" }, addBtn) : null,
     ),
+    alert,
     list,
   );
 }

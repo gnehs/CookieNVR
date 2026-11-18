@@ -2,6 +2,7 @@ import { api, setUnauthorizedHandler } from "./api.ts";
 import { errMsg, errorBox, h, icon, spinner } from "./dom.ts";
 import { matchRoute, navigate, parseHash, type PageCtx, type Route } from "./router.ts";
 import { state } from "./state.ts";
+import { onHealth, startHealthWatch, stopHealthWatch } from "./health-watch.ts";
 import "./theme.ts";
 import { loginPage, setupPage } from "./pages/auth.ts";
 import { camerasPage } from "./pages/cameras.ts";
@@ -65,6 +66,13 @@ const NAV = [
   { section: "account", href: "#/account", label: "帳號", icon: "user", admin: false },
 ] as const;
 
+let issueCount = 0;
+onHealth(({ health }) => {
+  if (health.issues.length === issueCount) return;
+  issueCount = health.issues.length;
+  renderNav(currentSection);
+});
+
 function buildShell() {
   const nav = h("nav", { class: "sidebar", "aria-label": "主選單" });
   const main = h("main", { class: "main", id: "main", tabindex: "-1" });
@@ -80,9 +88,16 @@ function renderNav(active?: string) {
   const isAdmin = me?.role === "admin";
   shell.nav.replaceChildren(
     h("div", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 17)), h("span", null, state.siteName)),
-    ...NAV.filter((n) => !n.admin || isAdmin).map((n) =>
-      h("a", { class: "nav-link", href: n.href, "aria-current": n.section === active ? "page" : null }, icon(n.icon, 20), n.label),
-    ),
+    ...NAV.filter((n) => !n.admin || isAdmin).map((n) => {
+      const alert = n.section === "settings" && issueCount > 0;
+      return h(
+        "a",
+        { class: "nav-link", href: n.href, "aria-current": n.section === active ? "page" : null },
+        h("span", { class: "nav-ico" }, icon(n.icon, 20), alert ? h("i", { class: "nav-dot", "aria-hidden": "true" }) : null),
+        n.label,
+        alert ? h("span", { class: "sr-only" }, `，有 ${issueCount} 件事需要處理`) : null,
+      );
+    }),
     ...(me
       ? [h(
           "div",
@@ -124,6 +139,7 @@ async function render() {
     if (token !== renderToken) return;
   }
   if (route.access === "admin" && state.me.role !== "admin") return navigate("/cameras", true);
+  if (state.me.role === "admin") startHealthWatch();
 
   const s = shell ?? buildShell();
   if (!app.contains(s.root)) app.replaceChildren(s.root);
@@ -156,6 +172,8 @@ setUnauthorizedHandler(() => {
   handling401 = true;
   state.me = null;
   shell = null;
+  stopHealthWatch();
+  issueCount = 0;
   navigate("/login");
   setTimeout(() => (handling401 = false), 500);
 });

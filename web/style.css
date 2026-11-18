@@ -19,13 +19,14 @@
   --ok: light-dark(#157f3d, #4fcf80);
   --bad: light-dark(#c62828, #ff7b72);
   --warn: light-dark(#a35200, #f0b14a);
-  --live: light-dark(#d92d2d, #ff6b6b);
+  --ph-icon: light-dark(#a9a9b2, #75757f);
 
 
   /* 回放時間軸：錄影區段、缺片、事件標記、播放頭 */
   --tl-track: light-dark(#ececf0, #232327);
   --tl-recorded: light-dark(#9fb8e8, #3d5688);
-  --tl-recorded-live: light-dark(#e98b8b, #8e3a3a);
+  /* 錄製中不是警示，用跟首頁「錄影中」同一個綠色系的淡色 */
+  --tl-recorded-live: light-dark(#8fcfa7, #2e7a4e);
   --tl-gap: light-dark(#f7f7f9, #141416);
   --tl-gap-hatch: light-dark(#dedee4, #2c2c31);
   --tl-event: light-dark(#d97706, #f5b544);
@@ -115,6 +116,10 @@ button, a, summary, label { touch-action: manipulation; }
   transition: background-color 150ms ease, color 150ms ease;
 }
 .nav-link .icon { color: var(--muted); transition: color 150ms ease; }
+.nav-ico { position: relative; display: inline-flex; flex: none; }
+/* 設定有問題時的提示點；外圈用導覽列的底色切開圖示 */
+.nav-dot { position: absolute; top: -2px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--nav-bg, var(--bg)); }
+.nav-link[aria-current="page"] { --nav-bg: var(--surface); }
 @media (hover: hover) { .nav-link:hover { background: var(--fill); color: var(--text); } }
 .nav-link[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm), 0 0 0 1px var(--border); }
 .nav-link[aria-current="page"] .icon { color: var(--accent); }
@@ -139,6 +144,8 @@ button, a, summary, label { touch-action: manipulation; }
     background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg);
   }
   .sidebar .brand, .sidebar-foot { display: none; }
+  .sidebar { --nav-bg: var(--surface); }
+  .nav-link[aria-current="page"] { --nav-bg: var(--accent-soft); }
   .nav-link { flex: 1; flex-direction: column; gap: 2px; padding: 7px 4px 6px; font-size: 12px; border-radius: 16px; align-items: center; min-width: 0; }
   .nav-link[aria-current="page"] { background: var(--accent-soft); box-shadow: none; color: var(--accent-text); }
   .main { padding: 20px 16px calc(104px + env(safe-area-inset-bottom)); }
@@ -231,17 +238,35 @@ button, a, summary, label { touch-action: manipulation; }
   background: var(--fill); border: 1px solid var(--border);
 }
 .cam-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-.cam-ph { color: var(--border-strong); }
-.cam-tile[data-tone="stop"] .cam-frame { background: repeating-linear-gradient(135deg, var(--fill) 0 8px, var(--frame) 8px 16px); }
+.cam-ph { color: var(--ph-icon); }
+.cam-tile[data-status="disabled"] .cam-frame { background: repeating-linear-gradient(135deg, var(--fill) 0 8px, var(--frame) 8px 16px); }
 .cam-status {
   position: absolute; top: 8px; left: 8px; display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 9px 3px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; line-height: 1.5;
   background: var(--surface); color: var(--text-2); box-shadow: var(--shadow-sm);
 }
 .cam-status > i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-.cam-tile[data-tone="rec"] .cam-status > i { background: var(--ok); }
-.cam-tile[data-tone="off"] .cam-status { background: var(--bad-soft); color: var(--bad-text); }
-.cam-tile[data-tone="off"] .cam-status > i { background: var(--bad-text); }
+.cam-tile[data-status="recording"] .cam-status > i { background: var(--ok); }
+.cam-tile[data-tone="bad"] .cam-status { background: var(--bad-soft); color: var(--bad-text); }
+.cam-tile[data-tone="bad"] .cam-status > i { background: var(--bad-text); }
+.cam-tile[data-tone="warn"] .cam-status { background: var(--warn-soft); color: var(--warn-text); }
+.cam-tile[data-tone="warn"] .cam-status > i { background: var(--warn-text); }
+
+/* 有問題時首頁頁首的一條提醒，點了到狀態頁 */
+.home-alert {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 14px; margin: -6px 0 20px;
+  border-radius: var(--r); text-decoration: none; font-weight: 600; font-size: 14.5px;
+  background: var(--bad-soft); color: var(--bad-text); border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--border));
+  transition: background-color 150ms ease, transform var(--dur-1) var(--ease-out);
+}
+.home-alert[data-tone="warn"] { background: var(--warn-soft); color: var(--warn-text); border-color: color-mix(in srgb, var(--warn) 32%, var(--border)); }
+.home-alert-text { flex: 1; min-width: 0; }
+.home-alert-go { display: inline-flex; align-items: center; gap: 2px; font-size: 13.5px; flex: none; }
+@media (hover: hover) {
+  .home-alert:hover { background: color-mix(in srgb, var(--bad) 16%, var(--surface)); }
+  .home-alert[data-tone="warn"]:hover { background: color-mix(in srgb, var(--warn) 18%, var(--surface)); }
+}
+.home-alert:active { transform: scale(0.99); }
 .cam-name { padding: 9px 8px 11px; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- 膠囊 ---------- */
@@ -256,6 +281,15 @@ button, a, summary, label { touch-action: manipulation; }
 .badge.warn { background: var(--warn-soft); color: var(--warn-text); }
 .badge.accent { background: var(--accent-soft); color: var(--accent-text); }
 .badge.plain::before { display: none; }
+/* 正在進行的狀態（錄製中、事件進行中）：平靜的色調，小點輕輕脈動 */
+.badge.live { --pulse: var(--ok); }
+.badge.live:not(.accent)::before { background: var(--ok); }
+.badge.accent.live { --pulse: var(--accent); }
+.badge.live::before { animation: live-pulse 2.4s var(--ease-out) infinite; }
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse) 50%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--pulse) 0%, transparent); }
+}
 
 /* 分段控制：radio 群組的膠囊外觀
    <div class="segmented" role="radiogroup" aria-label="…"><label><input type="radio" name="…"><span>文字</span></label>…</div> */
@@ -781,4 +815,5 @@ details.disclosure:not([open])::details-content { block-size: 0; }
   dialog.dlg, .toast, .menu { @starting-style { transform: none; } }
   .toast.leaving, dialog.dlg[data-closing] { transform: none; }
   .pb-ctl:active { transform: none; }
+  .badge.live::before { animation: none; }
 }
