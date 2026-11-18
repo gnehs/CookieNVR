@@ -17,7 +17,9 @@ export interface TimelineOptions {
 
 const MIN_SPAN = 60_000;
 const COLORS = ["--tl-track", "--tl-recorded", "--tl-recorded-live", "--tl-gap", "--tl-gap-hatch", "--tl-event", "--tl-event-fg", "--tl-playhead", "--tl-tick", "--muted", "--text", "--text-2", "--surface", "--border", "--accent", "--fill"] as const;
-type ColorName = (typeof COLORS)[number];
+/** derived shades, resolved through the same probe */
+const MIXES = { "event-hover": "color-mix(in srgb, var(--tl-event) 72%, var(--text))" } as const;
+type ColorName = (typeof COLORS)[number] | keyof typeof MIXES;
 
 /** Layout of the horizontal strip, CSS px */
 const H = { labelY: 14, tickTop: 20, trackTop: 30, trackH: 44, height: 92, eventInset: 5, minEventPx: 8 };
@@ -62,6 +64,7 @@ export class Timeline {
   private now = Date.now();
   private playhead: number | null = null;
   private hover: number | null = null;
+  private hoverB = 0;
   private hoverHit: Hit | null = null;
   private hits: Hit[] = [];
   private thumbs = new Map<number, HTMLImageElement>();
@@ -258,6 +261,10 @@ export class Timeline {
       p.style.color = `var(${name})`;
       this.colors[name] = getComputedStyle(p).color;
     }
+    for (const [name, css] of Object.entries(MIXES) as [keyof typeof MIXES, string][]) {
+      p.style.color = css;
+      this.colors[name] = getComputedStyle(p).color;
+    }
     if (!p.isConnected) this.colors["--tl-track"] = "";
     this.makeHatch();
     this.dirty = true;
@@ -335,7 +342,10 @@ export class Timeline {
       }
       return;
     }
-    if (e.pointerType === "mouse") this.setHover(a, this.hitTest(a, b));
+    if (e.pointerType === "mouse") {
+      this.hoverB = b;
+      this.setHover(a, this.hitTest(a, b));
+    }
   }
 
   private up(e: PointerEvent) {
@@ -421,7 +431,8 @@ export class Timeline {
 
   private zoomToCluster(c: Cluster) {
     const len = Math.max(c.end - c.start, MIN_SPAN / 2);
-    this.span = this.clampSpan(len * 2.2);
+    // always zoom in at least 3x, so a cluster that still holds after zooming splits on the next tap
+    this.span = this.clampSpan(Math.min(len * 2.2, this.span / 3));
     this.viewStart = this.clampStart(c.start - (this.span - len) / 2);
     this.setFollow(false);
     this.opts.onSpan(this.span);
@@ -457,6 +468,21 @@ export class Timeline {
       if (a >= hit.a0 - 2 && a <= hit.a1 + 2 && b >= hit.b0 && b <= hit.b1) return hit;
     }
     return null;
+  }
+
+  /** After a zoom or pan the clusters under a still pointer change; re-resolve against the new layout. */
+  private refreshHover() {
+    if (this.hover === null) return;
+    const hit = this.hitTest(this.hover, this.hoverB);
+    const same = hit?.cluster.first === this.hoverHit?.cluster.first && hit?.cluster.count === this.hoverHit?.cluster.count;
+    if (same) {
+      if (hit) this.hoverHit = hit;
+      return;
+    }
+    this.hoverHit = hit;
+    this.el.style.cursor = hit ? "pointer" : "";
+    this.renderTip(hit);
+    this.dirty = true;
   }
 
   private setHover(a: number | null, hit: Hit | null) {
@@ -595,8 +621,9 @@ export class Timeline {
         ctx.textAlign = "center";
         ctx.fillText(text, Math.max(half, Math.min(this.w - half, a)), labelAt);
       } else {
+        if (a < 0 || a > this.hgt) continue;
         ctx.textAlign = "right";
-        ctx.fillText(text, labelAt, a);
+        ctx.fillText(text, labelAt, Math.max(7, Math.min(this.hgt - 7, a)));
       }
     }
   }
@@ -661,15 +688,16 @@ export class Timeline {
       const a1 = this.pos(c.end);
       const b0 = top + H.eventInset;
       const b1 = bottom - H.eventInset;
-      const hovered = this.hoverHit?.cluster.first === c.first;
-      ctx.fillStyle = hovered ? colors["--text"] : colors["--tl-event"];
+      const hovered = this.hoverHit?.cluster.first === c.first && this.hoverHit.cluster.count === c.count;
+      ctx.fillStyle = hovered ? colors["event-hover"] : colors["--tl-event"];
       this.roundRect(a0, a1, b0, b1, 4);
       if (c.count > 1 && a1 - a0 >= 18) {
-        ctx.fillStyle = hovered ? colors["--surface"] : colors["--tl-event-fg"];
+        ctx.fillStyle = colors["--tl-event-fg"];
         ctx.fillText(String(c.count), (a0 + a1) / 2, (b0 + b1) / 2 + 0.5);
       }
       this.hits.push({ a0, a1, b0: top - 4, b1: bottom + 4, cluster: c });
     }
+    this.refreshHover();
     this.drawPlayhead(4, bottom + 6);
     this.drawHover(top, this.hgt);
   }
@@ -683,7 +711,7 @@ export class Timeline {
 
     const view = { start: this.viewStart, end: this.viewStart + this.span, msPerPx: this.msPerPx };
     // a cluster per card: events closer than a card's height share one
-    const clusters = clusterEvents(this.events, this.now, view, V.cardH, V.cardGap);
+    const clusters = clusterEvents(this.events, this.now, view, V.cardH, V.cardGap, "anchored");
     this.hits = [];
     const cardRight = this.w - 2;
     for (const c of clusters) {
@@ -732,7 +760,9 @@ export class Timeline {
     ctx.clip();
     ctx.fillStyle = colors["--fill"];
     ctx.fillRect(tx, ty, thumbW, thumbH);
-    const img = first.hasThumb ? this.thumb(first) : null;
+    let withThumb: EventDto | undefined;
+    for (let i = c.first; i < c.first + c.count && !withThumb; i++) if (this.events[i]!.hasThumb) withThumb = this.events[i];
+    const img = withThumb ? this.thumb(withThumb) : null;
     if (img?.complete && img.naturalWidth > 0) ctx.drawImage(img, tx, ty, thumbW, thumbH);
     ctx.restore();
     if (c.count > 1) {

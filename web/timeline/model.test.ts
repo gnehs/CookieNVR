@@ -52,6 +52,16 @@ test("short events get a minimum width, and nearby ones merge at low zoom", () =
   expect(clusterEvents([ev(9, T, null)], T + 120_000, view(10), 8, 2)[0]!.end).toBe(T + 120_000);
 });
 
+test("anchored clusters never chain a long run of events into one card", () => {
+  // an event every 10 minutes for 3 hours; at 1 min per px a 60 px card spans an hour
+  const events = Array.from({ length: 18 }, (_, i) => ev(i + 1, T + i * 600_000, T + i * 600_000 + 5_000));
+  const view = { start: T, end: T + 4 * 3_600_000, msPerPx: 60_000 };
+  expect(clusterEvents(events, now, view, 60, 6, "overlap")).toHaveLength(1);
+  const cards = clusterEvents(events, now, view, 60, 6, "anchored");
+  expect(cards.map((c) => c.count)).toEqual([7, 7, 4]);
+  for (let i = 1; i < cards.length; i++) expect(cards[i]!.start - cards[i - 1]!.start).toBeGreaterThan(66 * 60_000);
+});
+
 test("only clusters reaching the view are returned", () => {
   const events = [ev(1, T - 7_200_000, T - 7_100_000), ev(2, T - 100_000, T + 10_000), ev(3, T + 9_000_000, T + 9_001_000)];
   const got = clusterEvents(events, now, { start: T, end: T + 3_600_000, msPerPx: 1_000 }, 8, 2);

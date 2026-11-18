@@ -74,6 +74,11 @@ export interface Cluster {
 /**
  * Groups sorted events whose drawn extents (start..end, at least minPx) come
  * within gapPx of each other at the current zoom, keeping only those that reach the view.
+ *
+ * "overlap" joins an event to any cluster whose extent it touches, which suits
+ * bars on a strip. "anchored" joins only events that start within minPx of the
+ * cluster's own start, which suits fixed-size cards: a long run of events then
+ * becomes a series of cards rather than one card for the whole run.
  */
 export function clusterEvents(
   events: readonly EventDto[],
@@ -81,6 +86,7 @@ export function clusterEvents(
   view: { start: number; end: number; msPerPx: number },
   minPx: number,
   gapPx: number,
+  mode: "overlap" | "anchored" = "overlap",
 ): Cluster[] {
   const minMs = minPx * view.msPerPx;
   const gapMs = gapPx * view.msPerPx;
@@ -91,7 +97,8 @@ export function clusterEvents(
     const end = Math.max(e.endMs ?? now, e.startMs + minMs);
     if (end < view.start) continue;
     const last = out[out.length - 1];
-    if (last && e.startMs <= last.end + gapMs) {
+    const reach = last ? (mode === "overlap" ? last.end : last.start + minMs) + gapMs : 0;
+    if (last && e.startMs <= reach) {
       last.end = Math.max(last.end, end);
       last.count++;
     } else {

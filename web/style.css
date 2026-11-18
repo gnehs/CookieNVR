@@ -550,7 +550,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .tl.dragging { cursor: grabbing; }
 .tl:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
 .tl-canvas { display: block; width: 100%; height: 92px; }
-.tl[data-orient="v"] .tl-canvas { height: max(340px, calc(100dvh - var(--pb-player-h, 280px) - 190px)); }
+.tl[data-orient="v"] .tl-canvas { height: max(300px, calc(100dvh - var(--pb-player-h, 280px) - 230px)); }
 .tl-probe { position: absolute; width: 0; height: 0; overflow: hidden; }
 .tl-tip {
   position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 6; width: 188px; pointer-events: none;
@@ -572,7 +572,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-legend-keys { margin-left: auto; font-size: 12.5px; }
 
 .pb-events .panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.ev-list { list-style: none; margin: 0; padding: 6px; display: grid; gap: 2px; align-content: start; overflow-y: auto; flex: 1; scrollbar-width: thin; }
+.ev-list { position: relative; list-style: none; margin: 0; padding: 6px; display: grid; gap: 2px; align-content: start; overflow-y: auto; flex: 1; scrollbar-width: thin; }
 .ev-list > li { content-visibility: auto; contain-intrinsic-size: auto 66px; }
 .ev-list > li.ev-empty { content-visibility: visible; }
 .ev-empty .empty { border: 0; padding: 28px 12px; }
@@ -593,8 +593,14 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
   .pb-head { margin-bottom: 14px; }
   .pb-toolbar { width: 100%; }
   .pb-toolbar .cam-pick { flex: 1 1 100%; }
-  .pb-toolbar .cam-pick select, .pb-date { flex: 1; }
+  .pb-toolbar .cam-pick select { flex: 1; }
+  .pb-date { flex: 1 1 100%; }
   .pb-date select { flex: 1; min-width: 0; }
+  .pb-rate { flex: 1; }
+  .pb-rate .segmented { flex: 1; }
+  .pb-rate .segmented label { flex: 1; text-align: center; }
+  .pb-rate .segmented span { padding: 5px 4px; }
+  .pb-toolbar > .btn { padding: 0 11px; }
   .pb-grid { gap: 12px; }
   .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -8px; border-radius: 0 0 var(--r-xl) var(--r-xl); border-top: 0; }
   .pb-timeline .panel-body { padding: 8px 6px; }

@@ -247,7 +247,11 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     const btn = id !== null ? evButtons.get(id) : undefined;
     if (btn) {
       btn.setAttribute("aria-current", "true");
-      btn.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      // scroll the list only; scrollIntoView would also move the page under the reader's thumb
+      const item = btn.offsetTop;
+      if (item < evList.scrollTop || item + btn.offsetHeight > evList.scrollTop + evList.clientHeight) {
+        evList.scrollTo({ top: item - evList.clientHeight / 2 + btn.offsetHeight / 2, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      }
     }
   }
 
@@ -260,7 +264,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     const target = local && local.wall < dayEnd ? local.wall : w;
     seekDir = dir;
     player.seek(Math.min(target, now), play);
-    timeline.setPlayhead(Math.min(target, now));
+    tick();
   }
 
   function jumpToEvent(e: EventDto) {
@@ -400,6 +404,9 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   const applyOrient = () => timeline.setOrientation(narrow.matches ? "v" : "h");
   narrow.addEventListener("change", applyOrient);
   applyOrient();
+  // a whole day on a phone-height strip leaves room for only a few event cards
+  const initialSpan = narrow.matches ? 6 * HOUR : 24 * HOUR;
+  for (const input of zoomInputs) input.checked = Number(input.value) === initialSpan;
   const playerRo = new ResizeObserver(() => root.style.setProperty("--pb-player-h", `${playerPanel.offsetHeight}px`));
   playerRo.observe(playerPanel);
 
@@ -429,6 +436,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   renderDays();
   const [start, end] = dayRange(date);
   timeline.setBounds(start, end);
+  timeline.setSpan(initialSpan);
   await loadDay();
   const t = Number(ctx.query.get("t"));
   const initial = Number.isFinite(t) && t > 0 ? t : date === todayString() ? latestWall() : (segs[0]?.startMs ?? null);
