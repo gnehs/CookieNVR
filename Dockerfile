@@ -69,12 +69,17 @@ ARG VARIANT
 # They install side by side (separate ICD files, IGC 1.x vs 2.x sonames); the OpenCL loader picks
 # whichever claims the GPU. Hashes are the GitHub release asset digests, cross-checked with ww40.sum
 # and ww35.sum. Slim images have no curl; bun downloads them.
+# Hardware video decode (detect worker, settings.devices.decode): Intel goes through VA-API, so amd64
+# gets the iHD driver (Gen8 and newer) and i965 (older), in both variants since an Nvidia box usually
+# has an Intel iGPU too. Debian's ffmpeg already has VAAPI and NVDEC/NVENC (it dlopens libcuda and
+# libnvcuvid, which the NVIDIA Container Toolkit mounts when NVIDIA_DRIVER_CAPABILITIES includes video).
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
-    intel=""; \
+    intel=""; va=""; \
     if [ "$VARIANT" = default ] && [ "$arch" = amd64 ]; then intel=ocl-icd-libopencl1; fi; \
+    if [ "$arch" = amd64 ]; then va="intel-media-va-driver i965-va-driver"; fi; \
     apt-get update; \
-    apt-get install -y --no-install-recommends ffmpeg tini ca-certificates python3 $intel; \
+    apt-get install -y --no-install-recommends ffmpeg tini ca-certificates python3 $intel $va; \
     if [ -n "$intel" ]; then \
       mkdir /tmp/intel-gpu; cd /tmp/intel-gpu; \
       cr=https://github.com/intel/compute-runtime/releases/download; \
@@ -99,6 +104,7 @@ RUN set -eux; \
     ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=d=1 -f lavfi -i sine=d=1 \
       -c:v libx264 -c:a aac -f null -; \
     ffprobe -hide_banner -loglevel error -version >/dev/null; \
+    if [ -n "$va" ]; then test -f /usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so; test -f /usr/lib/x86_64-linux-gnu/dri/i965_drv_video.so; fi; \
     rm -rf /var/lib/apt/lists/*
 COPY --from=mediamtx /dl/mediamtx /usr/local/bin/mediamtx
 COPY --from=detector /opt/detector /opt/detector
@@ -109,8 +115,10 @@ COPY package.json bun.lock tsconfig.json ./
 RUN bun install --production --frozen-lockfile
 COPY detector ./detector
 COPY --from=detector /models ./detector/models
-COPY scripts/detector-selftest ./scripts/detector-selftest
-RUN chmod +x scripts/detector-selftest && ln -s /app/scripts/detector-selftest /usr/local/bin/detector-selftest
+COPY scripts/detector-selftest scripts/video-selftest scripts/video-selftest.ts ./scripts/
+RUN chmod +x scripts/detector-selftest scripts/video-selftest \
+ && ln -s /app/scripts/detector-selftest /usr/local/bin/detector-selftest \
+ && ln -s /app/scripts/video-selftest /usr/local/bin/video-selftest
 COPY src ./src
 COPY web ./web
 
@@ -119,7 +127,8 @@ ENV NODE_ENV=production \
     DATA_DIR=/data \
     PORT=8765 \
     RTSP_PORT=8554 \
-    DETECTOR_PYTHON=/opt/detector/bin/python
+    DETECTOR_PYTHON=/opt/detector/bin/python \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
 # /recordings is deliberately not declared as a volume: an anonymous volume would look
 # like a real mount and silently take the recordings, then vanish with the container.
 VOLUME /data

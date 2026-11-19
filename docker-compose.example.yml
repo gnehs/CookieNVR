@@ -22,18 +22,21 @@ services:
       # 拿掉這一行的話，錄影會放在 /data/recordings。
       - /mnt/user/recordings:/recordings
 
-    # 物件辨識用 Intel 內顯（latest 映像，amd64）：
+    # 物件辨識或影像硬體解碼用 Intel 內顯（amd64；硬體解碼兩種映像都可以，物件辨識要 latest）：
     # devices: ["/dev/dri:/dev/dri"]
     # 容器預設以 root 執行，不需要群組；用 user: 改成一般使用者時，再加上主機 render 群組的 gid
     # （主機上執行 stat -c %g /dev/dri/renderD128 取得）：
     # group_add: ["<render gid>"]
 
-    # 物件辨識用 Nvidia（主機要裝好 NVIDIA Container Toolkit，Unraid 是 Nvidia Driver 外掛）：
-    # image 改成 ghcr.io/<owner>/cookienvr:latest-nvidia，並加上
+    # 用 Nvidia（主機要裝好 NVIDIA Container Toolkit，Unraid 是 Nvidia Driver 外掛）：
+    # 物件辨識要把 image 改成 ghcr.io/<owner>/cookienvr:latest-nvidia；只用影像硬體解碼（NVDEC）時 latest 也可以。
+    # 硬體解碼需要驅動的 video 能力（libnvcuvid）：映像已預設 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video，
+    # 這裡又明寫一次，免得 Unraid 範本或其他設定把它蓋成只有 compute,utility。
     # runtime: nvidia
-    # environment: ["NVIDIA_VISIBLE_DEVICES=all"]
-    # 不用 runtime: nvidia 的寫法（等同 docker run --gpus all）：
+    # environment: ["NVIDIA_VISIBLE_DEVICES=all", "NVIDIA_DRIVER_CAPABILITIES=compute,utility,video"]
+    # 不用 runtime: nvidia 的寫法（等同 docker run --gpus all）：capabilities 要列出 video
     # deploy:
     #   resources:
     #     reservations:
-    #       devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+    #       devices: [{ driver: nvidia, count: all, capabilities: [gpu, compute, utility, video] }]
+    # 設好後在容器裡執行 video-selftest，會列出每張卡能不能解碼、編碼 H.264／H.265。

@@ -59,6 +59,24 @@ NVR 裡在「推論裝置」選單選特定的卡，設定存的是識別字（`
 
 容器以 root 執行，所以不需要 render 群組。用 `--user` 改成一般使用者時，再加上 `--group-add "$(stat -c %g /dev/dri/renderD128)"`。
 
+### 影像硬體解碼（`video-selftest`）
+
+動作偵測的解碼（「設定 → 影像解碼」，`settings.devices.decode`）另有自己的檢查，不需要 Python，兩種映像都有：
+
+```sh
+# Intel（VAAPI）
+docker run --rm --device /dev/dri:/dev/dri cookienvr:test video-selftest
+# Nvidia（NVDEC／NVENC）；要有 video 能力，映像預設已帶
+docker run --rm --gpus 'all,"capabilities=compute,utility,video"' cookienvr:test video-selftest
+docker run --rm --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility,video cookienvr:test video-selftest
+# 兩種都有
+docker run --rm --device /dev/dri:/dev/dri --gpus 'all,"capabilities=compute,utility,video"' cookienvr:test video-selftest
+# 正在跑的 NVR
+docker exec cookienvr video-selftest
+```
+
+輸出依序是環境（ffmpeg 版本、`/dev/dri`、VA 驅動檔、Nvidia 環境變數）、找到的每張卡與識別字（和物件辨識同一套：`intel:GPU.0`、`nvidia:GPU-<uuid>`）、每張卡 × H.264／H.265 × 解碼／編碼的試跑結果與失敗原因，最後用 detect worker 同一條指令在每張卡上解一段 3 秒的影片。整段貼回來即可。
+
 ### 啟動 NVR
 
 ```sh
