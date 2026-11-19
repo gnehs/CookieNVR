@@ -4,8 +4,9 @@ import { join } from "node:path";
 import index from "../web/index.html";
 import pkg from "../package.json";
 import { backupOnce } from "./backup/index.ts";
-import type { CameraDto, ProbeResult, SystemDto } from "./api-types.ts";
+import { API_VERSION, type CameraDto, type ProbeResult, type SystemDto } from "./api-types.ts";
 import { createAuth } from "./auth/index.ts";
+import { createLinkService } from "./auth/link.ts";
 import { probeCamera } from "./camera/probe.ts";
 import { openDb } from "./db.ts";
 import { buildDiagnostics } from "./diagnostics.ts";
@@ -13,10 +14,11 @@ import { createDetection } from "./detect/manager.ts";
 import { createEventTracker, eventRoutes } from "./events/index.ts";
 import { countEventsSince } from "./events/store.ts";
 import { createExports, exportRoutes } from "./export/index.ts";
+import { hostLabel, instanceLabel, loadInstanceId, startMdns, type MdnsResponder } from "./discovery/index.ts";
 import { readEnv } from "./env.ts";
 import { defaultRecordingsDir } from "./recordings-dir.ts";
 import { createHomekit } from "./homekit/manager.ts";
-import { coreRoutes, createRouter, HttpError, redactConfig } from "./http/index.ts";
+import { coreRoutes, createRouter, HttpError, linkRoutes, redactConfig } from "./http/index.ts";
 import { createLive } from "./live/live.ts";
 import {
   createIndexer,
@@ -51,6 +53,8 @@ mkdirSync(logDir, { recursive: true });
 
 const db = openDb(join(env.dataDir, "cookienvr.db"));
 const auth = createAuth({ db });
+const instanceId = loadInstanceId(db);
+const links = createLinkService({ tokens: auth });
 const cameras = createCameraStore(db);
 const settings = createSettingsStore(db, env.dataDir, defaultRecordingsDir(env));
 const supervisor = createSupervisor({ logDir });
@@ -287,6 +291,7 @@ const routes = [
     cameras,
     settings,
     version: pkg.version,
+    instanceId,
     system,
     diagnostics,
     probe,
@@ -305,6 +310,7 @@ const routes = [
     purgeOrphans: () =>
       indexer.exclusive(() => purgeOrphans(purgeDeps, (id) => cameras.get(id) !== null || hasRecordWorker(id))),
   }),
+  ...linkRoutes(links),
   ...eventRoutes({ db, dataDir: env.dataDir, events }),
   ...exportRoutes(exportJobs),
   ...ptzRoutes({ hub: ptz }),
@@ -335,6 +341,22 @@ homekit.sync();
 supervisor.apply(desiredWorkers());
 void restream.sync(cameras.list()).catch((e) => log("restream", e));
 
+const mdnsInfo = () => ({
+  instance: instanceLabel(settings.get().siteName, instanceId),
+  host: hostLabel(instanceId),
+  port: env.publicPort,
+  txt: { id: instanceId, version: pkg.version, api: String(API_VERSION) },
+});
+let mdns: MdnsResponder | null = null;
+if (env.discovery) {
+  try {
+    mdns = await startMdns({ info: mdnsInfo, onError: (e) => log("mdns", e) });
+  } catch (e) {
+    // 5353 被占用且不允許共用時，自動發現停用，其他功能照常
+    log("mdns", e);
+  }
+}
+
 cameras.subscribe((list) => {
   ptz.reconcile(list);
   detection.sync(list);
@@ -357,6 +379,7 @@ events.subscribe(({ phase, event }) => {
 settings.subscribe(() => {
   homekit.sync();
   void reconcileWorkers().catch((e) => log("workers", e));
+  mdns?.refresh();
 });
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => log("restream", e));
 
@@ -423,7 +446,7 @@ async function shutdown(exitCode = 0): Promise<void> {
   memory.stop();
   stopSync();
   void server.stop(true);
-  await Promise.all([supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop()]);
+  await Promise.all([mdns?.stop(), supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop()]);
   homekit.stop();
   db.close();
   process.exit(exitCode);

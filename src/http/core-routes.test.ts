@@ -68,6 +68,7 @@ beforeEach(async () => {
       cameras,
       settings,
       version: "1.2.3",
+      instanceId: "00000000-0000-4000-8000-000000000000",
       probe: async (conn): Promise<ProbeResult> => {
         probed.push(conn);
         return { ok: false, error: "unreachable" };
@@ -227,7 +228,7 @@ describe("路由與錯誤", () => {
 
 describe("認證流程", () => {
   test("info 反映是否需要初始設定", async () => {
-    expect(await (await call("/api/info")).json()).toEqual({ version: "1.2.3", apiVersion: 1, needsSetup: false, siteName: "CookieNVR" });
+    expect(await (await call("/api/info")).json()).toEqual({ version: "1.2.3", apiVersion: 1, needsSetup: false, siteName: "CookieNVR", instanceId: "00000000-0000-4000-8000-000000000000" });
   });
 
   test("setup 在已有帳號時回 409", async () => {

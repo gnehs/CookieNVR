@@ -13,6 +13,8 @@ export interface InfoDto {
   needsSetup: boolean;
   /** 顯示在登入頁、初始設定頁與側欄的站點名稱 */
   siteName: string;
+  /** 第一次啟動時產生的穩定識別碼；HA 用它認出同一台 NVR（換 IP 也一樣） */
+  instanceId: string;
 }
 
 export interface MeDto {
@@ -45,6 +47,34 @@ export interface TokenDto {
 /** 只在建立當下回傳一次完整 token */
 export interface CreatedTokenDto extends TokenDto {
   token: string;
+}
+
+/** 授權連結請求（免 token 連接其他 App）的狀態；只存在記憶體 */
+export type LinkStatus = "pending" | "approved" | "denied" | "claimed" | "expired";
+
+/** POST /api/link 的回應：code 給人對照，pollSecret 只有發起的 App 知道 */
+export interface LinkCreatedDto {
+  code: string;
+  approveUrl: string;
+  pollSecret: string;
+  expiresAt: number;
+  /** 建議的輪詢間隔（秒） */
+  interval: number;
+}
+
+/** POST /api/link/poll 的回應；approved 只會回一次，之後是 claimed */
+export type LinkPollDto =
+  | { status: "pending" | "denied" | "claimed" | "expired" }
+  | { status: "approved"; token: string; username: string; role: Role };
+
+/** 核准頁看到的請求內容 */
+export interface LinkRequestDto {
+  code: string;
+  app: string;
+  ip: string;
+  createdAt: number;
+  expiresAt: number;
+  status: LinkStatus;
 }
 
 export interface CameraDto {
