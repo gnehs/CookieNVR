@@ -623,6 +623,8 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 }
 @media (hover: hover) { .pb-ctl:hover { background: var(--fill); color: var(--text); } }
 .pb-ctl:active { transform: scale(0.94); }
+/* 暫停、靜音的圖示外面包了一層 span；行內的 span 會把圖示放在文字基線上而偏高 */
+.pb-ctl > span { display: grid; place-items: center; }
 .pb-ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 .pb-controls > .pb-ctl:first-child { background: var(--accent); color: var(--accent-fg); }
 @media (hover: hover) { .pb-controls > .pb-ctl:first-child:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); color: var(--accent-fg); } }
