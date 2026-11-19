@@ -182,6 +182,11 @@ describe("approval is a deliberate same-origin action by a signed-in person", ()
     expect((await call("/api/link", { json: { app: "Home\u0007Assistant" } })).status).toBe(400);
   });
 
+  test("shows IPv4-mapped addresses as plain IPv4", async () => {
+    const link = await start("::ffff:192.168.1.20");
+    expect((await (await call(`/api/link/${link.code}`, { cookie: adminCookie })).json()).ip).toBe("192.168.1.20");
+  });
+
   test("responses carrying secrets are not cached", async () => {
     const res = await call("/api/link", { json: { app: "Home Assistant" } });
     expect(res.headers.get("cache-control")).toBe("no-store");

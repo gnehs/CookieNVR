@@ -40,7 +40,9 @@ export function linkRoutes(links: LinkService): Route[] {
         const app = str(body, "app", { max: 40 }).trim();
         if (/\p{C}/u.test(app)) throw new HttpError(400, "欄位 app 不能含控制字元");
         const origin = `${isSecure(ctx) ? "https" : "http"}://${ctx.url.host}`;
-        return json(links.create({ app, ip: ctx.ip, origin }), 201, NO_STORE);
+        // 雙協定堆疊的 socket 會把 IPv4 寫成 ::ffff:a.b.c.d，給人看的名稱用原本的樣子
+        const ip = ctx.ip.replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/, "");
+        return json(links.create({ app, ip, origin }), 201, NO_STORE);
       },
     },
     {
