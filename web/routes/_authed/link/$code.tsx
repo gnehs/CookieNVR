@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { NotConverted } from "../../../app/NotConverted.tsx";
+import { LinkPage } from "../../../pages/link/LinkPage.tsx";
 
 export const Route = createFileRoute("/_authed/link/$code")({
-  component: () => <NotConverted title="連線核准" legacy="web/legacy/pages/link.ts" />,
+    component: LinkRoute,
 });
+
+function LinkRoute() {
+  const { code } = Route.useParams();
+  return <LinkPage code={code} />;
+}
