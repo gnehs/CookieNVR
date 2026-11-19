@@ -350,7 +350,7 @@ export function createMockStates(deps: MockStatesDeps) {
       s.model = buildModel(s.config, s.images, 6000);
       resetRecognition(s);
       const pct = Math.round((s.model.validation?.accuracy ?? 0) * 100);
-      return { ok: true, value: s.model.validation ? `訓練完成，交叉驗證準確度 ${pct}%` : "訓練完成" };
+      return { ok: true, value: s.model.validation ? `訓練完成，用標記的畫面驗證答對 ${pct}%` : "訓練完成" };
     });
   }
 
