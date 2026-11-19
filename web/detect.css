@@ -192,6 +192,39 @@ details.detect-more[open] > summary .icon { rotate: 90deg; }
 .obj-dot[data-tone="ok"] { background: var(--ok); }
 .obj-dot[data-tone="warn"] { background: var(--warn); }
 .obj-dot[data-tone="bad"] { background: var(--bad); }
+.obj-warnings { display: grid; gap: 8px; }
+.obj-warnings:empty { display: none; }
+.obj-notes { display: grid; gap: 8px; }
+.obj-notes:empty { display: none; }
+.obj-folded { display: grid; gap: 6px; padding: 4px 0 2px; }
+
+/* 測速 */
+.obj-bench { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
+.obj-bench-head { display: grid; gap: 2px; }
+.obj-bench-pickhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.bench-progress { display: grid; gap: 8px; }
+.bench-progress-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bench-progress-head b { font-weight: 650; min-width: 0; overflow-wrap: anywhere; }
+.bench-progress .bar > i { transition: width 500ms linear; }
+.bench-result { display: grid; gap: 12px; }
+.bench-headline { display: flex; align-items: flex-start; gap: 10px; font-size: 16px; line-height: 1.45; }
+.bench-headline .icon { margin-top: 2px; color: var(--ok-text); }
+.bench-headline[data-tone="warn"] .icon { color: var(--warn-text); }
+.bench-headline[data-tone="bad"] .icon { color: var(--bad-text); }
+.bench-verdict { color: var(--text-2); font-size: 14px; line-height: 1.5; }
+.bench-verdict[data-tone="warn"] { color: var(--warn-text); font-weight: 550; }
+.bench-rows { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.bench-rows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; min-width: 0; }
+.bench-rows li + li { border-top: 1px solid var(--border); }
+.bench-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.bench-val { flex: none; font-weight: 650; }
+.bench-rows li[data-tone="bad"] .bench-val { color: var(--bad-text); }
+.bench-tag { padding: 1px 8px; border-radius: 99px; background: var(--fill-2); color: var(--text-2); font-size: 12px; font-weight: 600; }
+.bench-tag.best { background: var(--ok-soft); color: var(--ok-text); }
+.bench-detail { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 4px 14px; margin: 4px 0 2px; font-size: 13px; }
+.bench-detail dt { font-weight: 600; color: var(--text-2); }
+.bench-detail dd { margin: 0; color: var(--muted); }
+@media (max-width: 560px) { .bench-detail { grid-template-columns: minmax(0, 1fr); gap: 0; } .bench-detail dd { margin-bottom: 8px; } }
 code.path { font-family: var(--mono); font-size: 12.5px; padding: 1px 6px; border-radius: 6px; background: var(--fill); color: var(--text); word-break: break-all; }
 
 .obj-section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }

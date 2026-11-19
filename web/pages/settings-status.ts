@@ -59,6 +59,14 @@ function explain(issue: Issue, snap: HealthSnapshot): Explained {
         why: "物件辨識停下來時，錄影與動作偵測不受影響，只是事件不會標上看到的東西；設成「過濾」的攝影機會改成照一般動作建立事件。重新啟動後仍然停止，請用頁面下方的「複製診斷資訊」找原因，也可以到「設定 → 一般」換一個辨識模型或推論裝置。",
         action: { label: "重新啟動", icon: "refresh", run: () => restartWorkers(["detector"], "重新啟動物件辨識？", "辨識會中斷幾秒鐘，錄影不受影響。", "已重新啟動物件辨識") },
       };
+    case "objectsLoad":
+      return {
+        who: "物件辨識",
+        pill: { label: "跟不上", tone: "warn" },
+        next: issue.title,
+        why: "辨識跟不上時，多出來的畫面會被略過。錄影與動作偵測不受影響，但事件可能漏標上看到的東西。降低辨識頻率、改用更快的裝置，或到設定裡測速看看這台機器的能力，都能改善。",
+        action: { label: "調整設定", icon: "settings", href: "#/settings/system" },
+      };
     case "offline":
       return {
         who: names,
@@ -137,7 +145,7 @@ function thumb(cameraId: string): HTMLElement {
   return box;
 }
 
-const SYSTEM_ICON: Partial<Record<Issue["kind"], string>> = { restream: "server", objects: "server", cpuBusy: "activity", memoryHigh: "activity" };
+const SYSTEM_ICON: Partial<Record<Issue["kind"], string>> = { restream: "server", objects: "server", objectsLoad: "server", cpuBusy: "activity", memoryHigh: "activity" };
 
 function issueRow(issue: Issue, snap: HealthSnapshot): HTMLElement {
   const e = explain(issue, snap);
@@ -176,14 +184,21 @@ export async function settingsStatusPage(ctx: PageCtx): Promise<Node> {
   const resources = createResourcesCard();
   resources.el.hidden = true;
   let lastKey = "";
+  let lastSnap: HealthSnapshot | null = null;
+  /** 物件辨識來不及處理的提醒（後端給的一般人看得懂的話）；沒問題或沒開為 null */
+  let loadWarning: string | null = null;
 
   function paint(snap: HealthSnapshot) {
+    lastSnap = snap;
     stamp.textContent = `每 5 秒自動更新・上次 ${formatClock(snap.at)}`;
     if (snap.metrics) {
       resources.el.hidden = false;
       resources.update(snap.metrics, snap.cams);
     }
-    const hl = snap.health;
+    const base = snap.health;
+    // 辨識程序已經停止時，說的是更根本的問題，不重複提醒負載
+    const extra: Issue[] = loadWarning && !base.issues.some((i) => i.kind === "objects") ? [{ kind: "objectsLoad", tone: "warn", cameras: [], title: loadWarning, short: "物件辨識跟不上" }] : [];
+    const hl = { ...base, issues: [...base.issues, ...extra].sort((a, b) => (a.tone === b.tone ? 0 : a.tone === "bad" ? -1 : 1)) };
     // 問題已經在上面的卡片說過，下面只列沒事的攝影機
     const fine = snap.cams.filter((c) => !hl.statuses.get(c.id)!.problem);
     // 內容沒變就不重畫，輪詢時不會把鍵盤焦點弄丟
@@ -234,6 +249,14 @@ export async function settingsStatusPage(ctx: PageCtx): Promise<Node> {
     );
   }
 
+  async function checkObjects() {
+    if (!lastSnap?.settings.objects.enabled) return void (loadWarning = null);
+    const next = await api.objects().then((o) => (o.status.paused ? loadWarning : o.status.warning), () => null);
+    if (next === loadWarning || !ctx.isCurrent()) return;
+    loadWarning = next;
+    if (lastSnap) paint(lastSnap);
+  }
+
   await refreshHealth();
   ctx.onCleanup(onHealth((s) => ctx.isCurrent() && paint(s)));
   // 系統資源只在這一頁每 5 秒抓（watch=1 讓後端讀 GPU 與各程序）；其他頁面跟著每分鐘的重抓判斷資源吃緊
@@ -243,6 +266,8 @@ export async function settingsStatusPage(ctx: PageCtx): Promise<Node> {
   pollMetrics();
   const metricsTimer = setInterval(pollMetrics, 5_000);
   ctx.onCleanup(() => clearInterval(metricsTimer));
+  void checkObjects();
+  ctx.every(5_000, () => void checkObjects());
 
   return settingsLayout(
     "status",

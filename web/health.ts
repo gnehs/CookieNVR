@@ -40,7 +40,7 @@ export function cameraStatus(cam: Pick<CameraDto, "config" | "online" | "recordi
   return { kind, ...STATUS[kind] };
 }
 
-export type IssueKind = "restream" | "objects" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh";
+export type IssueKind = "restream" | "objects" | "objectsLoad" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh";
 
 export interface Issue {
   kind: IssueKind;

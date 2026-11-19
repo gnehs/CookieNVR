@@ -61,8 +61,9 @@ function connect(): void {
     update((s) => ({ workers: s.workers && (w.state === "stopped" ? s.workers.filter((x) => x.id !== w.id) : upsert(s.workers, w)) }));
   });
   es.addEventListener("event", (e) => {
-    const { phase, event } = parse<{ phase: "start" | "end"; event: EventDto }>(e);
-    update((s) => ({ events: phase === "start" ? upsert(s.events, event) : s.events.filter((x) => x.id !== event.id) }));
+    const { phase, event } = parse<{ phase: "start" | "update" | "end"; event: EventDto }>(e);
+    // update：進行中的事件類別變了（物件辨識確認了新的東西），換成最新的那筆
+    update((s) => ({ events: phase === "end" ? s.events.filter((x) => x.id !== event.id) : upsert(s.events, event) }));
   });
   es.onerror = () => {
     // CONNECTING means the browser is already retrying; on reconnect the server sends a fresh snapshot.
