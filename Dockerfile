@@ -24,8 +24,16 @@ RUN set -eux; \
 FROM oven/bun:${BUN_VERSION}-slim AS base
 # tini is PID 1: it forwards SIGTERM/SIGINT to the main process and reaps
 # orphaned ffmpeg/mediamtx children, which Bun as PID 1 would not.
+# Debian's ffmpeg is linked against libavfilter, which drags in Mesa and LLVM through libplacebo
+# and Vulkan. They are only dlopen'ed for GPU filters and hwaccel, neither of which recording,
+# snapshots or probing use, so they are purged (about 180 MB). --force-depends leaves dpkg's
+# dependency state inconsistent: do not run apt-get install in this stage after this layer.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg tini ca-certificates \
+ && dpkg --purge --force-depends libllvm19 mesa-libgallium libz3-4 \
+ && ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=d=1 -f lavfi -i sine=d=1 \
+      -c:v libx264 -c:a aac -f null - \
+ && ffprobe -hide_banner -loglevel error -version >/dev/null \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=mediamtx /dl/mediamtx /usr/local/bin/mediamtx
 

@@ -8,14 +8,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   MEDIAMTX_VERSION: "1.21.4"
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
       - name: Install ffmpeg
         run: |
@@ -31,3 +36,15 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun test
+
+  # 真的建映像並在容器內走完整條流程（錄影、重啟、docker stop、時區）。約 7 分鐘，
+  # 所以只在 PR 與 main 上跑；它是這個專案唯一會用 Debian 的 ffmpeg 與 amd64 MediaMTX 實際錄影的地方。
+  docker-e2e:
+    needs: test
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun scripts/docker-e2e.ts

@@ -57,6 +57,10 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 
 時區不需要設定：顯示一律用瀏覽器的時區，錄影檔名與資料庫一律存 UTC。
 
+RTSP 轉發的主機埠要和容器內相同（預設 `8554:8554`）：App 顯示給使用者的 RTSP 網址用的是容器內的埠。
+
+容器驗證：`bun scripts/docker-e2e.ts` 建置映像，起一個假相機容器與一個 NVR 容器，經 HTTP API 走完初始設定、測試連線、錄影（經轉發與直連各一台）、下載片段、快照、RTSP 帳密、強制結束 ffmpeg 與 MediaMTX、`docker stop`、同一個 volume 重啟與 SIGKILL 後重啟，並以 `TZ=Asia/Taipei` 確認片段檔名仍是 UTC。失敗時印出是哪一步，結束時清掉自己建立的容器、volume 與 network。CI 在 PR 與 main 上跑它（約 7 分鐘）。映像體積靠移除 ffmpeg 連帶裝進來、但錄影用不到的 Mesa 與 LLVM 瘦身（約 250 MB）。
+
 環境變數只管「容器怎麼跑」，不含任何攝影機或功能設定。第一次開啟網頁會進入初始設定，建立管理員帳號。
 
 ```yaml
