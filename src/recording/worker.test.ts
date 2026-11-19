@@ -1,7 +1,8 @@
-import { expect, test } from "bun:test";
-import { readdir } from "node:fs/promises";
+import { describe, expect, test } from "bun:test";
+import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { readEnv } from "../env.ts";
+import { parseSegmentPath } from "./layout.ts";
 import { camera, tempSettings, writeSegment } from "./test-helpers.ts";
 import { ensureDayDirs, recordWorkerSpec } from "./worker.ts";
 
@@ -70,4 +71,51 @@ test("day directories exist for today and tomorrow (UTC) for recording cameras o
   await ensureDayDirs(cams, settings, Date.UTC(2026, 11, 31, 23, 30));
   expect((await readdir(settings.storagePath)).sort()).toEqual(["rec"]);
   expect((await readdir(join(settings.storagePath, "rec"))).sort()).toEqual(["20261231", "20270101"]);
+});
+
+const realEnv = readEnv({});
+const hasTools = Boolean(Bun.which(realEnv.ffmpegBin) && Bun.which(realEnv.ffprobeBin) && Bun.which(realEnv.mediamtxBin));
+
+describe.skipIf(!hasTools)("against a live RTSP camera (needs ffmpeg, ffprobe and MediaMTX)", () => {
+  test("the first segment holds no footage from before the time its name gives", async () => {
+    const probe = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
+    const port = probe.port;
+    probe.stop(true);
+    const fake = Bun.spawn(["bun", join(import.meta.dir, "../../scripts/fake-camera.ts"), "--port", String(port)], {
+      stdout: "pipe",
+      stderr: "ignore",
+    });
+    const settings = await tempSettings();
+    try {
+      const reader = fake.stdout.getReader();
+      for (let out = ""; !out.includes("READY"); ) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("fake camera exited early");
+        out += new TextDecoder().decode(value);
+      }
+      const cam = camera("cam1");
+      await ensureDayDirs([cam], settings, Date.now());
+      const spec = recordWorkerSpec(cam, settings, `rtsp://127.0.0.1:${port}/stream1`, realEnv);
+      const recorder = Bun.spawn(spec.cmd, { env: { ...process.env, ...spec.env }, stderr: "ignore" });
+      await Bun.sleep(8_000);
+      recorder.kill("SIGINT");
+      await recorder.exited;
+
+      const dayDirs = await readdir(join(settings.storagePath, "cam1"));
+      const files = (await Promise.all(dayDirs.map(async (d) => (await readdir(join(settings.storagePath, "cam1", d))).map((f) => join(settings.storagePath, "cam1", d, f)))))
+        .flat()
+        .sort();
+      const first = files[0]!;
+      const wallSec = ((await stat(first)).mtimeMs - parseSegmentPath(first)!.startMs) / 1000;
+      const ffprobe = Bun.spawnSync([realEnv.ffprobeBin, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", first]);
+      const mediaSec = Number(ffprobe.stdout.toString().trim());
+      expect(mediaSec).toBeGreaterThan(2);
+      // The name is truncated to whole seconds, so the wall span may exceed the media by up to ~1 s, never the reverse.
+      expect(mediaSec).toBeLessThanOrEqual(wallSec + 0.3);
+    } finally {
+      fake.kill("SIGTERM");
+      await fake.exited;
+      await rm(settings.storagePath, { recursive: true, force: true });
+    }
+  }, 30_000);
 });

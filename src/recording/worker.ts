@@ -27,6 +27,9 @@ export function recordWorkerSpec(
     ...["-rtsp_transport", transport],
     // RTSP demuxer timeout is in microseconds; without it a dead camera hangs ffmpeg forever.
     ...["-timeout", "10000000"],
+    // Stream analysis reads 2-3 s of live packets before the first segment is opened and named; without
+    // nobuffer those packets go into that file, so its media runs longer than the wall time its name implies.
+    ...["-fflags", "nobuffer"],
     ...["-i", inputUrl],
     ...["-map", "0:v:0"],
     // The trailing "?" makes the audio map optional, so a stream without audio still records.
