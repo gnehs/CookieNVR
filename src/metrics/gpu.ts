@@ -72,7 +72,7 @@ export async function probeNvidia(io: MetricsIo): Promise<ProbeOutcome> {
   };
 }
 
-interface DrmCard {
+export interface DrmCard {
   card: string;
   pdev: string;
   vendor: string;
@@ -81,7 +81,7 @@ interface DrmCard {
   renderNode: string | null;
 }
 
-async function listDrmCards(io: MetricsIo): Promise<DrmCard[]> {
+export async function listDrmCards(io: MetricsIo): Promise<DrmCard[]> {
   const names = (await io.readDir("/sys/class/drm")) ?? [];
   const cards: DrmCard[] = [];
   for (const card of names.filter((n) => /^card\d+$/.test(n)).sort()) {

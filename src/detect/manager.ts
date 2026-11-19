@@ -7,9 +7,12 @@ import type { EventTracker } from "../events/tracker.ts";
 import { HttpError } from "../http/errors.ts";
 import { queuedStream } from "../stream/queued-stream.ts";
 import type { Camera, CameraId, DetectConfig, Route, WorkerSpec } from "../types.ts";
+import type { HwFailure } from "../hwcodec/commands.ts";
+import type { DecodePlan } from "../hwcodec/plan.ts";
+import { HW_DECODE_ENV } from "./command.ts";
 import { detectConfigOf, usesOnvif, usesPixel } from "./config.ts";
 import { createOnvifSources, type OnvifSourceStatus } from "./onvif-source.ts";
-import { chunksOf, MsgKind, MsgReader, type DetectControl, type FrameResult } from "./protocol.ts";
+import { chunksOf, MsgKind, MsgReader, type DecodeReport, type DetectControl, type FrameResult } from "./protocol.ts";
 
 const WORKER_SCRIPT = join(import.meta.dir, "worker.ts");
 const TICK_MS = 500;
@@ -34,6 +37,8 @@ export interface DetectionOptions {
   isBusy(id: CameraId): boolean;
   /** 每台每秒輸出幾張 JPEG（1 到 5）；開了物件辨識的攝影機依辨識頻率，其餘 1 張 */
   jpegFps?: (camera: Camera) => number;
+  /** 這台用哪張卡解碼；沒給就一律 CPU */
+  decodePlan?: (camera: Camera) => DecodePlan;
   /** 每張新的 JPEG（快照與縮圖之外的用途，例如物件辨識） */
   onJpeg?: (id: CameraId, jpeg: Uint8Array<ArrayBuffer>, at: number) => void;
   fetch?: typeof fetch;
@@ -51,6 +56,16 @@ export interface DetectDiagnostics {
   jpegAt: number | null;
   paused: boolean;
   onvif: OnvifSourceStatus | null;
+  decode: CameraDecode | null;
+}
+
+/** 一台 detect worker 實際的解碼方式：device 是裝置識別字，null 是 CPU；fallback 是沒用到選定裝置的原因 */
+export interface CameraDecode {
+  cameraId: CameraId;
+  device: string | null;
+  /** 第一張畫面已經由這張卡解出（CPU 時恆為 false） */
+  confirmed: boolean;
+  fallback: HwFailure | null;
 }
 
 export interface Detection {
@@ -59,6 +74,8 @@ export interface Detection {
   workerSpecs(): WorkerSpec[];
   latestJpeg(id: CameraId): { bytes: Uint8Array<ArrayBuffer>; at: number } | null;
   diagnostics(id: CameraId): DetectDiagnostics | null;
+  /** 有 detect worker 的每台攝影機的解碼方式 */
+  decodeStatus(): CameraDecode[];
   routes(): Route[];
   stop(): Promise<void>;
 }
@@ -74,6 +91,10 @@ interface CamState {
   jpegWaiters: Set<() => void>;
   samples: Set<(s: MotionSampleDto) => void>;
   controlText: string | null;
+  /** 最近一次產生 worker 規格時的規劃 */
+  decodePlan: DecodePlan | null;
+  /** worker 這次執行回報的結果；worker 重啟時清掉 */
+  decodeReport: DecodeReport | null;
 }
 
 /** 每秒 1 張時不帶參數，沒開物件辨識的攝影機的 worker 指令和以前一樣，不會因升級重啟 */
@@ -143,14 +164,26 @@ export function createDetection(opts: DetectionOptions): Detection {
   async function pump(id: CameraId, stdout: ReadableStream<Uint8Array>): Promise<void> {
     const reader = new MsgReader();
     const dec = new TextDecoder();
+    const started = cams.get(id);
+    if (started) started.decodeReport = null;
     for await (const chunk of chunksOf(stdout)) {
       const c = cams.get(id);
       for (const msg of reader.push(chunk)) {
         if (!c) continue;
         if (msg.kind === MsgKind.frame) onFrame(c, JSON.parse(dec.decode(msg.payload)) as FrameResult);
         else if (msg.kind === MsgKind.jpeg) onJpeg(c, msg.payload);
+        else if (msg.kind === MsgKind.decode) c.decodeReport = JSON.parse(dec.decode(msg.payload)) as DecodeReport;
       }
     }
+  }
+
+  function decodeOf(c: CamState): CameraDecode | null {
+    const plan = c.decodePlan;
+    if (!plan) return null;
+    const r = c.decodeReport;
+    const cameraId = c.camera.id;
+    if (r?.mode === "cpu") return { cameraId, device: null, confirmed: false, fallback: { reason: r.reason, detail: r.detail } };
+    return { cameraId, device: plan.hw?.deviceId ?? null, confirmed: plan.hw !== null && r?.mode === "hw", fallback: plan.note };
   }
 
   function sync(cameras: Camera[]): void {
@@ -161,7 +194,7 @@ export function createDetection(opts: DetectionOptions): Detection {
       const detect = detectConfigOf(camera.config);
       let c = cams.get(camera.id);
       if (!c) {
-        c = { camera, detect, url: null, paused: false, lastFrame: null, recentPeak: [], jpeg: null, jpegWaiters: new Set(), samples: new Set(), controlText: null };
+        c = { camera, detect, url: null, paused: false, lastFrame: null, recentPeak: [], jpeg: null, jpegWaiters: new Set(), samples: new Set(), controlText: null, decodePlan: null, decodeReport: null };
         cams.set(camera.id, c);
       }
       const cooldown = detect.cooldownSec * 1000;
@@ -198,12 +231,21 @@ export function createDetection(opts: DetectionOptions): Detection {
   function workerSpecs(): WorkerSpec[] {
     const specs: WorkerSpec[] = [];
     for (const c of cams.values()) {
-      if (!c.url) continue;
+      if (!c.url) {
+        c.decodePlan = null;
+        continue;
+      }
       const id = c.camera.id;
+      const plan = opts.decodePlan?.(c.camera) ?? { hw: null, note: null };
+      // 規劃換了卡，上一次執行的回報就不算數；同一張卡則保留（規格沒變，worker 不會重啟）
+      if (JSON.stringify(plan.hw) !== JSON.stringify(c.decodePlan?.hw)) c.decodeReport = null;
+      c.decodePlan = plan;
       specs.push({
         id: `detect:${id}`,
         kind: "detect",
         cmd: [process.execPath, WORKER_SCRIPT, opts.env.ffmpegBin, c.url, controlPath(id), ...jpegFpsArg(opts.jpegFps?.(c.camera) ?? 1)],
+        // CPU 時不帶，規格和加入硬體解碼前一樣，升級不會重啟
+        ...(plan.hw ? { env: { [HW_DECODE_ENV]: JSON.stringify(plan.hw) } } : {}),
         stall: {
           graceMs: STALL_GRACE_MS,
           intervalMs: 5_000,
@@ -300,8 +342,10 @@ export function createDetection(opts: DetectionOptions): Detection {
         jpegAt: c.jpeg?.at ?? null,
         paused: c.paused,
         onvif: onvif.status(id),
+        decode: decodeOf(c),
       };
     },
+    decodeStatus: () => [...cams.values()].flatMap((c) => decodeOf(c) ?? []),
     routes: () => [snapshotRoute, motionRoute],
     async stop() {
       clearInterval(timer);

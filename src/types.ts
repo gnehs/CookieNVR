@@ -90,13 +90,17 @@ export interface Camera {
 }
 
 /**
- * 推論裝置：auto（有可用的 GPU 就用）、cpu，或 detector 列出的裝置識別字，例如 intel:GPU.0、
- * nvidia:GPU-<uuid>。存識別字而不是清單順序，重開機或換插槽不會指到別張卡。
+ * 運算裝置：auto（有可用的 GPU 就用）、cpu，或裝置識別字，例如 intel:GPU.0、nvidia:GPU-<uuid>。
+ * 物件辨識（detector 列出）與影像解碼（`src/hwcodec/` 列出）用同一套識別字，同一張卡在兩邊是同一個值。
+ * 存識別字而不是清單順序，重開機或換插槽不會指到別張卡。
  */
 export type DeviceRef = string;
 
-/** 會用到推論裝置的工作；目前只有物件辨識，之後的工作加在這裡 */
-export type DeviceTask = "objects";
+/**
+ * 會用到運算裝置的工作。objects = 物件辨識的推論；decode = detect worker 解碼攝影機畫面
+ * （動作偵測、快照、辨識畫面都來自它）。其他 ffmpeg 工作都是 -c copy，沒有影像解碼或編碼。
+ */
+export type DeviceTask = "objects" | "decode";
 
 /** 物件辨識每秒送幾張畫面去辨識（每台攝影機、有動作時） */
 export const OBJECT_FPS_CHOICES = [0.5, 1, 2, 3, 5] as const;
@@ -122,7 +126,7 @@ export interface Settings {
   /** HKSV 總開關；關閉時不載入 HAP-NodeJS、不啟動 homekit worker。basePort 是第一台配件的 port */
   homekit: { enabled: boolean; basePort: number };
   objects: ObjectSettings;
-  /** 每個工作用哪個推論裝置 */
+  /** 每個工作用哪個裝置；舊資料沒有 decode，讀取時補預設值 */
   devices: Record<DeviceTask, DeviceRef>;
 }
 
@@ -137,7 +141,8 @@ export function defaultSettings(dataDir: string, recordingsDir = `${dataDir}/rec
     rtsp: { externalEnabled: true },
     homekit: { enabled: false, basePort: 51826 },
     objects: { enabled: false, model: "builtin", fps: 2 },
-    devices: { objects: "auto" },
+    // 解碼預設用 CPU：子碼流很便宜，硬體解碼要使用者自己選（見規格「影像硬體解碼」）
+    devices: { objects: "auto", decode: "cpu" },
   };
 }
 

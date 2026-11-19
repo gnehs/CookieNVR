@@ -196,6 +196,54 @@ export interface SystemDto {
   /** oldestMs 是這台攝影機最早一段錄影的開始時間，給「大約可保留幾天」的估算用 */
   usage: { cameraId: CameraId; bytes: number; oldestMs: number | null }[];
   logs: string[];
+  /** 影像解碼用哪張卡；狀態頁用 warning 顯示退回 CPU 的提醒 */
+  decode: DecodeStatusDto;
+}
+
+export type VideoCodecName = "h264" | "hevc";
+export type VideoDeviceKind = "intel" | "nvidia" | "apple";
+
+/** 一項試跑：ok 附耗時（毫秒，含啟動 ffmpeg）；失敗附白話原因與 ffmpeg 的訊息（只放診斷資訊） */
+export type CodecCheckDto = { ok: true; ms: number } | { ok: false; reason: string; detail: string };
+
+/**
+ * 一張可做影片硬體解碼／編碼的顯示卡。id 和物件辨識的推論裝置同一套（intel:GPU.0、nvidia:GPU-<uuid>），
+ * 存進 `Settings.devices.decode`；pci 對應系統資源 `GpuDto.id` 的 `<vendor>:<PCI 位址>`。
+ * apple:0（VideoToolbox）只會出現在 macOS 開發機。
+ */
+export interface VideoDeviceDto {
+  id: string;
+  kind: VideoDeviceKind;
+  name: string;
+  pci: string | null;
+  decode: Record<VideoCodecName, CodecCheckDto>;
+  /** 目前沒有工作會編碼影片（錄影、預覽、匯出、HKSV 都是直接複製），只供參考與診斷 */
+  encode: Record<VideoCodecName, CodecCheckDto>;
+}
+
+/** 一台 detect worker 的解碼方式：device 是裝置識別字，null 是 CPU；confirmed = 第一張畫面已由這張卡解出 */
+export interface CameraDecodeDto {
+  cameraId: CameraId;
+  device: string | null;
+  confirmed: boolean;
+  fallback: { reason: string; detail: string } | null;
+}
+
+export interface DecodeStatusDto {
+  /** `Settings.devices.decode` */
+  requested: DeviceRef;
+  cameras: CameraDecodeDto[];
+  /** 給狀態頁的一句話（例如「客廳改用處理器解碼：…」）；沒有退回時為 null */
+  warning: string | null;
+}
+
+/** GET /api/video-devices（管理員）；`?refresh=1` 重新試跑。第一次請求會等試跑完成（通常幾秒） */
+export interface VideoDevicesDto {
+  /** 試跑的時間；ffmpeg 是 `ffmpeg -version` 的第一行 */
+  probedAt: number;
+  ffmpeg: string;
+  devices: VideoDeviceDto[];
+  decode: DecodeStatusDto;
 }
 
 /**

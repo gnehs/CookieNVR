@@ -1,7 +1,7 @@
 import { DEFAULT_DETECT, LIMITS } from "../detect/config.ts";
 import { LABEL_KEY } from "../objects/labels.ts";
 import { MAX_SPEED, MIN_SPEED } from "../onvif/index.ts";
-import { OBJECT_FPS_CHOICES, type CameraConfig, type CameraConnection, type DetectConfig, type MaskPolygon, type ObjectSettings, type OnvifEndpoint, type PtzPrefs, type Settings } from "../types.ts";
+import { OBJECT_FPS_CHOICES, type CameraConfig, type CameraConnection, type DetectConfig, type DeviceTask, type MaskPolygon, type ObjectSettings, type OnvifEndpoint, type PtzPrefs, type Settings } from "../types.ts";
 import { HttpError } from "./errors.ts";
 import { asObject, bool, int, isObject, oneOf, optStr, str, type JsonObject } from "./validate.ts";
 
@@ -135,8 +135,9 @@ export function parseCameraConfig(value: unknown): CameraConfig {
 }
 
 const SETTINGS_KEYS = ["siteName", "storagePath", "retention", "rtsp", "homekit", "objects", "devices"];
-/** auto、cpu，或 detector 列出的識別字（intel:GPU.0、nvidia:GPU-<uuid>、nvidia:0） */
-const DEVICE_REF = /^(auto|cpu|intel:[A-Za-z0-9._-]{1,40}|nvidia:[A-Za-z0-9._-]{1,80})$/;
+/** auto、cpu，或偵測到的識別字（intel:GPU.0、nvidia:GPU-<uuid>、nvidia:0；apple:0 只出現在 macOS 開發機） */
+const DEVICE_REF = /^(auto|cpu|intel:[A-Za-z0-9._-]{1,40}|nvidia:[A-Za-z0-9._-]{1,80}|apple:\d{1,2})$/;
+const DEVICE_TASKS: DeviceTask[] = ["objects", "decode"];
 /** 使用者模型是 <dataDir>/models/ 底下的檔名，不能帶路徑 */
 const MODEL_FILE = /^[\w.\- ]{1,120}\.onnx$/;
 
@@ -191,11 +192,14 @@ export function parseSettingsPatch(value: unknown, current: Settings): Partial<S
   }
   if (o.devices !== undefined) {
     if (!isObject(o.devices)) throw new HttpError(400, "欄位 devices 必須是物件");
-    rejectUnknown(o.devices, ["objects"], "devices");
+    rejectUnknown(o.devices, DEVICE_TASKS, "devices");
     const merged = { ...current.devices, ...o.devices };
-    const ref = str(merged, "objects", { path: "devices.objects", max: 100 });
-    if (!DEVICE_REF.test(ref)) throw new HttpError(400, "欄位 devices.objects 必須是 auto、cpu 或偵測到的裝置識別字");
-    patch.devices = { objects: ref };
+    const ref = (task: DeviceTask) => {
+      const v = str(merged, task, { path: `devices.${task}`, max: 100 });
+      if (!DEVICE_REF.test(v)) throw new HttpError(400, `欄位 devices.${task} 必須是 auto、cpu 或偵測到的裝置識別字`);
+      return v;
+    };
+    patch.devices = { objects: ref("objects"), decode: ref("decode") };
   }
   return patch;
 }

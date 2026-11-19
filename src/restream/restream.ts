@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Env } from "../env.ts";
+import type { CodecName } from "../hwcodec/commands.ts";
 import type { Camera, CameraId, Route, StreamName, Unsubscribe, WorkerSpec } from "../types.ts";
 import { buildRtspAuthRoute, type RtspAuthDeps } from "./auth-route.ts";
 import { renderMediamtxConfig } from "./mediamtx-config.ts";
@@ -19,6 +20,28 @@ export interface RestreamOptions {
   retryTimeoutMs?: number;
 }
 
+interface PathInfo {
+  ready?: boolean;
+  /** 舊版的軌道名稱，例如 "H264"、"MPEG-4 Audio" */
+  tracks?: unknown;
+  /** 1.15 起的軌道清單，每項有 codec */
+  tracks2?: unknown;
+}
+
+const CODEC_OF: Record<string, CodecName> = { H264: "h264", H265: "hevc" };
+
+/** MediaMTX `/v3/paths/get` 的回應裡第一個影像軌的格式 */
+export function videoCodecOf(info: PathInfo | null): CodecName | null {
+  if (!info?.ready) return null;
+  const names = Array.isArray(info.tracks2)
+    ? info.tracks2.map((t) => (t && typeof t === "object" ? (t as { codec?: unknown }).codec : null))
+    : Array.isArray(info.tracks)
+      ? info.tracks
+      : [];
+  for (const n of names) if (typeof n === "string" && n in CODEC_OF) return CODEC_OF[n]!;
+  return null;
+}
+
 export interface Restream {
   workerSpec(): WorkerSpec;
   /** 把 MediaMTX 的 path 對帳成 cameras 的樣子；MediaMTX 還沒起來時會重試，逾時才丟錯 */
@@ -31,6 +54,8 @@ export interface Restream {
   internalUrl(cameraId: CameraId, stream: StreamName): string;
   externalUrl(host: string, cameraId: CameraId, stream: StreamName): string;
   isReady(cameraId: CameraId, stream: StreamName): Promise<boolean>;
+  /** 這個碼流的影像格式（MediaMTX 收到來源後才知道）；不是 H.264／H.265 或還沒連上時為 null */
+  videoCodec(cameraId: CameraId, stream: StreamName): Promise<CodecName | null>;
   rtspAuthRoute(deps: RtspAuthDeps): Route;
 }
 
@@ -76,6 +101,15 @@ export function createRestream(opts: RestreamOptions): Restream {
   const rtspPort = opts.rtspPort ?? opts.env.rtspPort;
   const apiPort = opts.apiPort ?? 9997;
   const api = `http://127.0.0.1:${apiPort}`;
+
+  async function pathInfo(cameraId: CameraId, stream: StreamName): Promise<PathInfo | null> {
+    try {
+      const res = await fetch(`${api}/v3/paths/get/${encodeURIComponent(cameraId)}/${stream}`, { signal: AbortSignal.timeout(5_000) });
+      return res.ok ? ((await res.json()) as PathInfo) : null;
+    } catch {
+      return null;
+    }
+  }
   const retryTimeoutMs = opts.retryTimeoutMs ?? 30_000;
   const internal = { username: `nvr-${randomBytes(4).toString("hex")}`, secret: randomBytes(24).toString("hex") };
   const configPath = join(opts.configDir, "mediamtx.yml");
@@ -195,15 +229,11 @@ export function createRestream(opts: RestreamOptions): Restream {
     },
 
     async isReady(cameraId, stream) {
-      try {
-        const res = await fetch(`${api}/v3/paths/get/${encodeURIComponent(cameraId)}/${stream}`, {
-          signal: AbortSignal.timeout(5_000),
-        });
-        if (!res.ok) return false;
-        return ((await res.json()) as { ready?: boolean }).ready === true;
-      } catch {
-        return false;
-      }
+      return (await pathInfo(cameraId, stream))?.ready === true;
+    },
+
+    async videoCodec(cameraId, stream) {
+      return videoCodecOf(await pathInfo(cameraId, stream));
     },
 
     rtspAuthRoute(deps) {

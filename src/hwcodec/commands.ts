@@ -1,0 +1,118 @@
+/**
+ * ffmpeg 硬體解碼／編碼的參數，全部是純函式。每種 API 一列設定（`API`），呼叫端只拿 `HwApi`。
+ *
+ * 解碼一律加 `-hwaccel_output_format` 並在濾鏡開頭 `hwdownload`：硬體解碼失敗時 ffmpeg 會默默改用
+ * 軟體解碼，送出系統記憶體的畫面，hwdownload 收不了就讓 ffmpeg 直接失敗。這樣「有在用顯示卡」
+ * 才是可以檢查的事實，而不是只看指令有沒有帶參數。
+ */
+
+export type CodecName = "h264" | "hevc";
+export const CODECS: readonly CodecName[] = ["h264", "hevc"];
+export const CODEC_LABEL: Record<CodecName, string> = { h264: "H.264", hevc: "H.265" };
+
+/** ffmpeg 怎麼找到這張卡 */
+export type HwApi =
+  /** Intel：DRM render node，例如 /dev/dri/renderD128 */
+  | { type: "vaapi"; node: string }
+  /** Nvidia：有 UUID 時用 CUDA_VISIBLE_DEVICES 只露出這一張（不依賴編號順序）；沒有時依 PCI 順序的編號 */
+  | { type: "cuda"; uuid: string | null; index: number }
+  /** macOS 開發機：沒有裝置可選 */
+  | { type: "videotoolbox" };
+
+interface ApiSpec {
+  hwaccel: string;
+  outputFormat: string;
+  encoder: Record<CodecName, string>;
+}
+
+const API: Record<HwApi["type"], ApiSpec> = {
+  vaapi: { hwaccel: "vaapi", outputFormat: "vaapi", encoder: { h264: "h264_vaapi", hevc: "hevc_vaapi" } },
+  cuda: { hwaccel: "cuda", outputFormat: "cuda", encoder: { h264: "h264_nvenc", hevc: "hevc_nvenc" } },
+  videotoolbox: { hwaccel: "videotoolbox", outputFormat: "videotoolbox_vld", encoder: { h264: "h264_videotoolbox", hevc: "hevc_videotoolbox" } },
+};
+
+/** 8 位元的畫面是 nv12，10 位元的 H.265 是 p010 */
+export const HW_DOWNLOAD = "hwdownload,format=nv12|p010le";
+
+/** 子程序要多帶的環境變數 */
+export function hwEnv(api: HwApi): Record<string, string> {
+  if (api.type !== "cuda") return {};
+  return api.uuid ? { CUDA_VISIBLE_DEVICES: api.uuid } : { CUDA_DEVICE_ORDER: "PCI_BUS_ID" };
+}
+
+function hwaccelDevice(api: HwApi): string | null {
+  switch (api.type) {
+    case "vaapi":
+      return api.node;
+    case "cuda":
+      return api.uuid ? "0" : String(api.index);
+    case "videotoolbox":
+      return null;
+  }
+}
+
+/** 放在 `-i` 前面的解碼參數 */
+export function hwDecodeArgs(api: HwApi): string[] {
+  const spec = API[api.type];
+  const device = hwaccelDevice(api);
+  return ["-hwaccel", spec.hwaccel, ...(device === null ? [] : ["-hwaccel_device", device]), "-hwaccel_output_format", spec.outputFormat];
+}
+
+export const encoderName = (api: HwApi, codec: CodecName) => API[api.type].encoder[codec];
+
+const QUIET = ["-hide_banner", "-nostdin", "-loglevel", "error"];
+const TEST_FRAMES = 10;
+const TEST_SOURCE = ["-f", "lavfi", "-i", "testsrc2=size=640x360:rate=10"];
+
+/** 用 CPU 產生試跑用的短片（640×360、10 張，8 位元 4:2:0，和一般攝影機的子碼流同一類） */
+export function sampleCommand(ffmpeg: string, codec: CodecName, out: string): string[] {
+  const enc = codec === "h264" ? ["-c:v", "libx264"] : ["-c:v", "libx265", "-x265-params", "log-level=error"];
+  return [ffmpeg, ...QUIET, ...TEST_SOURCE, "-frames:v", String(TEST_FRAMES), ...enc, "-pix_fmt", "yuv420p", "-y", out];
+}
+
+/** 試跑解碼：成功代表每一張都真的在這張卡上解出來（見檔案開頭） */
+export function decodeTestCommand(ffmpeg: string, api: HwApi, sample: string): string[] {
+  return [ffmpeg, ...QUIET, ...hwDecodeArgs(api), "-i", sample, "-vf", HW_DOWNLOAD, "-f", "null", "-"];
+}
+
+/** 試跑編碼：VAAPI 編碼器只收顯示卡上的畫面，要先 hwupload；NVENC 與 VideoToolbox 直接收系統記憶體的畫面 */
+export function encodeTestCommand(ffmpeg: string, api: HwApi, codec: CodecName): string[] {
+  const upload = api.type === "vaapi" ? ["-init_hw_device", `vaapi=hw:${api.node}`, "-filter_hw_device", "hw"] : [];
+  const vf = api.type === "vaapi" ? "format=nv12,hwupload" : "format=nv12";
+  return [ffmpeg, ...QUIET, ...upload, ...TEST_SOURCE, "-frames:v", String(TEST_FRAMES), "-vf", vf, "-c:v", encoderName(api, codec), "-f", "null", "-"];
+}
+
+export interface HwFailure {
+  /** 給使用者看的一句話 */
+  reason: string;
+  /** ffmpeg 的原始訊息，進診斷資訊 */
+  detail: string;
+}
+
+/** 依 ffmpeg 的錯誤訊息猜最可能的原因；猜不到就說哪一步失敗。順序是先環境（裝置、驅動）再能力 */
+const RULES: { api?: HwApi["type"]; test: RegExp; reason: (api: HwApi, what: string) => string }[] = [
+  { api: "vaapi", test: /No such file or directory|Device creation failed: -2\b/i, reason: (a) => `容器裡沒有這張顯示卡的裝置（${a.type === "vaapi" ? a.node : ""}），請在容器設定掛入 /dev/dri` },
+  { api: "vaapi", test: /Permission denied|Device creation failed: -13\b/i, reason: (a) => `沒有權限使用顯示卡（${a.type === "vaapi" ? a.node : ""}），請把容器加入主機的 render 群組` },
+  { api: "vaapi", test: /va_openDriver\(\) returns|vaInitialize failed|Failed to initiali[sz]e VAAPI|libva: .*(not found|init failed)/i, reason: () => "找不到 Intel 的影像驅動程式（VAAPI），映像可能缺少 intel-media-va-driver" },
+  { api: "cuda", test: /Cannot load libnvcuvid|Cannot load libnvidia-encode|nvcuvid|NvEncodeAPI|OpenEncodeSessionEx failed: unsupported device/i, reason: () => "容器沒有載入 Nvidia 的影像編解碼元件，容器設定的 NVIDIA_DRIVER_CAPABILITIES 需要包含 video" },
+  { api: "cuda", test: /Cannot load libcuda|cu->cuInit|CUDA_ERROR_NO_DEVICE|no CUDA-capable device/i, reason: () => "容器裡沒有 Nvidia 驅動程式，請用 NVIDIA Container Toolkit 啟動容器" },
+  { test: /Impossible to convert between the formats|Failed setup for format|hwaccel initiali[sz]ation returned error|No support for codec|not supported|Unsupported|No usable encoding profile|does not support/i, reason: (_a, what) => `這張顯示卡不支援${what}` },
+];
+
+/** stderr 的最後幾行，夠判斷原因也不會把整段日誌塞進診斷資訊 */
+export function stderrTail(stderr: string, lines = 6): string {
+  return stderr
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(-lines)
+    .join("\n");
+}
+
+/** `what` 是「H.265 硬體解碼」這類說法，用在能力不足與無法判斷的情況 */
+export function explainHwFailure(api: HwApi, what: string, stderr: string, opts: { timedOut?: boolean; exitCode?: number | null } = {}): HwFailure {
+  const detail = stderrTail(stderr) || (opts.timedOut ? "timed out" : `exit ${opts.exitCode ?? "?"}`);
+  if (opts.timedOut) return { reason: `顯示卡沒有在時限內完成${what}`, detail };
+  const rule = RULES.find((r) => (!r.api || r.api === api.type) && r.test.test(stderr));
+  return { reason: rule ? rule.reason(api, what) : `顯示卡無法${what}`, detail };
+}

@@ -1,7 +1,9 @@
-import type { ProbeResult, StreamInfo, SystemDto } from "./api-types.ts";
+import type { CodecCheckDto, DecodeStatusDto, ProbeResult, StreamInfo, SystemDto } from "./api-types.ts";
 import { detectConfigOf } from "./detect/config.ts";
 import type { DetectDiagnostics } from "./detect/manager.ts";
 import type { HomekitCameraDiagnostics, HomekitDiagnostics } from "./homekit/manager.ts";
+import { CODEC_LABEL, CODECS } from "./hwcodec/commands.ts";
+import type { ProbeReport } from "./hwcodec/probe.ts";
 import { metricsReport } from "./metrics/report.ts";
 import type { MetricsDiagnostics } from "./metrics/sampler.ts";
 import type { ObjectsDiagnostics } from "./objects/service.ts";
@@ -40,6 +42,8 @@ export interface DiagnosticsInput {
   homekit?: Pick<HomekitDiagnostics, "systemEnabled" | "workerConnected" | "lastHeartbeatAt">;
   /** CPU、記憶體、GPU 與各程序的用量；沒有提供時報告不列這一節 */
   metrics?: MetricsDiagnostics;
+  /** 影像硬體解碼：試跑結果（沒跑過為 null）與每台的實際解碼方式 */
+  video?: { report: ProbeReport | null; status: DecodeStatusDto };
 }
 
 const MASK = "***";
@@ -250,6 +254,36 @@ function workerBlock(w: WorkerStatus, input: DiagnosticsInput): string[] {
 
 const MODE_TEXT = { off: "不辨識", annotate: "標註", filter: "過濾" } as const;
 
+const checkText = (c: CodecCheckDto) => (c.ok ? `可以（${c.ms} ms）` : `不行：${c.reason}`);
+
+function videoLines(v: NonNullable<DiagnosticsInput["video"]>, cameras: DiagnosticsCamera[], now: number): string[] {
+  const lines = [`- 設定：${v.status.requested}（auto = 自動，cpu = 處理器）`];
+  const r = v.report;
+  if (!r) lines.push("- 顯示卡試跑：還沒跑過（設定成 cpu 時不跑）");
+  else {
+    lines.push(`- 顯示卡試跑：${iso(r.at)}，${duration(now - r.at)}前；${r.ffmpeg}`);
+    if (r.devices.length === 0) lines.push("- 沒有找到可做影片硬體解碼的顯示卡");
+    for (const d of r.devices) {
+      const where = d.api.type === "vaapi" ? `VAAPI ${d.api.node}` : d.api.type === "cuda" ? `CUDA ${d.api.uuid ?? `#${d.api.index}`}` : "VideoToolbox";
+      lines.push(`- ${d.id}（${d.name}，${where}${d.pci ? `，PCI ${d.pci}` : ""}）`);
+      for (const [label, set] of [["解碼", d.decode], ["編碼", d.encode]] as const) {
+        for (const c of CODECS) {
+          const check = set[c];
+          lines.push(`    - ${CODEC_LABEL[c]} ${label}：${checkText(check)}`);
+          if (!check.ok) lines.push(...check.detail.split("\n").map((l) => `      > ${l}`));
+        }
+      }
+    }
+  }
+  for (const c of v.status.cameras) {
+    const name = cameras.find((x) => x.camera.id === c.cameraId)?.camera.config.name ?? c.cameraId;
+    const using = c.device === null ? "處理器" : `${c.device}${c.confirmed ? "（已確認有畫面）" : "（啟動中）"}`;
+    lines.push(`- ${name}：${using}${c.fallback ? `；${c.fallback.reason}` : ""}`);
+    if (c.fallback) lines.push(...c.fallback.detail.split("\n").map((l) => `    > ${l}`));
+  }
+  return lines;
+}
+
 function objectsLines(o: ObjectsDiagnostics, cameras: DiagnosticsCamera[], now: number): string[] {
   const st = o.status;
   if (!o.settings.enabled) return ["- 關閉（detector worker 沒有執行）"];
@@ -314,6 +348,7 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     `- 本次已執行 ${duration(input.runtime.uptimeMs)}`,
     "",
     ...(input.objects ? ["## 物件辨識（YOLO）", ...objectsLines(input.objects, cameras, input.now), ""] : []),
+    ...(input.video ? ["## 影像硬體解碼（detect worker）", ...videoLines(input.video, cameras, input.now), ""] : []),
     `## 攝影機（${cameras.length} 台）`,
     ...(cameras.length ? cameras.flatMap((c) => [...cameraBlock(c, input), ""]) : ["沒有攝影機。", ""]),
     `## 背景程序（${workers.length} 個）`,

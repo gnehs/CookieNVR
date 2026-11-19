@@ -18,6 +18,9 @@ import { hostLabel, instanceLabel, loadInstanceId, startMdns, type MdnsResponder
 import { readEnv } from "./env.ts";
 import { defaultRecordingsDir } from "./recordings-dir.ts";
 import { createHomekit } from "./homekit/manager.ts";
+import type { CodecName } from "./hwcodec/commands.ts";
+import { planDecode } from "./hwcodec/plan.ts";
+import { createVideoCodecs, decodeStatusDto } from "./hwcodec/service.ts";
 import { coreRoutes, createRouter, HttpError, linkRoutes, redactConfig } from "./http/index.ts";
 import { createLive } from "./live/live.ts";
 import { metricsRoutes } from "./metrics/routes.ts";
@@ -108,15 +111,27 @@ const objects = createObjectDetection({
   events,
   onError: log,
 });
+/** detect worker 讀的碼流：有子碼流用子碼流 */
+const detectStream = (camera: Camera) => (sourceUrls(camera.config.connection).sub !== null ? "sub" : "main");
+// 試跑結果出來、或碼流格式變了，detect worker 的解碼規劃可能不同，下一次對帳就會套用
+const videoCodecs = createVideoCodecs({
+  env,
+  tmpDir: join(env.dataDir, "tmp", "hwcodec"),
+  onProbed: () => void reconcileWorkers().catch((e) => log("workers", e)),
+  onError: (e) => log("hwcodec", e),
+});
+/** 每台 detect 碼流的影像格式（MediaMTX 回報）；只有選了硬體解碼才查 */
+const detectCodecs = new Map<CameraId, CodecName | null>();
+const usesHwDecode = () => settings.get().devices.decode !== "cpu";
 const detection = createDetection({
   env,
   controlDir: join(env.dataDir, "detect"),
   events,
   sourceUrl(camera) {
     if (!camera.config.enabled) return null;
-    const hasSub = sourceUrls(camera.config.connection).sub !== null;
-    return restream.internalUrl(camera.id, hasSub ? "sub" : "main");
+    return restream.internalUrl(camera.id, detectStream(camera));
   },
+  decodePlan: (camera) => planDecode(settings.get().devices.decode, videoCodecs.current()?.devices ?? null, detectCodecs.get(camera.id) ?? null),
   isBusy: (id) => ptz.isBusy(id),
   jpegFps: (camera) => objects.jpegFps(camera),
   onJpeg: (id, jpeg, at) => objects.offerJpeg(id, jpeg, at),
@@ -197,7 +212,14 @@ async function refreshOnline(): Promise<void> {
   const states = await Promise.all(list.map((c) => restream.isReady(c.id, "main")));
   online.clear();
   list.forEach((c, i) => online.set(c.id, states[i] ?? false));
+  if (!usesHwDecode()) return detectCodecs.clear();
+  const codecs = await Promise.all(list.map((c) => restream.videoCodec(c.id, detectStream(c))));
+  detectCodecs.clear();
+  // 連不上時保留 null：規劃先假設 H.264，worker 碰到不支援的格式會自己退回 CPU
+  list.forEach((c, i) => detectCodecs.set(c.id, codecs[i] ?? null));
 }
+
+const decodeStatus = () => decodeStatusDto(settings.get().devices.decode, detection.decodeStatus(), (id) => cameras.get(id)?.config.name ?? id);
 
 async function system(): Promise<SystemDto> {
   const path = settings.get().storagePath;
@@ -211,6 +233,7 @@ async function system(): Promise<SystemDto> {
       const tail = r.stderrTail.at(-1);
       return `${new Date(r.at).toISOString()} ${r.id} 重啟（${r.reason}，exit ${r.exitCode ?? r.signal ?? "?"}）${tail ? `：${tail}` : ""}`;
     }),
+    decode: decodeStatus(),
   };
 }
 
@@ -308,6 +331,7 @@ async function diagnostics(only: string | null): Promise<string> {
     disk: sys.disk,
     usage: sys.usage,
     metrics: await metrics.diagnostics(),
+    video: { report: videoCodecs.current(), status: decodeStatus() },
   });
 }
 
@@ -344,6 +368,7 @@ const routes = [
   ...ptzRoutes({ hub: ptz }),
   ...detection.routes(),
   ...objects.routes(),
+  ...videoCodecs.routes(decodeStatus),
   ...live.routes(),
   ...homekit.routes(),
   ...metricsRoutes(metrics),
@@ -370,6 +395,8 @@ detection.sync(cameras.list());
 homekit.sync();
 supervisor.apply(desiredWorkers());
 void restream.sync(cameras.list()).catch((e) => log("restream", e));
+// 選了硬體解碼才試跑；跑完 onProbed 重新對帳，detect worker 在那之前先用 CPU
+if (usesHwDecode()) void videoCodecs.probe().catch((e) => log("hwcodec", e));
 
 const mdnsInfo = () => ({
   instance: instanceLabel(settings.get().siteName, instanceId),
@@ -420,6 +447,7 @@ events.subscribe(({ phase, event }) => {
 let objectsWasEnabled = settings.get().objects.enabled;
 settings.subscribe((s) => {
   homekit.sync();
+  if (s.devices.decode !== "cpu" && !videoCodecs.current()) void videoCodecs.probe().catch((e) => log("hwcodec", e));
   void reconcileWorkers().catch((e) => log("workers", e));
   mdns?.refresh();
   if (s.objects.enabled === objectsWasEnabled) return;

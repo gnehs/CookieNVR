@@ -39,7 +39,12 @@ export const enum MsgKind {
   frame = 1,
   /** 一張 JPEG */
   jpeg = 2,
+  /** JSON 的 DecodeReport，硬體解碼開始運作或退回 CPU 時各送一次 */
+  decode = 3,
 }
+
+/** hw：第一張畫面已經由顯示卡解出；cpu：顯示卡啟動失敗，這次執行改用 CPU（reason 是白話，detail 是 ffmpeg 的訊息） */
+export type DecodeReport = { mode: "hw"; deviceId: string } | { mode: "cpu"; reason: string; detail: string };
 
 export interface FrameResult {
   at: number;

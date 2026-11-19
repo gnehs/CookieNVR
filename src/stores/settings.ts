@@ -5,10 +5,13 @@ export function createSettingsStore(db: Database, dataDir: string, recordingsDir
   const listeners = new Set<(settings: Settings) => void>();
 
   function get(): Settings {
-    const merged: Record<string, unknown> = { ...defaultSettings(dataDir, recordingsDir) };
+    const defaults = defaultSettings(dataDir, recordingsDir);
+    const merged: Record<string, unknown> = { ...defaults };
     for (const row of db.query("SELECT key, value FROM settings").all() as { key: string; value: string }[]) {
       if (row.key in merged) merged[row.key] = JSON.parse(row.value);
     }
+    // 新增的工作（例如 decode）在舊資料裡沒有，逐項補預設值
+    merged.devices = { ...defaults.devices, ...(merged.devices as Settings["devices"]) };
     return merged as unknown as Settings;
   }
 

@@ -78,6 +78,7 @@ beforeEach(async () => {
         disk: { path: "/data", totalBytes: 10, freeBytes: 5 },
         usage: [],
         logs: ["hello"],
+        decode: { requested: "cpu", cameras: [], warning: null },
       }),
       diagnostics: async (only) => {
         diagnosed.push(only);
