@@ -566,7 +566,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       rt.consensus = UNKNOWN;
       rt.fresh = true;
       const v = rt.model.validation;
-      return v ? `訓練完成，交叉驗證準確度 ${Math.round(v.accuracy * 1000) / 10}%` : "訓練完成（每一類至少要 2 張才能估計準確度）";
+      return v ? `訓練完成，用標記的畫面驗證答對 ${Math.round(v.accuracy * 1000) / 10}%` : "訓練完成（每一類至少要 2 張才能估計準確度）";
     }
     if (kind === "collect") {
       const images = (result.images as { file: string; at: number | null }[] | undefined) ?? [];
