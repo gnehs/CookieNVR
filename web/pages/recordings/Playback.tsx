@@ -120,7 +120,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     return Math.max(last.startMs, segEnd(last, Date.now()) - LIVE_LAG_MS);
   }
 
-  function seekTo(w: number, dir: 1 | -1 = 1, play = true) {
+  function seekTo(w: number, dir: 1 | -1 = 1, play = true, fresh = false) {
     const p = player.current;
     if (!p) return;
     const now = Date.now();
@@ -129,7 +129,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     // within the loaded day, skip gaps right away so the playhead lands where playback will start
     const target = local && local.wall < dayEnd ? local.wall : w;
     s.seekDir = dir;
-    p.seek(Math.min(target, now), play);
+    p.seek(Math.min(target, now), play, fresh);
     tick();
   }
 
@@ -319,6 +319,8 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     if (s.appliedKey === key) return;
     // a new camera or day: until now the old one kept playing
     s.appliedKey = key;
+    // another camera covers the same wall times, so what is buffered is the old camera's footage
+    const newCamera = s.camId !== cam.id;
     s.camId = cam.id;
     s.date = date;
     s.urlT = 0;
@@ -327,7 +329,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     const intent = s.intent.key === key ? s.intent.v : (tParam ?? "default");
     if (intent === "none") return;
     const w = typeof intent === "number" ? intent : date === todayKey() ? latestWall() : (segs[0]?.startMs ?? null);
-    if (w !== null) seekTo(w, 1, true);
+    if (w !== null) seekTo(w, 1, true, newCamera);
     t.recenter();
     // exp and tParam are read when a new day lands; a change to either alone must not seek again
   }, [segs, events, key, daysReady]);

@@ -149,12 +149,15 @@ export class Player {
     else this.play();
   }
 
-  /** Plays from wall time w: inside the buffer by moving the playhead, otherwise by reloading. */
-  seek(w: number, play = this.wantPlay) {
+  /**
+   * Plays from wall time w: inside the buffer by moving the playhead, otherwise by reloading.
+   * `fresh` always reloads: the source now serves different footage (another camera) for the same wall times.
+   */
+  seek(w: number, play = this.wantPlay, fresh = false) {
     this.wantPlay = play;
     this.lastWall = w;
     const t = wallToBuf(this.map, w);
-    if (t !== null && this.isBuffered(t)) {
+    if (!fresh && t !== null && this.isBuffered(t)) {
       this.pending = null;
       this.video.currentTime = t;
       if (play) this.video.play().catch(() => this.blocked());
