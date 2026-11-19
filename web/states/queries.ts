@@ -35,6 +35,8 @@ export function onSensorMessage(qc: QueryClient, s: StateSensorDto): void {
   const prev = qc.getQueryData(statesQuery.queryKey)?.find((x) => x.id === s.id);
   putSensor(qc, s);
   if (imagesChanged(prev, s)) void qc.invalidateQueries({ queryKey: ["states", s.id, "images"] });
+  // 類別改名時切換紀錄裡的名稱也跟著改了
+  if (prev && prev.config.classes.join("\n") !== s.config.classes.join("\n")) void qc.invalidateQueries({ queryKey: stateChangesQuery(s.id).queryKey });
 }
 
 export function onSensorRemoved(qc: QueryClient, id: string): void {

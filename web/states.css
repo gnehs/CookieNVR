@@ -196,6 +196,7 @@
 .lb-empty .icon { color: var(--ok-text); }
 .lb-empty b { color: var(--text); font-weight: 650; font-size: 15px; }
 .lb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 0 22px; }
+.lb-grid[data-many] { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 .lb-tile { display: grid; gap: 8px; padding: 6px; border-radius: var(--r); border: 1px solid var(--border); background: var(--surface); outline: none; min-width: 0; transition: border-color 150ms ease, box-shadow 150ms ease; }
 .lb-tile:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, var(--surface)); }
 .lb-tile[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
