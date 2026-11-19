@@ -5,10 +5,12 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CameraDto, EventDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { CameraDto, EventDto, ExportDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import { explainFailure } from "../src/camera/probe.ts";
+import { exportFileName } from "../src/export/filename.ts";
+import { planExport } from "../src/export/plan.ts";
 import index from "./index.html";
 
 const PORT = Number(process.env.PORT ?? 48765);
@@ -262,6 +264,80 @@ async function serveSegment(req: Request, id: number): Promise<Response> {
   });
 }
 
+// 匯出：依時間推進假的進度。同時只跑一個，每個大約 5 秒，其餘排隊
+interface MockExport { dto: ExportDto; runMs: number }
+const exportJobs: MockExport[] = [];
+const EXPORT_RUN_MS = 5_000;
+
+function exportView(job: MockExport): ExportDto {
+  const t = now();
+  let cursor = 0;
+  let startAt = 0;
+  let ahead = 0;
+  for (const j of exportJobs) {
+    const s = Math.max(cursor, j.dto.createdAt);
+    cursor = s + j.runMs;
+    if (j === job) {
+      startAt = s;
+      break;
+    }
+    if (t < cursor) ahead++;
+  }
+  const endAt = startAt + job.runMs;
+  const d = job.dto;
+  if (t >= endAt) return { ...d, state: "done", progress: 1, ahead: null, sizeBytes: d.estimatedBytes, finishedAt: endAt, expiresAt: endAt + 86_400_000 };
+  if (t >= startAt) return { ...d, state: "running", progress: (t - startAt) / job.runMs, ahead: null };
+  return { ...d, state: "queued", progress: 0, ahead };
+}
+
+async function exportApi(req: Request, url: URL, path: string, body: any): Promise<Response | null> {
+  const m = req.method;
+  if (path === "/exports" && m === "GET") return json(exportJobs.map(exportView).reverse());
+  if (path === "/exports" && m === "POST") {
+    const c = cams.find((x) => x.id === body.cameraId);
+    if (!c) return err(404, "找不到攝影機");
+    const plan = planExport(segmentsIn(c.id, Number(body.startMs) - MIN, Number(body.endMs) + MIN), Number(body.startMs), Number(body.endMs), now());
+    if (!plan.ok) return err(plan.reason === "empty" ? 422 : 400, plan.message);
+    const id = crypto.randomUUID().slice(0, 16);
+    const dto: ExportDto = {
+      id,
+      cameraId: c.id,
+      cameraName: c.config.name,
+      startMs: plan.startMs,
+      endMs: plan.endMs,
+      durationMs: plan.durationMs,
+      estimatedBytes: plan.estimatedBytes,
+      includesRecording: plan.includesRecording,
+      state: "queued",
+      progress: 0,
+      ahead: 0,
+      sizeBytes: null,
+      error: null,
+      fileName: exportFileName(c.config.name, plan.startMs, String(body.tz ?? "UTC")),
+      createdAt: now(),
+      finishedAt: null,
+      expiresAt: null,
+    };
+    exportJobs.push({ dto, runMs: EXPORT_RUN_MS });
+    return json(exportView(exportJobs[exportJobs.length - 1]!), 201);
+  }
+  const mm = path.match(/^\/exports\/(\w+)(\/file)?$/);
+  if (!mm) return null;
+  const job = exportJobs.find((j) => j.dto.id === mm[1]);
+  if (!job) return err(404, "找不到這個匯出，可能已經過期");
+  if (mm[2] && m === "GET") {
+    if (exportView(job).state !== "done") return err(409, "匯出還沒有完成");
+    const name = job.dto.fileName;
+    return new Response(Bun.file(segFiles[0]!), { headers: { "content-type": "video/mp4", "content-disposition": `attachment; filename="export.mp4"; filename*=UTF-8''${encodeURIComponent(name)}` } });
+  }
+  if (!mm[2] && m === "GET") return json(exportView(job));
+  if (!mm[2] && m === "DELETE") {
+    exportJobs.splice(exportJobs.indexOf(job), 1);
+    return noContent();
+  }
+  return null;
+}
+
 async function api(req: Request, url: URL): Promise<Response> {
   const path = url.pathname.slice(4);
   const m = req.method;
@@ -349,6 +425,8 @@ async function api(req: Request, url: URL): Promise<Response> {
   if (mm && m === "GET") return json(segmentsIn(mm[1]!, Number(url.searchParams.get("start")), Number(url.searchParams.get("end"))));
   mm = path.match(/^\/segments\/(\d+)$/);
   if (mm && m === "GET") return serveSegment(req, Number(mm[1]));
+  const exported = await exportApi(req, url, path, body);
+  if (exported) return exported;
   if (path === "/events" && m === "GET") {
     const q = url.searchParams;
     return json(eventsIn(q.get("camera"), Number(q.get("start") ?? 0), Number(q.get("end") ?? Number.MAX_SAFE_INTEGER), Number(q.get("limit") ?? 1000)));

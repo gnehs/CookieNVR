@@ -682,6 +682,7 @@ select.pb-rate option { background: var(--surface); color: var(--text); }
 .pb-timeline .panel-body { padding: 10px 12px 10px; }
 .tl { position: relative; outline: none; border-radius: 10px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
 .tl.dragging { cursor: grabbing; }
+.tl.selecting { cursor: crosshair; }
 .tl:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
 .tl-canvas { display: block; width: 100%; height: 92px; }
 .tl[data-orient="v"] .tl-canvas { height: max(300px, calc(100dvh - var(--pb-player-h, 280px) - 230px)); }
@@ -707,6 +708,44 @@ select.pb-rate option { background: var(--surface); color: var(--text); }
 .sw.ev { background: var(--tl-event); }
 .pb-legend-keys { margin-left: auto; font-size: 12.5px; }
 
+/* 匯出：選取列與工作清單，放在時間軸卡片上方 */
+.pb-timeline .panel-head .btn.active { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); }
+.pb-timeline .panel-head .btn.active .icon { color: var(--accent-text); }
+.ex-list { display: grid; gap: 8px; margin-top: 10px; }
+.ex-list[hidden], .ex [hidden], .ex-pick[hidden] { display: none; }
+.ex-pick { margin-bottom: 10px; display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--r); background: var(--accent-soft); border: 1px solid var(--accent-line); }
+.ex-sum { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.ex-text { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; min-width: 0; flex: 1; padding-top: 4px; }
+.ex-close { margin: -2px -4px 0 0; flex: none; }
+.ex-range { font-size: 15px; font-weight: 650; }
+.ex-meta { font-size: 13px; color: var(--text-2); }
+.ex-meta.hint { color: var(--muted); }
+.ex-meta.bad { color: var(--bad-text); font-weight: 550; }
+.ex-acts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ex-grow { flex: 1; }
+.ex-jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ex-jobs:empty { display: none; }
+.ex-job { display: flex; align-items: center; gap: 10px; padding: 9px 8px 9px 12px; border-radius: var(--r); background: var(--frame); border: 1px solid var(--border); min-width: 0; }
+.ex-lead { flex: none; display: grid; place-items: center; width: 20px; }
+.ex-job[data-state="done"] .ex-lead .icon { color: var(--ok-text); }
+.ex-job[data-state="failed"] .ex-lead .icon { color: var(--bad-text); }
+.ex-job-main { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.ex-job-title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-job-sub { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.ex-job-sub.bad { color: var(--bad-text); }
+.ex-job-prog { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ex-bar { flex: 1; max-width: 220px; height: 6px; }
+.ex-bar > i { transition: width 400ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .ex-bar > i { transition: none; } }
+.ex-job-acts { display: flex; align-items: center; gap: 4px; flex: none; }
+.ex-keep { padding: 0 2px; }
+@media (max-width: 560px) {
+  .ex-acts { flex-wrap: nowrap; }
+  .ex-acts .btn { flex: 1 1 0; min-height: 40px; padding: 0 6px; }
+  .ex-grow { display: none; }
+  .ex-job-title { white-space: normal; }
+}
+
 .pb-events .panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .ev-list { position: relative; list-style: none; margin: 0; padding: 6px; display: grid; gap: 2px; align-content: start; overflow-y: auto; flex: 1; scrollbar-width: thin; }
 .ev-list > li { content-visibility: auto; contain-intrinsic-size: auto 66px; }
@@ -721,6 +760,10 @@ select.pb-rate option { background: var(--surface); color: var(--text); }
 .ev-item[aria-current="true"] { background: color-mix(in srgb, var(--tl-event) 14%, var(--surface)); }
 .ev-thumb { width: 96px; height: 54px; flex: none; border-radius: 9px; overflow: hidden; background: var(--fill); display: grid; place-items: center; color: var(--muted); }
 .ev-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ev-row { position: relative; }
+.ev-row .ev-item { padding-right: 48px; }
+.ev-export { position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 36px; min-height: 36px; }
+.ev-row .badge.live { margin-right: 4px; }
 .ev-text { display: grid; min-width: 0; flex: 1; line-height: 1.35; }
 .ev-text b { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev-text span { color: var(--muted); font-size: 12.5px; }

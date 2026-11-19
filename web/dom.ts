@@ -79,6 +79,7 @@ const ICONS: Record<string, string> = {
   "alert-circle": '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/>',
   "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
   selector: '<path d="M8 9.5l4-4 4 4M8 14.5l4 4 4-4"/>',
+  download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>',
   power: '<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0"/>',
 };
 

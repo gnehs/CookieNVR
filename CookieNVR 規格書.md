@@ -305,10 +305,11 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 
 ### 匯出
 
-- 在時間軸上拖曳選取起訖（或從事件一鍵匯出，含前後緩衝）。
-- 後端用 ffmpeg concat＋`-c copy` 接成一個一般 MP4（`+faststart`），完成 24 小時後自動刪除暫存檔。切點對齊關鍵幀，可能快上 1–2 秒。
-- 單次匯出上限 2 小時，同時只跑一個匯出工作，來不及的排隊。佇列只在記憶體，主程序重啟時清空並刪除暫存檔。
-- 一般使用者即可匯出。
+- 選取：時間軸卡片標題列的「匯出」開啟選取模式，預設選播放位置起 1 分鐘；桌面在時間軸上拖曳選取，拖曳兩端的把手微調；手機（或不想拖曳時）用「設為開始」「設為結束」把目前播放位置當作起訖。選取列顯示長度與預估大小。事件清單每一筆有一鍵匯出按鈕，範圍為事件前後各 5 秒。
+- 後端用 ffmpeg concat＋`-c copy` 接成一個一般 MP4（`+faststart`），不重新編碼，所以音訊保留，切點對齊關鍵幀：開頭可能早到一個 GOP，長度與選取範圍的誤差約 1–2 秒。檔名為 `<攝影機名稱>_<YYYYMMDD>-<HHMMSS>.mp4`，時間是開始時間（依瀏覽器時區）。
+- 跨缺片的範圍直接把前後兩段接起來，缺片不補，匯出長度只計有錄影的部分。包含錄製中片段的範圍匯出到當下已寫入的部分，結束時間超過現在則收到現在。範圍內完全沒有錄影回 422「這段時間沒有錄影」。
+- 單次上限 2 小時，同時只跑一個匯出，其餘排隊（最多 10 筆未完成）。匯出是 export worker（ffmpeg 子程序，自成程序群組）：10 分鐘未完成、記憶體超過 256 MB 或被取消就整組終止，工作標為失敗。佇列與工作狀態只在記憶體，檔案放在 `<dataDir>/exports/`；主程序啟動時先清掉上次殘留的 ffmpeg 與暫存檔，完成或失敗 24 小時後自動刪除。
+- 進度每秒輪詢 `GET /api/exports`；完成後瀏覽器直接下載 `/api/exports/:id/file`。一般使用者即可匯出，所有人看得到所有匯出工作。
 
 ## Tapo 鏡頭控制（PTZ）
 
@@ -588,7 +589,8 @@ cookienvr-ha/
 | GET | `/api/events?camera=&label=&start=&end=&before=&limit=` | 事件查詢 | 一般使用者 |
 | GET | `/api/events/:id` · `/thumb.jpg` | 事件詳情、縮圖 | 一般使用者 |
 | DELETE | `/api/events/:id` | 刪除事件 | 管理員 |
-| POST / GET | `/api/exports` · `/:id` | 建立匯出工作、查進度、下載 | 一般使用者 |
+| POST / GET | `/api/exports` | 建立匯出工作（`{cameraId, startMs, endMs, tz}`，回 201 與工作；無錄影 422、超過 2 小時 400、佇列滿 429、磁碟不足 507）／列出所有工作 | 一般使用者 |
+| GET / DELETE | `/api/exports/:id` · `/:id/file` | 查進度；下載完成的 MP4（支援 Range）；DELETE 取消排隊中或執行中的工作，已完成的則移除 | 一般使用者 |
 | GET | `/api/stream` | SSE：動作、事件、攝影機狀態、worker 狀態 | 一般使用者 |
 | GET | `/api/system` | worker 狀態、磁碟、各攝影機用量與最早錄影時間、日誌 | 管理員 |
 | GET | `/api/system/diagnostics?camera=` | 診斷資訊純文字（`text/plain`）：版本、執行環境、各 worker 狀態與重啟紀錄、輸出尾端、攝影機類型與最近一次測試的碼流資訊、上線與錄影狀態、磁碟、設定。開頭說明用途，方便貼給 AI；所有密碼、相機帳號、網址帳密、API Token 與 session 一律遮蔽。帶 `camera` 時只含該台與共用的轉發程序 | 管理員 |
@@ -618,7 +620,7 @@ SSE 訊息格式：`event: motion` / `event` / `camera` / `worker`，`data` 為 
 
 - 攝影機密碼必須可還原（要組 RTSP 網址），以明文存在 config；API 只回傳給 admin，前端顯示為遮蔽。是否加密列在待決事項。
 - 縮圖存在 `/data/thumbs/<event id>.jpg`；HomeKit 配對資料在 `/data/homekit/`。
-- 資料庫每天自動備份一份到 `/data/backup/`，保留 7 份。
+- 資料庫每天自動備份一份到 `/data/backup/cookienvr-YYYYMMDD.db`，保留最近 7 份。用 SQLite 的 `VACUUM INTO` 取得一致的快照（WAL 模式下直接複製檔案會漏掉 -wal 裡的資料），先寫成 `.tmp`，通過 `quick_check` 才改名。啟動時與之後每小時檢查一次，當天還沒有就備份。
 
 ## 穩定性設計
 
@@ -641,9 +643,9 @@ SSE 訊息格式：`event: motion` / `event` / `camera` / `worker`，`data` 為 
 
 ### 記憶體監控
 
-1. 主程序每 5 秒讀 `/proc/<pid>/status` 的 `VmRSS`，算上該 worker 的子程序（例如 detect 內的 ffmpeg）。
+1. 主程序每 5 秒量測每個 worker 的常駐記憶體，算上它所有的子孫程序（例如 detect 內的 ffmpeg）。Linux 讀 `/proc/<pid>/status` 的 `VmRSS` 與 `PPid`；沒有 `/proc` 的開發環境（macOS）改用 `ps -A -o pid,ppid,rss`。匯出的 ffmpeg 也在量測範圍內。
 2. 連續 3 次（15 秒）超過上限才算過載，避免瞬間尖峰誤殺。
-3. 過載 → 先送 SIGTERM，5 秒內沒結束再 SIGKILL → 立刻重啟 → 寫入日誌（原因：memory）並推 SSE。
+3. 過載 → 先送 SIGTERM，5 秒內沒結束再 SIGKILL → 立刻重啟 → 寫入日誌（原因：memory）並推 SSE。匯出是一次性的工作，過載時改為終止並標為失敗，不重試。
 
 ### 重啟策略
 
@@ -654,7 +656,7 @@ SSE 訊息格式：`event: motion` / `event` / `camera` / `worker`，`data` 為 
 
 ### 主程序自我保護
 
-- 主程序也有上限（預設 512 MB）：超過時先關閉所有 worker 再退出，由 Docker `restart: unless-stopped` 拉起。
+- 主程序也有上限（預設 512 MB，環境變數 `MAIN_MEMORY_LIMIT_MB`）：每 5 秒檢查，超過一次就先關閉所有 worker 再以非零結束碼退出，由 Docker `restart: unless-stopped` 拉起。
 - 主程序結束時保證把所有子程序收乾淨；重新啟動時會清除上次殘留的 ffmpeg。
 - 錄影 worker 不依賴主程序的 HTTP 或資料庫，主程序忙碌時不會卡住錄影。
 - 磁碟剩餘空間低於最低值時立刻觸發清理，不等 10 分鐘週期。

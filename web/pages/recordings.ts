@@ -6,6 +6,7 @@ import type { PageCtx } from "../router.ts";
 import { browserTz, state } from "../state.ts";
 import { EVENT_PREROLL_MS, eventAt, labelText, nextEvent, playableFrom, prevEvent, segEnd } from "../timeline/model.ts";
 import { Timeline } from "../timeline/timeline.ts";
+import { createExportUi } from "./export-panel.ts";
 
 const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -199,6 +200,15 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
       for (const input of zoomInputs) input.checked = Number(input.value) === ms;
     },
     thumbUrl: (e) => api.eventThumbUrl(e.id),
+    onSelect: (range) => exportUi.select(range),
+  });
+  const exportUi = createExportUi({
+    ctx,
+    camera: () => cam,
+    timeline,
+    segments: () => segs,
+    wall: () => player.wall(),
+    bounds: () => dayRange(date),
   });
   const kbdHint = h("p", { class: "pb-legend-keys hint", id: "tl-keys" }, "空白鍵播放／暫停・← → 前後 10 秒・[ ] 上／下一個事件");
   timeline.el.setAttribute("aria-describedby", "tl-keys");
@@ -214,8 +224,8 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
   const tlPanel = h(
     "section",
     { class: "panel pb-timeline" },
-    h("div", { class: "panel-head" }, h("h2", null, "時間軸"), followBtn, zoomCtl),
-    h("div", { class: "panel-body" }, timeline.el, legend),
+    h("div", { class: "panel-head" }, h("h2", null, "時間軸"), followBtn, exportUi.button, zoomCtl),
+    h("div", { class: "panel-body" }, exportUi.pickEl, timeline.el, legend, exportUi.jobsEl),
   );
 
   const evCount = h("span", { class: "hint" });
@@ -243,7 +253,8 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
           e.endMs === null ? h("span", { class: "badge accent live" }, "進行中") : null,
         );
         evButtons.set(e.id, btn);
-        return h("li", null, btn);
+        const dl = h("button", { type: "button", class: "btn ghost icon-only ev-export", "aria-label": `匯出 ${formatClock(e.startMs)} 的事件影片`, title: "匯出影片（含前後 5 秒）", onclick: () => void exportUi.exportEvent(e) }, icon("download", 16));
+        return h("li", { class: "ev-row" }, btn, dl);
       }),
     );
   }
@@ -319,6 +330,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     events = e.slice().sort((a, b) => a.startMs - b.startMs);
     timeline.setData(segs, events, Date.now());
     renderEvents();
+    exportUi.refresh();
     return true;
   }
 
@@ -334,6 +346,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
       toast(errMsg(e), "error");
       return;
     }
+    exportUi.reset();
     if (seek) {
       const w = d === todayString() ? latestWall() : (segs[0]?.startMs ?? null);
       if (w !== null) seekTo(w, 1, true);

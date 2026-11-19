@@ -2,6 +2,8 @@ import type {
   CameraDto,
   CreatedTokenDto,
   EventDto,
+  ExportDto,
+  ExportRequestDto,
   InfoDto,
   MeDto,
   ProbeResult,
@@ -96,6 +98,10 @@ export const api = {
     get<EventDto[]>(`/events?camera=${encodeURIComponent(camera)}&start=${start}&end=${end}`),
   eventThumbUrl: (id: number) => `/api/events/${id}/thumb.jpg`,
   snapshotUrl: (id: string, t: number) => `/api/cameras/${encodeURIComponent(id)}/snapshot.jpg?t=${t}`,
+  exports: () => get<ExportDto[]>("/exports"),
+  createExport: (req: ExportRequestDto) => post<ExportDto>("/exports", req),
+  deleteExport: (id: string) => del(`/exports/${encodeURIComponent(id)}`),
+  exportFileUrl: (id: string) => `/api/exports/${encodeURIComponent(id)}/file`,
   system: () => get<SystemDto>("/system"),
   diagnostics: async (camera?: string): Promise<string> => {
     const res = await fetch(`/api/system/diagnostics${camera ? `?camera=${encodeURIComponent(camera)}` : ""}`, { credentials: "same-origin" });

@@ -13,6 +13,13 @@ export interface TimelineOptions {
   /** the visible span changed by wheel or pinch */
   onSpan(spanMs: number): void;
   thumbUrl(e: EventDto): string;
+  /** In select mode, a drag made or adjusted the selected range (whole seconds). */
+  onSelect?(range: Range): void;
+}
+
+export interface Range {
+  start: number;
+  end: number;
 }
 
 const MIN_SPAN = 60_000;
@@ -76,6 +83,10 @@ export class Timeline {
   private drag: { a0: number; view0: number; moved: boolean; samples: { a: number; t: number }[] } | null = null;
   private pinch: { d0: number; span0: number; anchorMs: number; anchorA: number } | null = null;
   private inertia = 0;
+  private selecting = false;
+  private selection: Range | null = null;
+  /** `new` only becomes the selection once the pointer has moved; a plain tap still seeks. */
+  private selDrag: { kind: "new" | "start" | "end"; anchor: number; moved: boolean; x: number } | null = null;
   private ro: ResizeObserver;
   private themeObs: MutationObserver;
   private onScheme = () => this.readColors();
@@ -137,6 +148,19 @@ export class Timeline {
     this.el.setAttribute("aria-orientation", o === "h" ? "horizontal" : "vertical");
     this.setHover(null, null);
     this.resize();
+  }
+
+  /** While selecting, a drag marks a range (or moves its ends) instead of panning; a tap still seeks. */
+  setSelectMode(on: boolean) {
+    this.selecting = on;
+    this.selDrag = null;
+    this.el.classList.toggle("selecting", on);
+    this.dirty = true;
+  }
+
+  setSelection(range: Range | null) {
+    this.selection = range;
+    this.dirty = true;
   }
 
   /** The day (or any window) the timeline can pan over. */
@@ -304,7 +328,44 @@ export class Timeline {
     }
     if (this.pointers.size > 2) return;
     const { a } = this.local(e);
+    if (this.selecting) {
+      this.selDrag = this.grabSelection(a, e.pointerType === "touch" ? 20 : 10);
+      this.selDrag.x = a;
+      return;
+    }
     this.drag = { a0: a, view0: this.viewStart, moved: false, samples: [{ a, t: e.timeStamp }] };
+  }
+
+  private grabSelection(a: number, slop: number): NonNullable<Timeline["selDrag"]> {
+    const sel = this.selection;
+    if (sel) {
+      const dStart = Math.abs(this.pos(sel.start) - a);
+      const dEnd = Math.abs(this.pos(sel.end) - a);
+      if (Math.min(dStart, dEnd) <= slop) {
+        return { kind: dStart <= dEnd ? "start" : "end", anchor: 0, moved: true, x: a };
+      }
+    }
+    return { kind: "new", anchor: this.snap(this.at(a)), moved: false, x: a };
+  }
+
+  /** Whole seconds, inside the day the timeline covers. */
+  private snap(ms: number) {
+    return Math.max(this.bounds.start, Math.min(Math.round(ms / 1000) * 1000, this.bounds.end));
+  }
+
+  private dragSelection(d: NonNullable<Timeline["selDrag"]>, a: number) {
+    const t = this.snap(this.at(a));
+    const sel = this.selection;
+    let next: Range;
+    if (d.kind === "new") {
+      next = { start: Math.min(d.anchor, t), end: Math.max(d.anchor, t) };
+    } else if (sel) {
+      next = d.kind === "start" ? { start: Math.min(t, sel.end - 1000), end: sel.end } : { start: sel.start, end: Math.max(t, sel.start + 1000) };
+    } else return;
+    if (next.end - next.start < 1000) return;
+    this.selection = next;
+    this.opts.onSelect?.(next);
+    this.dirty = true;
   }
 
   private startPinch() {
@@ -324,6 +385,12 @@ export class Timeline {
       return;
     }
     const { a, b } = this.local(e);
+    if (this.selDrag) {
+      const d = this.selDrag;
+      if (!d.moved && Math.abs(a - d.x) > 4) d.moved = true;
+      if (d.moved) this.dragSelection(d, a);
+      return;
+    }
     if (this.drag) {
       const da = a - this.drag.a0;
       if (!this.drag.moved && Math.abs(da) > 4) {
@@ -350,6 +417,15 @@ export class Timeline {
     this.pointers.delete(e.pointerId);
     if (this.pinch) {
       if (this.pointers.size < 2) this.pinch = null;
+      return;
+    }
+    const selDrag = this.selDrag;
+    this.selDrag = null;
+    if (selDrag) {
+      if (selDrag.kind === "new" && !selDrag.moved) {
+        this.setFollow(true);
+        this.opts.onSeek(this.at(this.local(e).a), 1);
+      }
       return;
     }
     const drag = this.drag;
@@ -379,6 +455,7 @@ export class Timeline {
     this.pointers.delete(e.pointerId);
     this.pinch = null;
     this.drag = null;
+    this.selDrag = null;
     this.el.classList.remove("dragging");
   }
 
@@ -624,6 +701,31 @@ export class Timeline {
     }
   }
 
+  /** The chosen range as a tinted band over the track, with a grip at each end. */
+  private drawSelection(b0: number, b1: number, handles: boolean) {
+    const sel = this.selection;
+    if (!sel) return;
+    const { ctx, colors } = this;
+    const a0 = this.pos(sel.start);
+    const a1 = this.pos(sel.end);
+    if (a1 < -8 || a0 > this.axisLen + 8) return;
+    if (!handles) {
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = colors["--accent"];
+      this.rect(Math.max(0, a0), Math.min(this.axisLen, a1), b0, b1);
+      ctx.restore();
+      return;
+    }
+    ctx.fillStyle = colors["--accent"];
+    for (const a of [a0, a1]) {
+      this.rect(Math.round(a) - 1, Math.round(a) + 1, b0 - 4, b1 + 4);
+      this.roundRect(Math.round(a) - 5, Math.round(a) + 5, (b0 + b1) / 2 - 11, (b0 + b1) / 2 + 11, 4);
+    }
+    ctx.fillStyle = colors["--surface"];
+    for (const a of [a0, a1]) this.rect(Math.round(a) - 1, Math.round(a), (b0 + b1) / 2 - 5, (b0 + b1) / 2 + 5);
+  }
+
   private drawPlayhead(b0: number, b1: number) {
     if (this.playhead === null) return;
     const a = this.pos(this.playhead);
@@ -672,6 +774,7 @@ export class Timeline {
     const bottom = top + H.trackH;
     this.drawTicks(H.tickTop, H.labelY);
     this.drawTrack(top, bottom);
+    this.drawSelection(top, bottom, false);
 
     const view = { start: this.viewStart, end: this.viewStart + this.span, msPerPx: this.msPerPx };
     const clusters = clusterEvents(this.events, this.now, view, H.minEventPx, 2);
@@ -695,6 +798,7 @@ export class Timeline {
       this.hits.push({ a0: a0 - H.hitSlop, a1: a1 + H.hitSlop, b0: top - 4, b1: bottom + 4, cluster: c });
     }
     this.refreshHover();
+    this.drawSelection(top, bottom, true);
     this.drawPlayhead(4, bottom + 6);
     this.drawHover(top, this.hgt);
   }
@@ -705,6 +809,7 @@ export class Timeline {
     const right = left + V.trackW;
     this.drawTicks(V.tickLeft - 4, V.labelRight);
     this.drawTrack(left, right);
+    this.drawSelection(left, right, false);
 
     const view = { start: this.viewStart, end: this.viewStart + this.span, msPerPx: this.msPerPx };
     // a cluster per card: events closer than a card's height share one
@@ -729,6 +834,7 @@ export class Timeline {
     // 播放頭先畫，卡片再蓋上去：線只出現在卡片之間的空隙；起點在刻度文字右邊，不會壓到時間標籤
     this.drawPlayhead(V.tickLeft - 4, this.w);
     for (const { c, top } of cards) this.drawCard(c, top, V.cardLeft, cardRight);
+    this.drawSelection(left, right, true);
   }
 
   private lastEnd(c: Cluster) {
