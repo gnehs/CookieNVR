@@ -257,30 +257,33 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 
 ## 即時預覽
 
-瀏覽器用 MSE 播放 fragmented MP4 串流，影像不轉碼、不需要 WebSocket 或 WebRTC。延遲約等於相機的關鍵幀間隔（Tapo 約 1–2 秒）。
+瀏覽器用 MSE 播放 fragmented MP4 串流，影像不轉碼、不需要 WebSocket 或 WebRTC。fragment 每 200 毫秒切一次，延遲不受關鍵幀間隔限制：假相機實測端到端約 0.45–0.75 秒（headless Chrome，畫面內嵌時鐘），Tapo 估計約 0.3–1.1 秒（只能用相機畫面上的秒級時間與相機時鐘比對）。
 
 ### 串流方式
 
-- 每個碼流有一個 ffmpeg live worker，從轉發層讀取後 `-c copy` 封裝成 fMP4（每個關鍵幀一個 fragment），輸出到 stdout。
-- 主程序解析 MP4 box：保留 init segment（ftyp + moov）與最新一個 fragment。
-- 新觀看者連上時先收 init＋最新 fragment，立刻有畫面；之後持續收新 fragment。
-- 傳輸用一般 HTTP chunked：`GET /api/cameras/:id/live.mp4?quality=sd|hd`，回應標頭 `X-Codec` 帶上從 moov 解出的 codec 字串（例如 `avc1.640028`）。
+- 每個碼流有一個 ffmpeg live worker，從轉發層讀取後 `-c copy` 封裝成 fMP4（遇到關鍵幀必定切開，另外每 200 毫秒切一次），輸出到 stdout，只取影像。
+- supervisor 平常把 worker 的 stdout 與 stderr 都收進輸出尾端（MediaMTX 的日誌寫在 stdout），所以 `WorkerSpec` 可以宣告 `readStdout`：宣告後 stdout 是資料，每次啟動都把該次的 stdout 整條交給它讀，不進尾端，stderr 照舊。選它而不是本機 socket，是因為 pipe 跟著子程序的生命週期走，一次執行就是一條串流，重啟的分界不用另外對齊，也不用管 port 或 socket 檔。
+- 主程序解析 MP4 box：保留 init segment（ftyp + moov）與最近一個關鍵幀以來的 fragment（一個 GOP）。
+- 新觀看者連上時先收 init＋這個 GOP，立刻有畫面；之後持續收新 fragment。
+- 傳輸用一般 HTTP chunked：`GET /api/cameras/:id/live.mp4?quality=sd|hd`，等到 init 才回應，標頭 `X-Codec` 帶上從 moov 解出的 codec 字串（例如 `avc1.640028`）。這個回應只承載一次 worker 執行：worker 重啟時連線結束，前端重連。
+- 多宮格用 `GET /api/live?cameras=<id>,<id>&quality=sd`，把多台攝影機包在同一條回應裡（每個 frame 是 1 byte 種類、1 byte 攝影機序號、4 byte 長度與內容；種類有資料、重新開始、沒有串流、保持連線）。瀏覽器對同一主機的 HTTP/1.1 只開 6 條連線，一台一條的話 5 台以上就會卡住其他請求。
 - 讀太慢的觀看者（積壓超過 4 MB）直接斷線，不拖累其他人。
-- 前端定期把播放位置拉回即時邊緣，避免延遲累積。
+- 前端每半秒檢查播放位置：落後即時邊緣超過 0.5 秒就以 1.1 倍速追上，超過 1.5 秒直接跳到邊緣。追趕門檻再低（0.3 秒）延遲可再少約 0.2 秒，但實測會頻繁卡頓。
+- 連線中斷、worker 重啟都會自動重連（退避 0.5 秒起、最長 10 秒）；分頁隱藏時關閉串流，回到分頁再接上。實測強制結束 live ffmpeg 後約 4 秒恢復畫面（含 supervisor 的 2 秒退避）。
 
 ### 畫質與資源
 
 | 畫質 | 來源 | 何時運作 |
 | --- | --- | --- |
-| SD（預設） | 子碼流 | 有人在看才啟動，最後一人離開 30 秒後停止 |
+| SD（預設） | 子碼流（沒有子碼流就用主碼流，與 HD 共用同一個 worker） | 有人在看才啟動，最後一人離開 30 秒後停止 |
 | HD | 主碼流 | 同上 |
 
-多宮格頁面一律用 SD；單支攝影機頁面可切 HD。音訊第一版不放進即時預覽。
+多宮格頁面一律用 SD（靜音自動播放，載入前與無法播放時顯示快照）；點卡片進單台頁面：大畫面、可切「標準／高畫質」（記在這台瀏覽器）、「看回放」直接開這台的回放。音訊第一版不放進即時預覽。
 
 ### 限制
 
-- H.265 是否能播取決於瀏覽器與硬體；不支援時前端顯示提示，不自動轉碼。
-- iPhone 沒有 `MediaSource`，前端在 iOS 17.1 以上改用 `ManagedMediaSource`（回放相同），更舊的版本不支援。
+- H.265 是否能播取決於瀏覽器與硬體；不支援時畫面上顯示「這個瀏覽器無法播放 H.265 即時畫面」並改用每 3 秒更新的快照，不自動轉碼。ffmpeg 從 RTSP 複製 H.265 時寫成 `hev1`，Safari 的 MSE 可能只接受 `hvc1`，尚未實測。
+- iPhone 沒有 `MediaSource`，前端在 iOS 17.1 以上改用 `ManagedMediaSource`（回放相同）；兩者都沒有時顯示說明，改用每 3 秒更新的快照。
 - 快照：偵測 worker 同時每秒輸出一張 640 寬的 JPEG，`/snapshot.jpg` 直接回傳記憶體中的最新一張。
 
 ## 回放系統
@@ -395,7 +398,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 
 - 原生 TypeScript，不用框架；Bun 的 HTML import 在啟動時打包，沒有另外的 build 步驟。
 - Hash 路由（`#/live`、`#/playback`…），後端只需要提供 `/`。
-- 即時狀態（動作、上下線、事件）由 `GET /api/stream`（Server-Sent Events）推送。
+- 即時狀態（動作、上下線、事件）由 `GET /api/stream`（Server-Sent Events）推送；首頁、狀態提醒與狀態頁都跟著它更新。重連時伺服器重送完整狀態；連續 3 次連不上（或瀏覽器沒有 `EventSource`）就改回每 5 秒輪詢，同時繼續嘗試 SSE。磁碟空間不推送，管理員端每分鐘與重連時重抓。
 
 ### 頁面
 
@@ -403,7 +406,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 | --- | --- | --- |
 | 初始設定 | 沒有任何帳號時出現，建立管理員 | — |
 | 登入 | 帳密登入 | — |
-| 即時 | 多宮格；點進單台：HD 切換、PTZ 控制盤、預置點、快照；管理員另有錄影／偵測開關 | 一般使用者 |
+| 即時 | 多宮格（`#/cameras`）；點進單台（`#/cameras/:id`）：HD 切換、看回放；之後加 PTZ 控制盤、預置點、快照；管理員另有錄影／偵測開關（尚未做） | 一般使用者 |
 | 回放 | 時間軸、日曆、倍速、事件清單、匯出 | 一般使用者 |
 | 事件 | 跨攝影機事件列表，可依攝影機、時間、物件類別篩選，點一下開回放；管理員可刪除 | 一般使用者 |
 | 設定 → 攝影機 | 新增／編輯／排序／停用；測試連線；錄影直連開關；偵測參數與即時分數曲線；遮罩編輯器；物件辨識（模式、類別、信心門檻）；PTZ；HKSV 配對碼；複製 RTSP 網址 | 管理員 |
@@ -538,7 +541,9 @@ cookienvr/
 │  ├─ db.ts · settings.ts · auth.ts
 │  ├─ http/            API 路由
 │  ├─ workers/         worker 監管、記憶體監控
-│  ├─ camera/          錄影、偵測、即時串流、fMP4 解析
+│  ├─ camera/          錄影、偵測、快照
+│  ├─ live/            即時串流 worker、fragment 分發、多台串流格式
+│  ├─ stream/          SSE 狀態推送
 │  ├─ restream/        MediaMTX 控制
 │  ├─ onvif/           ONVIF 客戶端、PTZ、事件
 │  └─ homekit/         HKSV worker
@@ -589,7 +594,8 @@ cookienvr-ha/
 | DELETE | `/api/recordings/orphaned` | 清除不屬於任何現存攝影機的錄影與事件，回傳 `{segments, events, bytes}` | 管理員 |
 | POST | `/api/cameras/test` | 測試連線（ffprobe＋ONVIF 探測） | 管理員 |
 | GET | `/api/cameras/:id/snapshot.jpg` | 最新快照 | 一般使用者 |
-| GET | `/api/cameras/:id/live.mp4?quality=` | 即時 fMP4 串流 | 一般使用者 |
+| GET | `/api/cameras/:id/live.mp4?quality=` | 即時 fMP4 串流（`sd`／`hd`，預設 `sd`；沒有串流回 404，20 秒內等不到畫面回 503） | 一般使用者 |
+| GET | `/api/live?cameras=&quality=` | 多台即時串流包在一條連線（格式見「即時預覽」） | 一般使用者 |
 | GET / POST | `/api/cameras/:id/ptz` | 取得能力與預置點／移動、停止、前往預置點 | 一般使用者 |
 | POST / DELETE | `/api/cameras/:id/ptz/presets` | 儲存／刪除預置點 | 管理員 |
 | GET | `/api/cameras/:id/days?tz=` | 有錄影的日子（`tz` 為 IANA 時區） | 一般使用者 |
@@ -608,7 +614,7 @@ cookienvr-ha/
 
 內部端點 `/internal/rtsp-auth` 只接受 127.0.0.1，供 MediaMTX 驗證 RTSP 連線。
 
-SSE 訊息格式：`event: motion` / `event` / `camera` / `worker`，`data` 為 JSON；連上時先送一筆 `snapshot`（完整狀態）。
+SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:` 是種類，`data:` 是 JSON。連上時先送 `snapshot`（`cameras` 完整清單、管理員才有的 `workers`、進行中的 `events`）；之後 `cameras`（新增、修改、刪除、排序後的完整清單）、`camera`（單台上線或錄影狀態改變）、`worker`（只送管理員，`state: "stopped"` 表示已移除）、`event`（`{phase: "start" | "end", event}`）、`motion`（`{cameraId, active}`）。事件與動作的來源在 M3 才有，通道與型別已就緒。每 20 秒送一行註解保持連線，積壓超過 1 MB 的用戶端直接斷線，重連後從 `snapshot` 重來。
 
 ## 資料模型（SQLite）
 
