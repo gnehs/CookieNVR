@@ -32,7 +32,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 - 轉碼、多畫質轉發、WebRTC
 - 雲端備份、遠端存取（交給 WireGuard / Cloudflare Tunnel）
 - 手機 App（網頁做 RWD 即可）
-- 硬體加速解碼（VAAPI / NVDEC）：子碼流解碼很便宜，GPU 只用於物件辨識
+- 硬體轉碼：所有 ffmpeg 工作都是直接複製影像，只有 detect worker 解碼（可選硬體解碼，見「影像硬體解碼」）
 - 多鏡頭同步回放、逐幀播放
 
 ## 部署：單一 Docker 容器
@@ -42,7 +42,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 - **映像內容**：`oven/bun`（Debian slim）＋ ffmpeg / ffprobe ＋ MediaMTX ＋ 物件辨識用的 Python 與 ONNX Runtime ＋ CookieNVR 原始碼。前端由 Bun 在啟動時打包，不需要另外 build 步驟。
 - **映像版本**：`latest` 含 CPU 推論，amd64 另含 Intel 內顯（OpenVINO plugin EP 與 Intel OpenCL 驅動，26.40 與 24.35 legacy 並裝）；`latest-nvidia` 改含 Nvidia（CUDA 12、cuDNN 9.11，主機驅動 525 以上）。不用物件辨識時兩者沒有差別，detector 不啟動，只是映像比較大（壓縮後 arm64 約 301 MB、amd64 約 680 MB；M3 時約 217 MB；-nvidia 估計約 2 GB）。
 - **平台**：`latest` 支援 `linux/amd64` 與 `linux/arm64`；`latest-nvidia` 只有 `linux/amd64`。
-- **GPU（選用，物件辨識用）**：Intel 內顯掛入 `/dev/dri`；Nvidia 需主機裝好 NVIDIA Container Toolkit（Unraid 用 Nvidia Driver 外掛），並以 `--gpus all` 或 `runtime: nvidia` 啟動。沒有 GPU 時用 CPU 推論。
+- **GPU（選用，物件辨識與影像硬體解碼用）**：Intel 內顯掛入 `/dev/dri`；Nvidia 需主機裝好 NVIDIA Container Toolkit（Unraid 用 Nvidia Driver 外掛），並以 `--gpus all` 或 `runtime: nvidia` 啟動，硬體解碼另需 `NVIDIA_DRIVER_CAPABILITIES` 含 `video`（映像預設 `compute,utility,video`）。amd64 映像都含 Intel 的 VA 驅動（`intel-media-va-driver`、`i965-va-driver`）。沒有 GPU 時用 CPU。
 - **網路**：容器需能連到攝影機的 554（RTSP）與 2020（Tapo ONVIF）。bridge 模式即可運作；想讓 Home Assistant 自動發現、或啟用 HKSV 時要用 host 網路，或 Unraid 的 br0 給獨立 IP，因為兩者都靠 mDNS。
 
 | 項目 | 值 | 說明 |
@@ -211,6 +211,17 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 - 實測延遲：物體出現在推流畫面到事件建立約 2.1 秒；判定本身（連續 2 張）不到 0.4 秒，其餘是編碼、兩層 RTSP 與解碼。相機事件從收到 true 到事件建立約 10 毫秒。
 - 物體離開後會留下約 5 秒的「殘影」：它掃過的區域已被背景部分吸收，消失時那塊和背景又不一樣，所以事件結束時間會比物體離開晚幾秒。
 
+### 影像硬體解碼（`src/hwcodec/`）
+
+- 只有 detect worker 在解碼影像（錄影、即時預覽、匯出、HKSV 都是 `-c copy`；測試連線的單張畫面與 HomeKit 快照縮放是一次性的小 JPEG，開硬體的成本比省下的多）。編碼 H.264／H.265 的工作目前沒有，所以只有「解碼」一個設定 `settings.devices.decode`：`cpu`（預設）、`auto`（依序 Nvidia、Intel）或裝置識別字，和物件辨識同一套（`nvidia:GPU-<uuid>`、`intel:GPU.<n>`，Intel 比照 OpenVINO：PCI 00:02.0 的內顯是 GPU.0，其餘依 PCI 位址）。舊資料沒有這欄時是 `cpu`。
+- 值不值得：Apple M 系列實測整條 detect 指令每秒耗的 CPU（單核百分比，軟體 → VideoToolbox）：640×360 15 fps H.264 子碼流 1.3% → 0.7%；1080p 20 fps H.264 7.2% → 2.2%；1440p 15 fps H.265 12.4% → 2.2%。有子碼流時幾乎省不到，所以預設 CPU；只有主碼流、或高解析度 H.265 的攝影機才明顯有用。
+- 能力偵測：選了 `cpu` 以外才做。對每張卡用 CPU 產生的 640×360 短片實際試跑 H.264、H.265 的解碼與編碼（Intel 走 VAAPI 的 render node，Nvidia 走 CUDA，以 `CUDA_VISIBLE_DEVICES=<uuid>` 指定那一張），不看編譯選項。解碼一律 `-hwaccel_output_format` 加 `hwdownload`：硬體失敗時 ffmpeg 會默默改用軟體，hwdownload 收不到顯示卡的畫面就讓它失敗，所以「成功」代表真的在那張卡上解。結果在 `GET /api/video-devices`（管理員，`?refresh=1` 重跑）；編碼結果只供參考與診斷。
+- 規劃（`planDecode`，純函式）：依設定、試跑結果與這台 detect 碼流的格式（MediaMTX 回報的軌道）挑卡；選的卡不支援這個格式或試跑失敗用 CPU，選的卡不見了改用自動，都附原因。試跑完成前先用 CPU，完成後 worker 規格改變而重啟一次。CPU 時 worker 指令和以前完全一樣。
+- 執行中的退回：worker 經環境變數 `DETECT_HW_DECODE` 收到要用的卡。硬體路徑在第一張畫面前就結束或 10 秒沒有畫面時，同一次執行內改用 CPU 重開 ffmpeg，偵測與快照不中斷；等 CPU 真的解出畫面才回報原因（相機連不上時不冤枉顯示卡）。下次 worker 重啟會再試硬體。硬體路徑不帶 `-fflags nobuffer`：VideoToolbox 在 nobuffer 下對同一條串流每張都解碼失敗且 ffmpeg 不結束。
+- 狀態：`GET /api/system` 的 `decode`（每台用哪張卡、是否已確認有畫面、退回原因，以及給狀態頁的一句 `warning`）；ffmpeg 的原始訊息只放診斷資訊的「影像硬體解碼」一節。
+- macOS 開發機會列出 `apple:0`（VideoToolbox），只用來在開發機走通硬體路徑。
+- 實機檢查：容器內 `video-selftest`（`scripts/video-selftest.ts`），步驟在 `detector/README.md`。Intel 與 Nvidia 的路徑在開發機跑不到，尚未實測。
+
 ### 畫面差分演算法
 
 1. 3×3 模糊去噪。
@@ -265,7 +276,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 | CPU | ONNX Runtime | 兩者皆可（arm64 只有 CPU） | 無 |
 
 - detector 啟動時列出這個環境實際偵測到的每個裝置：CPU、每顆 Intel 內顯（OpenVINO 的 `GPU.0`、`GPU.1`）、每張 Nvidia 卡，各帶型號。每個裝置有穩定的識別字：`cpu`、`intel:GPU.0`、`nvidia:GPU-<uuid>`（nvidia-smi 的 UUID，重開機或換插槽不變；沒有 nvidia-smi 時退而用 `nvidia:<編號>`）。CUDA 以 PCI 順序編號，和 nvidia-smi 一致。
-- 設定存成「工作 → 裝置」的對應 `settings.devices`（目前只有 `objects` 一個工作；影像解碼在 CPU，硬體解碼是非目標），值是 `auto`、`cpu` 或識別字。在「設定 → 一般 → 物件辨識」選擇，預設「自動」：依序試 Nvidia、Intel、CPU。不提供「不同攝影機用不同裝置」：所有攝影機共用一個推論程序，一次一張，分裝置要多開程序與佇列，這一版不做。
+- 設定存成「工作 → 裝置」的對應 `settings.devices`（`objects` 是這裡的推論，`decode` 是影像解碼，見「影像硬體解碼」），值是 `auto`、`cpu` 或識別字。在「設定 → 一般 → 物件辨識」選擇，預設「自動」：依序試 Nvidia、Intel、CPU。不提供「不同攝影機用不同裝置」：所有攝影機共用一個推論程序，一次一張，分裝置要多開程序與佇列，這一版不做。
 - 指定或自動選到的 GPU 載入失敗時改用下一個（最後是 CPU）；指定的裝置不見了（拔卡、換卡）改用自動。實際使用的裝置與原因回報給主程序，顯示在設定頁（「使用中：Intel UHD Graphics 630」與警示）與診斷資訊。
 - 分成兩個映像：官方文件說同一個環境只能裝一種 ONNX Runtime 套件，而且 Nvidia 的 CUDA／cuDNN 函式庫壓縮後就有約 1.7 GB。-nvidia 釘在 CUDA 12（`onnxruntime-gpu` 1.26.0、cuDNN 9.11），涵蓋 Maxwell 以後的卡（家用常見的 Pascal，例如 P400、GTX 10 系列）；cuDNN 9.12 起只支援 Turing 以後，所以不升級。要 CUDA 13 可用 build arg `ONNXRUNTIME_GPU`。TensorRT 需要另外數 GB 的函式庫與建引擎時間，不放。
 - Intel 內顯需要容器內的 OpenCL 驅動：Debian trixie 沒有打包，映像內並裝 Intel compute-runtime 26.40（Gen12 以後）與 24.35 的 legacy1 套件（Gen8 到 Gen11，例如 8 到 10 代 Core 的 UHD 630、J4125），下載時驗 SHA-256。
@@ -542,6 +553,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 | 儲存路徑 | 重啟所有錄影 worker（舊錄影留在原處，仍可回放） |
 | 保留天數、最低剩餘空間 | 不重啟，下一次檢查生效 |
 | 物件辨識開關、推論裝置、模型 | 只重啟 detector worker |
+| 影像解碼裝置 | 只重啟規劃有變的 detect worker（快照中斷約 2 秒） |
 | 單台的物件辨識模式、類別、門檻 | 立即套用，不重啟 |
 | HKSV 總開關、單台的 Apple 家庭開關 | 只啟停 homekit worker 或更新它發布的配件 |
 
