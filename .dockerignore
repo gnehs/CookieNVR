@@ -9,3 +9,6 @@ data
 *.md
 Dockerfile
 docker-compose*.yml
+detector/models
+detector/tests
+**/__pycache__

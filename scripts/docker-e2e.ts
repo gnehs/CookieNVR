@@ -1,6 +1,8 @@
 // 容器端到端驗證：建置映像、啟動 NVR 容器與假相機容器，經 HTTP API 走完整條流程。
+// 最後開啟物件辨識（CPU），在容器內跑 detector-selftest，並確認街景假相機的事件標上 person。
 // 用法：bun scripts/docker-e2e.ts
 // 環境變數：E2E_IMAGE（預設 cookienvr:e2e）、E2E_SKIP_BUILD=1、E2E_WEB_PORT（38704）、E2E_RTSP_PORT（38504）、
+//          E2E_PREFIX（容器、volume、network 的名稱前綴，預設 cookienvr-e2e）、
 //          E2E_TZ（Asia/Taipei）、E2E_KEEP=1（結束後保留容器、volume 與 network 供除錯）。
 // 失敗時印出失敗的步驟與兩個容器的日誌尾巴，退出碼 1。結束時移除自己建立的容器、volume 與 network。
 import { join } from "node:path";
@@ -9,12 +11,14 @@ const IMAGE = process.env.E2E_IMAGE ?? "cookienvr:e2e";
 const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 38704);
 const RTSP_PORT = Number(process.env.E2E_RTSP_PORT ?? 38504);
 const TZ = process.env.E2E_TZ ?? "Asia/Taipei";
-const PREFIX = "cookienvr-e2e";
+const PREFIX = process.env.E2E_PREFIX ?? "cookienvr-e2e";
 const NET = `${PREFIX}-net`;
 const VOLUME = `${PREFIX}-data`;
 const NVR = `${PREFIX}-nvr`;
 const CAM = `${PREFIX}-cam`;
 const CAM_ALIAS = "fakecam";
+const STREET_CAM = `${PREFIX}-cam-street`;
+const STREET_ALIAS = "streetcam";
 const CAM_PORT = 28504;
 const REPO = join(import.meta.dir, "..");
 const USER = "admin";
@@ -166,7 +170,7 @@ async function rtspDescribe(url: string, auth?: { user: string; pass: string }):
 const rtspUrl = (id: string, stream: "main" | "sub" = "main") => `rtsp://127.0.0.1:${RTSP_PORT}/${id}/${stream}`;
 
 async function removeResources(): Promise<void> {
-  for (const c of [NVR, CAM]) await exec(["docker", "rm", "-f", "-v", c]);
+  for (const c of [NVR, CAM, STREET_CAM]) await exec(["docker", "rm", "-f", "-v", c]);
   await exec(["docker", "volume", "rm", "-f", VOLUME]);
   await exec(["docker", "network", "rm", NET]);
 }
@@ -179,6 +183,17 @@ async function startNvr(): Promise<void> {
     "-e", `TZ=${TZ}`,
     IMAGE,
   ]);
+}
+
+/** 假相機跑在 NVR 映像裡：放在 /app/scripts/，場景素材才會對到映像內的 /app/detector/assets/。 */
+async function startFakeCamera(name: string, alias: string, scene?: string): Promise<void> {
+  await docker([
+    "create", "--name", name, "--no-healthcheck", "--network", NET, "--network-alias", alias,
+    "--entrypoint", "bun", IMAGE, "/app/scripts/fake-camera.ts", "--port", String(CAM_PORT), ...(scene ? ["--scene", scene] : []),
+  ]);
+  await docker(["cp", join(REPO, "scripts", "fake-camera.ts"), `${name}:/app/scripts/fake-camera.ts`]);
+  await docker(["start", name]);
+  await until(`${name} 印出 READY`, 60_000, async () => (await exec(["docker", "logs", name])).text.includes("READY"));
 }
 
 async function nvrLogs(tail = 80): Promise<string> {
@@ -198,6 +213,9 @@ const mediamtxPids = () => pidsMatching("[m]ediamtx*");
 interface Ctx {
   cameras: { id: string; name: string; direct: boolean }[];
 }
+
+/** 轉發一個，每台攝影機一個錄影與一個動作偵測（新攝影機預設開啟偵測）；物件辨識沒開時沒有 detector */
+const expectedWorkers = (ctx: Ctx) => ["restream", ...ctx.cameras.flatMap((c) => [`detect:${c.id}`, `record:${c.id}`])].sort();
 
 type Step = [name: string, fn: (ctx: Ctx) => Promise<void>];
 
@@ -221,13 +239,7 @@ const steps: Step[] = [
   [
     "啟動假相機容器",
     async () => {
-      await docker([
-        "create", "--name", CAM, "--no-healthcheck", "--network", NET, "--network-alias", CAM_ALIAS,
-        "--entrypoint", "bun", IMAGE, "/app/fake-camera.ts", "--port", String(CAM_PORT),
-      ]);
-      await docker(["cp", join(REPO, "scripts", "fake-camera.ts"), `${CAM}:/app/fake-camera.ts`]);
-      await docker(["start", CAM]);
-      await until("假相機印出 READY", 60_000, async () => (await exec(["docker", "logs", CAM])).text.includes("READY"));
+      await startFakeCamera(CAM, CAM_ALIAS);
     },
   ],
   [
@@ -337,7 +349,7 @@ const steps: Step[] = [
         check(w.restarts === 0, `${w.id} 在正常錄影期間重啟了 ${w.restarts} 次，最後一次 ${JSON.stringify(w.lastRestart)}`);
         for (const line of w.stderrTail.filter((l) => !/ INF /.test(l))) log(`${w.id} stderr：${line.slice(0, 200)}`);
       }
-      check(ws.length === 1 + ctx.cameras.length, `worker 數量不對：${ws.map((w) => w.id).join(",")}`);
+      check(ws.map((w) => w.id).sort().join() === expectedWorkers(ctx).join(), `worker 清單不對：${ws.map((w) => w.id).join(",")}`);
     },
   ],
   [
@@ -532,7 +544,43 @@ const steps: Step[] = [
         check(open.length <= 1, `${c.name} 有 ${open.length} 個沒有結尾的片段，被殺掉時中斷的那段沒有被收尾`);
       }
       const ws = await workers();
-      check(ws.filter((w) => w.state === "running" || w.state === "starting").length === 1 + ctx.cameras.length, `worker 狀態不對：${JSON.stringify(ws.map((w) => [w.id, w.state]))}`);
+      check(ws.filter((w) => w.state === "running" || w.state === "starting").length === expectedWorkers(ctx).length, `worker 狀態不對：${JSON.stringify(ws.map((w) => [w.id, w.state]))}`);
+    },
+  ],  [
+    "容器內物件辨識自我檢查（detector-selftest）",
+    async () => {
+      const r = await exec(["docker", "exec", NVR, "detector-selftest", "--seconds", "2"]);
+      const summary = r.text.slice(r.text.indexOf("----- "));
+      check(r.code === 0 && r.text.includes("selftest: PASS"), `detector-selftest 回 ${r.code}：\n${(summary || r.text + r.stderr).slice(-1500)}`);
+      for (const line of summary.split("\n").filter((l) => l.startsWith("- CPU"))) log(line);
+    },
+  ],
+  [
+    "開啟物件辨識（CPU）後，街景假相機的事件標上 person",
+    async () => {
+      await apiJson("/api/settings", { method: "PUT", json: { objects: { enabled: true, device: "cpu" } } });
+      const ready = await until("GET /api/objects 的 status.state 變成 ready", 120_000, async () => {
+        const { status } = await apiJson<{ status: { state: string; device: string | null; error: string | null } }>("/api/objects");
+        check(status.state !== "error", `detector 回報錯誤：${status.error}`);
+        return status.state === "ready" ? status : false;
+      });
+      check(ready.device === "cpu", `實際裝置應為 cpu，實際 ${ready.device}`);
+      // 行人在推流開始後 15 到 45 秒出現；攝影機要在這之前上線
+      await startFakeCamera(STREET_CAM, STREET_ALIAS, "street;person=15-45");
+      const cam = await apiJson<CameraDto>("/api/cameras", {
+        json: {
+          name: "街景",
+          enabled: true,
+          connection: { type: "rtsp", mainUrl: `rtsp://${STREET_ALIAS}:${CAM_PORT}/stream1`, subUrl: `rtsp://${STREET_ALIAS}:${CAM_PORT}/stream2`, transport: "tcp" },
+          record: { enabled: true, audio: false, direct: false },
+        },
+      });
+      const event = await until("街景攝影機出現 labels 含 person 的事件", 150_000, async () => {
+        const list = await apiJson<{ cameraId: string; labels: string[]; startMs: number }[]>(`/api/events?camera=${cam.id}&label=person`);
+        return list.find((e) => e.labels.includes("person"));
+      }, 2000);
+      const { status } = await apiJson<{ status: { latencyMs: { avg: number } | null; processed: number } }>("/api/objects");
+      log(`事件 labels=${event.labels.join(",")}；已推論 ${status.processed} 張，平均 ${status.latencyMs?.avg ?? "?"} ms`);
     },
   ],
 ];
@@ -586,10 +634,10 @@ async function main(): Promise<number> {
     console.error(`\n失敗的步驟：${failed.step}\n原因：${message}`);
     if (!(failed.error instanceof StepError) && failed.error instanceof Error) console.error(failed.error.stack);
     console.error(`\n--- ${NVR} 日誌尾巴 ---\n${await nvrLogs()}`);
-    console.error(`--- ${CAM} 日誌尾巴 ---\n${(await exec(["docker", "logs", "--tail", "30", CAM])).text}`);
+    for (const c of [CAM, STREET_CAM]) console.error(`--- ${c} 日誌尾巴 ---\n${(await exec(["docker", "logs", "--tail", "30", c])).text}`);
   }
   if (process.env.E2E_KEEP === "1") {
-    console.error(`E2E_KEEP=1，保留容器 ${NVR}、${CAM}、volume ${VOLUME}、network ${NET}`);
+    console.error(`E2E_KEEP=1，保留容器 ${NVR}、${CAM}、${STREET_CAM}、volume ${VOLUME}、network ${NET}`);
   } else {
     await removeResources();
   }

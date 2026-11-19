@@ -1,0 +1,14 @@
+#!/bin/sh
+# 物件辨識自我檢查：detector-selftest [--runs 20] [--expect intel,nvidia] [--model x.onnx]
+# 容器內在 PATH 上；原始碼目錄裡用 scripts/detector-selftest。參數原樣交給 detector/selftest.py。
+set -eu
+here="$(dirname "$(readlink -f "$0")")"
+script="$here/../detector/selftest.py"
+if [ -n "${DETECTOR_PYTHON:-}" ]; then
+  py="$DETECTOR_PYTHON"
+elif [ -x /opt/detector/bin/python ]; then
+  py=/opt/detector/bin/python
+else
+  py=python3
+fi
+exec "$py" "$script" "$@"
