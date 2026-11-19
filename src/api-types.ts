@@ -190,11 +190,25 @@ export interface SegmentDto {
   size: number;
 }
 
+export interface DiskDto {
+  path: string;
+  totalBytes: number;
+  freeBytes: number;
+}
+
 export interface SystemDto {
   workers: WorkerStatus[];
-  disk: { path: string; totalBytes: number; freeBytes: number };
-  /** oldestMs 是這台攝影機最早一段錄影的開始時間，給「大約可保留幾天」的估算用 */
+  /** 目前錄影位置（settings.storagePath）所在的硬碟 */
+  disk: DiskDto;
+  /**
+   * 資料目錄（/data：資料庫、縮圖、匯出）所在的硬碟。sameAsRecordings 為 true 時兩者是同一顆
+   * （同一個檔案系統，或容量與可用空間都一樣，例如 Unraid 共享把兩邊都寫進快取池），介面只顯示一顆。
+   */
+  dataDisk: DiskDto & { sameAsRecordings: boolean };
+  /** 只算放在目前錄影位置的片段；oldestMs 是這台攝影機最早一段的開始時間，給「大約可保留幾天」的估算用 */
   usage: { cameraId: CameraId; bytes: number; oldestMs: number | null }[];
+  /** 放在其他位置的片段（改過錄影位置），依當時的錄影位置合計；照常可回放、照保留規則清除 */
+  elsewhere: { path: string; bytes: number }[];
   logs: string[];
   /** 影像解碼用哪張卡；狀態頁用 warning 顯示退回 CPU 的提醒 */
   decode: DecodeStatusDto;

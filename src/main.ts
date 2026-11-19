@@ -16,6 +16,7 @@ import { createExports, exportRoutes } from "./export/index.ts";
 import { hostLabel, instanceLabel, loadInstanceId, startMdns, type MdnsResponder } from "./discovery/index.ts";
 import { portInUseMessage, readEnv } from "./env.ts";
 import { defaultRecordingsDir } from "./recordings-dir.ts";
+import { measureDisks, splitUsage } from "./storage.ts";
 import { createHomekit } from "./homekit/manager.ts";
 import type { CodecName } from "./hwcodec/commands.ts";
 import { planDecode } from "./hwcodec/plan.ts";
@@ -36,11 +37,11 @@ import {
   purgeOrphans,
   recordingRoutes,
   recordWorkerSpec,
-  usageByCamera,
+  usageByRoot,
 } from "./recording/index.ts";
 import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
-import { createCameraStore, createSettingsStore } from "./stores/index.ts";
+import { createCameraStore, createSettingsStore, followRecordingsDefault } from "./stores/index.ts";
 import { createStreamHub, type StreamClient } from "./stream/hub.ts";
 import type { Camera, CameraConfig, CameraConnection, CameraId, WorkerSpec, WorkerStatus } from "./types.ts";
 import { createMemoryMonitor, type MemoryTarget } from "./workers/memory.ts";
@@ -64,7 +65,12 @@ const auth = createAuth({ db });
 const instanceId = loadInstanceId(db);
 const links = createLinkService({ tokens: auth });
 const cameras = createCameraStore(db);
-const settings = createSettingsStore(db, env.dataDir, defaultRecordingsDir(env));
+const recordingsDir = defaultRecordingsDir(env);
+const previousRecordingsDir = followRecordingsDefault(db, env.dataDir, recordingsDir);
+if (previousRecordingsDir) {
+  console.log(`[storage] 錄影位置改成 ${recordingsDir}：原本自動放在 ${previousRecordingsDir}，現在有${env.recordingsDir ? "設定 RECORDINGS_DIR" : "另外掛載的 /recordings"}。舊的錄影留在原處，照常可以回放，並照保留天數清除`);
+}
+const settings = createSettingsStore(db, env.dataDir, recordingsDir);
 const supervisor = createSupervisor({ logDir });
 const restream = createRestream({
   env,
@@ -240,11 +246,10 @@ const publicWorker = (w: WorkerStatus): WorkerStatus => ({ ...w, stderrTail: w.s
 async function system(): Promise<SystemDto> {
   const path = settings.get().storagePath;
   mkdirSync(path, { recursive: true });
-  const fs = await statfs(path);
   return {
     workers: supervisor.status().map(publicWorker),
-    disk: { path, totalBytes: fs.blocks * fs.bsize, freeBytes: fs.bavail * fs.bsize },
-    usage: usageByCamera(db),
+    ...(await measureDisks(path, env.dataDir)),
+    ...splitUsage(usageByRoot(db), path),
     logs: readRestartLog(logDir, 100).map((r) => {
       const tail = r.stderrTail.at(-1);
       return `${new Date(r.at).toISOString()} ${r.id} 重啟（${r.reason}，exit ${r.exitCode ?? r.signal ?? "?"}）${tail ? `：${tail}` : ""}`;
@@ -345,7 +350,9 @@ async function diagnostics(only: string | null): Promise<string> {
     workers: sys.workers,
     restarts: readRestartLog(logDir, 50),
     disk: sys.disk,
+    dataDisk: sys.dataDisk,
     usage: sys.usage,
+    elsewhere: sys.elsewhere,
     metrics: await metrics.diagnostics(),
     video: { report: videoCodecs.current(), status: decodeStatus() },
   });

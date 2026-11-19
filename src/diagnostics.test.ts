@@ -90,7 +90,9 @@ function input(overrides: Partial<DiagnosticsInput> = {}): DiagnosticsInput {
       },
     ],
     disk: { path: "/data/recordings", totalBytes: 2 * 1024 ** 4, freeBytes: 1024 ** 4 },
+    dataDisk: { path: "/data", totalBytes: 2 * 1024 ** 4, freeBytes: 1024 ** 4, sameAsRecordings: true },
     usage: [{ cameraId: "front" as CameraId, bytes: 5 * 1024 ** 3, oldestMs: NOW - 86_400_000 }],
+    elsewhere: [],
     ...overrides,
   };
 }

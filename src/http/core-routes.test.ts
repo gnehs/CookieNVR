@@ -76,7 +76,9 @@ beforeEach(async () => {
       system: async (): Promise<SystemDto> => ({
         workers: [],
         disk: { path: "/data", totalBytes: 10, freeBytes: 5 },
+        dataDisk: { path: "/data", totalBytes: 10, freeBytes: 5, sameAsRecordings: true },
         usage: [],
+        elsewhere: [],
         logs: ["hello"],
         decode: { requested: "cpu", cameras: [], warning: null },
       }),

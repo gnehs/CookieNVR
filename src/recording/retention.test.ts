@@ -5,7 +5,7 @@ import { openDb } from "../db.ts";
 import type { Settings } from "../types.ts";
 import { createIndexer } from "./indexer.ts";
 import { createRetention } from "./retention.ts";
-import { allSegments, usageByCamera } from "./store.ts";
+import { allSegments, usageByRoot } from "./store.ts";
 import { camera, tempSettings, writeSegment } from "./test-helpers.ts";
 import { ensureDayDirs } from "./worker.ts";
 
@@ -84,7 +84,29 @@ test("low disk space evicts the oldest segments regardless of events, never the 
   free = 0;
   await retention.runOnce(NOW);
   expect(remaining()).toEqual([recording]);
-  expect(usageByCamera(db)).toEqual([{ cameraId: "cam1" as never, bytes: 500, oldestMs: NOW - 30_000 }]);
+  expect(usageByRoot(db)).toEqual([{ root: settings.storagePath, cameraId: "cam1" as never, bytes: 500, oldestMs: NOW - 30_000 }]);
+});
+
+test("low disk space only evicts segments on the recording disk; ones under an old location on another disk stay", async () => {
+  const old = await tempSettings();
+  const db = openDb(":memory:");
+  const oldPath = await writeSegment(old, "cam1", NOW - 3 * DAY, 1000, NOW - 3 * DAY + 60_000);
+  await createIndexer({ db, settings: () => old }).reconcile(NOW);
+  const current = await tempSettings();
+  const newPaths = [await writeSegment(current, "cam1", NOW - 2 * DAY, 1000, NOW - 2 * DAY + 60_000), await writeSegment(current, "cam1", NOW - DAY, 1000, NOW - DAY + 60_000)];
+  await createIndexer({ db, settings: () => current }).reconcile(NOW);
+  expect(allSegments(db)).toHaveLength(3);
+
+  const dev = (p: string) => (p.startsWith(old.storagePath) ? 1 : 2);
+  const free = async () => current.retention.minFreeBytes - 500;
+  const retention = createRetention({ db, settings: () => current, freeBytes: free, dataDir: current.storagePath + "-data", dev });
+  expect(await retention.runOnce(NOW)).toEqual({ deleted: 1, freedBytes: 1000, events: 0 });
+  expect(allSegments(db).map((s) => s.path).sort()).toEqual([oldPath, newPaths[1]!].sort());
+
+  // 同一顆硬碟上的舊位置照樣可以騰空間
+  const sameDisk = createRetention({ db, settings: () => current, freeBytes: free, dataDir: current.storagePath + "-data", dev: () => 2 });
+  await sameDisk.runOnce(NOW);
+  expect(allSegments(db).map((s) => s.path)).toEqual([newPaths[1]!]);
 });
 
 test("empty past day directories are removed but today's and tomorrow's are kept", async () => {

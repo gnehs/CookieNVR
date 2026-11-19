@@ -598,7 +598,9 @@ describe("診斷資訊", () => {
       workers: [],
       restarts: [],
       disk: { path: "/d", totalBytes: 10, freeBytes: 5 },
+      dataDisk: { path: "/d", totalBytes: 10, freeBytes: 5, sameAsRecordings: true },
       usage: [],
+      elsewhere: [],
     });
 
   test("列出能力與偏好", async () => {

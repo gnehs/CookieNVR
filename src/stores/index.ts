@@ -1,2 +1,2 @@
 export { createCameraStore } from "./cameras.ts";
-export { createSettingsStore } from "./settings.ts";
+export { createSettingsStore, followRecordingsDefault } from "./settings.ts";

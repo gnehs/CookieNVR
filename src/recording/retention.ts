@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
+import { statSync } from "node:fs";
 import { readdir, rm, rmdir, statfs } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { EVENT_BUFFER_MS, type Settings } from "../types.ts";
 import { thumbPath } from "../events/paths.ts";
 import { deleteEventRow, expiredEventIds } from "../events/store.ts";
@@ -31,9 +32,12 @@ export function createRetention(deps: {
   /** 縮圖在 <dataDir>/thumbs */
   dataDir: string;
   freeBytes?: FreeBytes;
+  /** st_dev；路徑不存在時丟出錯誤 */
+  dev?: (path: string) => number;
 }): Retention {
   const { db } = deps;
   const freeBytes = deps.freeBytes ?? statfsFreeBytes;
+  const dev = deps.dev ?? ((p: string) => statSync(p).dev);
 
   return {
     async runOnce(now) {
@@ -46,12 +50,14 @@ export function createRetention(deps: {
         }),
       );
 
-      // Deleting the age-expired segments frees space too, so count it before evicting by age order.
+      // Only segments on the recording disk free space there; ones left under an old storagePath on
+      // another disk wait for their age limit. Deleting the age-expired segments frees space too.
+      const onRecordingDisk = sameDiskAs(resolve(storagePath), dev);
       let deficit = retention.minFreeBytes - (await freeBytes(resolve(storagePath)));
-      for (const c of doomed) deficit -= c.size;
+      for (const c of doomed) if (onRecordingDisk(c.path)) deficit -= c.size;
       for (const c of candidates) {
         if (deficit <= 0) break;
-        if (doomed.has(c)) continue;
+        if (doomed.has(c) || !onRecordingDisk(c.path)) continue;
         doomed.add(c);
         deficit -= c.size;
       }
@@ -72,6 +78,26 @@ export function createRetention(deps: {
       }
       return { deleted: doomed.size, freedBytes, events: expired.length };
     },
+  };
+}
+
+/** Segment paths are <root>/<camera>/<day>/<file>; the device is looked up once per root. */
+function sameDiskAs(storagePath: string, dev: (path: string) => number): (segmentPath: string) => boolean {
+  const devOf = new Map<string, number | null>();
+  const lookup = (path: string) => {
+    if (!devOf.has(path)) {
+      try {
+        devOf.set(path, dev(path));
+      } catch {
+        devOf.set(path, null);
+      }
+    }
+    return devOf.get(path)!;
+  };
+  const target = lookup(storagePath);
+  return (segmentPath) => {
+    const root = dirname(dirname(dirname(segmentPath)));
+    return root === storagePath || (target !== null && lookup(root) === target);
   };
 }
 

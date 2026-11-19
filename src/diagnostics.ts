@@ -38,7 +38,9 @@ export interface DiagnosticsInput {
   workers: WorkerStatus[];
   restarts: RestartRecord[];
   disk: SystemDto["disk"];
+  dataDisk: SystemDto["dataDisk"];
   usage: SystemDto["usage"];
+  elsewhere: SystemDto["elsewhere"];
   homekit?: Pick<HomekitDiagnostics, "systemEnabled" | "workerConnected" | "lastHeartbeatAt">;
   /** CPU、記憶體、GPU 與各程序的用量；沒有提供時報告不列這一節 */
   metrics?: MetricsDiagnostics;
@@ -367,7 +369,13 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     "## 儲存空間",
     `- 錄影路徑：${input.disk.path}`,
     `- 磁碟：共 ${bytes(input.disk.totalBytes)}，已用 ${bytes(used)}，可用 ${bytes(input.disk.freeBytes)}`,
-    `- 錄影合計：${bytes(input.usage.reduce((a, u) => a + u.bytes, 0))}`,
+    `- 錄影合計（目前位置）：${bytes(input.usage.reduce((a, u) => a + u.bytes, 0))}`,
+    ...input.elsewhere.map((e) => `- 其他位置的錄影：${e.path}，${bytes(e.bytes)}`),
+    `- 資料目錄：${input.dataDisk.path}，${
+      input.dataDisk.sameAsRecordings
+        ? "和錄影在同一顆硬碟"
+        : `另一顆硬碟，共 ${bytes(input.dataDisk.totalBytes)}，可用 ${bytes(input.dataDisk.freeBytes)}`
+    }`,
     "",
     ...(input.metrics ? metricsReport(input.metrics) : []),
     "## 設定",

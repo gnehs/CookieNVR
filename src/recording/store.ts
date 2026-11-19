@@ -104,10 +104,21 @@ export function retentionCandidates(db: Database, now: number, bufferMs: number)
   return rows.map((r) => ({ id: r.id, path: r.path, endMs: r.end_ms, size: r.size, nearEvent: r.near_event === 1 }));
 }
 
-/** Total recorded bytes per camera, for the status page. */
-export function usageByCamera(db: Database): { cameraId: CameraId; bytes: number; oldestMs: number | null }[] {
+export interface RootUsage {
+  /** The storagePath the segments were written under: everything before `/<cameraId>/` in the path. */
+  root: string;
+  cameraId: CameraId;
+  bytes: number;
+  oldestMs: number;
+}
+
+/** Recorded bytes per camera and per recording location, so a changed storagePath doesn't mix two disks. */
+export function usageByRoot(db: Database): RootUsage[] {
   const rows = db
-    .query(`SELECT camera_id, SUM(size) AS bytes, MIN(start_ms) AS oldest FROM segments GROUP BY camera_id ORDER BY camera_id`)
-    .all() as { camera_id: string; bytes: number; oldest: number | null }[];
-  return rows.map((r) => ({ cameraId: r.camera_id as CameraId, bytes: r.bytes, oldestMs: r.oldest }));
+    .query(
+      `SELECT substr(path, 1, instr(path, '/' || camera_id || '/') - 1) AS root, camera_id, SUM(size) AS bytes, MIN(start_ms) AS oldest
+       FROM segments GROUP BY root, camera_id ORDER BY root, camera_id`,
+    )
+    .all() as { root: string; camera_id: string; bytes: number; oldest: number }[];
+  return rows.map((r) => ({ root: r.root, cameraId: r.camera_id as CameraId, bytes: r.bytes, oldestMs: r.oldest }));
 }

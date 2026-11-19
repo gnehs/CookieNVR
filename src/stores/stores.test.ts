@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { openDb } from "../db.ts";
 import { defaultSettings, type CameraConfig } from "../types.ts";
 import { createCameraStore } from "./cameras.ts";
-import { createSettingsStore } from "./settings.ts";
+import { createSettingsStore, followRecordingsDefault } from "./settings.ts";
 
 const config = (name: string): CameraConfig => ({
   name,
@@ -86,6 +86,34 @@ describe("SettingsStore", () => {
     const db = openDb(":memory:");
     createSettingsStore(db, "/data").update({ siteName: "X" });
     expect(createSettingsStore(db, "/data").get().siteName).toBe("X");
+  });
+
+  test("沒指定過錄影位置就跟著預設走：之後掛了 /recordings 自動改用；選回預設位置等於恢復自動", () => {
+    const db = openDb(":memory:");
+    createSettingsStore(db, "/data").update({ siteName: "X" });
+    expect(createSettingsStore(db, "/data", "/recordings").get().storagePath).toBe("/recordings");
+    const store = createSettingsStore(db, "/data", "/recordings");
+    store.update({ storagePath: "/recordings" });
+    expect(db.query("SELECT 1 FROM settings WHERE key = 'storagePath'").get()).toBeNull();
+    store.update({ storagePath: "/mnt/nas" });
+    expect(createSettingsStore(db, "/data", "/elsewhere").get().storagePath).toBe("/mnt/nas");
+  });
+
+  test("存下來的錄影位置剛好是 <dataDir>/recordings、而現在的預設在別處：視為自動決定，改用新的預設", () => {
+    const db = openDb(":memory:");
+    createSettingsStore(db, "/data").update({ retention: { continuousDays: 3, eventDays: 30, minFreeBytes: 1 } });
+    db.query("INSERT INTO settings (key, value) VALUES ('storagePath', ?)").run(JSON.stringify("/data/recordings"));
+    expect(followRecordingsDefault(db, "/data", "/data/recordings")).toBeNull();
+    expect(followRecordingsDefault(db, "/data", "/recordings")).toBe("/data/recordings");
+    expect(createSettingsStore(db, "/data", "/recordings").get()).toMatchObject({ storagePath: "/recordings", retention: { continuousDays: 3 } });
+    expect(followRecordingsDefault(db, "/data", "/recordings")).toBeNull();
+  });
+
+  test("使用者自己選的錄影位置不會被換掉", () => {
+    const db = openDb(":memory:");
+    createSettingsStore(db, "/data").update({ storagePath: "/mnt/nas" });
+    expect(followRecordingsDefault(db, "/data", "/recordings")).toBeNull();
+    expect(createSettingsStore(db, "/data", "/recordings").get().storagePath).toBe("/mnt/nas");
   });
 
   test("舊資料的 devices 只有 objects：decode 補預設值，objects 保留原值", () => {
