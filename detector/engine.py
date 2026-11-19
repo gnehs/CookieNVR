@@ -18,6 +18,7 @@ GPU 的 EP 建得起來不代表模型真的在上面跑：EP 不支援的節點
 from __future__ import annotations
 
 import glob
+import re
 import io
 import json
 import os
@@ -89,6 +90,8 @@ class Probe:
     devices: list[Device] = field(default_factory=list)
     #: 列舉某類裝置時遇到的錯誤（例如 OpenVINO 看不到 GPU）
     enum_errors: dict[str, str] = field(default_factory=dict)
+    #: OpenVINO 列出、但不是 Intel 而略過的 GPU（例如經 Nvidia 的 OpenCL 看到的 Nvidia 卡）
+    skipped_gpus: list[str] = field(default_factory=list)
 
     @property
     def has_cuda(self) -> bool:
@@ -155,7 +158,8 @@ def _intel_devices(ort, p: Probe) -> list[Device]:
         name = next((str(v) for k, v in meta.items() if "name" in k.lower() or "description" in k.lower()), "")
         # -nvidia 映像裡有 Nvidia 的 OpenCL ICD，OpenVINO 會把 Nvidia 卡列成「… (dGPU)」，而且 vendor_id 回報 0；
         # 只收確定是 Intel 的：vendor_id 是 Intel，或未知時名稱／廠商欄位寫著 Intel
-        if not is_intel_gpu(getattr(d.device, "vendor_id", 0), str(getattr(d.device, "vendor", "")), name):
+        if not is_intel_gpu(getattr(d.device, "vendor_id", 0), str(getattr(d.device, "vendor", "")), name, str(d.ep_metadata.get("DEVICE_ARCHITECTURE", ""))):
+            p.skipped_gpus.append(f"{ov}：{name or '未命名'}（{d.ep_metadata.get('DEVICE_ARCHITECTURE', '')}）")
             continue
         found.append(Device(f"intel:{ov}", "intel", name or f"Intel 內顯（{ov}）", ov_device=ov))
     # OpenVINO 不給 PCI 位址；只有一顆 Intel 顯示卡時才能確定是哪一顆
@@ -169,8 +173,15 @@ def _intel_devices(ort, p: Probe) -> list[Device]:
 _OTHER_VENDORS = ("nvidia", "geforce", "quadro", "amd", "radeon", "apple", "mali", "adreno")
 
 
-def is_intel_gpu(vendor_id: int, vendor: str, name: str) -> bool:
-    """OpenVINO 列出的 GPU 是不是 Intel 的。vendor_id 0 表示 ONNX Runtime 不知道，這時看名稱與廠商字串。"""
+def is_intel_gpu(vendor_id: int, vendor: str, name: str, architecture: str = "") -> bool:
+    """
+    OpenVINO 列出的 GPU 是不是 Intel 的。OpenVINO 的 DEVICE_ARCHITECTURE 帶著 OpenCL 回報的廠商編號
+    （例如 "GPU: vendor=0x8086 arch=v12.0.0"），有就以它為準；ONNX Runtime 的 vendor_id 對 OpenVINO 的 GPU
+    不可靠（實機上 Nvidia 卡回報 0），最後才看名稱與廠商字串。
+    """
+    m = re.search(r"vendor=0x([0-9a-fA-F]+)", architecture)
+    if m:
+        return int(m.group(1), 16) == INTEL_VENDOR
     text = f"{vendor} {name}".lower()
     if any(v in text for v in _OTHER_VENDORS):
         return False

@@ -136,7 +136,7 @@ def main() -> int:
     env_lines = [
         f"系統：{platform.system()} {platform.machine()}，核心 {platform.release()}，Python {platform.python_version()}，CPU 核心 {os.cpu_count()}（推論用 {eng.cpu_threads()} 執行緒）",
         f"onnxruntime {p.ort_version}；providers：{', '.join(p.providers)}",
-        f"OpenVINO plugin：{'已安裝' if p.has_openvino else '未安裝'}{f'（{p.openvino_plugin_error}）' if p.openvino_plugin_error else ''}{'；列舉錯誤：' + p.enum_errors['intel'] if 'intel' in p.enum_errors else ''}",
+        f"OpenVINO plugin：{'已安裝' if p.has_openvino else '未安裝'}{f'（{p.openvino_plugin_error}）' if p.openvino_plugin_error else ''}{'；列舉錯誤：' + p.enum_errors['intel'] if 'intel' in p.enum_errors else ''}{'；略過非 Intel 的 GPU：' + '、'.join(p.skipped_gpus) if p.skipped_gpus else ''}",
         f"/dev/dri：{', '.join(p.dri_nodes) or '沒有'}{'（可讀寫）' if p.dri_accessible else ('（沒有權限）' if p.dri_nodes else '')}；Intel GPU：{'; '.join(igpu) or '沒有看到'}",
         f"Nvidia：{', '.join(p.nvidia_nodes) or '沒有 /dev/nvidia*'}；nvidia-smi：{(smi or '無法執行').replace(chr(10), ' | ')}",
     ]

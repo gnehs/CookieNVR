@@ -17,6 +17,10 @@ class IntelGpuTest(unittest.TestCase):
         self.assertTrue(is_intel_gpu(0, "Intel Corporation", "GPU.0"))
         self.assertTrue(is_intel_gpu(INTEL_VENDOR, "", "Arc A380 (dGPU)"))
 
+    def test_openvino_architecture_vendor_wins_over_the_name(self):
+        self.assertFalse(is_intel_gpu(0, "", "NVIDIA GeForce RTX 5060 Ti (dGPU)", "GPU: vendor=0x10de arch=v12.0.0"))
+        self.assertTrue(is_intel_gpu(0, "", "GPU", "GPU: vendor=0x8086 arch=v12.55.8"))
+
     def test_unknown_vendor_without_intel_in_the_name_is_left_out(self):
         self.assertFalse(is_intel_gpu(0, "", "GPU.1"))
         self.assertFalse(is_intel_gpu(0x1002, "", "AMD Radeon RX 7600 (dGPU)"))
