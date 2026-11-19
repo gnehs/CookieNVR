@@ -120,7 +120,7 @@ def cpu_name() -> str:
         pass
     if platform.system() == "Darwin":
         return sh(["sysctl", "-n", "machdep.cpu.brand_string"]) or platform.machine()
-    return platform.processor() or platform.machine()
+    return platform.processor() or f"{platform.machine()} CPU"
 
 
 def _register_openvino(ort, plugin_path: str) -> None:

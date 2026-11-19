@@ -558,13 +558,13 @@ const steps: Step[] = [
   [
     "開啟物件辨識（CPU）後，街景假相機的事件標上 person",
     async () => {
-      await apiJson("/api/settings", { method: "PUT", json: { objects: { enabled: true, device: "cpu" } } });
+      await apiJson("/api/settings", { method: "PUT", json: { objects: { enabled: true }, devices: { objects: "cpu" } } });
       const ready = await until("GET /api/objects 的 status.state 變成 ready", 120_000, async () => {
-        const { status } = await apiJson<{ status: { state: string; device: string | null; error: string | null } }>("/api/objects");
+        const { status } = await apiJson<{ status: { state: string; device: { id: string } | null; error: string | null } }>("/api/objects");
         check(status.state !== "error", `detector 回報錯誤：${status.error}`);
         return status.state === "ready" ? status : false;
       });
-      check(ready.device === "cpu", `實際裝置應為 cpu，實際 ${ready.device}`);
+      check(ready.device?.id === "cpu", `實際裝置應為 cpu，實際 ${JSON.stringify(ready.device)}`);
       // 行人在推流開始後 15 到 45 秒出現；攝影機要在這之前上線
       await startFakeCamera(STREET_CAM, STREET_ALIAS, "street;person=15-45");
       const cam = await apiJson<CameraDto>("/api/cameras", {
