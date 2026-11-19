@@ -40,7 +40,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 整套系統是一個容器、一個 port、一個 volume，在 Unraid 用 Docker Compose 或 Docker 頁面都能直接跑。
 
 - **映像內容**：`oven/bun`（Debian slim）＋ ffmpeg / ffprobe ＋ MediaMTX ＋ 物件辨識用的 Python 與 ONNX Runtime ＋ CookieNVR 原始碼。前端由 Bun 在啟動時打包，不需要另外 build 步驟。
-- **映像版本**：`latest` 含 CPU 與 Intel 內顯（OpenVINO）推論；`latest-nvidia` 改含 Nvidia（CUDA）推論。不用物件辨識時兩者沒有差別。
+- **映像版本**：`latest` 含 CPU 推論，amd64 另含 Intel 內顯（OpenVINO plugin EP 與 Intel OpenCL 驅動，26.40 與 24.35 legacy 並裝）；`latest-nvidia` 改含 Nvidia（CUDA 12、cuDNN 9.11，主機驅動 525 以上）。不用物件辨識時兩者沒有差別，detector 不啟動，只是映像比較大（壓縮後 arm64 約 301 MB、amd64 約 680 MB；M3 時約 217 MB；-nvidia 估計約 2 GB）。
 - **平台**：`latest` 支援 `linux/amd64` 與 `linux/arm64`；`latest-nvidia` 只有 `linux/amd64`。
 - **GPU（選用，物件辨識用）**：Intel 內顯掛入 `/dev/dri`；Nvidia 需主機裝好 NVIDIA Container Toolkit（Unraid 用 Nvidia Driver 外掛），並以 `--gpus all` 或 `runtime: nvidia` 啟動。沒有 GPU 時用 CPU 推論。
 - **網路**：容器需能連到攝影機的 554（RTSP）與 2020（Tapo ONVIF）。bridge 模式即可運作；想讓 Home Assistant 自動發現、或啟用 HKSV 時要用 host 網路，或 Unraid 的 br0 給獨立 IP，因為兩者都靠 mDNS。
@@ -61,7 +61,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 
 RTSP 轉發的主機埠要和容器內相同（預設 `8554:8554`）：App 顯示給使用者的 RTSP 網址用的是容器內的埠。
 
-容器驗證：`bun scripts/docker-e2e.ts` 建置映像，起一個假相機容器與一個 NVR 容器，經 HTTP API 走完初始設定、測試連線、錄影（經轉發與直連各一台）、下載片段、快照、RTSP 帳密、強制結束 ffmpeg 與 MediaMTX、`docker stop`、同一個 volume 重啟與 SIGKILL 後重啟，並以 `TZ=Asia/Taipei` 確認片段檔名仍是 UTC。失敗時印出是哪一步，結束時清掉自己建立的容器、volume 與 network。CI 在 PR 與 main 上跑它（約 7 分鐘）。映像體積靠移除 ffmpeg 連帶裝進來、但錄影用不到的 Mesa 與 LLVM 瘦身（約 250 MB）。
+容器驗證：`bun scripts/docker-e2e.ts` 建置映像，起一個假相機容器與一個 NVR 容器，經 HTTP API 走完初始設定、測試連線、錄影（經轉發與直連各一台）、下載片段、快照、RTSP 帳密、強制結束 ffmpeg 與 MediaMTX、`docker stop`、同一個 volume 重啟與 SIGKILL 後重啟，並以 `TZ=Asia/Taipei` 確認片段檔名仍是 UTC；最後在容器內跑 `detector-selftest`，開啟 CPU 物件辨識後確認街景假相機（`street;person=…` 場景）的事件標上 `person`。失敗時印出是哪一步，結束時清掉自己建立的容器、volume 與 network。CI 在 PR 與 main 上跑它（約 8 分鐘）。映像體積靠移除 ffmpeg 連帶裝進來、但錄影用不到的 Mesa 與 LLVM 瘦身（約 250 MB）。
 
 環境變數只管「容器怎麼跑」，不含任何攝影機或功能設定。第一次開啟網頁會進入初始設定，建立管理員帳號。
 
@@ -83,13 +83,15 @@ services:
     # environment: ["NVIDIA_VISIBLE_DEVICES=all"]
 ```
 
+完整註解版（含 render 群組與 `--gpus all` 的 compose 寫法）在 repo 的 `docker-compose.example.yml`。
+
 ## 系統架構
 
 一個容器裡有一個輕量主程序和多個獨立 worker。相機只接轉發層，其餘 worker 都從轉發層讀影像；主程序不碰影像資料，只負責監管、API、資料庫與 ONVIF。
 
 - **相機 → 轉發層**：restream worker（MediaMTX）對每台相機的 main、sub 各開一條 RTSP 連線。
 - **轉發層 → worker**：record（切片錄影）、detect（差分與快照）、live（瀏覽器用 fMP4）、homekit（HKSV）都從轉發層讀。
-- **detect → detector**：開啟物件辨識時，各台 detect worker 在有動作時把畫面送給共用的 detector worker 做 YOLO 推論。
+- **detect → 主程序 → detector**：開啟物件辨識時，各台 detect worker 依辨識頻率輸出 JPEG，主程序在這台有動作時經 Unix socket 轉給共用的 detector worker 做 YOLO 推論。
 - **轉發層 → 外部**：HA、VLC 等 RTSP 用戶端從 `:8554` 讀。
 - **主程序**：監管所有 worker，提供 `:8765` 的網頁、API 與瀏覽器串流，並負責 SQLite 與 ONVIF。
 
@@ -246,47 +248,73 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 
 ### 行程內的事件訂閱
 
-`src/events/` 匯出 `EventFeed`：`subscribe(listener)` 收 `{phase: "start" | "update" | "end", event}`（update 是分數創新高、換了縮圖、來源或標籤改變），`active()` 回進行中的事件。HA 整合、HKSV、物件辨識都從這裡訂閱；SSE 的 `event` 與 `motion` 訊息也是由它轉送（update 不推）。
+`src/events/` 匯出 `EventFeed`：`subscribe(listener)` 收 `{phase: "start" | "update" | "end", event}`（update 是分數創新高、換了縮圖、來源或標籤改變），`active()` 回進行中的事件。HA 整合、HKSV、物件辨識都從這裡訂閱；SSE 的 `event` 與 `motion` 訊息也是由它轉送（update 只在 labels 改變時推）。
 
 可調參數（都在前端，存在攝影機設定的 `detect` 欄位；舊資料沒有這欄時用預設：開啟、畫面差分、門檻 25、最小面積 0.5%、冷卻 10 秒、沒有遮罩）：偵測開關、來源、靈敏度（低、中、高對應像素門檻 35、25、15，其他值顯示為自訂）、最小面積、冷卻時間、遮罩。前端的偵測設定頁用 `GET /api/cameras/:id/motion`（SSE）即時顯示分數曲線，觸發線就是最小面積。
 
 ## 物件辨識（YOLO，選用）
 
-動作偵測回答「有沒有東西在動」，物件辨識回答「動的是什麼」。YOLO 只在有動作時才跑，用來替事件加上類別（人、車、動物等），或濾掉不是指定類別的誤報。預設關閉；關閉或推論程序當掉時，系統退回純動作偵測，錄影完全不受影響。
+動作偵測回答「有沒有東西在動」，物件辨識回答「動的是什麼」。YOLO 只在有動作時才跑，用來替事件加上類別（人、車、動物等），或濾掉不是指定類別的誤報。預設關閉；關閉時 detector worker 完全不啟動。推論程序當掉時系統退回純動作偵測，錄影完全不受影響。
 
 ### 推論裝置
 
 | 裝置 | 執行方式 | 映像 | 容器需求 |
 | --- | --- | --- | --- |
-| Intel 內顯 | ONNX Runtime ＋ OpenVINO | `latest` | 掛入 `/dev/dri` |
-| Nvidia 顯卡 | ONNX Runtime ＋ CUDA | `latest-nvidia` | NVIDIA Container Toolkit、`runtime: nvidia` |
-| CPU | ONNX Runtime | 兩者皆可 | 無 |
+| Intel 內顯 | ONNX Runtime ＋ OpenVINO plugin EP（`onnxruntime-ep-openvino`） | `latest`（只有 amd64） | 掛入 `/dev/dri` |
+| Nvidia 顯卡 | ONNX Runtime ＋ CUDA 12（`onnxruntime-gpu` 1.26） | `latest-nvidia`（只有 amd64） | NVIDIA Container Toolkit，`--gpus all` 或 `runtime: nvidia`；主機驅動 525 以上 |
+| CPU | ONNX Runtime | 兩者皆可（arm64 只有 CPU） | 無 |
 
-- 裝置在「設定 → 系統」選擇，預設「自動」：有可用的 GPU 就用，否則用 CPU。
-- GPU 載入模型失敗時退回 CPU，並在狀態頁顯示警告。
-- 分成兩個映像是因為 CUDA 函式庫有數 GB，且兩種 ONNX Runtime 套件預期不能並存；能否合併待實測。
+- detector 啟動時列出這個環境實際偵測到的每個裝置：CPU、每顆 Intel 內顯（OpenVINO 的 `GPU.0`、`GPU.1`）、每張 Nvidia 卡，各帶型號。每個裝置有穩定的識別字：`cpu`、`intel:GPU.0`、`nvidia:GPU-<uuid>`（nvidia-smi 的 UUID，重開機或換插槽不變；沒有 nvidia-smi 時退而用 `nvidia:<編號>`）。CUDA 以 PCI 順序編號，和 nvidia-smi 一致。
+- 設定存成「工作 → 裝置」的對應 `settings.devices`（目前只有 `objects` 一個工作；影像解碼在 CPU，硬體解碼是非目標），值是 `auto`、`cpu` 或識別字。在「設定 → 一般 → 物件辨識」選擇，預設「自動」：依序試 Nvidia、Intel、CPU。不提供「不同攝影機用不同裝置」：所有攝影機共用一個推論程序，一次一張，分裝置要多開程序與佇列，這一版不做。
+- 指定或自動選到的 GPU 載入失敗時改用下一個（最後是 CPU）；指定的裝置不見了（拔卡、換卡）改用自動。實際使用的裝置與原因回報給主程序，顯示在設定頁（「使用中：Intel UHD Graphics 630」與警示）與診斷資訊。
+- 分成兩個映像：官方文件說同一個環境只能裝一種 ONNX Runtime 套件，而且 Nvidia 的 CUDA／cuDNN 函式庫壓縮後就有約 1.7 GB。-nvidia 釘在 CUDA 12（`onnxruntime-gpu` 1.26.0、cuDNN 9.11），涵蓋 Maxwell 以後的卡（家用常見的 Pascal，例如 P400、GTX 10 系列）；cuDNN 9.12 起只支援 Turing 以後，所以不升級。要 CUDA 13 可用 build arg `ONNXRUNTIME_GPU`。TensorRT 需要另外數 GB 的函式庫與建引擎時間，不放。
+- Intel 內顯需要容器內的 OpenCL 驅動：Debian trixie 沒有打包，映像內並裝 Intel compute-runtime 26.40（Gen12 以後）與 24.35 的 legacy1 套件（Gen8 到 Gen11，例如 8 到 10 代 Core 的 UHD 630、J4125），下載時驗 SHA-256。
+- Nvidia 卡的使用率與顯示記憶體由 detector 每 10 秒以 nvidia-smi 讀取，主程序以 `ObjectDetection.resources()` 匯出給狀態頁；Intel 內顯沒有便宜的讀法，不提供。
 
 ### 模型
 
-- 格式為 ONNX，輸入 640×640，類別為 COCO 80 類；前端只列常用類別（人、汽車、機車、腳踏車、貓、狗、鳥）。
-- 映像內建 YOLOX（Apache-2.0）。Ultralytics YOLO 是 AGPL-3.0，不內建。
-- 使用者可把自己的 ONNX 模型放進 `/data/models/` 並在前端選用，支援 YOLOX 與 Ultralytics YOLO（v8 / 11）的輸出格式。
+- 格式為 ONNX。內建 YOLOX-Tiny（Apache-2.0，官方 0.1.1rc0 release 的 `yolox_tiny.onnx`，輸入 416×416，COCO 80 類）。官方沒公布雜湊，建置時下載並比對我們釘住的 SHA-256（`detector/builtin-model.json`）。選 Tiny 的理由：Apple Silicon 4 執行緒實測每張約 12 ms（Nano 7 ms 但信心明顯較低，S 34 ms），在一般家用 x86 CPU 上預期仍在數十毫秒內。
+- Ultralytics YOLO 是 AGPL-3.0，不內建。使用者可把自己的 ONNX 模型放進 `/data/models/` 並在前端選用，支援 YOLOX（`[1, N, 5+C]`）、Ultralytics YOLOv8 / 11（`[1, 4+C, N]`）與內含 NMS 的 `[1, K, 6]`（例如 YOLO26）。格式以實際跑一張空白畫面的輸出形狀判斷；看不懂時 worker 不結束，回報中文錯誤顯示在設定頁。
+- **類別鍵**：模型的類別名稱轉成小寫英文、數字與底線（`traffic light` → `traffic_light`），設定的 `detect.labels`、事件的 `labels`、`GET /api/objects/labels` 都用這套鍵。自備模型的類別名稱讀 metadata 的 `names`，沒有才當作 COCO 80 類；任意名稱都照原樣轉鍵傳遞，有中文翻譯就顯示中文，沒有就顯示原名。
+- **包裹**：內建模型是 COCO 80 類，沒有包裹（只有背包、手提包、行李箱這類不同的東西，不拿來冒充）。要辨識包裹需要放入含這個類別的自備模型；類別名為 package、parcel 時會自動顯示為「包裹」，也會出現在勾選清單與 HA 感應器。
+- 前端預設列出常用類別（人、汽車、機車、腳踏車、卡車、公車、貓、狗、鳥），其餘收在「更多類別」。
 
 ### 流程
 
-1. 動作觸發（畫面差分或 ONVIF）後，該台的 detect worker 每秒送 2 張 640 寬的畫面給 detector worker，走本機 Unix socket。
-2. detector worker 由所有攝影機共用，一次處理一張；排隊超過 1 秒的畫面直接丟掉，不累積延遲。
-3. 某類別的信心值超過門檻（預設 0.5）且連續 2 張出現，才寫入事件的 `labels`；縮圖換成信心值最高的那一張。
+1. 物件辨識開啟、且這台不是「不辨識」時，detect worker 依辨識頻率輸出 640 寬 JPEG（每秒 1 到 5 張；沒開的攝影機維持每秒 1 張，不多編碼）。主程序已經收這些 JPEG 當快照，所以畫面由主程序轉交 detector（不另開一條 detect → detector 的通道），只在這台有動作（等待辨識或有進行中的事件）時才送，並依頻率節流。
+2. detector worker（`detector/main.py`，Python）由所有攝影機共用，經本機 Unix socket（`/tmp/cookienvr-<pid>-detector.sock`，路徑放 `/tmp` 是因為 macOS 的 socket 路徑上限約 104 字元）與主程序交換「1 位元組種類＋4 位元組長度＋內容」的訊息。一次處理一張；佇列在主程序，排隊超過 1 秒的畫面直接丟掉並計數。
+3. 某類別的信心值超過門檻（預設 0.5）且連續 2 張出現，才寫入事件的 `labels`，並立刻發出事件的 update（SSE 也推送）。縮圖換成信心值最高的那一張辨識畫面；之後動作分數再高也不換。
 4. 物件框的中心落在遮罩內就忽略，與動作偵測共用同一組遮罩。
+5. 卡死判定：心跳每 2 秒一次，10 秒沒有訊息、或一張推論超過 10 秒就重啟；載入模型最多等 3 分鐘（GPU 第一次編譯）。模型格式錯誤時 worker 只回報錯誤並持續心跳，不讓 supervisor 反覆重啟。
+
+### 辨識頻率
+
+「每秒辨識幾次」是全域設定 `objects.fps`，選項：每 2 秒 1 次、每秒 1、2（預設）、3、5 次，指的是每台攝影機有動作時。用全域而不是每台各自設定，因為瓶頸是共用的推論程序，測速的結論也是「幾台 × 每秒幾次」。「連續 2 張」的規則不變；過濾模式的等待期限是 max(3 秒, 2 張的間隔＋1 秒)，頻率很低時不會還沒等到第 2 張就丟棄。
+
+### 測速
+
+- 管理員在設定頁按「測速」，可選要測哪些裝置（預設目前使用的）。detector 在每個裝置上用內建測試圖（640 寬 JPEG，和實際送來的一樣）先暖機 1.5 秒，再連續推論 10 秒，量每秒幾張（含解碼與前後處理）。測速期間暫停辨識（事件照常由動作建立，過濾模式暫時當作標註），有進度、可取消，結果存在 `/data/detector-benchmark.json`，換了模型或測過的裝置都不在時標示過期。
+- 換算成「大約可以同時處理幾台攝影機」：測得的速度是最佳情況，CPU 只算一半（錄影、解碼與動作偵測也在用），GPU 算八成（解碼與前後處理仍在 CPU）；物件辨識只在有動作時才跑，所以這是「同時有動作」的台數。結論對照目前開了物件辨識的攝影機數與辨識頻率，說明夠不夠用。
+- 執行時持續量測最近 60 秒每秒實際推論幾張、最近 5 分鐘被丟掉的比例；丟掉超過一成，或測速結論顯示同時有動作時會來不及，在設定頁與狀態頁用白話提醒，並建議降低頻率或更換裝置。
+- `detector-selftest` 輸出同樣的測速與換算，實機上不用開介面也拿得到數字。
 
 ### 模式（單台設定）
 
+設定在每台的偵測設定裡：模式、關注的類別（`detect.labels`）、信心門檻（介面顯示為「嚴格程度」）。系統沒開物件辨識時這些設定不出現。
+
 | 模式 | 行為 |
 | --- | --- |
+| 不辨識 | 這台不送畫面去辨識 |
 | 標註（預設） | 事件照常由動作建立，辨識結果只是替事件加上類別 |
-| 過濾 | 動作觸發後先等辨識，3 秒內出現勾選的類別才建立事件並通知 HA 與 HKSV，否則丟棄 |
+| 過濾 | 動作觸發後先等辨識，期限內出現勾選的類別才建立事件並通知 HA 與 HKSV，否則丟棄（不寫資料庫、不發 start） |
 
-過濾模式下 detector 無法使用時，自動退回標註模式的行為，寧可多報也不漏報。
+過濾模式下 detector 無法使用（啟動中、重啟中、模型錯誤、測速中）時，自動退回標註模式的行為，寧可多報也不漏報；等待中的動作立刻建立事件。狀態機仍是純函式：等待中是 `pending` 狀態，期限與是否過濾由呼叫端以 `Policy` 傳入。
+
+對外（`GET /api/cameras` 與 SSE）的 `config.detect.labels` 是「目前生效的」類別：系統沒開物件辨識或這台設為不辨識時是空陣列，HA 依這個清單為每個類別建立感應器。存起來的勾選不受影響：沒開時用戶端送回空清單也會保留原值。
+
+### 實機驗證
+
+GPU 路徑在開發機（arm64 Mac）無法執行。`detector/README.md` 是實機測試步驟：在 amd64 機器上建置兩個映像、Intel 與 Nvidia 的啟動方式、在容器內執行 `detector-selftest [--expect intel,nvidia 或裝置識別字]`。自我檢查列出每個裝置、在每個裝置上推論並測速、比對與 CPU 的結果是否一致，最後印出可直接貼給 AI 的摘要；失敗時附可能原因與下一步。
 
 ## 即時預覽
 
@@ -537,7 +565,7 @@ HA 整合是獨立的 HACS repo `cookienvr-ha`（domain `cookienvr`），用 UI 
 | --- | --- | --- |
 | `camera.<名稱>` | camera | 快照取自 NVR；stream\_source 為 NVR 的 RTSP 轉發（main） |
 | `binary_sensor.<名稱>_motion` | motion | 事件開始／結束 |
-| `binary_sensor.<名稱>_<類別>` | occupancy | 進行中的事件含該類別（例如 `_person`）；該台有開物件辨識才有，每個勾選的類別一個 |
+| `binary_sensor.<名稱>_<類別>` | occupancy | 進行中的事件含該類別（例如 `_person`）。`config.detect.labels` 每個類別一個（沒開物件辨識或這台不辨識時清單是空的，就沒有）；使用者改了勾選，感應器跟著增減。名稱用 `GET /api/objects/labels` 的中文或英文；類別確認時 SSE 立刻送 event update，感應器不必等事件結束 |
 | `binary_sensor.<名稱>_online` | connectivity | 串流是否正常 |
 | `switch.<名稱>_recording` | switch | 錄影開關 |
 | `switch.<名稱>_detection` | switch | 偵測開關 |
@@ -698,7 +726,10 @@ cookienvr-ha/
 | GET | `/api/cameras/:id/days?tz=` | 有錄影的日子（`tz` 為 IANA 時區） | 一般使用者 |
 | GET | `/api/cameras/:id/recordings?start=&end=` | 時段內的片段清單（含錄製中） | 一般使用者 |
 | GET | `/api/segments/:id` | 片段檔，支援 Range | 一般使用者 |
-| GET | `/api/events?camera=&start=&end=&before=&limit=` | 事件查詢：沒帶 before 回與 [start, end) 重疊的事件（由舊到新）；帶 before 回開始時間早於它的事件（由新到舊，翻頁用）。label 篩選等 M4 | 一般使用者 |
+| GET | `/api/events?camera=&start=&end=&before=&limit=&label=` | 事件查詢：沒帶 before 回與 [start, end) 重疊的事件（由舊到新）；帶 before 回開始時間早於它的事件（由新到舊，翻頁用）；`label=person,car` 只回含任一類別的事件 | 一般使用者 |
+| GET | `/api/objects` | 物件辨識狀態（實際裝置、退回原因、延遲、速率、丟棄、負載提醒、GPU 使用率）、可選模型、偵測到的裝置、上次測速 | 管理員 |
+| POST / DELETE | `/api/objects/benchmark` | 開始測速（`{devices?, seconds?}`，回 202）／取消 | 管理員 |
+| GET | `/api/objects/labels` | 目前模型支援的類別：每個 `{key, zh, en}` 與常用類別；前端勾選清單與 HA 感應器名稱用 | 一般使用者 |
 | GET | `/api/events/:id` · `/thumb.jpg` | 事件詳情、縮圖 | 一般使用者 |
 | DELETE | `/api/events/:id` | 刪除事件與縮圖；進行中的回 409 | 管理員 |
 | POST / GET | `/api/exports` | 建立匯出工作（`{cameraId, startMs, endMs, tz}`，回 201 與工作；無錄影 422、超過 2 小時 400、佇列滿 429、磁碟不足 507）／列出所有工作 | 一般使用者 |
@@ -712,7 +743,7 @@ cookienvr-ha/
 
 內部端點 `/internal/rtsp-auth` 只接受 127.0.0.1，供 MediaMTX 驗證 RTSP 連線。
 
-SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:` 是種類，`data:` 是 JSON。連上時先送 `snapshot`（`cameras` 完整清單、管理員才有的 `workers`、進行中的 `events`）；之後 `cameras`（新增、修改、刪除、排序後的完整清單）、`camera`（單台上線或錄影狀態改變）、`worker`（只送管理員，`state: "stopped"` 表示已移除）、`event`（`{phase: "start" | "end", event}`）、`motion`（`{cameraId, active}`，事件開始為 true、結束為 false）。每 20 秒送一行註解保持連線，積壓超過 1 MB 的用戶端直接斷線，重連後從 `snapshot` 重來。
+SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:` 是種類，`data:` 是 JSON。連上時先送 `snapshot`（`cameras` 完整清單、管理員才有的 `workers`、進行中的 `events`）；之後 `cameras`（新增、修改、刪除、排序後的完整清單）、`camera`（單台上線或錄影狀態改變）、`worker`（只送管理員，`state: "stopped"` 表示已移除）、`event`（`{phase: "start" | "update" | "end", event}`；update 只在進行中事件的 labels 改變時送，例如物件辨識確認了新類別）、物件辨識開關改變時重送 `cameras`（對外的 `detect.labels` 會變）、`motion`（`{cameraId, active}`，事件開始為 true、結束為 false）。每 20 秒送一行註解保持連線，積壓超過 1 MB 的用戶端直接斷線，重連後從 `snapshot` 重來。
 
 ## 資料模型（SQLite）
 
@@ -726,7 +757,7 @@ SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:
 | `settings` | key, value（JSON） | 系統設定，沒有的 key 用預設值 |
 | `cameras` | id, position, config（JSON）, created\_at, updated\_at | config 含連線、錄影、偵測、遮罩、物件辨識、PTZ、HKSV |
 | `segments` | id, camera\_id, path, start\_ms, end\_ms, size | 索引 (camera\_id, start\_ms)；錄製中的片段 end\_ms 為 NULL |
-| `events` | id（AUTOINCREMENT，刪掉的 id 不重用，瀏覽器才不會拿到快取的舊縮圖）, camera\_id, source（pixel / onvif / both）, start\_ms, end\_ms, score, labels（JSON）, has\_thumb | 索引 (camera\_id, start\_ms)、(start\_ms)；labels 為物件類別（之後加最高信心值） |
+| `events` | id（AUTOINCREMENT，刪掉的 id 不重用，瀏覽器才不會拿到快取的舊縮圖）, camera\_id, source（pixel / onvif / both）, start\_ms, end\_ms, score, labels（JSON）, has\_thumb | 索引 (camera\_id, start\_ms)、(start\_ms)；labels 為類別鍵（物件辨識與 ONVIF 的 person、vehicle、pet，見「物件辨識 → 模型」） |
 
 - 匯出工作佇列只在記憶體；worker 重啟紀錄寫入 `/data/logs/` 的日誌檔，保留 30 天，給狀態頁與排錯。
 - 使用者自備的物件辨識模型放在 `/data/models/`。
@@ -746,7 +777,7 @@ SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:
 | restream | 1 | MediaMTX | 512 MB | Control API 10 秒無回應 |
 | record | 每台 1 | ffmpeg 切片錄影 | 256 MB | 錄製中的檔案 30 秒沒變大 |
 | detect | 每台 1 | ffmpeg 解碼＋ Bun 偵測程序 | 384 MB | 15 秒沒有新 frame |
-| detector | 0–1 | 物件辨識推論（開啟才跑，所有攝影機共用） | 2 GB | 心跳 10 秒無回應 |
+| detector | 0–1 | 物件辨識推論（開啟才跑，所有攝影機共用；CPU 實測常駐約 180 MB） | 2 GB | 心跳 10 秒無回應，或一張推論超過 10 秒 |
 | live | 每台每畫質 0–1 | ffmpeg fMP4 封裝（有人看才跑） | 128 MB | 15 秒沒有新 fragment |
 | homekit | 0–1 | HAP-NodeJS（開啟 HKSV 才跑；實測常駐約 80 MB） | 256 MB | 心跳 10 秒無回應 |
 | hksv-stream | 每台 0–3 | 家庭 App 觀看（最多 2 路）與 HKSV 錄影（1 路）用的 ffmpeg | 256 MB | 15 秒無進度輸出 |
@@ -796,5 +827,7 @@ SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:
 - [ ] 攝影機密碼要不要加密儲存？（金鑰只能放在 `/data`，保護效果有限）
 - [ ] 動作偵測誤報的驗收標準。
 - [ ] 哪些 Tapo 型號要列為正式支援（需實機測 PTZ 與 ONVIF 事件）。
-- [ ] 物件辨識的內建模型與授權：Ultralytics YOLO 是 AGPL-3.0，內建會影響整個專案的授權；目前規格寫內建 YOLOX（Apache-2.0）。
-- [ ] 物件辨識的映像切法：Intel 與 Nvidia 的 ONNX Runtime 套件能否放進同一個映像，待實測。
+- [x] 物件辨識的內建模型與授權：內建 YOLOX-Tiny（Apache-2.0）；Ultralytics YOLO 是 AGPL-3.0，只支援使用者自備。
+- [x] 物件辨識的映像切法：官方文件明說同一環境只能裝一種 ONNX Runtime 套件，且 CUDA 函式庫很大，維持兩個映像。
+- [ ] 物件辨識的 GPU 路徑（Intel 內顯、Nvidia、多張卡）與 amd64 映像只在建置與模擬中驗證過，要在實機跑 `detector-selftest`（步驟見 `detector/README.md`）。
+- [ ] Nvidia 舊卡（Maxwell、Pascal）能否用 `onnxruntime-gpu` 1.26 的 CUDA kernel 實際推論，待實機確認。
