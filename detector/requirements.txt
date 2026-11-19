@@ -1,0 +1,11 @@
+# 物件辨識 worker 的 Python 相依：預設映像（CPU，linux/amd64 另有 Intel 內顯）與從原始碼執行。
+# 整個相依閉包都釘住版本，重建結果固定。改版本後用這行重新解出：
+#   uv pip compile --universal --python-version 3.13 --no-header --no-annotate <只列下面四個頂層套件的檔案>
+# onnxruntime-ep-openvino 是 OpenVINO 的 plugin EP（自帶 OpenVINO 與 TBB），只有 linux x86_64 的 wheel。
+flatbuffers==25.12.19
+numpy==2.5.5
+onnxruntime==1.32.0
+onnxruntime-ep-openvino==1.8.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+packaging==26.3
+pillow==13.0.0
+protobuf==7.36.2

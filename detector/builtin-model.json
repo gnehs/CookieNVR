@@ -1,0 +1,9 @@
+{
+  "file": "yolox_tiny.onnx",
+  "name": "YOLOX-Tiny",
+  "url": "https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx",
+  "sha256": "427cc366d34e27ff7a03e2899b5e3671425c262ea2291f88bb942bc1cc70b0f7",
+  "bytes": 20219662,
+  "license": "Apache-2.0",
+  "source": "https://github.com/Megvii-BaseDetection/YOLOX"
+}

@@ -5,9 +5,11 @@
 // --scene 改用可控的畫面測動作偵測：靜止的彩條加少量雜訊，依時間表（推流開始後的秒數）出現移動物體或亮度突變。
 //   例：--scene "box=20-35;light=60-80;box=100-"。box 是畫面左半中段來回移動的黑色方塊（約占畫面 10%×17%，
 //   x 介於 10% 到 60%、y 介於 40% 到 57%）；light 是整體變亮。結尾省略代表一直持續。
+//   測物件辨識用：street（不帶時間）把背景換成有一台停著的汽車的街景（汽車約在 x 45%–54%、y 43%–49%）；
+//   person=20-35 是一個行人在畫面左側來回走（x 介於 5% 到 42%、y 50% 到 78%）。兩張圖都是 CC0，見 detector/assets/README.md。
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 const { values } = parseArgs({
@@ -21,6 +23,10 @@ const { values } = parseArgs({
   },
 });
 
+const ASSETS = resolve(import.meta.dir, "../detector/assets");
+/** 單張圖片變成無限長、帶時間戳的影像來源 */
+const still = (file: string, rate: number) => `movie=${join(ASSETS, file)},loop=loop=-1:size=1:start=0,setpts=N/${rate}/TB`;
+
 /** "box=20-35;light=60-" → lavfi 濾鏡圖；時間是推流開始後的秒數。drawbox 的位置不吃 t，移動的方塊用 overlay 疊 */
 function sceneFilter(spec: string, size: string, rate: number): string {
   const [w, h] = size.split("x").map(Number) as [number, number];
@@ -28,15 +34,21 @@ function sceneFilter(spec: string, size: string, rate: number): string {
     const [from, to] = range.split("-");
     return to ? `between(t\\,${Number(from)}\\,${Number(to)})` : `gte(t\\,${Number(from)})`;
   };
-  const chains = [`smptehdbars=size=${size}:rate=${rate},format=yuv420p,noise=alls=3:allf=t[v0]`];
+  const items = spec.split(";").filter(Boolean);
+  const background = items.includes("street") ? `${still("street.jpg", rate)},scale=${size}` : `smptehdbars=size=${size}:rate=${rate}`;
+  const chains = [`${background},format=yuv420p,noise=alls=3:allf=t[v0]`];
   let n = 0;
-  for (const item of spec.split(";").filter(Boolean)) {
+  for (const item of items.filter((i) => i !== "street")) {
     const [kind, range = "0-"] = item.split("=");
     const from = `[v${n}]`;
     const to = `[v${++n}]`;
     if (kind === "box") {
       chains.push(`color=c=black:size=${Math.round(w / 10)}x${Math.round(h / 6)}:rate=${rate}[b${n}]`);
       chains.push(`${from}[b${n}]overlay=x='W*(0.1+0.4*abs(mod(t/6\\,2)-1))':y=H*0.4:shortest=0:enable='${enable(range)}'${to}`);
+    } else if (kind === "person") {
+      // 素材是在 1280 寬的街景上約 150 寬的行人
+      chains.push(`${still("person.jpg", rate)},scale=${Math.round((w * 150) / 1280)}:-2[p${n}]`);
+      chains.push(`${from}[p${n}]overlay=x='W*(0.05+0.25*abs(mod(t/6\\,2)-1))':y=H*0.5:shortest=0:enable='${enable(range)}'${to}`);
     } else if (kind === "light") chains.push(`${from}eq=brightness=0.3:enable='${enable(range)}'${to}`);
     else throw new Error(`不認得的場景項目：${item}`);
   }
