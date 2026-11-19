@@ -1,0 +1,7 @@
+/* style.css 的 `.main:has(> .pb)` 寫在外殼加上 .page-enter 之前，React 外殼多包了一層 */
+@media (max-width: 760px) {
+  .main:has(> .page-enter > .pb) { padding-top: 0; }
+}
+@media (max-height: 520px) and (min-width: 761px) {
+  .main:has(> .page-enter > .pb) { padding-top: 10px; padding-bottom: 24px; }
+}
