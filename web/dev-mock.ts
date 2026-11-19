@@ -612,7 +612,7 @@ async function exportApi(req: Request, url: URL, path: string, body: any): Promi
     exportJobs.push({ dto, runMs: EXPORT_RUN_MS });
     return json(exportView(exportJobs[exportJobs.length - 1]!), 201);
   }
-  const mm = path.match(/^\/exports\/(\w+)(\/file)?$/);
+  const mm = path.match(/^\/exports\/([\w-]+)(\/file)?$/);
   if (!mm) return null;
   const job = exportJobs.find((j) => j.dto.id === mm[1]);
   if (!job) return err(404, "找不到這個匯出，可能已經過期");
