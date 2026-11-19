@@ -58,7 +58,7 @@ describe("link request lifecycle", () => {
   test("approve, then the poller collects a working token exactly once", async () => {
     const link = await start();
     expect(link.code).toMatch(/^[B-Z]{4}-[B-Z]{4}$/);
-    expect(link.approveUrl).toBe(`http://nvr.lan:8765/#/link/${link.code}`);
+    expect(link.approveUrl).toBe(`http://nvr.lan:8765/link/${link.code}`);
     expect(link.interval).toBe(2);
     expect(link.pollSecret).not.toContain(link.code.replace("-", ""));
 

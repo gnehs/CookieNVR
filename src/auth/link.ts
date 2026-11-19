@@ -219,7 +219,7 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
       byPoll.set(req.pollHash, req);
       return {
         code: formatCode(code),
-        approveUrl: `${origin}/#/link/${formatCode(code)}`,
+        approveUrl: `${origin}/link/${formatCode(code)}`,
         pollSecret,
         expiresAt: req.expiresAt,
         expiresIn: LINK_TTL_MS / 1000,

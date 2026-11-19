@@ -22,8 +22,6 @@ import "./detect.css";
 import "./style.css";
 import "./ui/overlays.css";
 
-// 舊版是 hash 路由（#/cameras/…）；App 與外部整合給的核准連結（/#/link/XXXX-XXXX）照樣能開
-if (location.hash.startsWith("#/")) history.replaceState(history.state, "", location.hash.slice(1));
 
 const queryClient = createQueryClient();
 const router = createRouter({

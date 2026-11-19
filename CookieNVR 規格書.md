@@ -469,7 +469,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 
 仿 OAuth 2.0 裝置授權（RFC 8628），讓 HA 這類 App 不用使用者複製 Token（`src/auth/link.ts`、`src/http/link-routes.ts`、核准頁 `/link/:code`）：
 
-1. App 呼叫 `POST /api/link`（`{app}`），拿到給人看的短碼 `code`（`XXXX-XXXX`，20 個子音字母，約 34.6 bits）、核准網址 `approveUrl`（`<NVR>/#/link/<code>`，以 App 連進來的網址組成）、只有 App 知道的輪詢憑證 `pollSecret`（32 bytes）、`expiresAt`（10 分鐘）與輪詢間隔。
+1. App 呼叫 `POST /api/link`（`{app}`），拿到給人看的短碼 `code`（`XXXX-XXXX`，20 個子音字母，約 34.6 bits）、核准網址 `approveUrl`（`<NVR>/link/<code>`，以 App 連進來的網址組成）、只有 App 知道的輪詢憑證 `pollSecret`（32 bytes）、`expiresAt`（10 分鐘）與輪詢間隔。
 2. 使用者開核准網址；未登入先登入再回來。頁面顯示同一組短碼、App 名稱、請求來源 IP、允許後能做什麼（一般使用者會看到「錄影與偵測開關不會出現」），按「允許」或「拒絕」。
 3. App 以 `POST /api/link/poll`（`{pollSecret}`）輪詢：`pending`、`denied`、`expired`、`claimed`，或一次性的 `approved`（附 token、帳號、角色）。Token 在被取走的當下以核准者身分建立，名稱如「Home Assistant（192.168.1.20，2026-11-19）」，出現在「帳號 → 連接其他 App」可撤銷。
 
@@ -497,7 +497,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 ### 技術
 
 - React 19 + TanStack Router（檔案式路由，`web/routes/`，各頁自動分割）+ TanStack Query + Base UI，Vite 打包（`bun run build` 輸出 `dist/web`）。前端套件只在 devDependencies，後端仍不用 npm 套件。正式環境由主程序提供 `dist/web` 的靜態檔（帶雜湊的資產永久快取、`index.html` 不快取），其他非 `/api` 路徑都回 `index.html`。開發時 `bun run dev:web`（或搭假後端的 `bun run dev:mock`）由 Vite 把 `/api` 代理給後端。轉換做法見 `web/MIGRATING.md`。
-- 一般路徑路由（`/cameras`、`/cameras/:id`…）；舊的 hash 網址（例如核准連結 `/#/link/<code>`）開啟時轉到對應路徑。
+- 一般路徑路由（`/cameras`、`/cameras/:id`…）。
 - 共用元件在 `web/ui/`：下拉選單（`Select.tsx`，Base UI Select）、日期選擇（`DatePicker.tsx`，Base UI Popover 裡的月曆，週日開始、依瀏覽器時區）、選單（`Menu.tsx`）、對話框與確認（`Dialog.tsx`）、通知（`toast.tsx`）、設定列（`SettingRow.tsx`）、可收合的表單卡片（`FormCard.tsx`）。外觀沿用同目錄的 CSS；寬度 560px 以下（下拉與日曆另含橫拿的手機）改成從底部滑出的面板。全站不使用原生的 `<select>` 與日期欄位。
 - 即時狀態（動作、上下線、事件）由 `GET /api/stream`（Server-Sent Events）推送，全站只開一條，內容寫進 Query 快取；首頁、狀態提醒與狀態頁都跟著它更新。重連時伺服器重送完整狀態；連續 3 次連不上（或瀏覽器沒有 `EventSource`）就改回每 5 秒輪詢，同時繼續嘗試 SSE。磁碟空間不推送，管理員端每分鐘與重連時重抓。
 

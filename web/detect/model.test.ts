@@ -69,6 +69,6 @@ describe("事件清單", () => {
 
   test("點事件從開始前 5 秒回放，日期用瀏覽器時區", () => {
     const start = at(2026, 11, 18, 0, 0) + 2_000;
-    expect(playbackHref({ cameraId: "c 1" as CameraId, startMs: start })).toBe(`#/recordings?camera=c%201&date=2026-11-18&t=${start - 5_000}`);
+    expect(playbackHref({ cameraId: "c 1" as CameraId, startMs: start })).toBe(`/recordings?camera=c%201&date=2026-11-18&t=${start - 5_000}`);
   });
 });

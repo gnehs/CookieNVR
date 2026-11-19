@@ -111,5 +111,5 @@ export function groupByDay(events: readonly EventDto[]): { key: string; events: 
 
 /** 回放頁從事件開始前 5 秒播起 */
 export function playbackHref(e: Pick<EventDto, "cameraId" | "startMs">): string {
-  return `#/recordings?camera=${encodeURIComponent(e.cameraId)}&date=${dayKey(e.startMs)}&t=${e.startMs - EVENT_PREROLL_MS}`;
+  return `/recordings?camera=${encodeURIComponent(e.cameraId)}&date=${dayKey(e.startMs)}&t=${e.startMs - EVENT_PREROLL_MS}`;
 }
