@@ -41,7 +41,7 @@ export function settingRow(opts: SettingRowOpts): HTMLElement {
   return h(
     "div",
     { class: `set-row${opts.wide ? " wide" : ""}${opts.class ? ` ${opts.class}` : ""}` },
-    h("div", { class: "set-row-text" }, title, opts.desc ? h("p", { class: "set-row-desc", id: descId }, opts.desc) : null),
+    h("div", { class: "set-row-text" }, title, opts.desc ? h("div", { class: "set-row-desc", id: descId }, opts.desc) : null),
     opts.control || opts.input ? h("div", { class: "set-row-control" }, opts.control ?? opts.input) : null,
   );
 }
