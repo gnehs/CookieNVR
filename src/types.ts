@@ -28,11 +28,34 @@ export interface PtzPrefs {
   speed: number;
 }
 
+/** pixel = 畫面差分；onvif = 相機內建偵測；both = 任一來源觸發就算 */
+export type DetectSource = "pixel" | "onvif" | "both";
+
+/** 遮罩多邊形，頂點是 0 到 1 的比例座標 [x, y]，換解析度不用重畫 */
+export interface MaskPolygon {
+  points: [number, number][];
+}
+
+/** 每台攝影機的動作偵測設定；舊資料沒有這個欄位，一律經 `detectConfigOf` 取得預設值 */
+export interface DetectConfig {
+  enabled: boolean;
+  source: DetectSource;
+  /** 像素門檻 1 到 255，越小越靈敏；前端的低、中、高對應 35、25、15 */
+  threshold: number;
+  /** 最小面積：活動區塊占未遮罩區塊的比例，0.001 到 0.5 */
+  minArea: number;
+  /** 連續這麼多秒沒有動作，事件才結束 */
+  cooldownSec: number;
+  /** 只影響畫面差分 */
+  masks: MaskPolygon[];
+}
+
 export interface CameraConfig {
   name: string;
   enabled: boolean;
   connection: CameraConnection;
   ptz?: PtzPrefs;
+  detect?: DetectConfig;
   record: {
     enabled: boolean;
     audio: boolean;

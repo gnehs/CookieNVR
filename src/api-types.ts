@@ -168,10 +168,19 @@ export interface PurgeDto {
 
 export type SettingsDto = Settings;
 
+/** pixel = 畫面差分；onvif = 相機事件；both = 同一段時間兩個來源都觸發，合併成一筆 */
+export type EventSourceKind = "pixel" | "onvif" | "both";
+
+/**
+ * GET /api/events?camera=&start=&end=&before=&limit=
+ * - 沒帶 before：與 [start, end) 重疊的事件（進行中的也算），依開始時間由舊到新。
+ * - 帶 before（毫秒）：開始時間早於 before 的事件，由新到舊；事件頁用最後一筆的 startMs 往下翻頁。
+ * labels：物件類別；相機事件的人形、車輛、寵物也記在這裡（person、vehicle、pet）。
+ */
 export interface EventDto {
   id: number;
   cameraId: CameraId;
-  source: "pixel" | "onvif";
+  source: EventSourceKind;
   startMs: number;
   /** null = 進行中 */
   endMs: number | null;
@@ -214,6 +223,28 @@ export interface ExportDto {
   finishedAt: number | null;
   /** 完成後自動刪除的時間 */
   expiresAt: number | null;
+}
+
+/**
+ * 一張畫面的偵測狀態：
+ * - ok：有計算分數
+ * - warmup：剛啟動、重連或鏡頭剛停下，背景還在建立（前 10 張不判斷）
+ * - paused：鏡頭正在移動
+ * - off：這台沒有用畫面差分（偵測關閉或只用相機事件），只解碼供快照
+ * - light：整體亮度突變（開燈、切換夜視），已重設背景，不觸發
+ */
+export type DetectFrameState = "ok" | "warmup" | "paused" | "off" | "light";
+
+/** GET /api/cameras/:id/motion（SSE，管理員）：每張畫面一筆 `sample` 訊息，約每秒 5 筆 */
+export interface MotionSampleDto {
+  at: number;
+  /** 活動區塊占未遮罩區塊的比例，0 到 1；state 不是 ok 時為 null */
+  score: number | null;
+  /** 超過最小面積 */
+  motion: boolean;
+  state: DetectFrameState;
+  /** 這台目前有進行中的事件 */
+  eventActive: boolean;
 }
 
 /** `GET /api/stream` 連上時的第一筆訊息，也是斷線重連後的完整狀態 */

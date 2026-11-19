@@ -1,5 +1,6 @@
+import { LIMITS } from "../detect/config.ts";
 import { MAX_SPEED, MIN_SPEED } from "../onvif/index.ts";
-import type { CameraConfig, CameraConnection, OnvifEndpoint, PtzPrefs, Settings } from "../types.ts";
+import type { CameraConfig, CameraConnection, DetectConfig, MaskPolygon, OnvifEndpoint, PtzPrefs, Settings } from "../types.ts";
 import { HttpError } from "./errors.ts";
 import { asObject, bool, int, isObject, oneOf, optStr, str, type JsonObject } from "./validate.ts";
 
@@ -61,6 +62,43 @@ function parsePtzPrefs(value: unknown): PtzPrefs {
   return { mode: oneOf(o, "mode", PTZ_MODES, "ptz.mode"), speed };
 }
 
+function num(o: JsonObject, key: string, min: number, max: number, path: string): number {
+  const v = o[key];
+  if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new HttpError(400, `欄位 ${path} 必須是 ${min} 到 ${max} 的數字`);
+  return v;
+}
+
+function parseMask(value: unknown, path: string): MaskPolygon {
+  const o = asObject(value, path);
+  const pts = o.points;
+  if (!Array.isArray(pts) || pts.length < LIMITS.points.min || pts.length > LIMITS.points.max) {
+    throw new HttpError(400, `欄位 ${path}.points 必須有 ${LIMITS.points.min} 到 ${LIMITS.points.max} 個頂點`);
+  }
+  const points = pts.map((p, i): [number, number] => {
+    if (!Array.isArray(p) || p.length !== 2 || !p.every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1)) {
+      throw new HttpError(400, `欄位 ${path}.points[${i}] 必須是兩個 0 到 1 的數字`);
+    }
+    return [p[0], p[1]];
+  });
+  return { points };
+}
+
+const DETECT_SOURCES = ["pixel", "onvif", "both"] as const;
+
+function parseDetect(value: unknown): DetectConfig {
+  const o = asObject(value, "detect");
+  const masks = o.masks;
+  if (!Array.isArray(masks) || masks.length > LIMITS.masks) throw new HttpError(400, `欄位 detect.masks 必須是最多 ${LIMITS.masks} 個多邊形的陣列`);
+  return {
+    enabled: bool(o, "enabled", "detect.enabled"),
+    source: oneOf(o, "source", DETECT_SOURCES, "detect.source"),
+    threshold: int(o, "threshold", LIMITS.threshold.min, LIMITS.threshold.max, "detect.threshold"),
+    minArea: num(o, "minArea", LIMITS.minArea.min, LIMITS.minArea.max, "detect.minArea"),
+    cooldownSec: int(o, "cooldownSec", LIMITS.cooldownSec.min, LIMITS.cooldownSec.max, "detect.cooldownSec"),
+    masks: masks.map((m, i) => parseMask(m, `detect.masks[${i}]`)),
+  };
+}
+
 export function parseCameraConfig(value: unknown): CameraConfig {
   const o = asObject(value);
   const name = str(o, "name", { max: 100 }).trim();
@@ -76,6 +114,7 @@ export function parseCameraConfig(value: unknown): CameraConfig {
     },
   };
   if (o.ptz !== undefined && o.ptz !== null) config.ptz = parsePtzPrefs(o.ptz);
+  if (o.detect !== undefined && o.detect !== null) config.detect = parseDetect(o.detect);
   return config;
 }
 

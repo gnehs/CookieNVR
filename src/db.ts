@@ -59,6 +59,25 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX events_camera_start ON events (camera_id, start_ms);
   `,
+  // 兩個來源合併成一筆事件時記為 both；SQLite 改不了 CHECK，只能重建資料表。
+  // AUTOINCREMENT：刪掉的事件 id 不再重用，否則瀏覽器會拿快取的舊縮圖給新事件
+  `
+  CREATE TABLE events_v2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    camera_id TEXT NOT NULL,
+    source TEXT NOT NULL CHECK (source IN ('pixel', 'onvif', 'both')),
+    start_ms INTEGER NOT NULL,
+    end_ms INTEGER,
+    score REAL NOT NULL DEFAULT 0,
+    labels TEXT NOT NULL DEFAULT '[]',
+    has_thumb INTEGER NOT NULL DEFAULT 0
+  );
+  INSERT INTO events_v2 SELECT id, camera_id, source, start_ms, end_ms, score, labels, has_thumb FROM events;
+  DROP TABLE events;
+  ALTER TABLE events_v2 RENAME TO events;
+  CREATE INDEX events_camera_start ON events (camera_id, start_ms);
+  CREATE INDEX events_start ON events (start_ms);
+  `,
 ];
 
 /** 開啟資料庫並升級到最新 schema。測試可傳 ":memory:"。 */
