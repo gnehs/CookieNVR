@@ -247,7 +247,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
   const listHref = welcome ? "#/cameras" : "#/settings/cameras";
   const s = fromConfig(existing?.config ?? null);
   // 新增時只問名稱與連線，偵測用預設值；加入之後再回來調
-  const detect = existing ? detectSettings(ctx, existing) : null;
+  const detect = existing ? detectSettings(ctx, existing, false) : null;
   const homekit = existing ? homekitSettings(existing, () => refresh()) : null;
   const connKey = (st: FormState) => {
     const r = toConnection(st);

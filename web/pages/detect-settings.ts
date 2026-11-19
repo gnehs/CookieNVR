@@ -63,11 +63,11 @@ export interface DetectSettings {
 }
 
 /** 攝影機表單裡的「動作偵測」區塊。camera 為 null 是新增中的攝影機，還沒有畫面可看 */
-export function detectSettings(ctx: PageCtx, camera: CameraDto | null): DetectSettings {
+export function detectSettings(ctx: PageCtx, camera: CameraDto | null, initiallyActive = true): DetectSettings {
   const saved = camera ? detectConfigOf(camera.config) : DEFAULT_DETECT;
   const d: DetectConfig = { ...saved, masks: saved.masks.map((m) => ({ points: m.points.map(([x, y]) => [x, y]) })) };
   let onvif = true;
-  let active = true;
+  let active = initiallyActive;
   const live = camera !== null && camera.config.enabled;
 
   // ---------- 開關與來源 ----------
