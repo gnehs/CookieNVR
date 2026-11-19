@@ -5,11 +5,13 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CameraDto, HomekitDto, EventDto, InferenceDeviceKind, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { BenchmarkDto, BenchmarkResultDto, CameraDto, HomekitDto, EventDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import { detectConfigOf, usesPixel } from "../src/detect/config.ts";
-import type { CameraConfig, CameraId, InferenceDevice, Role, Settings, WorkerStatus } from "../src/types.ts";
+import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import { setupUri } from "../src/homekit/identity.ts";
+import { camerasSupported, verdict } from "../src/objects/capacity.ts";
+import { COCO_LABELS, COMMON_LABELS, labelName } from "../src/objects/labels.ts";
 import type { ObjectsDiagnostics } from "../src/objects/service.ts";
 import { explainFailure } from "../src/camera/probe.ts";
 import { exportFileName } from "../src/export/filename.ts";
@@ -67,53 +69,9 @@ let settings: Settings = {
   retention: { continuousDays: 7, eventDays: 30, minFreeBytes: 5 * 1024 ** 3 },
   rtsp: { externalEnabled: true },
   homekit: { enabled: false, basePort: 51826 },
-  objects: { enabled: false, device: "auto", model: "builtin" },
+  objects: { enabled: false, model: "builtin", fps: 2 },
+  devices: { objects: "auto" },
 };
-
-// 物件辨識情境：MOCK_OBJECTS=intel|cpu|fallback|error|loading 會讓系統設定一開始就開啟並固定成該結果；
-// 不設時是關閉，之後在設定頁打開，依選的裝置與模型走：啟動中 → 載入中 → 使用中
-const OBJECTS_SCENARIO = process.env.MOCK_OBJECTS ?? "";
-if (OBJECTS_SCENARIO) settings.objects.enabled = true; // down：detector 程序一直重啟，用來看狀態頁的提醒
-let objectsOnAt = now() - 60_000;
-const OBJECT_MODELS: ObjectModelDto[] = [
-  { id: "builtin", name: "內建模型", builtin: true, sizeBytes: null },
-  { id: "yolo11s.onnx", name: "yolo11s.onnx", builtin: false, sizeBytes: 38_600_000 },
-  { id: "broken.onnx", name: "broken.onnx", builtin: false, sizeBytes: 1_200 },
-];
-
-function objectsStatus(): ObjectsStatusDto {
-  const s = settings.objects;
-  const model = { id: s.model, name: s.model === "builtin" ? "內建模型" : s.model, format: null as string | null, input: null as [number, number] | null };
-  const base: Omit<ObjectsStatusDto, "state"> = { requested: s.device, device: null, fallback: null, error: null, model, latencyMs: null, processed: 0, dropped: 0 };
-  if (!s.enabled) return { ...base, state: "off" };
-  const age = now() - objectsOnAt;
-  if (age < 1_500 || OBJECTS_SCENARIO === "down") return { ...base, state: "starting" };
-  if (age < 4_000 || OBJECTS_SCENARIO === "loading") return { ...base, state: "loading" };
-  if (OBJECTS_SCENARIO === "error" || s.model === "broken.onnx") return { ...base, state: "error", error: "這個檔案不是有效的 ONNX 模型，請換一個模型。" };
-  const wants = (OBJECTS_SCENARIO === "fallback" ? "nvidia" : OBJECTS_SCENARIO === "cpu" ? "cpu" : OBJECTS_SCENARIO === "intel" ? "intel" : s.device === "auto" ? "intel" : s.device) as InferenceDevice;
-  const fell = wants === "nvidia";
-  const device: InferenceDeviceKind = fell ? "cpu" : wants === "auto" ? "intel" : wants;
-  const ready = { ...base, state: "ready" as const, device, model: { ...model, format: "yolo", input: [640, 640] as [number, number] }, processed: 1840 + Math.floor((now() - objectsOnAt) / 500), dropped: 0 };
-  const latencyMs = device === "cpu" ? { last: 71, avg: 68.4, max: 120 } : { last: 11, avg: 12.4, max: 31 };
-  return {
-    ...ready,
-    latencyMs,
-    fallback: fell ? { reason: "找不到可以使用的 Nvidia 顯卡，已改用 CPU 辨識。", detail: "CUDAExecutionProvider not in ort.get_available_providers(); /dev/nvidiactl missing" } : null,
-  };
-}
-
-function objectsDiagnostics(): ObjectsDiagnostics {
-  const status = objectsStatus();
-  return {
-    settings: settings.objects,
-    status,
-    ready: status.state === "ready" ? { device: status.device!, fallback: status.fallback, model: { file: status.model.id === "builtin" ? "yolo11n.onnx" : status.model.id, format: "yolo", input: [640, 640] }, loadMs: 2300, providers: status.device === "cpu" ? ["CPUExecutionProvider"] : ["OpenVINOExecutionProvider", "CPUExecutionProvider"], threads: 4, attempts: [{ device: status.requested, ok: !status.fallback }], probe: null } : null,
-    errorDetail: status.state === "error" ? "onnxruntime InvalidProtobuf: Protobuf parsing failed" : null,
-    probe: { openvino: true, nvidia: false },
-    queued: 0,
-    recent: cams.slice(0, 2).map((c) => ({ cameraId: c.id, at: now() - 4_000, detections: [{ label: "person", score: 0.83 }] })),
-  };
-}
 
 const cams: { id: CameraId; position: number; config: CameraConfig }[] = [];
 let camSeq = 1;
@@ -127,6 +85,168 @@ addCam({ name: "車庫", enabled: true, connection: { type: "rtsp", mainUrl: "rt
 addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "both", threshold: 15, minArea: 0.01, cooldownSec: 30, masks: [], labels: ["person", "car"], objectMode: "filter", objectScore: 0.6 } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
 addCam({ name: "車道", enabled: true, connection: { type: "tapo", host: "192.168.1.53", username: "nvr", password: "secret123" }, record: { enabled: true, audio: false, direct: false } });
+// 物件辨識情境（MOCK_OBJECTS）：intel|cpu|fallback|error|loading|down|overload|missing 會讓系統設定一開始就開啟並固定成該結果；
+// 不設時是關閉，之後在設定頁打開，依選的裝置與模型走：啟動中 → 載入中 → 使用中。
+//   overload：實際運作跟不上（丟畫面），狀態頁與設定頁會出現負載提醒
+//   missing：設定的裝置（intel:GPU.1）已經找不到
+// 裝置清單（MOCK_DEVICES）：預設 CPU、Intel 內顯與兩張 Nvidia；cpu 只有處理器（兩類顯卡都標示不能用）、intel 是處理器加內顯
+// 測速結果（MOCK_BENCH）：done 是四個裝置都測過、stale 是換過模型後的舊結果、partial 是只測了處理器而且撐不住目前的頻率
+const OBJECTS_SCENARIO = process.env.MOCK_OBJECTS ?? "";
+if (OBJECTS_SCENARIO) settings.objects.enabled = true; // down：detector 程序一直重啟，用來看狀態頁的提醒
+if (OBJECTS_SCENARIO === "missing") settings.devices.objects = "intel:GPU.1";
+let objectsOnAt = now() - 60_000;
+const OBJECT_MODELS: ObjectModelDto[] = [
+  { id: "builtin", name: "內建模型", builtin: true, sizeBytes: null },
+  { id: "yolo11s.onnx", name: "yolo11s.onnx", builtin: false, sizeBytes: 38_600_000 },
+  { id: "parcel.onnx", name: "parcel.onnx", builtin: false, sizeBytes: 11_800_000 },
+  { id: "broken.onnx", name: "broken.onnx", builtin: false, sizeBytes: 1_200 },
+];
+
+const DEVICE_CPU: InferenceDeviceDto = { id: "cpu", kind: "cpu", name: "Intel(R) Core(TM) i5-9400 CPU @ 2.90GHz", pci: null };
+const DEVICE_INTEL: InferenceDeviceDto = { id: "intel:GPU.0", kind: "intel", name: "Intel(R) UHD Graphics 630", pci: "0000:00:02.0" };
+const DEVICE_N1: InferenceDeviceDto = { id: "nvidia:GPU-3f6a0c1e", kind: "nvidia", name: "NVIDIA GeForce GTX 1650", pci: "0000:02:00.0" };
+const DEVICE_N2: InferenceDeviceDto = { id: "nvidia:GPU-9b27d4a8", kind: "nvidia", name: "NVIDIA GeForce RTX 3060", pci: "0000:01:00.0" };
+const DEVICES_SCENARIO = process.env.MOCK_DEVICES ?? "";
+const DEVICES: InferenceDeviceDto[] = DEVICES_SCENARIO === "cpu" ? [DEVICE_CPU] : DEVICES_SCENARIO === "intel" ? [DEVICE_CPU, DEVICE_INTEL] : [DEVICE_CPU, DEVICE_INTEL, DEVICE_N1, DEVICE_N2];
+const DEVICES_UNAVAILABLE: ObjectsDto["unavailable"] = {
+  intel: DEVICES.some((d) => d.kind === "intel") ? null : "找不到 Intel 內顯：容器沒有取得 /dev/dri，請在 Docker 設定裡開放它。",
+  nvidia: DEVICES.some((d) => d.kind === "nvidia") ? null : "這個版本的映像沒有 Nvidia 元件，要用 Nvidia 顯卡請改用 nvidia 版的映像。",
+};
+/** 各裝置在假後端的測速表現（每秒幾張、平均每張幾毫秒） */
+const SPEED: Record<string, { fps: number; ms: number }> = { cpu: { fps: 14, ms: 71 }, [DEVICE_INTEL.id]: { fps: 31, ms: 32 }, [DEVICE_N1.id]: { fps: 96, ms: 10.4 }, [DEVICE_N2.id]: { fps: 212, ms: 4.7 } };
+const BENCH_MS_PER_DEVICE = 3_000;
+
+const bestDevice = () => DEVICES.find((d) => d.kind === "nvidia") ?? DEVICES.find((d) => d.kind === "intel") ?? DEVICE_CPU;
+/** 設定的裝置換成實際使用的：auto 選最好的；指定的找不到就退回自動，並附上原因 */
+function resolveDevice(): { device: InferenceDeviceDto; fallback: { reason: string; detail: string } | null } {
+  if (OBJECTS_SCENARIO === "fallback") return { device: DEVICE_CPU, fallback: { reason: "找不到可以使用的 Nvidia 顯卡，已改用 CPU 辨識。", detail: "CUDAExecutionProvider not in ort.get_available_providers(); /dev/nvidiactl missing" } };
+  if (OBJECTS_SCENARIO === "cpu" || OBJECTS_SCENARIO === "overload") return { device: DEVICE_CPU, fallback: null };
+  if (OBJECTS_SCENARIO === "intel") return { device: DEVICES.find((d) => d.kind === "intel") ?? DEVICE_CPU, fallback: null };
+  const want = settings.devices.objects;
+  if (want === "auto") return { device: bestDevice(), fallback: null };
+  const hit = DEVICES.find((d) => d.id === want);
+  if (hit) return { device: hit, fallback: null };
+  return { device: bestDevice(), fallback: { reason: "之前選的裝置現在找不到，已暫時自動選擇。", detail: `${want} not found` } };
+}
+
+// ---------- 測速：依開始時間推算進度，不需要計時器；取消與完成都在讀取時定案 ----------
+let bench: (BenchmarkDto & { devices: string[]; seconds: number }) | null = null;
+const camerasOn = () => cams.filter((c) => c.config.enabled && detectConfigOf(c.config).enabled && detectConfigOf(c.config).objectMode !== "off").length;
+
+function resultOf(d: InferenceDeviceDto, perCamera: number): BenchmarkResultDto {
+  const sp = SPEED[d.id] ?? SPEED.cpu!;
+  return { device: d.id, kind: d.kind, name: d.name, ok: true, loadMs: d.kind === "cpu" ? 900 : 4200, frames: Math.round(sp.fps * 10), fps: sp.fps, msMean: sp.ms, msP90: Math.round(sp.ms * 1.35 * 10) / 10, cameras: camerasSupported(sp.fps, d.kind, perCamera) };
+}
+
+function seedBench() {
+  const fps = settings.objects.fps;
+  const mk = (devices: InferenceDeviceDto[], model: string): NonNullable<typeof bench> => ({ state: "done", startedAt: now() - 2 * 3_600_000, finishedAt: now() - 2 * 3_600_000 + 35_000, model, perCameraFps: fps, progress: null, results: devices.map((d) => resultOf(d, fps)), error: null, stale: false, verdict: null, devices: [], seconds: 10 });
+  const kind = process.env.MOCK_BENCH;
+  if (kind === "done") bench = mk(DEVICES, settings.objects.model);
+  if (kind === "stale") bench = mk(DEVICES.slice(0, 2), "yolo11s.onnx");
+  if (kind === "partial") {
+    settings.objects.fps = 5;
+    bench = { ...mk([DEVICE_CPU], settings.objects.model), perCameraFps: 5 };
+    bench.results = [resultOf(DEVICE_CPU, 5)];
+  }
+}
+
+function tickBench() {
+  if (!bench || bench.state !== "running") return;
+  const elapsed = now() - bench.startedAt;
+  const total = bench.devices.length;
+  if (elapsed >= total * BENCH_MS_PER_DEVICE) {
+    bench = { ...bench, state: "done", finishedAt: now(), progress: null, results: bench.devices.map((id) => resultOf(DEVICES.find((d) => d.id === id)!, bench!.perCameraFps)) };
+    return;
+  }
+  const index = Math.floor(elapsed / BENCH_MS_PER_DEVICE);
+  bench.progress = { device: bench.devices[index]!, index, total, fraction: (elapsed % BENCH_MS_PER_DEVICE) / BENCH_MS_PER_DEVICE };
+  bench.results = bench.devices.slice(0, index).map((id) => resultOf(DEVICES.find((d) => d.id === id)!, bench!.perCameraFps));
+}
+
+function benchDto(): BenchmarkDto | null {
+  tickBench();
+  if (!bench) return null;
+  const { devices: _d, seconds: _s, ...dto } = bench;
+  const current = resolveDevice().device;
+  const tested = dto.results.filter((r) => r.ok);
+  const stale = dto.model !== settings.objects.model || (tested.length > 0 && !tested.some((r) => DEVICES.some((d) => d.id === r.device)));
+  const mine = tested.find((r) => r.device === current.id);
+  const v = mine?.fps ? verdict(mine.fps, mine.kind, settings.objects.fps, camerasOn()) : null;
+  return { ...dto, stale, verdict: v && mine ? { device: mine.device, ...v } : null };
+}
+seedBench();
+
+function objectsStatus(): ObjectsStatusDto {
+  tickBench();
+  const s = settings.objects;
+  const model = { id: s.model, name: s.model === "builtin" ? "內建模型" : s.model, format: null as string | null, input: null as [number, number] | null };
+  const base: Omit<ObjectsStatusDto, "state"> = { requested: settings.devices.objects, device: null, fallback: null, error: null, model, latencyMs: null, processed: 0, dropped: 0, rateFps: 0, dropRatio: null, paused: null, warning: null, gpu: null };
+  if (!s.enabled) return { ...base, state: "off" };
+  const age = now() - objectsOnAt;
+  if (age < 1_500 || OBJECTS_SCENARIO === "down") return { ...base, state: "starting" };
+  if (age < 4_000 || OBJECTS_SCENARIO === "loading") return { ...base, state: "loading" };
+  if (OBJECTS_SCENARIO === "error" || s.model === "broken.onnx") return { ...base, state: "error", error: "這個檔案不是有效的 ONNX 模型，請換一個模型。" };
+  const { device, fallback } = resolveDevice();
+  const overload = OBJECTS_SCENARIO === "overload";
+  const b = benchDto();
+  const slow = b && !b.stale && b.verdict?.state === "partial" ? b.verdict : null;
+  const warning = overload
+    ? "最近有 23% 的畫面來不及辨識。可以降低辨識頻率，或改用更快的裝置。"
+    : slow
+      ? `開了物件辨識的 ${slow.cameras} 台攝影機同時有動作時會來不及，這台機器大約能同時處理 ${slow.supported} 台。可以降低辨識頻率，或改用更快的裝置。`
+      : null;
+  const latencyMs = device.kind === "cpu" ? { last: 71, avg: 68.4, max: 120 } : { last: 11, avg: 12.4, max: 31 };
+  return {
+    ...base,
+    state: "ready",
+    device,
+    model: { ...model, format: "yolo", input: [640, 640] },
+    processed: 1840 + Math.floor((now() - objectsOnAt) / 500),
+    dropped: overload ? 640 : 0,
+    rateFps: overload ? 7.4 : 1.2,
+    dropRatio: overload ? 0.23 : 0,
+    paused: b?.state === "running" ? "benchmark" : null,
+    warning,
+    gpu: device.kind === "nvidia" ? { utilPercent: 18, memoryUsedMb: 612, memoryTotalMb: 4096 } : null,
+    latencyMs,
+    fallback,
+  };
+}
+
+/** 系統資源的 GPU 卡片：正在做物件辨識的那張顯卡帶一行辨識速率（後端以 PCI 位址對應） */
+function objectsGpuExtras(): Record<string, { label: string; value: string }[]> {
+  const st = objectsStatus();
+  const d = st.state === "ready" ? st.device : null;
+  return d?.pci ? { [`${d.kind}:${d.pci}`]: [{ label: "物件辨識", value: "每秒 12 張" }] } : {};
+}
+
+/** 目前模型的類別：內建與 yolo11s 是 COCO 80 類；parcel.onnx 是自備的，有包裹，也有沒有翻譯的類別 */
+function objectLabels(): ObjectLabelsDto {
+  const model = settings.objects.model;
+  const custom = model === "parcel.onnx";
+  const labels = custom
+    ? [["person", "Person"], ["package", "Package"], ["car", "Car"], ["dog", "Dog"], ["delivery_truck", "delivery truck"]].map(([key, en]) => ({ key: key!, zh: labelName(key!), en: en! }))
+    : COCO_LABELS.map(([key, zh, en]) => ({ key, zh, en }));
+  const keys = new Set(labels.map((l) => l.key));
+  return { labels, common: COMMON_LABELS.filter((k) => keys.has(k)), model, known: true };
+}
+
+function objectsDiagnostics(): ObjectsDiagnostics {
+  const status = objectsStatus();
+  return {
+    settings: settings.objects,
+    requested: settings.devices.objects,
+    status,
+    ready: status.state === "ready" ? { device: status.device!, devices: DEVICES, fallback: status.fallback, model: { file: status.model.id === "builtin" ? "yolo11n.onnx" : status.model.id, format: "yolo", input: [640, 640], classes: objectLabels().labels.map((l) => l.key), titles: objectLabels().labels.map((l) => l.en) }, loadMs: 2300, providers: status.device!.kind === "cpu" ? ["CPUExecutionProvider"] : ["OpenVINOExecutionProvider", "CPUExecutionProvider"], threads: 4, attempts: [{ device: status.requested, ok: !status.fallback }], probe: null } : null,
+    errorDetail: status.state === "error" ? "onnxruntime InvalidProtobuf: Protobuf parsing failed" : null,
+    probe: { openvino: true, nvidia: DEVICES.some((d) => d.kind === "nvidia") },
+    queued: 0,
+    benchmark: benchDto(),
+    recent: cams.slice(0, 2).map((c) => ({ cameraId: c.id, at: now() - 4_000, detections: [{ label: "person", score: 0.83 }] })),
+  };
+}
+
 let mockFreeBytes = 1.6 * 1024 ** 4;
 // 每台攝影機佔用的錄影空間；攝影機刪掉後沒清除的錄影會留在這裡，成為「已刪除的攝影機」
 const usage = new Map<string, { bytes: number; oldestMs: number }>(
@@ -915,13 +1035,41 @@ async function route(req: Request, url: URL): Promise<Response> {
     if (m === "GET") return json(settings);
     if (m === "PUT") {
       const wasOn = settings.objects.enabled;
-      const loadChanged = body.objects && (body.objects.device !== undefined || body.objects.model !== undefined);
-      settings = { ...settings, ...body, retention: { ...settings.retention, ...body.retention }, rtsp: { ...settings.rtsp, ...body.rtsp }, objects: { ...settings.objects, ...body.objects } };
+      const loadChanged = (body.objects && body.objects.model !== undefined) || (body.devices && body.devices.objects !== undefined);
+      settings = { ...settings, ...body, retention: { ...settings.retention, ...body.retention }, rtsp: { ...settings.rtsp, ...body.rtsp }, objects: { ...settings.objects, ...body.objects }, devices: { ...settings.devices, ...body.devices } };
       if ((!wasOn && settings.objects.enabled) || (settings.objects.enabled && loadChanged)) objectsOnAt = now();
       return json(settings);
     }
   }
-  if (path === "/objects" && m === "GET") return json({ status: objectsStatus(), models: OBJECT_MODELS, modelsDir: "/data/models" } satisfies ObjectsDto);
+  if (path === "/objects" && m === "GET") {
+    return json({ status: objectsStatus(), models: OBJECT_MODELS, modelsDir: "/data/models", devices: DEVICES, unavailable: DEVICES_UNAVAILABLE, benchmark: benchDto() } satisfies ObjectsDto);
+  }
+  if (path === "/objects/labels" && m === "GET") return json(objectLabels());
+  if (path === "/objects/benchmark" && m === "POST") {
+    if (objectsStatus().state !== "ready") return err(409, "物件辨識還沒準備好，等狀態顯示使用中再測速。");
+    if (benchDto()?.state === "running") return err(409, "已經在測速了。");
+    const ids: string[] = Array.isArray(body.devices) && body.devices.length ? body.devices : [resolveDevice().device.id];
+    const picked = ids.filter((id) => DEVICES.some((d) => d.id === id));
+    if (picked.length === 0) return err(400, "找不到要測的裝置");
+    bench = { state: "running", startedAt: now(), finishedAt: null, model: settings.objects.model, perCameraFps: settings.objects.fps, progress: { device: picked[0]!, index: 0, total: picked.length, fraction: 0 }, results: [], error: null, stale: false, verdict: null, devices: picked, seconds: Number(body.seconds) || 10 };
+    return json(benchDto(), 202);
+  }
+  if (path === "/objects/benchmark" && m === "DELETE") {
+    if (benchDto()?.state === "running") bench = { ...bench!, state: "cancelled", finishedAt: now(), progress: null };
+    return noContent();
+  }
+  if (path === "/mock/event-update" && m === "POST") {
+    // POST /api/mock/event-update?label=dog：給進行中的第一筆事件加上一個類別並推送 update；沒有進行中的就先開一筆
+    const label = new URL(req.url).searchParams.get("label") ?? "person";
+    let e = activeEvents()[0];
+    if (!e) {
+      startSimEvent(cams[0]!, 60_000);
+      e = activeEvents()[0]!;
+    }
+    if (!e.labels.includes(label)) e.labels = [...e.labels, label];
+    broadcast("event", { phase: "update", event: e });
+    return json(e);
+  }
   if (path === "/recordings/orphaned" && m === "DELETE") {
     let bytes = 0;
     let segments = 0;
@@ -950,7 +1098,11 @@ async function route(req: Request, url: URL): Promise<Response> {
     };
     return json(sys);
   }
-  if (path === "/system/metrics" && m === "GET") return json(mockMetrics(cams.filter((c) => c.config.enabled).map((c) => c.id)));
+  if (path === "/system/metrics" && m === "GET") return json(mockMetrics(
+        cams.filter((c) => c.config.enabled).map((c) => c.id),
+        Date.now(),
+        objectsGpuExtras(),
+      ));
   if (path === "/system/diagnostics" && m === "GET") {
     const only = url.searchParams.get("camera");
     if (only && !cams.some((c) => c.id === only)) return err(404, "找不到攝影機");

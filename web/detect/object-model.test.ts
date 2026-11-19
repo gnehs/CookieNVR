@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { ObjectsStatusDto } from "../../src/api-types.ts";
 import { LIMITS } from "../../src/detect/config.ts";
-import { deviceHint, deviceOptions, eventLabelOptions, labelGroups, labelsProblem, objectsView, posToScore, rateClause, scoreToPos, speedText, strictnessOf, unavailableNotes } from "./object-model.ts";
+import { deviceHint, deviceOptions, eventLabelOptions, labelGroups, labelsProblem, objectsView, objectSummary, posToScore, rateClause, scoreToPos, speedText, strictnessOf, unavailableNotes } from "./object-model.ts";
 
-const CPU = { id: "cpu", kind: "cpu", name: "Intel(R) Core(TM) i5-9400 CPU @ 2.90GHz" } as const;
-const UHD = { id: "intel:GPU.0", kind: "intel", name: "Intel(R) UHD Graphics 630" } as const;
-const GTX = { id: "nvidia:GPU-aaa", kind: "nvidia", name: "NVIDIA GeForce GTX 1650" } as const;
+const CPU = { id: "cpu", kind: "cpu", name: "Intel(R) Core(TM) i5-9400 CPU @ 2.90GHz", pci: null } as const;
+const UHD = { id: "intel:GPU.0", kind: "intel", name: "Intel(R) UHD Graphics 630", pci: null } as const;
+const GTX = { id: "nvidia:GPU-aaa", kind: "nvidia", name: "NVIDIA GeForce GTX 1650", pci: null } as const;
 
 const status = (o: Partial<ObjectsStatusDto> = {}): ObjectsStatusDto => ({
   state: "ready",
@@ -99,7 +99,7 @@ describe("推論裝置選單", () => {
   });
 
   test("型號沒寫 CPU 時加上「處理器」前綴", () => {
-    expect(deviceOptions([{ id: "cpu", kind: "cpu", name: "Apple M2" }], "auto")[1]!.label).toBe("處理器：Apple M2");
+    expect(deviceOptions([{ id: "cpu", kind: "cpu", name: "Apple M2", pci: null }], "auto")[1]!.label).toBe("處理器：Apple M2");
   });
 
   test("設定的裝置不在清單裡，補一項說明，選單才不會騙人", () => {
@@ -109,7 +109,7 @@ describe("推論裝置選單", () => {
   });
 
   test("兩張同型號的卡用編號區分", () => {
-    const twin = { id: "nvidia:GPU-bbb", kind: "nvidia", name: "NVIDIA GeForce GTX 1650" } as const;
+    const twin = { id: "nvidia:GPU-bbb", kind: "nvidia", name: "NVIDIA GeForce GTX 1650", pci: null } as const;
     expect(deviceOptions([GTX, twin], "auto").map((x) => x.label).slice(1)).toEqual(["NVIDIA GeForce GTX 1650（1）", "NVIDIA GeForce GTX 1650（2）"]);
   });
 
@@ -169,5 +169,20 @@ describe("類別清單", () => {
 
   test("拿不到目錄時只剩出現過的類別", () => {
     expect(eventLabelOptions(null, ["person"]).top.map((l) => l.key)).toEqual(["person"]);
+  });
+});
+
+describe("卡片摘要", () => {
+  test("不辨識沒有摘要", () => {
+    expect(objectSummary("off", ["person"])).toBeNull();
+  });
+  test("標註與過濾的說法不同，類別多時收成「等 N 類」", () => {
+    expect(objectSummary("annotate", ["person", "car"])).toBe("辨識人與汽車");
+    expect(objectSummary("filter", ["person"])).toBe("只記錄人");
+    expect(objectSummary("filter", ["person", "car", "dog"])).toBe("只記錄人、汽車與狗");
+    expect(objectSummary("annotate", ["person", "car", "dog", "cat"])).toBe("辨識人、汽車等 4 類");
+  });
+  test("過濾模式沒勾類別會提醒不會記錄事件", () => {
+    expect(objectSummary("filter", [])).toBe("未選類別，不記錄事件");
   });
 });

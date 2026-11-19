@@ -43,7 +43,7 @@ function gpusAt(t: number): Omit<GpuDto, "extras">[] {
 }
 
 /** 依時間與攝影機清單產生一份假的 MetricsDto */
-export function mockMetrics(cameraIds: CameraId[], now = Date.now()): MetricsDto {
+export function mockMetrics(cameraIds: CameraId[], now = Date.now(), extras: Record<string, GpuDto["extras"]> = {}): MetricsDto {
   const at = Math.floor(now / STEP) * STEP;
   const history: MetricsPointDto[] = [];
   for (let t = at - HISTORY; t <= at; t += STEP) {
@@ -72,7 +72,7 @@ export function mockMetrics(cameraIds: CameraId[], now = Date.now()): MetricsDto
     { category: "system", cpuPct: share(cpu, 3), memBytes: 140 * 1024 ** 2, cameras: [] },
   ];
   const ours = sum(usage);
-  const gpus = gpusAt(at).map((g) => ({ ...g, extras: [] }));
+  const gpus = gpusAt(at).map((g) => ({ ...g, extras: extras[g.id] ?? [] }));
   return {
     at,
     intervalMs: STEP,

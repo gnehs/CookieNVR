@@ -8,6 +8,8 @@ import { ptzPrefsField, ptzSupportNote } from "../ptz/prefs-field.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 import { sensitivityOf } from "../detect/model.ts";
+import { objectSettings } from "../detect/object-settings.ts";
+import { detectConfigOf } from "../../src/detect/config.ts";
 import { formCard, type FormCard } from "../ui/form-card.ts";
 import { settingRow, settingsDisclosure } from "../ui/settings-row.ts";
 import { detectSettings } from "./detect-settings.ts";
@@ -248,6 +250,9 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
   const s = fromConfig(existing?.config ?? null);
   // 新增時只問名稱與連線，偵測用預設值；加入之後再回來調
   const detect = existing ? detectSettings(ctx, existing, false) : null;
+  const objects = existing ? objectSettings(ctx, detectConfigOf(existing.config), () => refresh()) : null;
+  /** 偵測設定加上物件辨識的三個欄位：存檔、摘要與「未儲存」都以這份為準 */
+  const detectValue = () => (detect ? { ...detect.value(), ...objects!.value() } : null);
   const homekit = existing ? homekitSettings(existing, () => refresh()) : null;
   const connKey = (st: FormState) => {
     const r = toConnection(st);
@@ -416,7 +421,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
           { title: "偵測", icon: "activity", class: "fcard-detect" },
           detect.el,
           // ▼ 物件辨識插入點（m4/yolo）：物件辨識的設定放在這裡，緊接在動作偵測之後、同一張卡片裡
-          h("div", { class: "detect-extra", "data-slot": "object-detection" }),
+          h("div", { class: "detect-extra", "data-slot": "object-detection" }, objects!.el),
         )
       : null,
     ptz: existing ? formCard({ title: "鏡頭控制", icon: "crosshair" }, h("div", { class: "set-block" }, ptzPrefs.el)) : null,
@@ -459,7 +464,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
 
   // ---------- 每張卡片的摘要與「未儲存」 ----------
   const initial = JSON.stringify(s);
-  const initialDetect = detect ? JSON.stringify(detect.value()) : "";
+  const initialDetect = JSON.stringify(detectValue());
   const initialPtz = JSON.stringify(ptzPrefs.value() ?? null);
   const savedState = JSON.parse(initial) as FormState;
   const SENS = { low: "低", medium: "中", high: "高", custom: "自訂" } as const;
@@ -469,7 +474,8 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
     cards.conn.setSummary(`${s.type === "tapo" ? "Tapo" : "其他攝影機"} · ${host || "還沒填位址"}${s.type === "rtsp" && s.onvifOn ? " · 使用 ONVIF" : ""}`);
     cards.rec.setSummary(!s.recEnabled ? "不錄影" : s.recAudio ? "全天候錄影 · 錄下聲音" : "全天候錄影 · 不錄聲音");
     if (cards.detect && detect) {
-      const d = detect.value();
+      const d = detectValue()!;
+      objects!.setMotionOn(d.enabled);
       const parts = !d.enabled ? ["未開啟"] : ["已開啟"];
       if (d.enabled) {
         if (d.source === "onvif") parts.push("相機偵測");
@@ -479,6 +485,8 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
           if (d.masks.length) parts.push(`${d.masks.length} 個排除區域`);
         }
       }
+      const obj = objects!.summary();
+      if (obj) parts.push(obj);
       cards.detect.setSummary(parts.join(" · "));
       cards.detect.setFlags({ dirty: !!existing && JSON.stringify(d) !== initialDetect });
     }
@@ -599,7 +607,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
       enabled: s.enabled,
       connection: r.conn,
       record: { enabled: s.recEnabled, audio: s.recAudio, direct: s.recDirect },
-      detect: detect?.value() ?? existing?.config.detect,
+      detect: detectValue() ?? existing?.config.detect,
       homekit: homekit?.value(),
     };
     const ptz = ptzPrefs.value();

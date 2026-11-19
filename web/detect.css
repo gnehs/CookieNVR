@@ -249,3 +249,20 @@ code.path { font-family: var(--mono); font-size: 12.5px; padding: 1px 6px; borde
 /* 類別標籤：事件頁卡片 */
 .ev-tags { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .ev-tag { padding: 1px 8px; border-radius: 99px; background: var(--fill); color: var(--text-2); font-size: 12px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
+
+/* 物件辨識：設定列裡的狀態、選單與測速 */
+.obj-group .obj-block { display: grid; gap: 12px; align-content: start; }
+.obj-group .obj-block:empty { display: none; }
+.obj-group .set-row-desc small.hint { display: block; margin-top: 2px; }
+.obj-group .obj-row .set-row-control > .sel { flex: 1; min-width: 0; }
+.obj-group .obj-row .sel-trigger { width: 100%; }
+.obj-bench-pickhead { margin-bottom: 0; }
+.obj-group .bench-progress .hint { font-size: 13px; }
+.detect-extra:has(> [hidden]) { display: none; }
+.ev-tag { box-shadow: inset 0 0 0 1px var(--border); }
+/* 手機上三個篩選並排：收掉圖示與箭頭，字才放得下 */
+@media (max-width: 760px) {
+  .ev-filters { gap: 6px; }
+  .ev-filters .sel-trigger { padding: 0 10px; gap: 4px; font-size: 14.5px; }
+  .ev-filters .sel-trigger > .icon, .ev-filters .sel-chevron, .ev-filters .dp-trigger > .icon { display: none; }
+}

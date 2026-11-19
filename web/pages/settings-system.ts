@@ -3,9 +3,10 @@ import { errMsg, h, switchInput, toast } from "../dom.ts";
 import type { PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 import { settingRow, settingsGroup } from "../ui/settings-row.ts";
+import { objectsGroup } from "./settings-objects.ts";
 import { settingsLayout } from "./settings-shell.ts";
 
-export async function settingsSystemPage(_ctx: PageCtx): Promise<Node> {
+export async function settingsSystemPage(ctx: PageCtx): Promise<Node> {
   const settings = await api.settings();
   const name = h("input", { type: "text", required: true, maxlength: 40, autocomplete: "off", name: "siteName" });
   name.value = settings.siteName;
@@ -65,5 +66,5 @@ export async function settingsSystemPage(_ctx: PageCtx): Promise<Node> {
       save.disabled = false;
     }
   });
-  return settingsLayout("system", form);
+  return settingsLayout("system", h("div", { class: "stack" }, form, await objectsGroup(ctx)));
 }

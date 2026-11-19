@@ -87,7 +87,7 @@ describe("多個裝置並排", () => {
 });
 
 describe("測速進度", () => {
-  const devices: InferenceDeviceDto[] = [{ id: "cpu", kind: "cpu", name: "Intel(R) Core(TM) i5" }, { id: "nvidia:x", kind: "nvidia", name: "NVIDIA GTX" }];
+  const devices: InferenceDeviceDto[] = [{ id: "cpu", kind: "cpu", name: "Intel(R) Core(TM) i5", pci: null }, { id: "nvidia:x", kind: "nvidia", name: "NVIDIA GTX", pci: null }];
   test("第幾個裝置、整體進度", () => {
     const p = progressOf(bench({ state: "running", progress: { device: "nvidia:x", index: 1, total: 2, fraction: 0.5 } }), devices);
     expect(p.text).toBe("第 2 個裝置，共 2 個：NVIDIA GTX");

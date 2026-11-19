@@ -3,6 +3,7 @@ import { api } from "../api.ts";
 import { benchmarkView, BENCHMARK_ASSUMPTION, BENCHMARK_RUNNING_NOTE, endedText, progressOf } from "../detect/benchmark-model.ts";
 import { deviceLabel } from "../detect/object-model.ts";
 import { errMsg, formatDateTime, h, icon, toast } from "../dom.ts";
+import { settingRow } from "../ui/settings-row.ts";
 
 export interface BenchmarkSection {
   el: HTMLElement;
@@ -21,27 +22,25 @@ export function benchmarkSection(onChange: () => void): BenchmarkSection {
   let pickKey = "";
   let resultKey = "";
 
-  const pick = h("div", { class: "field", hidden: true });
+  const pick = h("div", { class: "set-block obj-block", hidden: true });
   const startBtn = h("button", { class: "btn", type: "button" }, icon("activity", 16), "測速");
   const cancelBtn = h("button", { class: "btn", type: "button", hidden: true }, "取消");
   const startHint = h("small", { class: "hint", hidden: true });
-  const actions = h("div", { class: "form-actions" }, startBtn, cancelBtn, startHint);
   const progressText = h("b", { class: "num" });
   const bar = h("i");
   const progress = h(
     "div",
-    { class: "bench-progress", hidden: true, role: "status", "aria-live": "polite" },
+    { class: "set-block obj-block bench-progress", hidden: true, role: "status", "aria-live": "polite" },
     h("div", { class: "bench-progress-head" }, h("span", { class: "spin" }), progressText),
     h("div", { class: "bar", role: "progressbar", "aria-label": "測速進度", "aria-valuemin": "0", "aria-valuemax": "100" }, bar),
     h("small", { class: "hint" }, BENCHMARK_RUNNING_NOTE),
   );
-  const result = h("div", { class: "bench-result", hidden: true });
+  const result = h("div", { class: "set-block obj-block bench-result", hidden: true });
   const el = h(
-    "section",
-    { class: "obj-bench", "aria-label": "測速" },
-    h("div", { class: "obj-bench-head" }, h("span", { class: "legend" }, "測速"), h("small", { class: "hint" }, "測一下這台機器大約可以同時處理幾台攝影機。")),
+    "div",
+    { class: "set-rows", role: "group", "aria-label": "測速" },
+    settingRow({ title: "測速", desc: ["測一下這台機器大約可以同時處理幾台攝影機。", startHint], control: [startBtn, cancelBtn] }),
     pick,
-    actions,
     progress,
     result,
   );
@@ -75,7 +74,7 @@ export function benchmarkSection(onChange: () => void): BenchmarkSection {
       paintActions();
     });
     pick.replaceChildren(
-      h("div", { class: "obj-bench-pickhead" }, h("span", { class: "legend" }, "要測哪些裝置"), allBtn),
+      h("div", { class: "obj-bench-pickhead" }, h("span", { class: "set-row-title" }, "要測哪些裝置"), allBtn),
       h(
         "div",
         { class: "obj-labels", role: "group", "aria-label": "要測哪些裝置" },

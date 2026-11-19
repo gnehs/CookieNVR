@@ -183,3 +183,12 @@ export function eventLabelOptions(catalog: Pick<ObjectLabelsDto, "labels" | "com
   return { top, rest };
 }
 
+
+/** 卡片收合時的摘要：「辨識人與汽車」「只記錄人、汽車與貓」；不辨識就沒有 */
+export function objectSummary(mode: ObjectMode, labels: readonly string[]): string | null {
+  if (mode === "off") return null;
+  const names = [...new Set(labels.map(labelName))];
+  if (names.length === 0) return mode === "filter" ? "未選類別，不記錄事件" : "辨識物件";
+  const list = names.length <= 3 ? (names.length === 1 ? names[0]! : `${names.slice(0, -1).join("、")}與${names.at(-1)}`) : `${names.slice(0, 2).join("、")}等 ${names.length} 類`;
+  return `${mode === "filter" ? "只記錄" : "辨識"}${list}`;
+}
