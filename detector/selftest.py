@@ -27,6 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 #: 換算「可同時處理幾台」時保留的餘裕：CPU 還要錄影、解碼，只算一半；GPU 的前後處理仍在 CPU，算八成。
 #: 與 src/objects/capacity.ts 相同
 HEADROOM = {"cpu": 0.5, "intel": 0.8, "nvidia": 0.8}
+NOT_ON_DEVICE = "沒有實際執行這個模型"
 
 
 def capacity(fps: float, kind: str, per_camera: float) -> int:
@@ -59,6 +60,9 @@ def intel_gpus() -> list[str]:
 
 def hints(device: str, error: str, p: eng.Probe) -> list[str]:
     e = error.lower()
+    if NOT_ON_DEVICE in error:
+        return [f"{eng.RUNTIME_NAMES.get(device, device)} 看得到這個裝置，但沒有把模型放到上面執行（實際執行的比例見上一行），測到的速度其實是處理器的。",
+                "常見原因：驅動版本不支援這顆顯示卡的運算、或模型用了這個裝置不支援的運算。CookieNVR 會自動改用其他裝置。"]
     if device == "intel":
         if not p.has_openvino:
             return ["這個映像不含 OpenVINO plugin：Intel 內顯只有 linux/amd64 的 latest（預設）映像支援，-nvidia 與 arm64 映像沒有。"]
@@ -185,6 +189,8 @@ def main() -> int:
             return 1
         except Exception as e:  # noqa: BLE001
             err = f"{type(e).__name__}: {e}"
+            if isinstance(e, eng.NotOnDevice):
+                err = f"{e}；實際執行：{eng.placement_text(e.placement)}"
             results[key] = {"status": "fail", "kind": kind, "name": name, "error": err}
             print(f"[{name}] 失敗：{err[:400]}")
             for h in hints(kind, err, p):
@@ -193,8 +199,9 @@ def main() -> int:
         found_labels = {d.label for d in dets if d.score >= 0.4}
         missing_labels = [label for label in EXPECTED if label not in found_labels]
         cams = capacity(bench["fps"], kind, args.fps)
-        results[key] = {"status": "ok", "kind": kind, "name": name, "load_ms": load_ms, **bench, "dets": dets, "missing": missing_labels, "providers": engine.providers, "cams": cams}
-        print(f"[{name}] 成功：載入 {load_ms:.0f} ms；每秒 {bench['fps']:.1f} 張（平均 {bench['msMean']:.1f} ms，九成在 {bench['msP90']:.1f} ms 內）；provider {engine.providers[0]}")
+        results[key] = {"status": "ok", "kind": kind, "name": name, "load_ms": load_ms, **bench, "dets": dets, "missing": missing_labels, "placement": engine.placement, "cams": cams}
+        print(f"[{name}] 成功：載入 {load_ms:.0f} ms；每秒 {bench['fps']:.1f} 張（平均 {bench['msMean']:.1f} ms，九成在 {bench['msP90']:.1f} ms 內）")
+        print(f"    實際執行：{eng.placement_text(engine.placement)}" + (f"（約 {1 - eng.device_share(engine.placement):.0%} 的時間在處理器上）" if kind != "cpu" and engine.placement else ""))
         print(f"    辨識：{fmt_dets(dets)}" + (f"；缺少 {', '.join(missing_labels)}（結果不合理）" if missing_labels else ""))
         print(f"    換算：同時有動作、每台每秒辨識 {args.fps:g} 次時，大約可以同時處理 {cams} 台攝影機")
 
@@ -227,7 +234,7 @@ def main() -> int:
     for key, r in results.items():
         if r["status"] == "ok":
             extra = "" if "consistent" not in r else ("，與 CPU 一致" if r["consistent"] else "，與 CPU 不一致")
-            print(f"- {r['name']} [{key}]: OK 載入 {r['load_ms']:.0f} ms，{r['fps']:.1f} 張/秒（平均 {r['msMean']:.1f} ms），約 {r['cams']} 台；{fmt_dets(r['dets'])}{extra}" + (f"；缺少 {r['missing']}" if r["missing"] else ""))
+            print(f"- {r['name']} [{key}]: OK 載入 {r['load_ms']:.0f} ms，{r['fps']:.1f} 張/秒（平均 {r['msMean']:.1f} ms），約 {r['cams']} 台；實際執行 {eng.placement_text(r['placement'])}；{fmt_dets(r['dets'])}{extra}" + (f"；缺少 {r['missing']}" if r["missing"] else ""))
         elif r["status"] == "skip":
             print(f"- {r['name']}: 略過（{r['reason']}）")
         else:

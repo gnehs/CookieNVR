@@ -12,6 +12,7 @@ const status = (o: Partial<ObjectsStatusDto> = {}): ObjectsStatusDto => ({
   requested: "auto",
   device: CPU,
   fallback: null,
+  cpuShare: null,
   error: null,
   model: { id: "builtin", name: "內建", format: "yolo", input: [640, 640] },
   latencyMs: null,
@@ -60,6 +61,16 @@ describe("物件辨識狀態", () => {
     expect(v.tone).toBe("warn");
     expect(v.warnings).toEqual(["找不到 Nvidia 顯卡，改用 CPU。"]);
     expect(JSON.stringify(v)).not.toContain("CUDA");
+  });
+
+  test("顯示卡只做了一小部分時，說出有多少在處理器上；大多在處理器上就是警告", () => {
+    expect(objectsView(status({ device: GTX, cpuShare: 0.01 })).note).toBeNull();
+    const some = objectsView(status({ device: UHD, cpuShare: 0.3, latencyMs: { last: 30, avg: 30, max: 40 } }));
+    expect(some.tone).toBe("ok");
+    expect(some.note).toBe("每張約 30 毫秒，約 30% 的運算在處理器上執行");
+    const most = objectsView(status({ device: UHD, cpuShare: 0.62 }));
+    expect(most.tone).toBe("warn");
+    expect(most.warnings).toEqual(["實際上大多在處理器上執行（約 62% 的運算），顯示卡幫助不大。"]);
   });
 
   test("負載提醒也算警告，與退回的原因並列", () => {

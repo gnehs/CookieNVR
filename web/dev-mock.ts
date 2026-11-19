@@ -92,11 +92,14 @@ addCam({ name: "車道", enabled: true, connection: { type: "tapo", host: "192.1
 // 不設時是關閉，之後在設定頁打開，依選的裝置與模型走：啟動中 → 載入中 → 使用中。
 //   overload：實際運作跟不上（丟畫面），狀態頁與設定頁會出現負載提醒
 //   missing：設定的裝置（intel:GPU.1）已經找不到
+//   handback：選了內顯，但 OpenVINO 把模型整個交回處理器，退回處理器；mostlycpu：內顯有在跑，但 62% 的運算在處理器上
 // 裝置清單（MOCK_DEVICES）：預設 CPU、Intel 內顯與兩張 Nvidia；cpu 只有處理器（兩類顯卡都標示不能用）、intel 是處理器加內顯
-// 測速結果（MOCK_BENCH）：done 是四個裝置都測過、stale 是換過模型後的舊結果、partial 是只測了處理器而且撐不住目前的頻率
+// 測速結果（MOCK_BENCH）：done 是四個裝置都測過、stale 是換過模型後的舊結果、partial 是只測了處理器而且撐不住目前的頻率、
+// handback 是內顯沒有實際執行（測速失敗）且 GTX 1650 有 62% 的運算在處理器上、handback1 是只測了內顯而且失敗
 const OBJECTS_SCENARIO = process.env.MOCK_OBJECTS ?? "";
 if (OBJECTS_SCENARIO) settings.objects.enabled = true; // down：detector 程序一直重啟，用來看狀態頁的提醒
 if (OBJECTS_SCENARIO === "missing") settings.devices.objects = "intel:GPU.1";
+if (OBJECTS_SCENARIO === "handback" || OBJECTS_SCENARIO === "mostlycpu") settings.devices.objects = "intel:GPU.0";
 let objectsOnAt = now() - 60_000;
 const OBJECT_MODELS: ObjectModelDto[] = [
   { id: "builtin", name: "內建模型", builtin: true, sizeBytes: null },
@@ -124,6 +127,7 @@ const bestDevice = () => DEVICES.find((d) => d.kind === "nvidia") ?? DEVICES.fin
 function resolveDevice(): { device: InferenceDeviceDto; fallback: { reason: string; detail: string } | null } {
   if (OBJECTS_SCENARIO === "fallback") return { device: DEVICE_CPU, fallback: { reason: "找不到可以使用的 Nvidia 顯卡，已改用 CPU 辨識。", detail: "CUDAExecutionProvider not in ort.get_available_providers(); /dev/nvidiactl missing" } };
   if (OBJECTS_SCENARIO === "cpu" || OBJECTS_SCENARIO === "overload") return { device: DEVICE_CPU, fallback: null };
+  if (OBJECTS_SCENARIO === "handback") return { device: DEVICE_CPU, fallback: { reason: "Intel(R) UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器），已改用其他裝置", detail: "NotOnDevice: Intel(R) UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器）；實際執行：CPUExecutionProvider 100%" } };
   if (OBJECTS_SCENARIO === "intel") return { device: DEVICES.find((d) => d.kind === "intel") ?? DEVICE_CPU, fallback: null };
   const want = settings.devices.objects;
   if (want === "auto") return { device: bestDevice(), fallback: null };
@@ -138,6 +142,10 @@ const camerasOn = () => cams.filter((c) => c.config.enabled && detectConfigOf(c.
 
 function resultOf(d: InferenceDeviceDto, perCamera: number): BenchmarkResultDto {
   const sp = SPEED[d.id] ?? SPEED.cpu!;
+  if (process.env.MOCK_BENCH?.startsWith("handback")) {
+    if (d.kind === "intel") return { device: d.id, kind: d.kind, name: d.name, ok: false, reason: "Intel(R) UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器），這個裝置不適合用來辨識", error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" };
+    if (d.id === DEVICE_N1.id) return { ...resultOf(DEVICE_CPU, perCamera), device: d.id, kind: d.kind, name: d.name, fps: 18, msMean: 55, cameras: camerasSupported(18, d.kind, perCamera), cpuShare: 0.62 };
+  }
   return { device: d.id, kind: d.kind, name: d.name, ok: true, loadMs: d.kind === "cpu" ? 900 : 4200, frames: Math.round(sp.fps * 10), fps: sp.fps, msMean: sp.ms, msP90: Math.round(sp.ms * 1.35 * 10) / 10, cameras: camerasSupported(sp.fps, d.kind, perCamera) };
 }
 
@@ -147,6 +155,8 @@ function seedBench() {
   const kind = process.env.MOCK_BENCH;
   if (kind === "done") bench = mk(DEVICES, settings.objects.model);
   if (kind === "stale") bench = mk(DEVICES.slice(0, 2), "yolo11s.onnx");
+  if (kind === "handback") bench = mk(DEVICES, settings.objects.model);
+  if (kind === "handback1") bench = mk([DEVICE_INTEL], settings.objects.model);
   if (kind === "partial") {
     settings.objects.fps = 5;
     bench = { ...mk([DEVICE_CPU], settings.objects.model), perCameraFps: 5 };
@@ -184,7 +194,7 @@ function objectsStatus(): ObjectsStatusDto {
   tickBench();
   const s = settings.objects;
   const model = { id: s.model, name: s.model === "builtin" ? "內建模型" : s.model, format: null as string | null, input: null as [number, number] | null };
-  const base: Omit<ObjectsStatusDto, "state"> = { requested: settings.devices.objects, device: null, fallback: null, error: null, model, latencyMs: null, processed: 0, dropped: 0, rateFps: 0, dropRatio: null, paused: null, warning: null, gpu: null };
+  const base: Omit<ObjectsStatusDto, "state"> = { requested: settings.devices.objects, device: null, fallback: null, cpuShare: null, error: null, model, latencyMs: null, processed: 0, dropped: 0, rateFps: 0, dropRatio: null, paused: null, warning: null, gpu: null };
   if (!s.enabled) return { ...base, state: "off" };
   const age = now() - objectsOnAt;
   if (age < 1_500 || OBJECTS_SCENARIO === "down") return { ...base, state: "starting" };
@@ -212,6 +222,7 @@ function objectsStatus(): ObjectsStatusDto {
     paused: b?.state === "running" ? "benchmark" : null,
     warning,
     gpu: device.kind === "nvidia" ? { utilPercent: 18, memoryUsedMb: 612, memoryTotalMb: 4096 } : null,
+    cpuShare: device.kind === "cpu" ? null : OBJECTS_SCENARIO === "mostlycpu" ? 0.62 : 0.01,
     latencyMs,
     fallback,
   };
@@ -241,7 +252,7 @@ function objectsDiagnostics(): ObjectsDiagnostics {
     settings: settings.objects,
     requested: settings.devices.objects,
     status,
-    ready: status.state === "ready" ? { device: status.device!, devices: DEVICES, fallback: status.fallback, model: { file: status.model.id === "builtin" ? "yolo11n.onnx" : status.model.id, format: "yolo", input: [640, 640], classes: objectLabels().labels.map((l) => l.key), titles: objectLabels().labels.map((l) => l.en) }, loadMs: 2300, providers: status.device!.kind === "cpu" ? ["CPUExecutionProvider"] : ["OpenVINOExecutionProvider", "CPUExecutionProvider"], threads: 4, attempts: [{ device: status.requested, ok: !status.fallback }], probe: null } : null,
+    ready: status.state === "ready" ? { device: status.device!, devices: DEVICES, fallback: status.fallback, model: { file: status.model.id === "builtin" ? "yolo11n.onnx" : status.model.id, format: "yolo", input: [640, 640], classes: objectLabels().labels.map((l) => l.key), titles: objectLabels().labels.map((l) => l.en) }, loadMs: 2300, providers: status.device!.kind === "cpu" ? ["CPUExecutionProvider"] : ["OpenVINOExecutionProvider", "CPUExecutionProvider"], placement: status.cpuShare === null ? { CPUExecutionProvider: 1 } : { OpenVINOExecutionProvider: 1 - status.cpuShare, CPUExecutionProvider: status.cpuShare }, threads: 4, attempts: [{ device: status.requested, ok: !status.fallback }], probe: null } : null,
     errorDetail: status.state === "error" ? "onnxruntime InvalidProtobuf: Protobuf parsing failed" : null,
     probe: { openvino: true, nvidia: DEVICES.some((d) => d.kind === "nvidia") },
     queued: 0,

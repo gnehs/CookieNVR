@@ -1,5 +1,5 @@
 import type { BenchmarkDto, BenchmarkResultDto, InferenceDeviceDto, ObjectModelDto } from "../../src/api-types.ts";
-import { rateClause, rateText, tidyName } from "./object-model.ts";
+import { cpuShareNote, rateClause, rateText, tidyName } from "./object-model.ts";
 
 /** 換算的假設，一句話；數字對應 src/objects/capacity.ts 的 HEADROOM */
 export const BENCHMARK_ASSUMPTION = "只在有動作時才辨識，換算時已替錄影與解碼保留餘裕（處理器留一半、顯卡留兩成）。";
@@ -18,6 +18,8 @@ export interface BenchmarkRow {
   current: boolean;
   /** 幾個裝置比較時，最快的那個 */
   best: boolean;
+  /** 顯示卡的運算有不少交回處理器時的一句話（「實際上大多在處理器上執行…」） */
+  note: { tone: "ok" | "warn"; text: string } | null;
   /** 收在「詳細數字」裡的一句話；失敗時是原因 */
   detail: string | null;
 }
@@ -38,7 +40,7 @@ const okResults = (b: BenchmarkDto): Good[] => b.results.filter((r): r is Good =
 const rowText = (cameras: number) => (cameras > 0 ? `約 ${cameras} 台` : "太慢，連 1 台也撐不住");
 
 function detailOf(r: BenchmarkResultDto): string | null {
-  if (!r.ok) return r.error ?? null;
+  if (!r.ok) return [r.reason, r.error].filter(Boolean).join("；") || null;
   const parts: string[] = [];
   if (r.fps !== undefined) parts.push(`每秒約 ${r.fps.toFixed(1)} 張`);
   if (r.msMean !== undefined) parts.push(`平均每張 ${Math.round(r.msMean)} 毫秒`);
@@ -50,10 +52,15 @@ function detailOf(r: BenchmarkResultDto): string | null {
 /** 結論一句話：以目前使用的裝置為準；沒測到它就用最快的 */
 export function headlineOf(b: BenchmarkDto, currentDevice: string | null): BenchmarkView["headline"] {
   const ok = okResults(b);
-  if (ok.length === 0) return null;
+  if (ok.length === 0) {
+    const failed = b.results.find((r) => r.reason);
+    return failed?.reason ? { tone: "bad", text: `${failed.reason}。` } : null;
+  }
   const pick = ok.find((r) => r.device === currentDevice) ?? ok.reduce((a, r) => (r.cameras > a.cameras || (r.cameras === a.cameras && r.fps > a.fps) ? r : a));
   if (pick.cameras <= 0) return { tone: "bad", text: `這個裝置太慢，撐不住 1 台攝影機${rateText(b.perCameraFps)}的辨識。建議降低辨識頻率，或換更快的裝置。` };
-  return { tone: "ok", text: `這台機器大約可以同時處理 ${pick.cameras} 台攝影機（每台${rateClause(b.perCameraFps)}）` };
+  const share = cpuShareNote(pick.cpuShare);
+  const text = `這台機器大約可以同時處理 ${pick.cameras} 台攝影機（每台${rateClause(b.perCameraFps)}）`;
+  return share?.tone === "warn" ? { tone: "warn", text: `${text}，不過${tidyName(pick.name)}${share.text}` } : { tone: "ok", text };
 }
 
 export function verdictOf(b: BenchmarkDto): BenchmarkView["verdict"] {
@@ -72,8 +79,9 @@ export function benchmarkView(b: BenchmarkDto, opts: { currentDevice: string | n
   const rows = b.results.map<BenchmarkRow>((r) => ({
     device: r.device,
     name: tidyName(r.name),
-    text: r.ok && r.cameras !== undefined ? rowText(r.cameras) : "無法測速",
-    tone: !r.ok ? "bad" : (r.cameras ?? 0) > 0 ? "ok" : "bad",
+    text: r.ok && r.cameras !== undefined ? rowText(r.cameras) : r.reason ? "無法使用" : "無法測速",
+    tone: !r.ok ? "bad" : (r.cameras ?? 0) <= 0 ? "bad" : cpuShareNote(r.cpuShare)?.tone === "warn" ? "warn" : "ok",
+    note: r.ok ? cpuShareNote(r.cpuShare) : r.reason ? { tone: "warn", text: r.reason } : null,
     current: r.device === opts.currentDevice,
     best: ok.length > 1 && r.ok && r.cameras === top && r.fps === topFps,
     detail: detailOf(r),

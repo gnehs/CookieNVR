@@ -49,6 +49,11 @@ function Result({ b, data }: { b: BenchmarkDto; data: ObjectsDto }) {
                 {r.name}
                 {r.current ? <span className="bench-tag">使用中</span> : null}
                 {r.best ? <span className="bench-tag best">最快</span> : null}
+                {r.note ? (
+                  <small className="bench-note" data-tone={r.note.tone}>
+                    {r.note.text}
+                  </small>
+                ) : null}
               </span>
               <span className="bench-val num">{r.text}</span>
             </li>

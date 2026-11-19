@@ -11,16 +11,21 @@
 - nvidia:GPU-<uuid>（nvidia-smi 的 UUID，換插槽或重開機都不變；沒有 nvidia-smi 時退而用 nvidia:<編號>）
 
 指定的或自動選到的 GPU 載入失敗時退回 CPU；指定的裝置不見了改用自動；原因寫進 LoadResult.fallback。
+GPU 的 EP 建得起來不代表模型真的在上面跑：EP 不支援的節點會交給 CPU EP，get_providers() 照樣列著它。
+所以建 engine 時開 profiling 跑一次，量各 provider 實際佔的推論時間（Engine.placement）。
 """
 
 from __future__ import annotations
 
 import glob
 import io
+import json
 import os
 import platform
+import shutil
 import statistics
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 
@@ -34,6 +39,12 @@ os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
 
 KINDS = ("cpu", "intel", "nvidia")
 KIND_NAMES = {"cpu": "CPU", "intel": "Intel 內顯", "nvidia": "Nvidia 顯卡"}
+RUNTIME_NAMES = {"intel": "OpenVINO", "nvidia": "CUDA"}
+CPU_EP = "CPUExecutionProvider"
+#: GPU 的 EP 分到的推論時間低於這個比例，就當作這個裝置沒有在跑這個模型。
+#: CUDA 把形狀計算之類的小節點放在 CPU 是正常的，只佔約 1%；不到一成表示幾乎全部交回處理器，用這張卡沒有好處，
+#: 還多了搬資料的成本。
+MIN_DEVICE_SHARE = 0.1
 
 
 @dataclass(frozen=True)
@@ -266,17 +277,20 @@ def cpu_threads() -> int:
     return max(1, min(4, (os.cpu_count() or 2) // 2))
 
 
-def _session_options(ort):
+def _session_options(ort, profile_prefix: str | None):
     so = ort.SessionOptions()
     so.intra_op_num_threads = cpu_threads()
     so.inter_op_num_threads = 1
     so.log_severity_level = 3
+    if profile_prefix:
+        so.enable_profiling = True
+        so.profile_file_prefix = profile_prefix
     return so
 
 
-def create_session(ort, model_path: str, device: Device, p: Probe):
+def create_session(ort, model_path: str, device: Device, p: Probe, profile_prefix: str | None = None):
     """建立 InferenceSession；確認實際用的是要求的 provider，否則丟例外讓呼叫端退回 CPU。"""
-    so = _session_options(ort)
+    so = _session_options(ort, profile_prefix)
     if device.kind == "cpu":
         return ort.InferenceSession(model_path, sess_options=so, providers=["CPUExecutionProvider"])
     if device.kind == "nvidia":
@@ -300,6 +314,54 @@ def create_session(ort, model_path: str, device: Device, p: Probe):
     raise ValueError(f"unknown device kind {device.kind}")
 
 
+class NotOnDevice(RuntimeError):
+    """EP 建得起來，但模型幾乎全部交回 CPU EP 執行。訊息是給使用者看的中文。"""
+
+    def __init__(self, device: Device, placement: dict[str, float]):
+        self.placement = placement
+        super().__init__(f"{device.name}沒有實際執行這個模型（{RUNTIME_NAMES.get(device.kind, device.kind)}把運算交回處理器）")
+
+
+def placement_of(events: list) -> dict[str, float] | None:
+    """ONNX Runtime profile 的事件 → 最後一次 model_run 裡各 provider 佔的節點時間比例（由大到小）。沒有節點事件回 None。
+
+    每個節點一個 `<節點名>_kernel_time` 事件，args.provider 是實際執行的 EP；EP 編譯成一整塊的子圖
+    （OpenVINO、CoreML、TensorRT）也是一個節點，provider 是那個 EP。只看最後一次 run，避開第一次的暖機成本。
+    """
+    runs = [e for e in events if e.get("cat") == "Session" and e.get("name") == "model_run"]
+    last = max(runs, key=lambda e: e.get("ts", 0)) if runs else None
+    totals: dict[str, float] = {}
+    for e in events:
+        if e.get("cat") != "Node" or not str(e.get("name", "")).endswith("_kernel_time"):
+            continue
+        if last is not None and not (last["ts"] <= e.get("ts", -1) <= last["ts"] + last.get("dur", 0)):
+            continue
+        provider = (e.get("args") or {}).get("provider")
+        if isinstance(provider, str) and provider:
+            totals[provider] = totals.get(provider, 0.0) + float(e.get("dur", 0))
+    total = sum(totals.values())
+    if total <= 0:
+        return None
+    return {k: round(v / total, 4) for k, v in sorted(totals.items(), key=lambda kv: -kv[1])}
+
+
+def device_share(placement: dict[str, float]) -> float:
+    """CPU EP 以外（也就是 GPU 的 EP）佔的時間比例。"""
+    return round(1 - placement.get(CPU_EP, 0.0), 4)
+
+
+def check_placement(device: Device, placement: dict[str, float] | None) -> None:
+    if device.kind != "cpu" and placement is not None and device_share(placement) < MIN_DEVICE_SHARE:
+        raise NotOnDevice(device, placement)
+
+
+def placement_text(placement: dict[str, float] | None) -> str:
+    """「OpenVINOExecutionProvider 97%、CPUExecutionProvider 3%」；量不到時說量不到。"""
+    if not placement:
+        return "量不到"
+    return "、".join(f"{k} {v:.0%}" for k, v in placement.items())
+
+
 @dataclass
 class Engine:
     session: object
@@ -307,6 +369,8 @@ class Engine:
     device: Device
     input_name: str
     providers: list[str] = field(default_factory=list)
+    #: 各 provider 實際佔的推論時間比例；量不到為 None
+    placement: dict[str, float] | None = None
 
     def infer_image(self, image: Image.Image, min_score: float = yolo.MIN_SCORE) -> list[yolo.Detection]:
         tensor, box = yolo.preprocess(image, self.layout)
@@ -319,20 +383,40 @@ class Engine:
         return self.infer_image(image, min_score)
 
 
+def _read_profile(path: str) -> dict[str, float] | None:
+    try:
+        with open(path, encoding="utf-8") as f:
+            return placement_of(json.load(f))
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+
+
 def build_engine(ort, model_path: str, device: Device, p: Probe) -> Engine:
-    """建立 session、跑一次空白畫面判斷輸出格式。格式不合丟 ModelFormatError，裝置問題丟其他例外。"""
-    session = create_session(ort, model_path, device, p)
-    inputs = session.get_inputs()
-    if len(inputs) != 1:
-        raise yolo.ModelFormatError(f"模型應該只有一個影像輸入，這個模型有 {len(inputs)} 個")
-    width, height = yolo.input_size(list(inputs[0].shape))
-    if inputs[0].type != "tensor(float)":
-        raise yolo.ModelFormatError(f"模型的輸入型別是 {inputs[0].type}，目前只支援 float32")
-    dummy = np.full((1, 3, height, width), yolo.PAD_VALUE, dtype=np.float32)
-    outputs = session.run(None, {inputs[0].name: dummy})
+    """建立 session、跑兩次空白畫面：判斷輸出格式、量各 provider 實際佔的時間（第二次）。
+    格式不合丟 ModelFormatError；GPU 幾乎沒跑到丟 NotOnDevice；其他裝置問題丟其他例外。"""
+    tmp = tempfile.mkdtemp(prefix="cookienvr-profile-")
+    try:
+        session = create_session(ort, model_path, device, p, profile_prefix=os.path.join(tmp, "detector"))
+        try:
+            inputs = session.get_inputs()
+            if len(inputs) != 1:
+                raise yolo.ModelFormatError(f"模型應該只有一個影像輸入，這個模型有 {len(inputs)} 個")
+            width, height = yolo.input_size(list(inputs[0].shape))
+            if inputs[0].type != "tensor(float)":
+                raise yolo.ModelFormatError(f"模型的輸入型別是 {inputs[0].type}，目前只支援 float32")
+            dummy = np.full((1, 3, height, width), yolo.PAD_VALUE, dtype=np.float32)
+            outputs = session.run(None, {inputs[0].name: dummy})
+            session.run(None, {inputs[0].name: dummy})
+        finally:
+            # end_profiling 之後不再記錄，之後的推論不寫檔；出錯時也要先收掉，免得 session 釋放時才寫進已刪掉的目錄
+            profile = session.end_profiling()
+        placement = _read_profile(profile)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
     metadata = dict(session.get_modelmeta().custom_metadata_map)
     layout = yolo.detect_layout(list(inputs[0].shape), tuple(np.asarray(outputs[0]).shape), metadata)
-    return Engine(session, layout, device, inputs[0].name, list(session.get_providers()))
+    check_placement(device, placement)
+    return Engine(session, layout, device, inputs[0].name, list(session.get_providers()), placement)
 
 
 @dataclass
@@ -363,11 +447,14 @@ def load(ort, model_path: str, requested: str, p: Probe | None = None) -> LoadRe
             if device.kind == "cpu":
                 raise
             err = f"{type(e).__name__}: {e}"
+            if isinstance(e, NotOnDevice):
+                err = f"{err}；實際執行：{placement_text(e.placement)}"
             attempts.append({"device": device.id, "ok": False, "error": err[:600], "ms": round((time.monotonic() - t0) * 1000)})
             if fallback is None:
-                fallback = Fallback(f"{device.name}載入模型失敗，已改用其他裝置", err[:600])
+                reason = f"{e}，已改用其他裝置" if isinstance(e, NotOnDevice) else f"{device.name}載入模型失敗，已改用其他裝置"
+                fallback = Fallback(reason, err[:600])
             continue
-        attempts.append({"device": device.id, "ok": True, "ms": round((time.monotonic() - t0) * 1000)})
+        attempts.append({"device": device.id, "ok": True, "ms": round((time.monotonic() - t0) * 1000), "placement": engine.placement})
         return LoadResult(engine, requested, fallback, round((time.monotonic() - started) * 1000), attempts)
     raise RuntimeError("no device could load the model")  # 走不到：CPU 失敗已在迴圈內丟出
 

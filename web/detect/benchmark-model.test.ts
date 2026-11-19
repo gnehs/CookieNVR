@@ -42,6 +42,30 @@ describe("測速結論", () => {
   });
 });
 
+describe("實際在哪裡執行", () => {
+  const gpu = (o: Partial<BenchmarkResultDto>) => res({ device: "intel:GPU.0", kind: "intel", name: "Intel(R) UHD Graphics 630", fps: 15, cameras: 6, ...o });
+
+  test("顯示卡的成績其實大多是處理器跑的，結論要說清楚", () => {
+    const h = headlineOf(bench({ results: [gpu({ cpuShare: 0.7 })] }), "intel:GPU.0");
+    expect(h).toEqual({ tone: "warn", text: "這台機器大約可以同時處理 6 台攝影機（每台每秒辨識 2 次），不過Intel UHD Graphics 630實際上大多在處理器上執行（約 70% 的運算），顯示卡幫助不大" });
+    expect(headlineOf(bench({ results: [gpu({ cpuShare: 0.02 })] }), "intel:GPU.0")?.tone).toBe("ok");
+  });
+
+  test("並排時在該列標出比例", () => {
+    const view = benchmarkView(bench({ results: [res({}), gpu({ cpuShare: 0.7 }), gpu({ device: "nvidia:x", kind: "nvidia", name: "GTX", cpuShare: 0.2 })] }), opts);
+    expect(view.rows.map((r) => [r.tone, r.note?.tone ?? null])).toEqual([["ok", null], ["warn", "warn"], ["ok", "ok"]]);
+    expect(view.rows[2]!.note?.text).toBe("約 20% 的運算在處理器上執行");
+  });
+
+  test("顯示卡沒有實際執行模型時是失敗，用白話說原因", () => {
+    const failed = gpu({ ok: false, fps: undefined, cameras: undefined, reason: "Intel UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器），這個裝置不適合用來辨識", error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" });
+    expect(headlineOf(bench({ results: [failed] }), "cpu")).toEqual({ tone: "bad", text: `${failed.reason}。` });
+    const view = benchmarkView(bench({ results: [res({}), failed] }), opts);
+    expect(view.rows[1]).toMatchObject({ text: "無法使用", tone: "bad", note: { tone: "warn", text: failed.reason } });
+    expect(view.rows[1]!.detail).toContain("CPUExecutionProvider 100%");
+  });
+});
+
 describe("對照目前設定", () => {
   test("夠用、不夠用、沒開辨識的攝影機各一句話", () => {
     expect(verdictOf(bench())?.text).toContain("來得及");

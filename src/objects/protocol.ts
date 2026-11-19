@@ -14,6 +14,8 @@ export interface ReadyInfo {
   model: { file: string; format: string; input: [number, number]; classes: string[]; titles: string[] };
   loadMs: number;
   providers: string[];
+  /** 各 provider 實際佔的推論時間比例（{"CUDAExecutionProvider": 0.99, ...}）；量不到為 null */
+  placement: Record<string, number> | null;
   threads: number;
   /** 每個嘗試過的裝置，原樣放進診斷資訊 */
   attempts: unknown[];
@@ -58,15 +60,33 @@ function gpu(v: unknown): GpuUsageDto | null {
   return util === null || used === null || total === null ? null : { utilPercent: util, memoryUsedMb: used, memoryTotalMb: total };
 }
 
+function placement(v: unknown): Record<string, number> | null {
+  if (!isObj(v)) return null;
+  const out: Record<string, number> = {};
+  for (const [k, share] of Object.entries(v)) {
+    const n = num(share);
+    if (n !== null) out[k] = n;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** GPU 上的推論有多少比例其實在 CPU EP 上跑；CPU 裝置或量不到為 null */
+export function cpuShareOf(kind: InferenceDeviceKind, shares: Record<string, number> | null): number | null {
+  return kind === "cpu" || !shares ? null : (shares.CPUExecutionProvider ?? 0);
+}
+
 function benchResult(v: unknown): BenchmarkResultDto | null {
   if (!isObj(v) || typeof v.device !== "string") return null;
   const kind = DEVICES.has(v.kind as InferenceDeviceKind) ? (v.kind as InferenceDeviceKind) : "cpu";
   const out: BenchmarkResultDto = { device: v.device, kind, name: text(v.name, v.device), ok: v.ok === true };
+  if (typeof v.reason === "string") out.reason = v.reason;
   if (typeof v.error === "string") out.error = v.error;
   for (const k of ["loadMs", "frames", "fps", "msMean", "msP90"] as const) {
     const n = num(v[k]);
     if (n !== null) out[k] = n;
   }
+  const share = cpuShareOf(kind, placement(v.placement));
+  if (share !== null) out.cpuShare = share;
   return out;
 }
 
@@ -87,6 +107,7 @@ function ready(v: Obj): ReadyInfo | null {
     model: { file: text(model.file), format: text(model.format), input, classes, titles: titles.length === classes.length ? titles : classes },
     loadMs: num(v.loadMs) ?? 0,
     providers: Array.isArray(v.providers) ? v.providers.filter((p): p is string => typeof p === "string") : [],
+    placement: placement(v.placement),
     threads: num(v.threads) ?? 0,
     attempts: Array.isArray(v.attempts) ? v.attempts : [],
     probe: v.probe ?? null,

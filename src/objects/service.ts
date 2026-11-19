@@ -25,7 +25,7 @@ import type { Camera, CameraId, DeviceRef, ObjectSettings, Route, WorkerSpec } f
 import { camerasSupported, DROP_WARN_RATIO, loadSample, verdict } from "./capacity.ts";
 import { toHits, type Detection } from "./hits.ts";
 import { COCO_LABELS, COMMON_LABELS, labelName } from "./labels.ts";
-import { encodeFrame, encodeJson, KIND_JSON, parseDetectorMsg, type ReadyInfo } from "./protocol.ts";
+import { cpuShareOf, encodeFrame, encodeJson, KIND_JSON, parseDetectorMsg, type ReadyInfo } from "./protocol.ts";
 import { FrameQueue } from "./queue.ts";
 
 const DETECTOR_SCRIPT = join(import.meta.dir, "../../detector/main.py");
@@ -462,6 +462,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       requested: s.devices.objects,
       device: ready?.device ?? null,
       fallback: ready?.fallback ?? null,
+      cpuShare: ready ? cpuShareOf(ready.device.kind, ready.placement) : null,
       error: phase.tag === "error" ? phase.message : null,
       model: {
         id: s.objects.model,

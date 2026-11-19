@@ -6,11 +6,12 @@
   種類 2：4 位元組請求編號 + 一張 JPEG。一次只送一張，等到結果才送下一張。
   種類 1：JSON 指令。{"type":"bench","devices":[識別字…],"seconds":10} 測速；{"type":"bench-cancel"} 取消。
 - detector → 主程序（種類 1，JSON）：
-  {"type":"status","state":"loading"|"ready"|"error", ...}  載入進度、實際裝置、退回原因、類別清單、模型格式錯誤
+  {"type":"status","state":"loading"|"ready"|"error", ...}  載入進度、實際裝置、退回原因、類別清單、模型格式錯誤；
+    placement 是各 provider 實際佔的推論時間比例（{"CUDAExecutionProvider":0.99,"CPUExecutionProvider":0.01}），量不到為 null
   {"type":"heartbeat","busyMs":…,"bench":bool,"gpu":{…}|null}  每 2 秒；gpu 是 Nvidia 卡的使用率與顯示記憶體
   {"type":"result","id":n,"ms":推論毫秒,"detections":[{label,score,box}]} 或 {"type":"result","id":n,"error":"..."}
   {"type":"bench-progress","device":識別字,"fraction":0..1,"index":i,"total":n}
-  {"type":"bench-result","cancelled":bool,"results":[{device,kind,name,ok,error?,loadMs,frames,fps,msMean,msP90}]}
+  {"type":"bench-result","cancelled":bool,"results":[{device,kind,name,ok,reason?,error?,placement?,loadMs,frames,fps,msMean,msP90}]}
 
 模型格式不合時回報 error 後不結束，只送心跳，免得 supervisor 反覆重啟一個註定失敗的程序。
 測速時不處理畫面（主程序在測速期間不送），心跳帶 bench: true，主程序不會把它當成卡死。
@@ -162,12 +163,16 @@ def run_bench(ch: Channel, ort, cmd: dict, current: eng.Engine, model_path: str,
                                   progress=lambda f, d=device_id, i=i: ch.send({"type": "bench-progress", "device": d, "fraction": f, "index": i, "total": len(ids)}))
             except (ConnectionResetError, BrokenPipeError):
                 raise
+            except eng.NotOnDevice as e:
+                results.append({**base, "ok": False, "reason": f"{e}，這個裝置不適合用來辨識",
+                                "error": f"NotOnDevice: 實際執行 {eng.placement_text(e.placement)}", "placement": e.placement})
+                continue
             except Exception as e:  # noqa: BLE001 — 某個裝置不能用只影響它自己的結果
                 results.append({**base, "ok": False, "error": f"{type(e).__name__}: {e}"[:400]})
                 continue
             if r is None:
                 break
-            results.append({**base, "ok": True, "loadMs": load_ms, **r})
+            results.append({**base, "ok": True, "loadMs": load_ms, "placement": engine.placement, **r})
             if stop():
                 break
     finally:
@@ -223,6 +228,7 @@ def main() -> None:
         "model": describe_model(args.model, engine.layout),
         "loadMs": loaded.load_ms,
         "providers": engine.providers,
+        "placement": engine.placement,
         "threads": eng.cpu_threads(),
         "attempts": loaded.attempts,
         "probe": p.to_json(),

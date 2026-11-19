@@ -296,6 +296,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 - detector 啟動時列出這個環境實際偵測到的每個裝置：CPU、每顆 Intel 內顯（OpenVINO 的 `GPU.0`、`GPU.1`）、每張 Nvidia 卡，各帶型號。每個裝置有穩定的識別字：`cpu`、`intel:GPU.0`、`nvidia:GPU-<uuid>`（nvidia-smi 的 UUID，重開機或換插槽不變；沒有 nvidia-smi 時退而用 `nvidia:<編號>`）。CUDA 以 PCI 順序編號，和 nvidia-smi 一致。
 - 設定存成「工作 → 裝置」的對應 `settings.devices`（`objects` 是這裡的推論，`decode` 是影像解碼，見「影像硬體解碼」），值是 `auto`、`cpu` 或識別字。在「設定 → 一般 → 物件辨識」選擇，預設「自動」：依序試 Nvidia、Intel、CPU。不提供「不同攝影機用不同裝置」：所有攝影機共用一個推論程序，一次一張，分裝置要多開程序與佇列，這一版不做。
 - 指定或自動選到的 GPU 載入失敗時改用下一個（最後是 CPU）；指定的裝置不見了（拔卡、換卡）改用自動。實際使用的裝置與原因回報給主程序，顯示在設定頁（「使用中：Intel UHD Graphics 630」與警示）與診斷資訊。
+- **實際在哪裡執行**：EP 建得起來不代表模型在 GPU 上跑。EP 不支援的節點會交給 CPU EP，`get_providers()` 照樣列著它（例如 OpenVINO 看得到內顯卻編譯不了這個模型）。所以載入時開 ONNX Runtime profiling 跑兩次空白畫面，從第二次的節點事件（`args.provider`、`dur`）算各 provider 佔的推論時間，然後 `end_profiling()`（之後不再記錄）並刪掉檔案。GPU 的 EP 佔不到一成：視為這個裝置不能跑這個模型，改用下一個，原因寫「<型號>沒有實際執行這個模型（OpenVINO 把運算交回處理器）」；CUDA 把形狀計算放在 CPU 只佔約 1%，不受影響。一成以上照常使用，處理器佔一成以上時設定頁寫出比例（過半用警示色：「實際上大多在處理器上執行」）。各 provider 的比例進診斷資訊。
 - 分成兩個映像：官方文件說同一個環境只能裝一種 ONNX Runtime 套件，而且 Nvidia 的 CUDA／cuDNN 函式庫壓縮後就有約 1.7 GB。-nvidia 釘在 CUDA 12（`onnxruntime-gpu` 1.26.0、cuDNN 9.11），涵蓋 Maxwell 以後的卡（家用常見的 Pascal，例如 P400、GTX 10 系列）；cuDNN 9.12 起只支援 Turing 以後，所以不升級。要 CUDA 13 可用 build arg `ONNXRUNTIME_GPU`。TensorRT 需要另外數 GB 的函式庫與建引擎時間，不放。
 - Intel 內顯需要容器內的 OpenCL 驅動：Debian trixie 沒有打包，映像內並裝 Intel compute-runtime 26.40（Gen12 以後）與 24.35 的 legacy1 套件（Gen8 到 Gen11，例如 8 到 10 代 Core 的 UHD 630、J4125），下載時驗 SHA-256。
 - Nvidia 卡的使用率與顯示記憶體由 detector 每 10 秒以 nvidia-smi 讀取，主程序以 `ObjectDetection.resources()` 匯出給狀態頁；Intel 內顯沒有便宜的讀法，不提供。
@@ -325,7 +326,8 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 - 管理員在設定頁按「測速」，可選要測哪些裝置（預設目前使用的）。detector 在每個裝置上用內建測試圖（640 寬 JPEG，和實際送來的一樣）先暖機 1.5 秒，再連續推論 10 秒，量每秒幾張（含解碼與前後處理）。測速期間暫停辨識（事件照常由動作建立，過濾模式暫時當作標註），有進度、可取消，結果存在 `/data/detector-benchmark.json`，換了模型或測過的裝置都不在時標示過期。
 - 換算成「大約可以同時處理幾台攝影機」：測得的速度是最佳情況，CPU 只算一半（錄影、解碼與動作偵測也在用），GPU 算八成（解碼與前後處理仍在 CPU）；物件辨識只在有動作時才跑，所以這是「同時有動作」的台數。結論對照目前開了物件辨識的攝影機數與辨識頻率，說明夠不夠用。
 - 執行時持續量測最近 60 秒每秒實際推論幾張、最近 5 分鐘被丟掉的比例；丟掉超過一成，或測速結論顯示同時有動作時會來不及，在設定頁與狀態頁用白話提醒，並建議降低頻率或更換裝置。
-- `detector-selftest` 輸出同樣的測速與換算，實機上不用開介面也拿得到數字。
+- 每筆結果帶實際執行的比例：處理器佔一成以上時在該列寫出來，過半時結論也說明「實際上大多在處理器上執行」；沒有實際執行模型的顯示卡算失敗並附原因。
+- `detector-selftest` 輸出同樣的測速與換算，每個裝置另有一行「實際執行：OpenVINOExecutionProvider 97%、CPUExecutionProvider 3%」，實機上不用開介面也拿得到數字。
 
 ### 模式（單台設定）
 

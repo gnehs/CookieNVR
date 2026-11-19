@@ -495,6 +495,8 @@ export interface ObjectsStatusDto {
   requested: DeviceRef;
   device: InferenceDeviceDto | null;
   fallback: { reason: string; detail: string } | null;
+  /** 推論時間實際花在處理器上的比例（0 到 1）。顯示卡沒接手的運算會交回處理器；CPU 或量不到時為 null */
+  cpuShare: number | null;
   error: string | null;
   /** 選用的模型；format 與 input 在載入後才知道 */
   model: { id: string; name: string; format: string | null; input: [number, number] | null };
@@ -520,12 +522,17 @@ export interface BenchmarkResultDto {
   kind: InferenceDeviceKind;
   name: string;
   ok: boolean;
+  /** 失敗時給使用者看的原因（例如顯示卡沒有實際執行模型）；沒有時只有 error */
+  reason?: string;
+  /** 失敗時的技術訊息，只放在「詳細數字」 */
   error?: string;
   loadMs?: number;
   frames?: number;
   fps?: number;
   msMean?: number;
   msP90?: number;
+  /** 推論時間實際花在處理器上的比例（0 到 1）；CPU 或量不到時沒有 */
+  cpuShare?: number;
   /** 同時有動作、每台每秒辨識 perCameraFps 次時，大約可以撐幾台（已扣掉餘裕，見 src/objects/capacity.ts） */
   cameras?: number;
 }

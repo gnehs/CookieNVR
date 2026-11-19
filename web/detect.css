@@ -218,6 +218,9 @@ details.detect-more[open] > summary .icon { rotate: 90deg; }
 .bench-rows li[data-tone="bad"] .bench-val { color: var(--bad-text); }
 .bench-tag { padding: 1px 8px; border-radius: 99px; background: var(--fill-2); color: var(--text-2); font-size: 12px; font-weight: 600; }
 .bench-tag.best { background: var(--ok-soft); color: var(--ok-text); }
+.bench-note { flex-basis: 100%; font-size: 13px; font-weight: 450; line-height: 1.45; color: var(--muted); }
+.bench-note[data-tone="warn"] { color: var(--warn-text); }
+.bench-rows li[data-tone="warn"] .bench-val { color: var(--warn-text); }
 .bench-detail { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 4px 14px; margin: 4px 0 2px; font-size: 13px; }
 .bench-detail dt { font-weight: 600; color: var(--text-2); }
 .bench-detail dd { margin: 0; color: var(--muted); }

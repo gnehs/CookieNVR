@@ -45,6 +45,20 @@ test("detector messages are parsed defensively", () => {
   expect(parseDetectorMsg(JSON.stringify({ type: "status", state: "ready", device: "gpu", model: {} }))).toBeNull();
 });
 
+test("the share of inference that actually ran on the CPU comes from the detector's placement", () => {
+  const results = [
+    { device: "intel:GPU.0", kind: "intel", name: "UHD 630", ok: true, fps: 30, placement: { OpenVINOExecutionProvider: 0.38, CPUExecutionProvider: 0.62 } },
+    { device: "nvidia:GPU-1", kind: "nvidia", name: "RTX", ok: true, fps: 300, placement: { CUDAExecutionProvider: 1 } },
+    { device: "cpu", kind: "cpu", name: "CPU", ok: true, fps: 20, placement: { CPUExecutionProvider: 1 } },
+    { device: "intel:GPU.1", kind: "intel", name: "Arc", ok: false, reason: "Arc沒有實際執行這個模型", error: "NotOnDevice", placement: { CPUExecutionProvider: 1 } },
+    { device: "nvidia:GPU-2", kind: "nvidia", name: "Old", ok: true, fps: 50 },
+  ];
+  const msg = parseDetectorMsg(JSON.stringify({ type: "bench-result", cancelled: false, results }));
+  if (msg?.type !== "bench-result") throw new Error("not parsed");
+  expect(msg.results.map((r) => r.cpuShare)).toEqual([0.62, 0, undefined, 1, undefined]);
+  expect(msg.results[3]!.reason).toBe("Arc沒有實際執行這個模型");
+});
+
 const cam = "cam1" as CameraId;
 const camera = (objectMode: "off" | "annotate" | "filter"): Camera => ({
   id: cam,

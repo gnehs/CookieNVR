@@ -104,6 +104,16 @@ export function labelsProblem(mode: ObjectMode, labels: readonly string[]): stri
 
 export type ObjectsTone = "ok" | "warn" | "bad" | "busy";
 
+/**
+ * 顯示卡上的推論有多少其實在處理器上跑（顯示卡不支援的運算會交回處理器）。
+ * 一成以下是正常的（形狀計算之類的小運算），不提；過半時速度其實是處理器的，要講清楚。
+ */
+export function cpuShareNote(share: number | null | undefined): { tone: "ok" | "warn"; text: string } | null {
+  if (share === null || share === undefined || share < 0.1) return null;
+  const pct = Math.round(share * 100);
+  return share >= 0.5 ? { tone: "warn", text: `實際上大多在處理器上執行（約 ${pct}% 的運算），顯示卡幫助不大` } : { tone: "ok", text: `約 ${pct}% 的運算在處理器上執行` };
+}
+
 export interface ObjectsView {
   tone: ObjectsTone;
   /** 狀態一行，例如「使用中：Intel UHD Graphics 630」 */
@@ -136,11 +146,13 @@ export function objectsView(status: ObjectsStatusDto): ObjectsView {
       return { tone: "bad", title: "模型無法使用", note: status.error ?? "請換一個模型試試。", warnings: [] };
     case "ready": {
       if (status.paused === "benchmark") return { tone: "busy", title: "測速中，暫停辨識", note: "事件照常記錄，測完會自動恢復。", warnings: [] };
-      const warnings = [status.fallback?.reason, status.warning].filter((w): w is string => !!w);
+      const share = cpuShareNote(status.cpuShare);
+      const warnings = [status.fallback?.reason, share?.tone === "warn" ? `${share.text}。` : null, status.warning].filter((w): w is string => !!w);
+      const note = [speedText(status), share?.tone === "ok" ? share.text : null].filter(Boolean).join("，");
       return {
         tone: warnings.length ? "warn" : "ok",
         title: `使用中：${status.device ? tidyName(status.device.name) : "處理器"}`,
-        note: speedText(status),
+        note: note || null,
         warnings,
       };
     }
