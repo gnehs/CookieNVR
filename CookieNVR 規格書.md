@@ -446,7 +446,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 - 在「帳號 → 連接其他 App」（預設收合）建立，名稱如「Home Assistant」「電視牆」；完整 token 只在建立時顯示一次，格式 `cnvr_…`。
 - Token 繼承建立者的角色；只想給檢視權限時，用一般使用者帳號建 token。
 - 使用方式：`Authorization: Bearer <token>`；快照與串流網址另接受 `?token=`（給無法帶標頭的客戶端）；RTSP 則放在密碼欄。
-- 顯示最後使用時間，可隨時撤銷。
+- 顯示最後使用時間，可隨時撤銷。撤銷 token 或登出 session 後，用它開著的即時事件串流（`/api/stream`）會在下一次 ping（20 秒內）被切斷，HA 因此立刻進入重新驗證。
 
 ## 前端與設定
 
