@@ -110,8 +110,9 @@ describe.skipIf(!hasTools)("against a live RTSP camera (needs ffmpeg, ffprobe an
       const ffprobe = Bun.spawnSync([realEnv.ffprobeBin, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", first]);
       const mediaSec = Number(ffprobe.stdout.toString().trim());
       expect(mediaSec).toBeGreaterThan(2);
-      // The name is truncated to whole seconds, so the wall span may exceed the media by up to ~1 s, never the reverse.
-      expect(mediaSec).toBeLessThanOrEqual(wallSec + 0.3);
+      // The name is truncated to whole seconds, so the wall span may exceed the media by up to ~1 s. The reverse
+      // stays within a GOP (0.31 s seen on ffmpeg 6.1); footage from the analysis phase would add 2 to 3 s.
+      expect(mediaSec).toBeLessThanOrEqual(wallSec + 1);
     } finally {
       fake.kill("SIGTERM");
       await fake.exited;
