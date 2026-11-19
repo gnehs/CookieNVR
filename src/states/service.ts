@@ -50,7 +50,7 @@ const PROGRESS_PUSH_MS = 500;
 const COLLECT_POINTS = 100;
 const COLLECT_COUNT = 24;
 /** Bun.serve 預設的請求本體上限是 128 MB */
-export const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
+const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 const RECENT_READINGS = 10;
 const TICK_MS = 5_000;
 

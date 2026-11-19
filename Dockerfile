@@ -22,7 +22,7 @@ RUN set -eux; \
     grep "[ *]${file}\$" checksums.sha256 | sha256sum -c -; \
     tar -xzf "${file}" mediamtx
 
-# The detector's Python environment and built-in model. Same base image as the final stage, so the
+# The detector's Python environment, the built-in YOLOX model and the state classification backbone (DINOv2-small). Same base image as the final stage, so the
 # venv's bin/python symlink resolves to the same /usr/bin/python3 (3.13) there.
 FROM oven/bun:${BUN_VERSION}-slim AS detector
 ARG VARIANT
@@ -31,7 +31,7 @@ ARG ONNXRUNTIME_GPU=
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3-venv ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-COPY detector/requirements.txt detector/requirements-nvidia.txt detector/builtin-model.json detector/fetch_model.py /src/
+COPY detector/requirements.txt detector/requirements-nvidia.txt detector/builtin-model.json detector/backbone-model.json detector/fetch_model.py /src/
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     case "$VARIANT" in \
