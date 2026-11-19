@@ -151,11 +151,12 @@ def _intel_devices(ort, p: Probe) -> list[Device]:
         ov = str(d.ep_metadata.get("ov_device", ""))
         if not ov.startswith("GPU"):
             continue
-        # OpenVINO 的 GPU plugin 只列 Intel 的 OpenCL 裝置；-nvidia 映像裡還有 Nvidia 的 OpenCL ICD，保險起見再擋一次
-        if getattr(d.device, "vendor_id", INTEL_VENDOR) not in (INTEL_VENDOR, 0):
-            continue
         meta = {**dict(d.device.metadata), **dict(d.ep_metadata)}
         name = next((str(v) for k, v in meta.items() if "name" in k.lower() or "description" in k.lower()), "")
+        # -nvidia 映像裡有 Nvidia 的 OpenCL ICD，OpenVINO 會把 Nvidia 卡列成「… (dGPU)」，而且 vendor_id 回報 0；
+        # 只收確定是 Intel 的：vendor_id 是 Intel，或未知時名稱／廠商欄位寫著 Intel
+        if not is_intel_gpu(getattr(d.device, "vendor_id", 0), str(getattr(d.device, "vendor", "")), name):
+            continue
         found.append(Device(f"intel:{ov}", "intel", name or f"Intel 內顯（{ov}）", ov_device=ov))
     # OpenVINO 不給 PCI 位址；只有一顆 Intel 顯示卡時才能確定是哪一顆
     pcis = intel_pci_addresses()
@@ -163,6 +164,19 @@ def _intel_devices(ort, p: Probe) -> list[Device]:
         d = found[0]
         found[0] = Device(d.id, d.kind, d.name, ov_device=d.ov_device, pci=pcis[0])
     return found
+
+
+_OTHER_VENDORS = ("nvidia", "geforce", "quadro", "amd", "radeon", "apple", "mali", "adreno")
+
+
+def is_intel_gpu(vendor_id: int, vendor: str, name: str) -> bool:
+    """OpenVINO 列出的 GPU 是不是 Intel 的。vendor_id 0 表示 ONNX Runtime 不知道，這時看名稱與廠商字串。"""
+    text = f"{vendor} {name}".lower()
+    if any(v in text for v in _OTHER_VENDORS):
+        return False
+    if vendor_id == INTEL_VENDOR:
+        return True
+    return vendor_id == 0 and "intel" in text
 
 
 def intel_pci_addresses() -> list[str]:
