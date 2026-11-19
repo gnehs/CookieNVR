@@ -103,7 +103,15 @@ export const api = {
   segmentUrl: (id: number) => `/api/segments/${id}`,
   events: (camera: string, start: number, end: number) =>
     get<EventDto[]>(`/events?camera=${encodeURIComponent(camera)}&start=${start}&end=${end}`),
+  /** 所有攝影機在這段時間內還沒結束的事件；事件最長 10 分鐘，since 往前抓 10 分鐘以上就不會漏 */
+  activeEvents: (since: number, until: number) => get<EventDto[]>(`/events?start=${since}&end=${until}`).then((list) => list.filter((e) => e.endMs === null)),
+  /** 開始時間早於 before 的事件，由新到舊；camera 為 null 時是所有攝影機 */
+  eventsBefore: (before: number, limit: number, camera: string | null) =>
+    get<EventDto[]>(`/events?before=${before}&limit=${limit}${camera ? `&camera=${encodeURIComponent(camera)}` : ""}`),
+  event: (id: number) => get<EventDto>(`/events/${id}`),
+  deleteEvent: (id: number) => del(`/events/${id}`),
   eventThumbUrl: (id: number) => `/api/events/${id}/thumb.jpg`,
+  motionUrl: (id: string) => `/api/cameras/${encodeURIComponent(id)}/motion`,
   snapshotUrl: (id: string, t: number) => `/api/cameras/${encodeURIComponent(id)}/snapshot.jpg?t=${t}`,
   exports: () => get<ExportDto[]>("/exports"),
   createExport: (req: ExportRequestDto) => post<ExportDto>("/exports", req),

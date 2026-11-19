@@ -7,6 +7,7 @@ import { cameraStatus } from "../health.ts";
 import { ptzPrefsField, ptzSupportNote } from "../ptz/prefs-field.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
+import { detectSettings } from "./detect-settings.ts";
 import { settingsLayout, settingsSubpage } from "./settings-shell.ts";
 
 /** 網址裡的主機名稱，不含帳密與路徑 */
@@ -241,6 +242,8 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
   const welcome = mode === "welcome";
   const listHref = welcome ? "#/cameras" : "#/settings/cameras";
   const s = fromConfig(existing?.config ?? null);
+  // 第一次使用的引導只問連線，偵測用預設值
+  const detect = welcome ? null : detectSettings(ctx, existing);
   const connKey = (st: FormState) => {
     const r = toConnection(st);
     return "conn" in r ? JSON.stringify(r.conn) : null;
@@ -397,6 +400,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
     rtspSection.hidden = s.type !== "rtsp";
     rtspAdvanced.hidden = s.type !== "rtsp";
     onvifFields.hidden = !s.onvifOn;
+    detect?.setOnvif(s.type === "tapo" || s.onvifOn);
     if (saveBtn.getAttribute("aria-busy") !== "true") saveLabel.textContent = needsTest() ? "測試並儲存" : "儲存變更";
   }
 
@@ -473,6 +477,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
         existing ? check("enabled", "啟用這台攝影機", "停用後不看畫面也不錄影，但保留設定。") : null,
       ),
     ),
+    detect?.el,
     advanced,
   );
 
@@ -487,6 +492,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
       enabled: s.enabled,
       connection: r.conn,
       record: { enabled: s.recEnabled, audio: s.recAudio, direct: s.recDirect },
+      detect: detect?.value() ?? existing?.config.detect,
     };
     const ptz = ptzPrefs.value();
     if (ptz) config.ptz = ptz;

@@ -1,4 +1,4 @@
-import type { CameraDto } from "../src/api-types.ts";
+import type { CameraDto, DetectFrameState } from "../src/api-types.ts";
 import type { CameraId, WorkerStatus } from "../src/types.ts";
 
 export type CameraStatusKind = "recording" | "unstable" | "notRecording" | "offline" | "viewOnly" | "disabled";
@@ -108,3 +108,17 @@ export function assessHealth(input: HealthInput): Health {
 export function alertSummary(issues: Issue[]): string | null {
   return issues.length ? issues.map((i) => i.short).join("、") : null;
 }
+
+/** 有進行中的事件：首頁卡片的提示與事件頁的標示。用主色，不用紅色（紅色只代表需要處理） */
+export const EVENT_ACTIVE = { label: "偵測到動作", badge: "進行中" } as const;
+
+/** 偵測設定頁的即時畫面變化：分數算不出來時的一句話 */
+export const DETECT_FRAME_TEXT: Record<Exclude<DetectFrameState, "ok">, string> = {
+  warmup: "正在熟悉畫面，幾秒後開始",
+  paused: "鏡頭轉動中，暫停偵測",
+  light: "光線突然改變，重新適應中",
+  off: "儲存後開始比對畫面變化",
+};
+
+/** 即時畫面變化右上角的狀態 */
+export const MOTION_LEVEL_TEXT = { calm: "沒有動作", motion: "偵測到動作", event: "事件進行中", lost: "暫時看不到即時變化" } as const;

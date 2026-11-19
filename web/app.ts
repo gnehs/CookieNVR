@@ -9,6 +9,7 @@ import { loginPage, setupPage } from "./pages/auth.ts";
 import { camerasPage } from "./pages/cameras.ts";
 import { cameraPage } from "./pages/camera.ts";
 import { recordingsPage } from "./pages/recordings.ts";
+import { eventsPage } from "./pages/events.ts";
 import { cameraFormPage, settingsCamerasPage } from "./pages/settings-cameras.ts";
 import { settingsStoragePage } from "./pages/settings-storage.ts";
 import { settingsSystemPage } from "./pages/settings-system.ts";
@@ -22,6 +23,7 @@ const routes: Route[] = [
   { pattern: "/login", page: loginPage, access: "public" },
   { pattern: "/cameras", page: camerasPage, access: "user", section: "cameras" },
   { pattern: "/cameras/:id", page: (c) => cameraPage(c, c.params.id!), access: "user", section: "cameras" },
+  { pattern: "/events", page: eventsPage, access: "user", section: "events" },
   { pattern: "/recordings", page: recordingsPage, access: "user", section: "recordings" },
   { pattern: "/settings/cameras", page: settingsCamerasPage, access: "admin", section: "settings" },
   { pattern: "/welcome", page: (c) => cameraFormPage(c, null, "welcome"), access: "admin", bare: true },
@@ -66,6 +68,7 @@ function makeCtx(params: Record<string, string>, query: URLSearchParams, token: 
 
 const NAV = [
   { section: "cameras", href: "#/cameras", label: "攝影機", icon: "camera" },
+  { section: "events", href: "#/events", label: "事件", icon: "activity" },
   { section: "recordings", href: "#/recordings", label: "錄影", icon: "film" },
 ] as const;
 

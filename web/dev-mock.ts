@@ -5,7 +5,8 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CameraDto, EventDto, ExportDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { CameraDto, EventDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import { detectConfigOf, usesPixel } from "../src/detect/config.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import { explainFailure } from "../src/camera/probe.ts";
@@ -17,7 +18,7 @@ import index from "./index.html";
 const PORT = Number(process.env.PORT ?? 48765);
 const cacheDir = join(tmpdir(), "cookienvr-web-mock");
 mkdirSync(cacheDir, { recursive: true });
-const snapFile = join(cacheDir, "snap.jpg");
+const snapFile = join(cacheDir, "snap640.jpg");
 // 三個 60 秒的 fMP4 輪流當作每分鐘的片段；色相不同，畫面上的計時器每段從 0 開始，方便看接縫
 const segFiles = [0, 120, 240].map((hue, i) => {
   const file = join(cacheDir, `seg60-${i}.mp4`);
@@ -34,7 +35,7 @@ const thumbFiles = ["testsrc2", "smptebars", "rgbtestsrc", "testsrc2,hue=h=200"]
   return file;
 });
 if (!existsSync(snapFile)) {
-  Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=1", "-frames:v", "1", snapFile]);
+  Bun.spawnSync(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=1", "-frames:v", "1", snapFile]);
 }
 const snapB64 = existsSync(snapFile) ? Buffer.from(await Bun.file(snapFile).arrayBuffer()).toString("base64") : null;
 
@@ -69,9 +70,9 @@ function addCam(config: CameraConfig) {
   cams.push({ id, position: cams.length, config });
   return cams[cams.length - 1]!;
 }
-addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
+addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "pixel", threshold: 25, minArea: 0.005, cooldownSec: 10, masks: [{ points: [[0.62, 0.04], [0.98, 0.04], [0.98, 0.2], [0.62, 0.2]] }] } });
 addCam({ name: "車庫", enabled: true, connection: { type: "rtsp", mainUrl: "rtsp://u:p@192.168.1.60/s1", subUrl: "rtsp://u:p@192.168.1.60/s2", transport: "tcp" }, record: { enabled: true, audio: false, direct: true } });
-addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
+addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "both", threshold: 15, minArea: 0.01, cooldownSec: 30, masks: [] } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
 addCam({ name: "車道", enabled: true, connection: { type: "tapo", host: "192.168.1.53", username: "nvr", password: "secret123" }, record: { enabled: true, audio: false, direct: false } });
 // 每台攝影機佔用的錄影空間；攝影機刪掉後沒清除的錄影會留在這裡，成為「已刪除的攝影機」
@@ -176,23 +177,123 @@ function dayEvents(camIdx: number, dayStart: number): EventDto[] {
   return out;
 }
 
-function eventsIn(cameraId: string | null, start: number, end: number, limit: number): EventDto[] {
+// ---------- 假的即時事件：每隔一段時間某台開始一筆，十幾秒後結束；結束後留在清單裡 ----------
+const simEvents: EventDto[] = [];
+const deletedEvents = new Set<number>();
+let simSeq = 1;
+const activeEvents = () => simEvents.filter((e) => e.endMs === null && !deletedEvents.has(e.id));
+
+function startSimEvent(c: (typeof cams)[number], lengthMs: number) {
+  const d = detectConfigOf(c.config);
+  const e: EventDto = { id: 5_000_000 + simSeq++, cameraId: c.id, source: d.source, startMs: now(), endMs: null, score: Math.round((0.02 + Math.random() * 0.2) * 100) / 100, labels: [], hasThumb: true };
+  simEvents.push(e);
+  broadcast("event", { phase: "start", event: e });
+  broadcast("motion", { cameraId: c.id, active: true });
+  setTimeout(() => {
+    e.endMs = now();
+    broadcast("event", { phase: "end", event: e });
+    broadcast("motion", { cameraId: c.id, active: false });
+  }, lengthMs);
+}
+
+function simulateEvents() {
+  const idle = cams.filter((c) => c.config.enabled && camDto(c, true).online && detectConfigOf(c.config).enabled && !activeEvents().some((e) => e.cameraId === c.id));
+  const c = idle[Math.floor(Math.random() * idle.length)];
+  if (c) startSimEvent(c, 8_000 + Math.random() * 12_000);
+  setTimeout(simulateEvents, 20_000 + Math.random() * 20_000);
+}
+// 啟動時客廳馬上有一筆持續兩分鐘的，首頁一打開就看得到進行中的樣子
+setTimeout(() => {
+  startSimEvent(cams[0]!, 120_000);
+  setTimeout(simulateEvents, 15_000);
+}, 0);
+
+/** 前門沒有假錄影，只給事件頁一週份量的事件，讓捲動載入有東西可以翻 */
+const frontDoorCache = new Map<number, EventDto[]>();
+function frontDoorEvents(dayStart: number): EventDto[] {
+  const hit = frontDoorCache.get(dayStart);
+  if (hit) return hit;
+  const r = rng(dayStart / MIN + 31337);
+  const cam = cams.find((c) => c.config.name === "前門");
+  const out: EventDto[] = [];
+  if (cam) {
+    for (let i = 0; i < 32; i++) {
+      const start = dayStart + Math.floor(r() * 1440) * MIN + Math.floor(r() * 60_000);
+      out.push({ id: 3_000_000 + daysAgo(dayStart) * 1_000 + i, cameraId: cam.id, source: r() < 0.5 ? "both" : "onvif", startMs: start, endMs: start + 4_000 + Math.round(r() * 50_000), score: Math.round((0.02 + r() * 0.3) * 100) / 100, labels: r() < 0.4 ? ["person"] : [], hasThumb: r() < 0.92 });
+    }
+  }
+  frontDoorCache.set(dayStart, out);
+  return out;
+}
+
+/** 錄影頁用的假事件（只有前兩台、最近三天）、前門一週的事件，加上即時產生的 */
+function allEvents(cameraId: string | null): EventDto[] {
   const t0 = now();
+  const day = (d: number) => localMidnight(localMidnight(t0) - d * DAY + 12 * 3_600_000);
   const out: EventDto[] = [];
   cams.slice(0, 2).forEach((c, camIdx) => {
     if (cameraId && c.id !== cameraId) return;
-    for (let d = localMidnight(start); d < end; d += DAY) {
-      if (daysAgo(d) < 0 || daysAgo(d) > 2) continue;
-      for (const e of dayEvents(camIdx, localMidnight(d + 3_600_000))) {
-        if (e.endMs! > t0) continue;
-        if (e.startMs < end && e.endMs! > start) out.push(e);
-      }
-    }
-    // 一筆進行中的事件，45 秒前開始
-    const live: EventDto = { id: camIdx * 1_000_000 + 999, cameraId: c.id, source: "pixel", startMs: Math.floor(t0 / 1000) * 1000 - 45_000, endMs: null, score: 0.42, labels: ["person"], hasThumb: true };
-    if (camIdx === 0 && live.startMs < end && t0 > start) out.push(live);
+    for (let d = 0; d <= 2; d++) for (const e of dayEvents(camIdx, day(d))) if (e.endMs! <= t0) out.push(e);
   });
-  return out.sort((a, b) => a.startMs - b.startMs || a.id - b.id).slice(0, limit);
+  for (let d = 0; d <= 6; d++) for (const e of frontDoorEvents(day(d))) if (e.endMs! <= t0 && (!cameraId || e.cameraId === cameraId)) out.push(e);
+  for (const e of simEvents) if (!cameraId || e.cameraId === cameraId) out.push(e);
+  return out.filter((e) => !deletedEvents.has(e.id));
+}
+
+function eventsIn(cameraId: string | null, start: number, end: number, limit: number): EventDto[] {
+  return allEvents(cameraId)
+    .filter((e) => e.startMs < end && (e.endMs ?? Infinity) > start)
+    .sort((a, b) => a.startMs - b.startMs || a.id - b.id)
+    .slice(0, limit);
+}
+
+function eventsBefore(cameraId: string | null, before: number, limit: number): EventDto[] {
+  return allEvents(cameraId)
+    .filter((e) => e.startMs < before)
+    .sort((a, b) => b.startMs - a.startMs || b.id - a.id)
+    .slice(0, limit);
+}
+
+/** 假的畫面變化分數：平常是小雜訊，每 9 秒一次起伏，有時越過觸發線；有進行中的事件時持續偏高。靈敏度與遮罩會影響大小 */
+function mockScore(c: (typeof cams)[number], t: number): number {
+  const d = detectConfigOf(c.config);
+  const gain = (25 / d.threshold) * (1 - Math.min(0.6, d.masks.length * 0.2));
+  const noise = 0.0006 + Math.random() * 0.0012;
+  if (activeEvents().some((e) => e.cameraId === c.id)) return Math.min(1, gain * (0.012 + 0.02 * (0.5 + 0.5 * Math.sin(t / 650)) + Math.random() * 0.01));
+  const phase = (t % 9_000) / 9_000;
+  const peak = d.minArea * (0.5 + 1.3 * rng(Math.floor(t / 9_000))());
+  const bump = phase < 0.14 ? Math.sin((Math.PI * phase) / 0.14) * peak : 0;
+  return Math.min(1, gain * (noise + bump));
+}
+
+function motionResponse(c: (typeof cams)[number]): Response {
+  const enc = new TextEncoder();
+  let timer: ReturnType<typeof setInterval>;
+  let n = 0;
+  const body = new ReadableStream<Uint8Array>({
+    start(ctl) {
+      timer = setInterval(() => {
+        const live = cams.find((x) => x.id === c.id);
+        if (!live) return ctl.close();
+        const d = detectConfigOf(live.config);
+        const t = now();
+        const eventActive = activeEvents().some((e) => e.cameraId === c.id);
+        n++;
+        let sample: MotionSampleDto;
+        if (!usesPixel(d)) sample = { at: t, score: null, motion: false, state: "off", eventActive };
+        else if (n <= 10) sample = { at: t, score: null, motion: false, state: "warmup", eventActive };
+        else {
+          const score = mockScore(live, t);
+          sample = { at: t, score, motion: score >= d.minArea, state: "ok", eventActive };
+        }
+        ctl.enqueue(enc.encode(sse("sample", sample)));
+      }, 200);
+    },
+    cancel() {
+      clearInterval(timer);
+    },
+  });
+  return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store" } });
 }
 
 const workers: WorkerStatus[] = [
@@ -433,6 +534,9 @@ function sse(event: string, data: unknown) {
 function broadcastCameras() {
   for (const c of streamClients) c.send(sse("cameras", cams.map((x) => camDto(x, c.admin))));
 }
+function broadcast(event: string, data: unknown) {
+  for (const c of streamClients) c.send(sse(event, data));
+}
 function streamResponse(admin: boolean): Response {
   const enc = new TextEncoder();
   let client: { admin: boolean; send: (text: string) => void };
@@ -441,7 +545,7 @@ function streamResponse(admin: boolean): Response {
     start(ctl) {
       client = { admin, send: (text) => ctl.enqueue(enc.encode(text)) };
       streamClients.add(client);
-      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: [] })}`);
+      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: activeEvents() })}`);
       ping = setInterval(() => client.send(": ping\n\n"), 20_000);
     },
     cancel() {
@@ -543,9 +647,17 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (mm && m === "GET") {
     const c = cams.find((x) => x.id === mm![1]);
     if (!c) return err(404, "找不到攝影機");
+    if (!c.config.enabled) return err(404, "這台攝影機已停用");
     const dto = camDto(c, admin);
     if (!dto.online || !existsSync(snapFile)) return err(503, "目前沒有快照");
     return new Response(Bun.file(snapFile), { headers: { "content-type": "image/jpeg", "cache-control": "no-store" } });
+  }
+  mm = path.match(/^\/cameras\/([^/]+)\/motion$/);
+  if (mm && m === "GET") {
+    if (!admin) return err(403, "需要管理員權限");
+    const c = cams.find((x) => x.id === mm![1]);
+    if (!c || !c.config.enabled) return err(404, "找不到攝影機");
+    return motionResponse(c);
   }
   mm = path.match(/^\/cameras\/([^/]+)\/days$/);
   if (mm && m === "GET") return json(recordedDays(mm[1]!, url.searchParams.get("tz") ?? "UTC"));
@@ -557,7 +669,20 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (exported) return exported;
   if (path === "/events" && m === "GET") {
     const q = url.searchParams;
+    if (q.has("before")) return json(eventsBefore(q.get("camera"), Number(q.get("before")), Number(q.get("limit") ?? 50)));
     return json(eventsIn(q.get("camera"), Number(q.get("start") ?? 0), Number(q.get("end") ?? Number.MAX_SAFE_INTEGER), Number(q.get("limit") ?? 1000)));
+  }
+  mm = path.match(/^\/events\/(\d+)$/);
+  if (mm) {
+    const e = allEvents(null).find((x) => x.id === Number(mm![1]));
+    if (m === "GET") return e ? json(e) : err(404, "找不到這個事件");
+    if (m === "DELETE") {
+      if (!admin) return err(403, "需要管理員權限");
+      if (!e) return err(404, "找不到這個事件");
+      if (e.endMs === null) return err(409, "事件還在進行中，結束後才能刪除");
+      deletedEvents.add(e.id);
+      return noContent();
+    }
   }
   mm = path.match(/^\/events\/(\d+)\/thumb\.jpg$/);
   if (mm && m === "GET") {

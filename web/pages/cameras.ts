@@ -1,7 +1,7 @@
-import type { CameraDto } from "../../src/api-types.ts";
+import type { CameraDto, EventDto } from "../../src/api-types.ts";
 import { api } from "../api.ts";
 import { emptyState, h, icon } from "../dom.ts";
-import { alertSummary, cameraStatus } from "../health.ts";
+import { alertSummary, cameraStatus, EVENT_ACTIVE } from "../health.ts";
 import { onHealth } from "../health-watch.ts";
 import { liveFrame, type LiveFrame } from "../live/frame.ts";
 import { playGrid } from "../live/transport.ts";
@@ -14,30 +14,46 @@ interface Tile {
   el: HTMLAnchorElement;
   frame: LiveFrame;
   update(cam: CameraDto): void;
+  /** 這台有進行中的事件 */
+  setEvent(active: boolean): void;
 }
 
 function tile(initial: CameraDto): Tile {
   const frame = liveFrame(initial);
   const status = h("span", { class: "cam-status" }, h("i", { "aria-hidden": "true" }), h("span"));
   frame.el.append(status);
-  const name = h("span", { class: "cam-name" });
+  const nameText = h("span", { class: "cam-name-text" });
+  const name = h("span", { class: "cam-name" }, h("i", { class: "cam-event-dot", "aria-hidden": "true", title: EVENT_ACTIVE.label }), nameText);
   const el = h("a", { class: "cam-tile" }, frame.el, name);
+  let current = initial;
+  let eventActive = false;
 
   const update = (cam: CameraDto) => {
+    current = cam;
     const st = cameraStatus(cam);
     el.href = `#/cameras/${encodeURIComponent(cam.id)}`;
     el.dataset.status = st.kind;
     el.dataset.tone = st.tone;
     el.title = cam.config.name;
-    el.setAttribute("aria-label", st.quiet ? cam.config.name : `${cam.config.name}，${st.label}`);
-    name.textContent = cam.config.name;
+    el.setAttribute("aria-label", [cam.config.name, st.quiet ? null : st.label, eventActive ? EVENT_ACTIVE.label : null].filter(Boolean).join("，"));
+    nameText.textContent = cam.config.name;
     status.hidden = st.quiet;
     status.lastElementChild!.textContent = st.label;
     frame.update(cam);
   };
 
   update(initial);
-  return { el, frame, update };
+  return {
+    el,
+    frame,
+    update,
+    setEvent(active) {
+      if (active === eventActive) return;
+      eventActive = active;
+      el.toggleAttribute("data-event", active);
+      update(current);
+    },
+  };
 }
 
 export async function camerasPage(ctx: PageCtx): Promise<Node> {
@@ -105,8 +121,17 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
   };
 
   const addBtn = h("a", { class: "btn", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機");
+  const markEvents = (events: EventDto[]) => {
+    for (const [id, t] of tiles) t.setEvent(events.some((e) => e.cameraId === id));
+  };
   render(await api.cameras());
-  ctx.onCleanup(onStatus((s) => ctx.isCurrent() && render(s.cams)));
+  ctx.onCleanup(
+    onStatus((s) => {
+      if (!ctx.isCurrent()) return;
+      render(s.cams);
+      markEvents(s.events);
+    }),
+  );
   if (isAdmin) {
     ctx.onCleanup(
       onHealth(({ health }) => {
