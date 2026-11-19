@@ -85,6 +85,7 @@ const ICONS: Record<string, string> = {
   up: '<path d="M6 15l6-6 6 6"/>',
   down: '<path d="M6 9l6 6 6-6"/>',
   stop: '<rect x="7" y="7" width="10" height="10" rx="2"/>',
+  home: '<path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.5"/><path d="M10 20v-5h4v5"/>',
 };
 
 export function icon(name: keyof typeof ICONS | string, size = 18): HTMLSpanElement {

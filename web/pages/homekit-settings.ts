@@ -11,6 +11,8 @@ export interface HomekitSettings {
   el: HTMLElement;
   /** What the form saves: the section applies changes on its own, the form must not undo them. */
   value(): HomekitCameraConfig | undefined;
+  /** 一句話的現況（給收合的卡片用）：已加入、等待配對、未開啟… */
+  summary(): string;
 }
 
 /** "57725799" → "5772 5799", the grouping Apple prints on HomeKit labels. */
@@ -69,7 +71,7 @@ function requirements(): HTMLElement {
   );
 }
 
-export function homekitSettings(camera: CameraDto): HomekitSettings {
+export function homekitSettings(camera: CameraDto, onUpdate?: () => void): HomekitSettings {
   let dto: HomekitDto | null = null;
   let busy = false;
   let poll: ReturnType<typeof setTimeout> | null = null;
@@ -222,6 +224,7 @@ export function homekitSettings(camera: CameraDto): HomekitSettings {
     parts.push(requirements());
     body.replaceChildren(...parts.filter((p): p is Node => p !== null));
     schedulePoll();
+    onUpdate?.();
   }
 
   void api.homekit(camera.id).then(
@@ -235,5 +238,12 @@ export function homekitSettings(camera: CameraDto): HomekitSettings {
   return {
     el,
     value: () => (dto ? { enabled: dto.enabled } : camera.config.homekit),
+    summary() {
+      if (!dto) return "正在檢查…";
+      if (!dto.systemEnabled) return "未開啟（要先在「設定 → 一般」開啟）";
+      if (!dto.enabled) return blockedReason(dto) && dto.check.state === "blocked" ? "無法加入：畫面格式不支援" : "未開啟";
+      if (dto.pairing?.paired) return "已加入";
+      return dto.status === "failed" ? "無法啟動，請重設配對" : "等待在「家庭」App 加入";
+    },
   };
 }

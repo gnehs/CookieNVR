@@ -1,12 +1,15 @@
 import type { CameraDto, ProbeResult, StreamInfo } from "../../src/api-types.ts";
 import type { CameraConfig, CameraConnection } from "../../src/types.ts";
 import { api } from "../api.ts";
-import { badge, copyButton, emptyState, errMsg, field, formatBytes, h, icon, menuButton, openDialog, PageError, panel, panelSection, switchInput, switchRow, tiles, toast } from "../dom.ts";
+import { badge, copyButton, emptyState, errMsg, formatBytes, h, icon, menuButton, openDialog, PageError, segmented, switchInput, switchRow, tiles, toast } from "../dom.ts";
 import { explainProbe, maskedField, type ProbeField } from "../camera-form-logic.ts";
 import { cameraStatus } from "../health.ts";
 import { ptzPrefsField, ptzSupportNote } from "../ptz/prefs-field.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
+import { sensitivityOf } from "../detect/model.ts";
+import { formCard, type FormCard } from "../ui/form-card.ts";
+import { settingRow, settingsDisclosure } from "../ui/settings-row.ts";
 import { detectSettings } from "./detect-settings.ts";
 import { homekitSettings } from "./homekit-settings.ts";
 import { settingsLayout, settingsSubpage } from "./settings-shell.ts";
@@ -243,9 +246,9 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
   const welcome = mode === "welcome";
   const listHref = welcome ? "#/cameras" : "#/settings/cameras";
   const s = fromConfig(existing?.config ?? null);
-  // 第一次使用的引導只問連線，偵測用預設值
-  const detect = welcome ? null : detectSettings(ctx, existing);
-  const homekit = existing ? homekitSettings(existing) : null;
+  // 新增時只問名稱與連線，偵測用預設值；加入之後再回來調
+  const detect = existing ? detectSettings(ctx, existing) : null;
+  const homekit = existing ? homekitSettings(existing, () => refresh()) : null;
   const connKey = (st: FormState) => {
     const r = toConnection(st);
     return "conn" in r ? JSON.stringify(r.conn) : null;
@@ -291,14 +294,15 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
     return input;
   };
   const check = (key: "enabled" | "onvifOn" | "recEnabled" | "recAudio" | "recDirect", title: string, desc?: string) =>
-    switchRow(
-      switchInput(s[key], (v) => {
+    settingRow({
+      title,
+      desc,
+      input: switchInput(s[key], (v) => {
         s[key] = v;
         refresh();
       }),
-      title,
-      desc,
-    );
+    });
+  const row = (title: string, input: HTMLInputElement, desc?: string, wide = true) => settingRow({ title, desc, input, wide });
 
   const typeTiles = tiles(
     "攝影機類型",
@@ -316,36 +320,38 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
 
   const tapoSection = h(
     "div",
-    { class: "form" },
+    { class: "set-rows" },
     h(
-      "p",
-      { class: "callout" },
-      icon("info"),
-      h("span", null, "帳號密碼請在 Tapo App 的「進階設定 → 相機帳戶」建立，", h("b", null, "不是"), " TP-Link 雲端帳號。"),
+      "div",
+      { class: "set-block" },
+      h("p", { class: "callout" }, icon("info"), h("span", null, "帳號密碼請在 Tapo App 的「進階設定 → 相機帳戶」建立，", h("b", null, "不是"), " TP-Link 雲端帳號。")),
     ),
     // 不用 inputmode="decimal"：iPhone 的數字鍵盤打不出主機名稱
-    field("相機 IP 位址", text("tapoHost", { placeholder: "例如 192.168.1.50", inputmode: "url" }), "建議在路由器把這個位址固定下來。"),
-    h("div", { class: "field-row" }, field("相機帳號", text("tapoUser")), field("相機密碼", secret("tapoPass"))),
+    row("相機 IP 位址", text("tapoHost", { placeholder: "例如 192.168.1.50", inputmode: "url" }), "建議在路由器把這個位址固定下來。"),
+    row("相機帳號", text("tapoUser")),
+    row("相機密碼", secret("tapoPass")),
   );
 
   const rtspSection = h(
     "div",
-    { class: "form" },
-    field("串流網址", urlInput("mainUrl", "rtsp://帳號:密碼@192.168.1.60:554/stream1"), "以 rtsp:// 開頭，通常寫在相機的說明書或 App 裡。帳號密碼可以直接寫在網址中。"),
-    field("低畫質串流網址（選填）", urlInput("subUrl", "rtsp://…/stream2"), "有的話，首頁預覽與動作偵測會更省資源。"),
+    { class: "set-rows" },
+    row("串流網址", urlInput("mainUrl", "rtsp://帳號:密碼@192.168.1.60:554/stream1"), "以 rtsp:// 開頭，通常寫在相機的說明書或 App 裡。帳號密碼可以直接寫在網址中。"),
+    row("低畫質串流網址", urlInput("subUrl", "rtsp://…/stream2"), "選填。有的話，首頁預覽與動作偵測會更省資源。"),
   );
 
   const onvifFields = h(
     "div",
-    { class: "form" },
-    h("div", { class: "field-row" }, field("ONVIF 主機", text("ovHost", { placeholder: "192.168.1.60" })), field("連接埠", text("ovPort", { inputmode: "numeric" }))),
-    h("div", { class: "field-row" }, field("ONVIF 帳號", text("ovUser")), field("ONVIF 密碼", secret("ovPass"))),
+    { class: "set-rows" },
+    row("ONVIF 主機", text("ovHost", { placeholder: "192.168.1.60" })),
+    row("連接埠", text("ovPort", { inputmode: "numeric" }), undefined, false),
+    row("ONVIF 帳號", text("ovUser")),
+    row("ONVIF 密碼", secret("ovPass")),
   );
-  const transportTiles = tiles(
+  const transport = segmented(
     "傳輸方式",
     [
-      { value: "tcp", label: "TCP", desc: "建議，穩定不掉畫面" },
-      { value: "udp", label: "UDP", desc: "延遲較低，網路不穩時容易花屏" },
+      { value: "tcp", label: "TCP" },
+      { value: "udp", label: "UDP" },
     ],
     s.transport,
     (v) => {
@@ -355,46 +361,137 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
   );
   const rtspAdvanced = h(
     "div",
-    { class: "form" },
-    h("div", { class: "field" }, h("span", { class: "legend" }, "傳輸方式"), transportTiles),
+    { class: "set-rows" },
+    settingRow({ title: "傳輸方式", desc: "TCP 穩定不掉畫面，建議使用；UDP 延遲較低，網路不穩時容易花屏。", control: transport }),
     check("onvifOn", "使用 ONVIF", "可以控制鏡頭轉向，並接收相機自己偵測到的事件。"),
     onvifFields,
   );
   const shareUrls = existing
-    ? h(
-        "div",
-        { class: "field" },
-        h("span", { class: "legend" }, "給其他 App 的串流網址"),
-        h("small", { class: "hint" }, "在「設定 → 一般」開啟「讓其他 App 讀取攝影機畫面」後，VLC 或 Home Assistant 可以用這個網址看這台攝影機。"),
-        h(
+    ? settingRow({
+        title: "給其他 App 的串流網址",
+        desc: "在「設定 → 一般」開啟「讓其他 App 讀取攝影機畫面」後，VLC 或 Home Assistant 可以用這個網址看這台攝影機。",
+        control: h(
           "div",
           { class: "form-actions" },
           copyButton("複製串流網址", () => existing!.rtsp.main, { class: "small", done: "已複製串流網址" }),
-          existing.rtsp.sub ? copyButton("複製低畫質串流網址", () => existing!.rtsp.sub!, { class: "small", done: "已複製低畫質串流網址" }) : null,
+          existing.rtsp.sub ? copyButton("複製低畫質網址", () => existing!.rtsp.sub!, { class: "small", done: "已複製低畫質串流網址" }) : null,
         ),
-      )
+      })
     : null;
   const ptzPrefs = ptzPrefsField(existing);
-  const advanced = h(
-    "details",
-    { class: "disclosure" },
-    h("summary", null, icon("chevron", 16), "進階設定", h("small", null, "大多數情況不需要調整")),
-    h(
-      "div",
-      { class: "disclosure-body" },
-      rtspAdvanced,
-      ptzPrefs.el,
-      h("div", { class: "switch-list" }, check("recDirect", "錄影直接連到相機", "影像服務出問題時錄影不受影響，但會多佔用相機一條連線。")),
-      shareUrls,
-    ),
+  const connAdvanced = settingsDisclosure(
+    "進階",
+    () =>
+      [s.type === "rtsp" ? s.transport.toUpperCase() : null, s.type === "rtsp" && s.onvifOn ? "使用 ONVIF" : null, s.recDirect ? "錄影直接連到相機" : null].filter(Boolean).join(" · ") ||
+      "大多數情況不需要調整",
+    rtspAdvanced,
+    check("recDirect", "錄影直接連到相機", "影像服務出問題時錄影不受影響，但會多佔用相機一條連線。"),
+    shareUrls,
   );
-  if (s.type === "rtsp" && (s.transport !== "tcp" || s.onvifOn) || s.recDirect) advanced.open = true;
+  if ((s.type === "rtsp" && (s.transport !== "tcp" || s.onvifOn)) || s.recDirect) connAdvanced.el.open = true;
 
   const name = text("name", { placeholder: "例如：客廳、前門", maxlength: 60 });
   const summary = h("p", { class: "form-error", role: "alert" });
   const copySlot = h("span", { class: "copy-slot" });
   const saveLabel = h("span");
   const saveBtn = h("button", { class: "btn primary", type: "submit" }, saveLabel);
+
+  // ---------- 卡片：編輯時全部收合，摘要一眼看完；新增時只有基本與連線，直接展開 ----------
+  const cards = {
+    basic: formCard(
+      { title: "基本", icon: "edit", open: !existing },
+      row("名稱", name, "會顯示在首頁與錄影頁。"),
+      existing ? check("enabled", "啟用這台攝影機", "停用後不看畫面也不錄影，但保留設定。") : null,
+    ),
+    conn: formCard(
+      { title: "連線", icon: "link", open: !existing },
+      h("div", { class: "set-block" }, h("span", { class: "sr-only" }, "攝影機類型"), typeTiles),
+      tapoSection,
+      rtspSection,
+      connAdvanced.el,
+    ),
+    rec: formCard({ title: "錄影", icon: "rec" }, check("recEnabled", "全天候錄影"), check("recAudio", "錄下聲音")),
+    detect: detect
+      ? formCard(
+          { title: "偵測", icon: "activity", class: "fcard-detect" },
+          detect.el,
+          // ▼ 物件辨識插入點（m4/yolo）：物件辨識的設定放在這裡，緊接在動作偵測之後、同一張卡片裡
+          h("div", { class: "detect-extra", "data-slot": "object-detection" }),
+        )
+      : null,
+    ptz: existing ? formCard({ title: "鏡頭控制", icon: "crosshair" }, h("div", { class: "set-block" }, ptzPrefs.el)) : null,
+    homekit: homekit ? formCard({ title: "Apple 家庭", icon: "home", class: "fcard-homekit" }, homekit.el) : null,
+  };
+  if (cards.ptz) {
+    cards.ptz.el.hidden = true;
+    void ptzPrefs.supported.then((ok) => cards.ptz && (cards.ptz.el.hidden = !ok));
+  }
+  // 排除區域編輯器與畫面變化曲線只在偵測卡片展開時連線
+  if (cards.detect) {
+    const d = cards.detect.el;
+    detect!.setActive(d.open);
+    d.addEventListener("toggle", () => detect!.setActive(d.open));
+  }
+  const cardList = Object.values(cards).filter((c): c is FormCard => c !== null);
+  const cardOf = (node: Element) => cardList.find((c) => c.el.contains(node)) ?? null;
+
+  const removeZone = existing
+    ? h(
+        "section",
+        { class: "danger-zone" },
+        h("div", { class: "danger-text" }, h("b", null, "刪除這台攝影機"), h("p", null, "停止錄影並移除設定；可以選擇是否一起刪除已錄的影片。")),
+        h("button", { class: "btn danger", type: "button", onclick: () => void removeCamera() }, icon("trash", 16), "刪除攝影機"),
+      )
+    : null;
+  async function removeCamera() {
+    if (!existing) return;
+    const usage = await api.system().then((x) => x.usage.find((u) => u.cameraId === existing!.id)?.bytes ?? 0, () => undefined);
+    const purge = await confirmDeleteCamera(existing.config.name, usage);
+    if (purge === null) return;
+    try {
+      await api.deleteCamera(existing.id, purge);
+      toast(`已刪除「${existing.config.name}」`);
+      navigate("/settings/cameras");
+    } catch (e) {
+      toast(errMsg(e), "error");
+    }
+  }
+
+  // ---------- 每張卡片的摘要與「未儲存」 ----------
+  const initial = JSON.stringify(s);
+  const initialDetect = detect ? JSON.stringify(detect.value()) : "";
+  const initialPtz = JSON.stringify(ptzPrefs.value() ?? null);
+  const savedState = JSON.parse(initial) as FormState;
+  const SENS = { low: "低", medium: "中", high: "高", custom: "自訂" } as const;
+  function paintCards() {
+    cards.basic.setSummary(`${s.name.trim() || "還沒取名"}${existing ? ` · ${s.enabled ? "已啟用" : "已停用"}` : ""}`);
+    const host = s.type === "tapo" ? s.tapoHost.trim() : hostOf(s.mainUrl);
+    cards.conn.setSummary(`${s.type === "tapo" ? "Tapo" : "其他攝影機"} · ${host || "還沒填位址"}${s.type === "rtsp" && s.onvifOn ? " · 使用 ONVIF" : ""}`);
+    cards.rec.setSummary(!s.recEnabled ? "不錄影" : s.recAudio ? "全天候錄影 · 錄下聲音" : "全天候錄影 · 不錄聲音");
+    if (cards.detect && detect) {
+      const d = detect.value();
+      const parts = !d.enabled ? ["未開啟"] : ["已開啟"];
+      if (d.enabled) {
+        if (d.source === "onvif") parts.push("相機偵測");
+        else {
+          if (d.source === "both") parts.push("畫面變化＋相機偵測");
+          parts.push(`靈敏度${SENS[sensitivityOf(d.threshold)]}`);
+          if (d.masks.length) parts.push(`${d.masks.length} 個排除區域`);
+        }
+      }
+      cards.detect.setSummary(parts.join(" · "));
+      cards.detect.setFlags({ dirty: !!existing && JSON.stringify(d) !== initialDetect });
+    }
+    cards.ptz?.setSummary(ptzPrefs.summary());
+    cards.ptz?.setFlags({ dirty: JSON.stringify(ptzPrefs.value() ?? null) !== initialPtz });
+    cards.homekit?.setSummary(homekit!.summary());
+    if (!existing) return;
+    const changed = (keys: FieldKey[]) => keys.some((k) => s[k] !== savedState[k]);
+    cards.basic.setFlags({ dirty: changed(["name", "enabled"]) });
+    cards.conn.setFlags({ dirty: connKey(s) !== savedKey || changed(["recDirect"]) || (s.type === "rtsp" && changed(["transport", "onvifOn"])) });
+    cards.rec.setFlags({ dirty: changed(["recEnabled", "recAudio"]) });
+  }
+  const isDirty = () => !existing || cardList.some((c) => c.el.hasAttribute("data-dirty"));
 
   const needsTest = () => !existing || connKey(s) !== savedKey;
   function refresh() {
@@ -403,12 +500,18 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
     rtspAdvanced.hidden = s.type !== "rtsp";
     onvifFields.hidden = !s.onvifOn;
     detect?.setOnvif(s.type === "tapo" || s.onvifOn);
-    if (saveBtn.getAttribute("aria-busy") !== "true") saveLabel.textContent = needsTest() ? "測試並儲存" : "儲存變更";
+    paintCards();
+    connAdvanced.refresh();
+    if (saveBtn.getAttribute("aria-busy") !== "true") {
+      saveLabel.textContent = needsTest() ? "測試並儲存" : "儲存變更";
+      saveBtn.disabled = !isDirty();
+    }
   }
 
   function clearErrors() {
     summary.textContent = "";
     copySlot.replaceChildren();
+    for (const c of cardList) c.setFlags({ error: false });
     for (const input of inputs.values()) {
       input.removeAttribute("aria-invalid");
       const err = document.getElementById(`${input.id}-err`);
@@ -427,12 +530,20 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
     if (!input) return;
     for (const k of [key, ...also]) inputs.get(k)?.setAttribute("aria-invalid", "true");
     const err = h("p", { class: "field-error", id: `${input.id}-err` }, icon("alert-circle", 15), h("span", null, message));
-    input.closest(".field")!.append(err);
+    (input.closest(".set-row") ?? input.closest(".field"))!.append(err);
     input.setAttribute("aria-describedby", [input.getAttribute("aria-describedby"), err.id].filter(Boolean).join(" "));
-    const details = input.closest("details");
-    if (details) details.open = true;
-    input.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
-    input.focus({ preventScroll: true });
+    const card = cardOf(input);
+    card?.setFlags({ error: true });
+    const nested = input.closest<HTMLDetailsElement>("details.set-disclosure");
+    const closed = [card?.el, nested].filter((d): d is HTMLDetailsElement => !!d && !d.open);
+    for (const d of closed) d.open = true;
+    const go = () => {
+      input.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
+      input.focus({ preventScroll: true });
+    };
+    // 剛展開的卡片在展開動畫結束前內容還不能聚焦
+    if (closed.length && !reducedMotion()) setTimeout(go, 300);
+    else go();
   }
 
   const fail = (message: string, key?: FieldKey) => {
@@ -454,35 +565,28 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
       subUrl: ["subUrl", []],
     };
     summary.textContent = help.field ? "連不上這台攝影機，所以還沒儲存" : help.message;
+    cards.conn.setFlags({ error: true });
     if (help.field) fieldError(target[help.field][0], help.message, target[help.field][1]);
     copySlot.replaceChildren(
       copyButton("複製錯誤內容", () => `CookieNVR 測試攝影機連線失敗\n攝影機：${describeConn(conn)}\n錯誤：${error}\n（帳號密碼已省略）`, { class: "small ghost", done: "已複製錯誤內容，可以貼給 AI 或技術人員" }),
     );
   };
 
-  const form = panel(
-    {
-      tag: "form",
-      class: "sticky-foot",
-      foot: [h("div", { class: "foot-status" }, summary, copySlot), h("a", { class: "btn", href: listHref }, welcome ? "稍後再說" : "取消"), saveBtn],
-    },
-    panelSection(null, null, h("div", { class: "narrow" }, field("名稱", name, "會顯示在首頁與錄影頁。"))),
-    panelSection("攝影機類型", null, typeTiles, tapoSection, rtspSection),
-    panelSection(
-      "錄影",
-      null,
-      h(
-        "div",
-        { class: "switch-list" },
-        check("recEnabled", "全天候錄影"),
-        check("recAudio", "錄下聲音"),
-        existing ? check("enabled", "啟用這台攝影機", "停用後不看畫面也不錄影，但保留設定。") : null,
-      ),
+  const form = h(
+    "form",
+    { class: "cam-form", novalidate: true },
+    h("div", { class: "fcards" }, cardList.map((c) => c.el)),
+    h(
+      "div",
+      { class: "form-bar" },
+      h("div", { class: "foot-status" }, summary, copySlot),
+      h("a", { class: "btn", href: listHref }, welcome ? "稍後再說" : "取消"),
+      saveBtn,
     ),
-    detect?.el,
-    homekit?.el,
-    advanced,
+    removeZone,
   );
+  // 偵測、鏡頭控制裡的控制項不經過 bind()，從表單層級重新計算摘要與未儲存
+  for (const type of ["input", "change", "pointerup", "keyup"]) form.addEventListener(type, () => queueMicrotask(refresh));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

@@ -1,0 +1,75 @@
+/* 表單裡可以收合的卡片（web/ui/form-card.ts）：攝影機設定的基本、連線、錄影、偵測… */
+.fcards { display: grid; gap: 12px; }
+details.disclosure.fcard {
+  border: 1px solid var(--border); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-sm);
+  overflow: clip; container-type: inline-size;
+  transition: border-color var(--dur-2) ease;
+}
+details.disclosure.fcard[data-error] { border-color: color-mix(in srgb, var(--bad) 55%, var(--border)); }
+details.disclosure.fcard > summary { min-height: 68px; padding: 12px 16px 12px 14px; gap: 12px; border-radius: 0; font-size: 15px; }
+details.disclosure.fcard[open] > summary { border-bottom: 1px solid var(--border); }
+@media (hover: hover) { details.disclosure.fcard[open] > summary:hover { background: var(--fill); } }
+.fcard-ico { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 11px; background: var(--fill); }
+details.disclosure.fcard > summary .fcard-ico .icon { color: var(--text-2); transform: none; }
+.fcard-text { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
+.fcard-text b { font-weight: 650; font-size: 15px; }
+.fcard-sub { color: var(--muted); font-size: 13px; font-weight: 450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fcard-flags { display: flex; gap: 6px; flex: none; }
+.fcard-flag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.fcard-flag.error { background: var(--bad-soft); color: var(--bad-text); }
+details.disclosure.fcard > summary .fcard-flag.error .icon { color: var(--bad-text); transform: none; }
+.fcard-flag.dirty { background: var(--accent-soft); color: var(--accent-text); }
+.fcard-flag.dirty i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.fcard-chevron { display: inline-flex; flex: none; }
+details.disclosure.fcard > summary .fcard-chevron .icon { color: var(--muted); }
+details.disclosure.fcard[open] > summary .fcard-chevron .icon { transform: rotate(180deg); }
+
+/* 卡片內容：設定列一列一列，中間細線分隔 */
+.fcard-body > *:not([hidden]) ~ *:not([hidden]), .set-rows > *:not([hidden]) ~ *:not([hidden]), .fcard .set-disclosure > .disclosure-body > *:not([hidden]) ~ *:not([hidden]) { border-top: 1px solid var(--border); }
+.fcard-body > .set-rows:empty, .set-rows[hidden] { display: none; }
+.set-block { padding: 16px 20px; }
+.set-row > .field-error { grid-column: 1 / -1; justify-self: end; }
+.set-row:has(> .field-error) input { border-color: var(--bad); }
+/* 搬進卡片的區塊：卡片標題已經寫了名稱，不再重複 */
+.fcard-homekit .hk-head h3 { display: none; }
+.set-row.wide .set-row-control > .segmented, .set-row.wide .set-row-control > .choice { max-width: 100%; }
+@container (max-width: 560px) {
+  .set-row.wide .set-row-control > .segmented { width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .set-row.wide .set-row-control > .segmented span { text-align: center; }
+  .set-row.wide .set-row-control > .choice { width: 100%; }
+}
+.detect-extra:empty { display: none; }
+.set-row:not(.wide) .set-row-control > input[type="text"] { width: 120px; }
+
+/* 底部動作列：黏在視窗底部，長表單也隨時按得到儲存 */
+.form-bar {
+  position: sticky; bottom: 0; z-index: 4; margin-top: 12px;
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px 10px 16px; border: 1px solid var(--border); border-radius: var(--r-xl);
+  background: var(--frame); box-shadow: 0 -10px 24px -18px light-dark(rgb(20 20 30 / 0.3), rgb(0 0 0 / 0.8)), var(--shadow-sm);
+}
+
+/* 刪除這類破壞性動作：跟一般設定分開，放在最下面 */
+.danger-zone {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap;
+  margin-top: 28px; padding: 16px 20px; border-radius: var(--r-xl); border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--border));
+}
+.danger-text b { font-weight: 650; }
+.danger-text p { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+
+@container (max-width: 560px) {
+  .set-block { padding: 14px 16px; }
+  .set-row > .field-error { justify-self: start; }
+}
+/* 手機上底部已經有導覽列，動作列放回卡片下方，不再黏著 */
+@media (max-width: 760px) {
+  .form-bar { position: static; box-shadow: none; }
+}
+@media (max-width: 560px) {
+  details.disclosure.fcard > summary { padding: 12px 14px 12px 12px; }
+  .fcard-flag { padding: 2px 7px; }
+  .form-bar .btn { flex: 1; }
+  .form-bar .foot-status { flex: 1 1 100%; }
+  .danger-zone { padding: 16px; }
+  .danger-zone .btn { width: 100%; }
+}
