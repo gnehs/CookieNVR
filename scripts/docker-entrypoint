@@ -1,0 +1,103 @@
+#!/bin/sh
+# 容器的執行身分。PUID／PGID 有設時，把資料目錄與錄影目錄交給該使用者，再降權執行 CMD；
+# 都沒設（或 PUID=0）時以 root 執行，和沒有這支腳本時一樣。UMASK 在兩種情況都套用。
+# 空字串視為沒設：Unraid 會把範本裡沒填的變數以空字串傳進來。
+set -eu
+
+log() { echo "[entrypoint] $*" >&2; }
+die() { log "$*"; exit 1; }
+
+umask_value=${UMASK:-022}
+case "$umask_value" in
+  ??? | ????) ;;
+  *) die "UMASK 必須是 3 或 4 位的八進位數字（例如 022、002），收到「${umask_value}」" ;;
+esac
+case "$umask_value" in
+  *[!0-7]*) die "UMASK 必須是 3 或 4 位的八進位數字（例如 022、002），收到「${umask_value}」" ;;
+esac
+umask "$umask_value"
+
+# 數字或空字串；去掉前導零，和 stat 的輸出比對時才一致。
+id_value() {
+  v=$2
+  case "$v" in
+    *[!0-9]*) die "$1 必須是數字（例如 Unraid 的 PUID=99、PGID=100），收到「${v}」" ;;
+  esac
+  while :; do
+    case "$v" in 0?*) v=${v#0} ;; *) break ;; esac
+  done
+  echo "$v"
+}
+puid=$(id_value PUID "${PUID:-}")
+pgid=$(id_value PGID "${PGID:-}")
+# 只設其中一個時，另一個用同一個數字（PUID=1000 就是 1000:1000）。
+[ -n "$puid" ] || puid=$pgid
+[ -n "$pgid" ] || pgid=$puid
+
+data_dir=${DATA_DIR:-/data}
+owner_file="$data_dir/.cookienvr-owner"
+
+if [ "$(id -u)" != 0 ]; then
+  # 已經用 user: 或 --user 以一般使用者啟動：沒有權限 chown 或切換身分，照常執行。
+  [ -z "$puid" ] || log "容器已經以 uid $(id -u) 執行，略過 PUID／PGID"
+  exec "$@"
+fi
+
+if [ -z "$puid" ] || [ "$puid" = 0 ]; then
+  # 以 root 執行時新檔案會歸 root；刪掉紀錄，之後改設 PUID 時才會重新整理擁有者。
+  rm -f "$owner_file"
+  exec "$@"
+fi
+
+# 錄影的預設位置，判斷方式和 src/recordings-dir.ts 一樣：RECORDINGS_DIR，
+# 否則另外掛進來的 /recordings，否則資料目錄底下（已包含在資料目錄裡）。
+rec_dir=
+if [ -n "${RECORDINGS_DIR:-}" ]; then
+  rec_dir=$RECORDINGS_DIR
+elif [ -d /recordings ] && [ "$(stat -c %d /recordings)" != "$(stat -c %d /)" ]; then
+  rec_dir=/recordings
+fi
+
+want="$puid:$pgid $data_dir $rec_dir"
+fix=
+for d in "$data_dir" ${rec_dir:+"$rec_dir"}; do
+  mkdir -p "$d"
+  [ "$(stat -c %u:%g "$d")" = "$puid:$pgid" ] || fix=1
+done
+[ "$(cat "$owner_file" 2>/dev/null || true)" = "$want" ] || fix=1
+
+# 錄影目錄可能有幾十萬個檔案，只在第一次、或身分改變時整個走一遍，平常啟動不掃。
+if [ -n "$fix" ]; then
+  ok=1
+  for d in "$data_dir" ${rec_dir:+"$rec_dir"}; do
+    log "把 $d 的擁有者改成 $puid:$pgid（第一次使用這組 PUID／PGID 才會做，檔案多時要等一下）"
+    find "$d" \( ! -user "$puid" -o ! -group "$pgid" \) -exec chown -h "$puid:$pgid" {} + || ok=
+  done
+  if [ -n "$ok" ]; then
+    echo "$want" > "$owner_file"
+    chown "$puid:$pgid" "$owner_file"
+  else
+    log "有些檔案改不了擁有者（例如 NFS 的 root_squash），請在主機上把這些目錄交給 $puid:$pgid"
+  fi
+fi
+
+# 顯示卡的裝置節點通常只開放給 render／video 群組，把它們的 gid 加進補充群組。
+# Nvidia 的節點（/dev/nvidia*）一般是 0666，不需要群組；不是的話一樣加。
+groups=$pgid
+for node in /dev/dri/renderD* /dev/dri/card* /dev/nvidia*; do
+  [ -c "$node" ] || continue
+  gid=$(stat -c %g "$node")
+  if [ "$gid" = 0 ]; then
+    case "$(stat -c %A "$node")" in
+      ???????rw?) ;;
+      *) log "$node 屬於 root 群組，uid $puid 可能無法使用；請在主機上調整權限，或不要設 PUID" ;;
+    esac
+    continue
+  fi
+  case ",$groups," in *",$gid,"*) ;; *) groups="$groups,$gid" ;; esac
+done
+
+# root 的 HOME（/root）其他使用者不能寫
+export HOME=/tmp
+log "以 uid $puid、gid $pgid（補充群組 $groups）、umask $umask_value 執行"
+exec setpriv --reuid="$puid" --regid="$pgid" --groups="$groups" --inh-caps=-all -- "$@"

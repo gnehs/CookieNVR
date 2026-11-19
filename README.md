@@ -29,6 +29,9 @@ services:
     container_name: cookienvr
     restart: unless-stopped
     ports: ["8765:8765", "8554:8554"]
+    environment:
+      - PUID=99    # 以這個使用者執行（Unraid 慣例 99:100）；不設就以 root 執行
+      - PGID=100
     volumes:
       - /path/to/appdata:/data            # 資料庫、縮圖、設定：建議放 SSD
       - /path/to/recordings:/recordings   # 錄影：量大，放一般硬碟即可
@@ -38,6 +41,7 @@ services:
 
 - `8765` 是網頁與 API，`8554` 是 RTSP 轉發；主機上的埠要和容器內相同。
 - 沒掛 `/recordings` 時，錄影放在 `/data/recordings`。
+- 設了 `PUID`／`PGID` 時，啟動時會把 `/data` 與錄影目錄交給這個使用者。第一次（或改了數字）會把整個目錄走一遍，錄影多時要等一下，之後就不再掃。`UMASK`（預設 `022`）決定新檔案的權限，`002` 讓同群組也能改。在設定頁把儲存路徑改到別的掛載點前，先在主機上把那個目錄交給同一個使用者。
 - 要讓 Home Assistant 自動發現，或使用 Apple 家庭，改用 host 網路（`network_mode: host`，拿掉 `ports`）。
 
 完整的設定（host 網路、Intel 內顯、Nvidia）見 [`docker-compose.example.yml`](docker-compose.example.yml)。
@@ -55,10 +59,10 @@ services:
 
 ### 顯示卡（選用）
 
-- **Intel 內顯**：加上 `devices: ["/dev/dri:/dev/dri"]`。
+- **Intel 內顯**：加上 `devices: ["/dev/dri:/dev/dri"]`。設了 `PUID` 時，容器會自動加入裝置的群組。
 - **Nvidia**：主機裝好 NVIDIA Container Toolkit，映像改用 `edge-nvidia`，並以 `runtime: nvidia` 或 `--gpus all` 啟動。
 
-設好後可以在容器裡檢查每張卡實際能做什麼，輸出可以直接貼到 issue：
+設好後可以在容器裡檢查每張卡實際能做什麼，輸出可以直接貼到 issue（`docker exec` 預設以 root 執行；設了 `PUID` 時加上 `-u 99:100` 會更接近 NVR 實際的權限）：
 
 ```bash
 docker exec cookienvr detector-selftest

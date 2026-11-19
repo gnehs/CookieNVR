@@ -295,7 +295,7 @@ def create_session(ort, model_path: str, device: Device, p: Probe):
         match = [d for d in ort.get_ep_devices() if d.ep_name == "OpenVINOExecutionProvider" and d.ep_metadata.get("ov_device") == device.ov_device]
         if not match:
             raise RuntimeError(f"OpenVINO 找不到 {device.ov_device}，通常是缺少 Intel GPU 驅動或沒掛入 /dev/dri")
-        so.add_provider_for_devices([match[0]], {"cache_dir": os.environ.get("OPENVINO_CACHE_DIR", "/tmp/cookienvr-openvino")})
+        so.add_provider_for_devices([match[0]], {"cache_dir": os.environ.get("OPENVINO_CACHE_DIR", f"/tmp/cookienvr-openvino-{os.getuid()}")})
         return ort.InferenceSession(model_path, sess_options=so)
     raise ValueError(f"unknown device kind {device.kind}")
 

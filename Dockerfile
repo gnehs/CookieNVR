@@ -125,8 +125,8 @@ COPY package.json bun.lock tsconfig.json ./
 RUN bun install --production --frozen-lockfile
 COPY detector ./detector
 COPY --from=detector /models ./detector/models
-COPY scripts/detector-selftest scripts/video-selftest scripts/video-selftest.ts ./scripts/
-RUN chmod +x scripts/detector-selftest scripts/video-selftest \
+COPY scripts/detector-selftest scripts/video-selftest scripts/video-selftest.ts scripts/docker-entrypoint ./scripts/
+RUN chmod +x scripts/detector-selftest scripts/video-selftest scripts/docker-entrypoint \
  && ln -s /app/scripts/detector-selftest /usr/local/bin/detector-selftest \
  && ln -s /app/scripts/video-selftest /usr/local/bin/video-selftest
 COPY src ./src
@@ -150,5 +150,6 @@ EXPOSE 8765 8554
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD ["bun", "-e", "const r = await fetch(`http://127.0.0.1:${process.env.PORT}/api/info`); process.exit(r.ok ? 0 : 1)"]
 
-ENTRYPOINT ["tini", "-g", "--"]
+# PUID／PGID／UMASK：見 scripts/docker-entrypoint。它 exec 主程序，tini 的訊號仍直接送到 bun。
+ENTRYPOINT ["tini", "-g", "--", "/app/scripts/docker-entrypoint"]
 CMD ["bun", "run", "src/main.ts"]

@@ -21,10 +21,13 @@
   <CPUset/>
   <DonateText/>
   <DonateLink/>
-  <Requires>顯示卡為選用。Intel 內顯：在 Extra Parameters 加上 --device=/dev/dri。Nvidia：安裝 Nvidia Driver 外掛，Repository 改成 ghcr.io/gnehs/cookienvr:edge-nvidia，Extra Parameters 加上 --runtime=nvidia，並新增變數 NVIDIA_VISIBLE_DEVICES=all 與 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video。要讓 Home Assistant 自動發現或使用 Apple 家庭時，Network Type 改成 Host 或 br0（兩者都靠 mDNS）。</Requires>
+  <Requires>顯示卡為選用。Intel 內顯：在 Extra Parameters 加上 --device=/dev/dri；以 PUID 執行時會自動加入 /dev/dri 裝置的群組，不需要另外設定。Nvidia：安裝 Nvidia Driver 外掛，Repository 改成 ghcr.io/gnehs/cookienvr:edge-nvidia，Extra Parameters 加上 --runtime=nvidia，並新增變數 NVIDIA_VISIBLE_DEVICES=all 與 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video（Nvidia 的裝置所有人都能用，PUID 不影響）。在設定頁把儲存路徑改到其他掛載點前，先在主機上把該目錄交給 PUID:PGID（例如 chown -R 99:100）。要讓 Home Assistant 自動發現或使用 Apple 家庭時，Network Type 改成 Host 或 br0（兩者都靠 mDNS）。</Requires>
   <Config Name="WebUI" Target="8765" Default="8765" Mode="tcp" Description="網頁介面與 API" Type="Port" Display="always" Required="true" Mask="false">8765</Config>
   <Config Name="RTSP" Target="8554" Default="8554" Mode="tcp" Description="RTSP 轉發，給 Home Assistant 與其他軟體取得串流。主機埠必須和容器埠相同（8554），介面顯示的 RTSP 網址用的是這個埠。" Type="Port" Display="always" Required="true" Mask="false">8554</Config>
   <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/cookienvr" Mode="rw" Description="資料庫、縮圖與設定。量小但讀寫頻繁，建議放 SSD（快取池）。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/cookienvr</Config>
   <Config Name="Recordings" Target="/recordings" Default="/mnt/user/recordings/cookienvr" Mode="rw" Description="錄影檔。量大，放一般硬碟的共享資料夾即可。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/recordings/cookienvr</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="以這個使用者 ID 執行。啟動時會把 /data 與錄影目錄交給它（第一次或改了數字時會整個走一遍，錄影多時要等一下）。清空則以 root 執行。" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="以這個群組 ID 執行。" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="UMASK" Target="UMASK" Default="022" Mode="" Description="新檔案的權限遮罩。002 讓同群組的使用者也能修改、刪除錄影檔。" Type="Variable" Display="advanced" Required="false" Mask="false">022</Config>
   <TailscaleStateDir/>
 </Container>

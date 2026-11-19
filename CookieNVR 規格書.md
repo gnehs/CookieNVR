@@ -56,12 +56,16 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 | `PORT` | 選用 | 覆寫網頁 port |
 | `DISCOVERY` | 選用 | `false` 時不在區域網路上廣播（預設開啟） |
 | `PUBLIC_PORT` | 選用 | mDNS 廣播的網頁埠，預設同 `PORT`；對外看到的埠不同時才需要 |
+| `PUID`／`PGID` | 選用 | 執行身分（Unraid 慣例 `99`／`100`）。都不設或 `PUID=0` 時以 root 執行；只設一個時另一個用同一個數字 |
+| `UMASK` | 選用 | 新檔案的權限遮罩，預設 `022`；`002` 讓同群組可寫 |
+
+**執行身分**：映像的 entrypoint（`scripts/docker-entrypoint`，tini 之後、主程序之前）在設了 `PUID` 時先確保資料目錄與錄影的預設位置（`RECORDINGS_DIR`，否則另外掛進來的 `/recordings`；判斷方式同 `src/recordings-dir.ts`）歸 `PUID:PGID`，再用 `setpriv` 降權並 `exec` 主程序，所有 worker 跟著以同一個身分執行，`docker stop` 的訊號照樣直接送到主程序。錄影可能有幾十萬個檔案，所以只在第一次、或身分改變時整個走一遍（只改擁有者不符的檔案），由 `/data/.cookienvr-owner` 記下上次套用的身分與目錄；平常啟動只比對最上層。以 root 執行時刪掉這個紀錄，之後再設 `PUID` 就會重新整理。`/dev/dri` 底下裝置節點的群組自動加進補充群組；Nvidia 的節點一般是 0666，不需要處理。容器已經用 `user:`／`--user` 以一般使用者啟動時，entrypoint 只套用 `UMASK`，其餘略過，掛載目錄要自己先給對權限。設定頁改的儲存路徑存在資料庫裡，entrypoint 不會去修正：改到新位置前，先在主機上把那個目錄交給 `PUID:PGID`（或改設 `RECORDINGS_DIR`，讓 entrypoint 一併處理）。主程序寫入的位置只有資料目錄、錄影目錄與 `/tmp`（detector 的 Unix socket）。
 
 時區不需要設定：顯示一律用瀏覽器的時區，錄影檔名與資料庫一律存 UTC。
 
 RTSP 轉發的主機埠要和容器內相同（預設 `8554:8554`）：App 顯示給使用者的 RTSP 網址用的是容器內的埠。
 
-容器驗證：`bun scripts/docker-e2e.ts` 建置映像，起一個假相機容器與一個 NVR 容器，經 HTTP API 走完初始設定、測試連線、錄影（經轉發與直連各一台）、下載片段、快照、RTSP 帳密、強制結束 ffmpeg 與 MediaMTX、`docker stop`、同一個 volume 重啟與 SIGKILL 後重啟，並以 `TZ=Asia/Taipei` 確認片段檔名仍是 UTC；最後在容器內跑 `detector-selftest`，開啟 CPU 物件辨識後確認街景假相機（`street;person=…` 場景）的事件標上 `person`。失敗時印出是哪一步，結束時清掉自己建立的容器、volume 與 network。CI 在 PR 與 main 上跑它（約 8 分鐘）。映像體積靠移除 ffmpeg 連帶裝進來、但錄影用不到的 Mesa 與 LLVM 瘦身（約 250 MB）。
+容器驗證：`bun scripts/docker-e2e.ts` 建置映像，起一個假相機容器與一個 NVR 容器，經 HTTP API 走完初始設定、測試連線、錄影（經轉發與直連各一台）、下載片段、快照、RTSP 帳密、強制結束 ffmpeg 與 MediaMTX、`docker stop`、同一個 volume 重啟與 SIGKILL 後重啟，並以 `TZ=Asia/Taipei` 確認片段檔名仍是 UTC；從「同一個 volume 重啟」起改設 `PUID=99`、`PGID=100`、`UMASK=002`（root 產生過資料後才設 PUID 的升級情境），確認擁有者被修正、第二次啟動不再整個走一遍、所有程序以 99:100 執行、新片段的權限是 `rw-rw-r--`；最後在容器內跑 `detector-selftest`，開啟 CPU 物件辨識後確認街景假相機（`street;person=…` 場景）的事件標上 `person`，再以 PUID 身分確認 `docker stop` 乾淨結束。失敗時印出是哪一步，結束時清掉自己建立的容器、volume 與 network。CI 在 PR 與 main 上跑它（約 8 分鐘）。映像體積靠移除 ffmpeg 連帶裝進來、但錄影用不到的 Mesa 與 LLVM 瘦身（約 250 MB）。
 
 環境變數只管「容器怎麼跑」，不含任何攝影機或功能設定。第一次開啟網頁會進入初始設定，建立管理員帳號。
 
@@ -80,7 +84,8 @@ services:
     # devices: ["/dev/dri:/dev/dri"]
     # 物件辨識用 Nvidia：映像改用 :latest-nvidia，並加上
     # runtime: nvidia
-    # environment: ["NVIDIA_VISIBLE_DEVICES=all"]
+    # 以及 environment 裡的 NVIDIA_VISIBLE_DEVICES=all
+    environment: ["PUID=99", "PGID=100"]
 ```
 
 完整註解版（含 render 群組與 `--gpus all` 的 compose 寫法）在 repo 的 `docker-compose.example.yml`。

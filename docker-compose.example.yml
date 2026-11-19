@@ -14,8 +14,15 @@ services:
     # 自動發現的相關環境變數（都是選用）：
     #   DISCOVERY=false   不在區域網路上廣播
     #   PUBLIC_PORT=8765  廣播出去的網頁埠；只有對外看到的埠和 PORT 不同時（例如 br0 加埠轉址）才需要
-    # 要設時區就加 environment: ["TZ=Asia/Taipei"]（和下面的 Nvidia 設定合併成同一個清單）。
-    # 錄影檔名一律是 UTC，不受時區影響。
+    # 錄影檔名一律是 UTC，不受時區影響；要設時區就在 environment 加 TZ=Asia/Taipei。
+    environment:
+      # 執行身分（選用）。都不設時以 root 執行。設了之後，啟動時把 /data 與錄影目錄交給這個 uid:gid，
+      # 再以它執行（Unraid 慣例是 99:100）；只設其中一個時，另一個用同一個數字。
+      # 第一次（或改了數字）會把整個目錄走一遍修正擁有者，錄影多時要等一下；之後啟動只看最上層，不再掃。
+      - PUID=99
+      - PGID=100
+      # 新檔案的權限遮罩，預設 022；002 讓同群組的使用者也能改、刪錄影檔。
+      - UMASK=022
     volumes:
       # 資料庫、縮圖、設定：量小但讀寫頻繁，建議放 SSD
       - /mnt/user/appdata/cookienvr:/data
@@ -25,16 +32,18 @@ services:
 
     # 物件辨識或影像硬體解碼用 Intel 內顯（amd64；硬體解碼兩種映像都可以，物件辨識要 latest）：
     # devices: ["/dev/dri:/dev/dri"]
-    # 容器預設以 root 執行，不需要群組；用 user: 改成一般使用者時，再加上主機 render 群組的 gid
-    # （主機上執行 stat -c %g /dev/dri/renderD128 取得）：
+    # 設了 PUID 時，容器會自動把 /dev/dri 裝置的群組加進去，不需要 group_add。
+    # 不用 PUID、改用 user: 直接以一般使用者啟動時，才要自己加上主機 render 群組的 gid
+    # （主機上執行 stat -c %g /dev/dri/renderD128 取得），掛載的目錄也要先交給那個使用者：
     # group_add: ["<render gid>"]
 
     # 用 Nvidia（主機要裝好 NVIDIA Container Toolkit，Unraid 是 Nvidia Driver 外掛）：
     # 物件辨識要把 image 改成 ghcr.io/gnehs/cookienvr:latest-nvidia；只用影像硬體解碼（NVDEC）時 latest 也可以。
     # 硬體解碼需要驅動的 video 能力（libnvcuvid）：映像已預設 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video，
     # 這裡又明寫一次，免得 Unraid 範本或其他設定把它蓋成只有 compute,utility。
+    # Nvidia 的裝置節點（/dev/nvidia*）一般所有人可讀寫，設了 PUID 也照常能用。
     # runtime: nvidia
-    # environment: ["NVIDIA_VISIBLE_DEVICES=all", "NVIDIA_DRIVER_CAPABILITIES=compute,utility,video"]
+    # 並在上面的 environment 加上 NVIDIA_VISIBLE_DEVICES=all 與 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
     # 不用 runtime: nvidia 的寫法（等同 docker run --gpus all）：capabilities 要列出 video
     # deploy:
     #   resources:
