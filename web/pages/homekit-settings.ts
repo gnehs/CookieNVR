@@ -37,11 +37,16 @@ function qrCode(payload: string): SVGSVGElement {
   return svg;
 }
 
+function codecName(codec: string | null): string {
+  if (codec === "hevc") return "H.265";
+  return codec ? codec.toUpperCase() : "不支援的格式";
+}
+
 function blockedReason(dto: HomekitDto): string | null {
   if (!dto.systemEnabled) return null;
   if (dto.check.state === "blocked") {
     return dto.check.reason === "not-h264"
-      ? `這台攝影機的主畫面是 ${dto.check.videoCodec?.toUpperCase() ?? "不支援的格式"}，家庭 App 只支援 H.264。在攝影機的 App 裡把主畫面改成 H.264 後，就可以開啟。`
+      ? `這台攝影機的主畫面是 ${codecName(dto.check.videoCodec)}，家庭 App 只支援 H.264。在攝影機的 App 裡把主畫面改成 H.264 後，就可以開啟。`
       : "讀到的主畫面沒有影像，無法加入。";
   }
   if (dto.check.state === "unknown") return "目前讀不到這台的畫面，等它連上後再開啟。";
@@ -142,7 +147,7 @@ export function homekitSettings(camera: CameraDto): HomekitSettings {
           "ol",
           { class: "hk-steps" },
           h("li", null, "打開「家庭」App，點右上角的 ＋，選「加入配件」。"),
-          h("li", null, "掃描左邊的 QR code。掃不到時選「更多選項」，點這台攝影機，再輸入配對碼。"),
+          h("li", null, "掃描這個 QR code。用同一支手機開這一頁時，改選「更多選項」，點這台攝影機，再輸入配對碼。"),
           h("li", null, "出現「未認證的配件」時選「仍要加入」。"),
         ),
       ),
@@ -162,7 +167,7 @@ export function homekitSettings(camera: CameraDto): HomekitSettings {
           "p",
           { class: "hk-muted" },
           "要先到 ",
-          h("a", { class: "text-link", href: "#/settings/system" }, "設定 → 系統"),
+          h("a", { class: "text-link", href: "#/settings/system" }, "設定 → 一般"),
           " 開啟「Apple 家庭」，這裡才能使用。",
         ),
       );
@@ -187,7 +192,7 @@ export function homekitSettings(camera: CameraDto): HomekitSettings {
     }
     if (d.enabled && d.systemEnabled) {
       parts.push(statusLine(d), pairingCard(d));
-      if (d.pairing) {
+      if (d.pairing && (d.pairing.paired || d.status === "failed")) {
         parts.push(
           h(
             "div",

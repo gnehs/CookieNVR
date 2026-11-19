@@ -9,6 +9,7 @@ export async function settingsSystemPage(_ctx: PageCtx): Promise<Node> {
   const name = h("input", { type: "text", required: true, maxlength: 40, autocomplete: "off", name: "siteName" });
   name.value = settings.siteName;
   const rtsp = switchInput(settings.rtsp.externalEnabled);
+  const homekit = switchInput(settings.homekit.enabled);
   const error = h("p", { class: "form-error", role: "alert" });
   const save = h("button", { class: "btn primary", type: "submit" }, "儲存變更");
   const form = panel(
@@ -29,6 +30,21 @@ export async function settingsSystemPage(_ctx: PageCtx): Promise<Node> {
         ),
       ),
     ),
+    panelSection(
+      null,
+      null,
+      switchRow(homekit, "Apple 家庭（實驗性）", "讓攝影機加入 iPhone 的「家庭」App。開啟後，到每台攝影機的設定裡加入。"),
+      h(
+        "details",
+        { class: "more" },
+        h("summary", null, "使用前要知道"),
+        h(
+          "p",
+          null,
+          "iPhone 是在家裡的網路上找到攝影機的，所以 CookieNVR 的容器要用 host 網路（或給它自己的區網 IP）。要收到動作通知、在外面看畫面，家裡要有當作家庭中樞的 Apple TV、HomePod 或 iPad；想讓 Apple 保存動作片段，還要有含安全錄影的 iCloud+ 方案。這是實驗性功能，畫質與錄影是否成功以實際使用為準。",
+        ),
+      ),
+    ),
   );
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -36,7 +52,7 @@ export async function settingsSystemPage(_ctx: PageCtx): Promise<Node> {
     if (!name.value.trim()) return void (error.textContent = "請填寫站點名稱");
     save.disabled = true;
     try {
-      const res = await api.updateSettings({ siteName: name.value.trim(), rtsp: { externalEnabled: rtsp.checked } });
+      const res = await api.updateSettings({ siteName: name.value.trim(), rtsp: { externalEnabled: rtsp.checked }, homekit: { ...settings.homekit, enabled: homekit.checked } });
       state.siteName = res.siteName;
       document.title = res.siteName;
       window.dispatchEvent(new Event("sitenamechange"));

@@ -8,6 +8,7 @@ import { ptzPrefsField, ptzSupportNote } from "../ptz/prefs-field.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 import { detectSettings } from "./detect-settings.ts";
+import { homekitSettings } from "./homekit-settings.ts";
 import { settingsLayout, settingsSubpage } from "./settings-shell.ts";
 
 /** 網址裡的主機名稱，不含帳密與路徑 */
@@ -244,6 +245,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
   const s = fromConfig(existing?.config ?? null);
   // 第一次使用的引導只問連線，偵測用預設值
   const detect = welcome ? null : detectSettings(ctx, existing);
+  const homekit = existing ? homekitSettings(existing) : null;
   const connKey = (st: FormState) => {
     const r = toConnection(st);
     return "conn" in r ? JSON.stringify(r.conn) : null;
@@ -478,6 +480,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
       ),
     ),
     detect?.el,
+    homekit?.el,
     advanced,
   );
 
@@ -493,6 +496,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
       connection: r.conn,
       record: { enabled: s.recEnabled, audio: s.recAudio, direct: s.recDirect },
       detect: detect?.value() ?? existing?.config.detect,
+      homekit: homekit?.value(),
     };
     const ptz = ptzPrefs.value();
     if (ptz) config.ptz = ptz;

@@ -5,10 +5,11 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CameraDto, EventDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { CameraDto, HomekitDto, EventDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import { detectConfigOf, usesPixel } from "../src/detect/config.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
+import { setupUri } from "../src/homekit/identity.ts";
 import { explainFailure } from "../src/camera/probe.ts";
 import { exportFileName } from "../src/export/filename.ts";
 import { planExport } from "../src/export/plan.ts";
@@ -464,6 +465,56 @@ function onvifProbeOf(conn: any): OnvifProbeDto {
 // 開發用開關：MOCK_PTZ_DOWN=1 啟動，或 POST /api/mock/ptz?down=1&fail=1&delay=300 即時切換。
 // down：GET 能力回 503（連不上）；fail：move 回 502；delay：每個 PTZ 請求多等幾毫秒
 const ptzFault = { down: process.env.MOCK_PTZ_DOWN === "1", fail: false, delay: 0 };
+// ---------- Apple 家庭：車庫是 H.265（不能開）、車道的關鍵幀 6 秒（警告）；開啟 2 秒後發布，20 秒後當作 iPhone 已配對 ----------
+const homekitState = new Map<string, { code: string; setupUri: string; since: number }>();
+function homekitDto(cam: (typeof cams)[number]): HomekitDto {
+  const enabled = cam.config.homekit?.enabled === true;
+  const st = homekitState.get(cam.id);
+  const check: HomekitDto["check"] = !cam.config.enabled
+    ? { state: "unknown" }
+    : cam.config.name === "車庫"
+      ? { state: "blocked", reason: "not-h264", videoCodec: "hevc" }
+      : { state: "ok", keyframeIntervalSec: cam.config.name === "車道" ? 6 : 2, warning: cam.config.name === "車道" ? "keyframe-interval" : null };
+  const on = enabled && settings.homekit.enabled && cam.config.enabled;
+  const age = st ? now() - st.since : 0;
+  return {
+    systemEnabled: settings.homekit.enabled,
+    enabled,
+    check,
+    pairing: enabled && st ? { code: st.code, setupUri: st.setupUri, paired: on && age > 20_000 } : null,
+    status: !on ? "off" : age > 2_000 ? "ready" : "starting",
+  };
+}
+function newPairing() {
+  const d = () => Math.floor(Math.random() * 10);
+  const digits = Array.from({ length: 8 }, d).join("");
+  const code = `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+  return { code, setupUri: setupUri(code, "MOCK"), since: now() };
+}
+async function homekitApi(path: string, m: string, body: any): Promise<Response | null> {
+  const mm = path.match(/^\/cameras\/([^/]+)\/homekit$/);
+  if (!mm) return null;
+  const cam = cams.find((c) => c.id === mm[1]);
+  if (!cam) return err(404, "找不到攝影機");
+  if (m === "GET") {
+    await Bun.sleep(400);
+    return json(homekitDto(cam));
+  }
+  if (m !== "POST") return null;
+  const dto = homekitDto(cam);
+  if (body.action === "enable") {
+    if (!cam.config.enabled) return err(409, "這台攝影機已停用，先啟用才能加入 Apple 家庭");
+    if (dto.check.state === "blocked") return err(409, "這台的主畫面不是 H.264，Apple 家庭不支援");
+    cam.config = { ...cam.config, homekit: { enabled: true } };
+    if (!homekitState.has(cam.id)) homekitState.set(cam.id, newPairing());
+  } else if (body.action === "disable") {
+    cam.config = { ...cam.config, homekit: { enabled: false } };
+  } else if (body.action === "reset") {
+    homekitState.set(cam.id, newPairing());
+  } else return err(400, "action 只接受 enable、disable、reset");
+  return json(homekitDto(cam));
+}
+
 const ptzRoute = (path: string) => path.match(/^\/cameras\/([^/]+)\/ptz(\/presets)?$/);
 async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): Promise<Response | null> {
   if (path === "/mock/ptz" && req.method === "POST") {
@@ -696,6 +747,8 @@ async function route(req: Request, url: URL): Promise<Response> {
 
   const denied = path.startsWith("/cameras") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
   if (denied) return denied;
+  const homekitResponse = await homekitApi(path, m, body);
+  if (homekitResponse) return homekitResponse;
 
   if (path === "/cameras" && m === "POST") return json(camDto(addCam(body), true), 201);
   if (path === "/cameras/test" && m === "POST") {

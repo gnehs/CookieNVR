@@ -1,0 +1,36 @@
+/* Apple 家庭（HKSV）：攝影機設定裡的配對區塊 */
+.hk-head { margin-bottom: 14px; }
+.hk-head h3 { display: flex; align-items: center; gap: 8px; }
+.hk-head p { margin-top: 4px; color: var(--muted); font-size: 14px; max-width: 62ch; }
+.hk-beta { background: var(--fill); color: var(--text-2); font-size: 11.5px; font-weight: 600; }
+.hk-body { display: grid; gap: 14px; min-width: 0; }
+.hk-muted { color: var(--muted); font-size: 14px; }
+
+.hk-state { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--text-2); }
+.hk-state > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.hk-state b { color: var(--text); font-weight: 650; }
+.hk-state.ok .icon { color: var(--ok-text); margin-top: 1px; }
+.hk-dot { flex: none; width: 8px; height: 8px; margin: 6px 4px 0; border-radius: 50%; background: var(--accent); --pulse: var(--accent); animation: live-pulse 2.4s var(--ease-out) infinite; }
+
+.hk-pair {
+  display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
+  padding: 18px; border-radius: var(--r); background: var(--frame); border: 1px solid var(--border);
+}
+/* QR code 一律深色碼、白底：掃描器只認得淺底深碼，深色模式也一樣 */
+.hk-qr-wrap { width: 168px; aspect-ratio: 1; border-radius: var(--r-sm); overflow: hidden; background: #fff; box-shadow: 0 0 0 1px var(--border); }
+.hk-qr { display: block; width: 100%; height: 100%; }
+.hk-qr-bg { fill: #fff; }
+.hk-qr-fg { fill: #111; }
+.hk-pair-text { min-width: 0; }
+.hk-code-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.hk-code { font-family: var(--mono); font-size: 30px; font-weight: 650; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; margin: 2px 0 12px; user-select: all; }
+.hk-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; color: var(--text-2); max-width: 52ch; }
+.hk-actions { display: flex; gap: 8px; }
+.hk-needs { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; color: var(--text-2); max-width: 64ch; }
+.hk-needs b { color: var(--text); font-weight: 650; }
+
+@media (max-width: 640px) {
+  .hk-pair { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 18px 16px; }
+  .hk-qr-wrap { width: min(200px, 64vw); }
+  .hk-steps { text-align: left; }
+}
