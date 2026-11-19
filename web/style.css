@@ -400,6 +400,8 @@ input:focus-visible, textarea:focus-visible {
 input[aria-invalid="true"] { border-color: var(--bad); }
 input[type="text"], input[type="password"], input[type="number"], input[type="url"] { text-overflow: ellipsis; }
 input:disabled { background: var(--fill); color: var(--muted); cursor: not-allowed; }
+/* iOS Safari 在字級小於 16px 的輸入框取得焦點時會自動放大頁面 */
+@media (pointer: coarse), (max-width: 760px) { input[type="text"], input[type="password"], input[type="number"], input[type="url"], textarea { font-size: 16px; } }
 fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .form-error { color: var(--bad-text); font-size: 14px; }
 .form-error:empty { display: none; }
