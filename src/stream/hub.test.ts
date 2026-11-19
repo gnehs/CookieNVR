@@ -70,6 +70,16 @@ describe("stream hub", () => {
     await expect(drain()).rejects.toThrow();
   });
 
+  test("cuts off a client whose credentials were revoked", async () => {
+    let valid = true;
+    const hub = createStreamHub({ snapshot: () => snapshot(null), pingMs: 10, stillAuthorized: () => valid });
+    const client = connect(hub, user);
+    expect((await client.next()).event).toBe("snapshot");
+    valid = false;
+    await expect(client.next()).rejects.toThrow();
+    expect(hub.clients()).toBe(0);
+  });
+
   test("keeps idle connections alive with comment lines", async () => {
     const hub = createStreamHub({ snapshot: () => snapshot(null), pingMs: 10 });
     const url = new URL("http://nvr/api/stream");

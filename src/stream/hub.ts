@@ -11,6 +11,8 @@ export interface StreamClient {
 export interface StreamHubOptions {
   snapshot(client: StreamClient): StreamSnapshotDto;
   pingMs?: number;
+  /** Checked on every ping; a client whose session or token was revoked is cut off and must sign in again. */
+  stillAuthorized?: (client: StreamClient) => boolean;
   /** A client this far behind is dropped; it reconnects and starts over from a snapshot. */
   maxBacklogBytes?: number;
 }
@@ -55,7 +57,10 @@ export function createStreamHub(opts: StreamHubOptions): StreamHub {
       access: "user",
       handler(ctx) {
         const client: StreamClient = { principal: ctx.principal!, req: ctx.req };
-        const ping = setInterval(() => send(client, ": ping\n\n"), pingMs);
+        const ping = setInterval(() => {
+          if (opts.stillAuthorized && !opts.stillAuthorized(client)) clients.get(client)?.abort();
+          else send(client, ": ping\n\n");
+        }, pingMs);
         const q = queuedStream(maxBacklog, () => {
           clearInterval(ping);
           clients.delete(client);

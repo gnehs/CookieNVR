@@ -232,6 +232,7 @@ function cameraDto(camera: Camera, client: StreamClient): CameraDto {
 }
 
 const hub = createStreamHub({
+  stillAuthorized: (client) => auth.authenticate(client.req, new URL(client.req.url)) !== null,
   snapshot: (client) => ({
     cameras: cameras.list().map((c) => cameraDto(c, client)),
     workers: client.principal.role === "admin" ? supervisor.status() : null,
