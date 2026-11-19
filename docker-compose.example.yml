@@ -3,7 +3,7 @@ services:
     # latest：CPU 推論，amd64 另含 Intel 內顯（linux/amd64、linux/arm64）
     # latest-nvidia：CPU 與 Nvidia 顯卡（只有 linux/amd64）。也有固定版本，例如 1.2.3 與 1.2.3-nvidia。
     # edge、edge-nvidia：main 最新的建置，還沒發版時用這個。
-    image: ghcr.io/<owner>/cookienvr:latest
+    image: ghcr.io/gnehs/cookienvr:latest
     restart: unless-stopped
     # 主機上的埠要和容器內的埠一樣：App 顯示給使用者的 RTSP 網址用的是容器內的 8554。
     ports: ["8765:8765", "8554:8554"]
@@ -30,7 +30,7 @@ services:
     # group_add: ["<render gid>"]
 
     # 用 Nvidia（主機要裝好 NVIDIA Container Toolkit，Unraid 是 Nvidia Driver 外掛）：
-    # 物件辨識要把 image 改成 ghcr.io/<owner>/cookienvr:latest-nvidia；只用影像硬體解碼（NVDEC）時 latest 也可以。
+    # 物件辨識要把 image 改成 ghcr.io/gnehs/cookienvr:latest-nvidia；只用影像硬體解碼（NVDEC）時 latest 也可以。
     # 硬體解碼需要驅動的 video 能力（libnvcuvid）：映像已預設 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video，
     # 這裡又明寫一次，免得 Unraid 範本或其他設定把它蓋成只有 compute,utility。
     # runtime: nvidia

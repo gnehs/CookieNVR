@@ -68,7 +68,7 @@ RTSP 轉發的主機埠要和容器內相同（預設 `8554:8554`）：App 顯�
 ```yaml
 services:
   cookienvr:
-    image: ghcr.io/<owner>/cookienvr:latest
+    image: ghcr.io/gnehs/cookienvr:latest
     restart: unless-stopped
     ports: ["8765:8765", "8554:8554"]
     # 讓 HA 自動發現或啟用 HKSV 時改用 host 網路（拿掉 ports）：
