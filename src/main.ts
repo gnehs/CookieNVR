@@ -4,7 +4,7 @@ import { join } from "node:path";
 import index from "../web/index.html";
 import pkg from "../package.json";
 import { backupOnce } from "./backup/index.ts";
-import type { ProbeResult, SystemDto } from "./api-types.ts";
+import type { CameraDto, ProbeResult, SystemDto } from "./api-types.ts";
 import { createAuth } from "./auth/index.ts";
 import { probeCamera } from "./camera/probe.ts";
 import { createSnapshots } from "./camera/snapshot.ts";
@@ -13,7 +13,9 @@ import { buildDiagnostics } from "./diagnostics.ts";
 import { eventRoutes } from "./events/index.ts";
 import { createExports, exportRoutes } from "./export/index.ts";
 import { readEnv } from "./env.ts";
-import { coreRoutes, createRouter, HttpError } from "./http/index.ts";
+import { coreRoutes, createRouter, HttpError, redactConfig } from "./http/index.ts";
+import { createLive } from "./live/live.ts";
+import { queryEvents } from "./events/store.ts";
 import {
   createIndexer,
   createRetention,
@@ -28,7 +30,8 @@ import {
 import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore } from "./stores/index.ts";
-import type { CameraConnection, CameraId, WorkerSpec } from "./types.ts";
+import { createStreamHub, type StreamClient } from "./stream/hub.ts";
+import type { Camera, CameraConnection, CameraId, WorkerSpec } from "./types.ts";
 import { createMemoryMonitor } from "./workers/memory.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
@@ -69,6 +72,17 @@ const exportJobs = createExports({
   },
 });
 const ptz = createPtzHub({ cameras, onError: (id, e) => log(`ptz:${id}`, e) });
+const live = createLive({
+  env,
+  source(id, quality) {
+    const camera = cameras.get(id);
+    if (!camera?.config.enabled) return null;
+    const hasSub = sourceUrls(camera.config.connection).sub !== null;
+    const stream = quality === "hd" || !hasSub ? "main" : "sub";
+    return { stream, url: restream.internalUrl(id, stream) };
+  },
+  onChange: () => void reconcileWorkers().catch((e) => log("workers", e)),
+});
 const indexer = createIndexer({ db, settings: settings.get });
 const retention = createRetention({ db, settings: settings.get });
 
@@ -109,7 +123,7 @@ function purgeCameraRecordings(id: CameraId): void {
 }
 
 function desiredWorkers(): WorkerSpec[] {
-  const specs = [restream.workerSpec()];
+  const specs = [restream.workerSpec(), ...live.workerSpecs()];
   for (const camera of cameras.list()) {
     if (!isRecording(camera)) continue;
     const input = camera.config.record.direct
@@ -166,6 +180,45 @@ function cameraStatus(id: CameraId) {
   return { online: isOnline, recording: isOnline && active };
 }
 
+function rtspUrls(id: CameraId, req: Request) {
+  const host = new URL(req.url).hostname;
+  const camera = cameras.get(id);
+  const hasSub = camera !== null && sourceUrls(camera.config.connection).sub !== null;
+  return {
+    main: restream.externalUrl(host, id, "main"),
+    sub: hasSub ? restream.externalUrl(host, id, "sub") : null,
+  };
+}
+
+function cameraDto(camera: Camera, client: StreamClient): CameraDto {
+  return {
+    id: camera.id,
+    position: camera.position,
+    config: client.principal.role === "admin" ? camera.config : redactConfig(camera.config),
+    ...cameraStatus(camera.id),
+    rtsp: rtspUrls(camera.id, client.req),
+  };
+}
+
+const hub = createStreamHub({
+  snapshot: (client) => ({
+    cameras: cameras.list().map((c) => cameraDto(c, client)),
+    workers: client.principal.role === "admin" ? supervisor.status() : null,
+    events: queryEvents(db, { cameraId: null, startMs: Date.now(), endMs: Date.now() + 1, limit: 100 }).filter((e) => e.endMs === null),
+  }),
+});
+
+// 只推有變的那幾台；上線狀態每 5 秒更新一次，錄影狀態跟著 worker 狀態走
+const sentStatus = new Map<CameraId, string>();
+function publishCameraChanges(): void {
+  for (const camera of cameras.list()) {
+    const key = JSON.stringify(cameraStatus(camera.id));
+    if (sentStatus.get(camera.id) === key) continue;
+    sentStatus.set(camera.id, key);
+    hub.publish((client) => ({ type: "camera", data: cameraDto(camera, client) }));
+  }
+}
+
 async function diagnostics(only: string | null): Promise<string> {
   const list = cameras.list();
   if (only !== null && !list.some((c) => c.id === only)) throw new HttpError(404, "找不到攝影機");
@@ -207,15 +260,7 @@ const routes = [
     diagnostics,
     probe,
     cameraStatus,
-    rtspUrls: (id, req) => {
-      const host = new URL(req.url).hostname;
-      const camera = cameras.get(id);
-      const hasSub = camera !== null && sourceUrls(camera.config.connection).sub !== null;
-      return {
-        main: restream.externalUrl(host, id, "main"),
-        sub: hasSub ? restream.externalUrl(host, id, "sub") : null,
-      };
-    },
+    rtspUrls,
     purgeRecordings: purgeCameraRecordings,
     supervisor: {
       restart(id, reason) {
@@ -241,6 +286,8 @@ const routes = [
       return restream.internalUrl(id, hasSub ? "sub" : "main");
     },
   }).route(),
+  ...live.routes(),
+  hub.route(),
   restream.rtspAuthRoute({
     verify: async (username, secret) => (await auth.verifyCredentials(username, secret)) !== null,
     externalEnabled: () => settings.get().rtsp.externalEnabled,
@@ -250,6 +297,8 @@ const routes = [
 const server = Bun.serve({
   port: env.port,
   development: process.env.NODE_ENV !== "production",
+  // 即時串流與 SSE 是長連線；預設 10 秒沒有資料就斷線，比 SSE 的 20 秒 ping 還短
+  idleTimeout: 60,
   routes: { "/": index },
   fetch: createRouter(routes, auth),
 });
@@ -262,8 +311,14 @@ void restream.sync(cameras.list()).catch((e) => log("restream", e));
 
 cameras.subscribe((list) => {
   ptz.reconcile(list);
+  for (const c of list) sentStatus.set(c.id, JSON.stringify(cameraStatus(c.id)));
+  hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
   void reconcileWorkers().catch((e) => log("workers", e));
   void restream.sync(list).catch((e) => log("restream", e));
+});
+supervisor.subscribe((status) => {
+  hub.publish((client) => (client.principal.role === "admin" ? { type: "worker", data: status } : null));
+  if (status.kind === "record") publishCameraChanges();
 });
 settings.subscribe(() => void reconcileWorkers().catch((e) => log("workers", e)));
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => log("restream", e));
@@ -314,7 +369,11 @@ const timers = [
     void retention.runOnce(Date.now()).catch((e) => log("retention", e));
     pruneRestartLog(logDir);
   }, RETENTION_MS),
-  setInterval(() => void refreshOnline().catch((e) => log("online", e)), ONLINE_POLL_MS),
+  setInterval(() => {
+    void refreshOnline()
+      .then(publishCameraChanges)
+      .catch((e) => log("online", e));
+  }, ONLINE_POLL_MS),
   setInterval(runBackup, BACKUP_CHECK_MS),
   setInterval(() => void exportJobs.sweep().catch((e) => log("export", e)), EXPORT_SWEEP_MS),
 ];

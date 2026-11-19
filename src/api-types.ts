@@ -215,3 +215,24 @@ export interface ExportDto {
   /** 完成後自動刪除的時間 */
   expiresAt: number | null;
 }
+
+/** `GET /api/stream` 連上時的第一筆訊息，也是斷線重連後的完整狀態 */
+export interface StreamSnapshotDto {
+  cameras: CameraDto[];
+  /** 只有管理員收得到；一般使用者是 null */
+  workers: WorkerStatus[] | null;
+  /** 進行中的事件 */
+  events: EventDto[];
+}
+
+/**
+ * SSE 訊息：`event:` 是 type，`data:` 是 JSON 的 data。
+ * cameras 在新增、修改、刪除、排序後送完整清單；camera 在上線或錄影狀態改變時送單台。
+ */
+export type StreamMessage =
+  | { type: "snapshot"; data: StreamSnapshotDto }
+  | { type: "cameras"; data: CameraDto[] }
+  | { type: "camera"; data: CameraDto }
+  | { type: "worker"; data: WorkerStatus }
+  | { type: "event"; data: { phase: "start" | "end"; event: EventDto } }
+  | { type: "motion"; data: { cameraId: CameraId; active: boolean } };
