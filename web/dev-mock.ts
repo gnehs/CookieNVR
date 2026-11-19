@@ -518,6 +518,10 @@ function motionResponse(c: (typeof cams)[number]): Response {
 const workers: WorkerStatus[] = [
   { id: "restream", kind: "restream", state: "running", unstable: false, pid: 4101, startedAt: now() - 3 * 3600_000, restarts: 0, lastRestart: null, stderrTail: [] },
   ...cams.slice(0, 2).map((c, i): WorkerStatus => ({ id: `record:${c.id}`, kind: "record", state: i ? "backoff" : "running", unstable: i === 1, pid: i ? null : 4200 + i, startedAt: now() - 600_000, restarts: i ? 14 : 2, lastRestart: { reason: i ? "exit" : "stall", at: now() - 120_000, exitCode: i ? 1 : null }, stderrTail: i ? ["[tcp @ 0x1] Connection timed out", "rtsp://u:***@192.168.1.60/s1: Operation timed out"] : [] })),
+  // MOCK_DENIED=1：前門的錄影寫不進儲存位置（以 PUID 執行，但資料夾是 root 建立的）
+  ...(process.env.MOCK_DENIED === "1"
+    ? [{ id: `record:${cams[2]!.id}`, kind: "record", state: "backoff", unstable: false, pid: null, startedAt: now() - 60_000, restarts: 6, lastRestart: { reason: "exit", at: now() - 5_000, exitCode: 243 }, stderrTail: ["[out#0/segment @ 0x1] Could not write header (incorrect codec parameters ?): Permission denied", "[out#0/segment @ 0x1] Nothing was written into output file, because at least one of its streams received no packets."] } satisfies WorkerStatus]
+    : []),
   ...(OBJECTS_SCENARIO === "down" ? [{ id: "detector", kind: "detector", state: "backoff", unstable: true, pid: null, startedAt: now() - 300_000, restarts: 9, lastRestart: { reason: "exit", at: now() - 20_000, exitCode: 1 }, stderrTail: ["ModuleNotFoundError: No module named 'onnxruntime'"] } satisfies WorkerStatus] : []),
 ];
 

@@ -84,6 +84,17 @@ describe("assessHealth", () => {
     expect(h.disk.tone).toBe("bad");
   });
 
+  test("錄影因為權限寫不進去時，沒在錄影的問題說出原因", () => {
+    const base = { ...healthy, cams: [cam("a", "前門", { recording: false })] };
+    const plain = assessHealth({ ...base, workers: [worker("restream"), worker("record:a", { state: "backoff" })] });
+    const denied = assessHealth({ ...base, workers: [worker("restream"), worker("record:a", { state: "backoff", stderrTail: ["[out#0/segment @ 0x1] Could not write header: Permission denied"] })] });
+    expect(plain.issues.map((i) => [i.kind, i.detail])).toEqual([["notRecording", undefined]]);
+    expect(denied.issues.map((i) => [i.kind, i.detail])).toEqual([["notRecording", "沒有權限寫入錄影位置"]]);
+    // 同時有一般的沒在錄影時分開列，不會被一起說成權限問題
+    const mixed = assessHealth({ ...healthy, cams: [cam("a", "前門", { recording: false }), cam("b", "車道", { recording: false })], workers: denied.issues.length ? [worker("restream"), worker("record:a", { state: "backoff", stderrTail: ["Permission denied"] })] : [] });
+    expect(mixed.issues.map((i) => [i.title, i.detail])).toEqual([["前門沒在錄影", "沒有權限寫入錄影位置"], ["車道沒在錄影", undefined]]);
+  });
+
   test("RTSP port 被佔用時說出原因，一般的停止沒有說明", () => {
     const taken = worker("restream", { state: "backoff", stderrTail: ["ERR: listen tcp :8554: bind: address already in use"] });
     const h = assessHealth({ ...healthy, workers: [taken], cams: [] });

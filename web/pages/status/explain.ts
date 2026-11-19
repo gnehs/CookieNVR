@@ -92,6 +92,13 @@ export function explain(issue: Issue, snap: Snapshot): Explained {
         action: one ? { label: "檢查設定", to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } } : { label: "檢查設定", to: "/settings/cameras" },
       };
     case "notRecording":
+      if (issue.detail)
+        return {
+          who: names,
+          pill: { label: "沒有寫入權限", tone: "bad" },
+          next: "錄影寫不進儲存位置，重新啟動容器通常會自動修正",
+          why: "CookieNVR 以 PUID／PGID 設定的使用者執行，錄影資料夾裡卻有它不能寫的資料夾，多半是之前以 root 執行（沒設 PUID）時建立的。重新啟動容器時會自動把資料夾交給這個使用者；仍然不行時，在主機上把錄影與 appdata 的資料夾交給 PUID:PGID（例如 chown -R 99:100 <主機上的路徑>），再重新啟動容器。",
+        };
       return {
         who: names,
         pill: { label: "沒在錄影", tone: "bad" },

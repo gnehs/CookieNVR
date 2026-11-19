@@ -50,7 +50,7 @@ export interface Issue {
   title: string;
   /** 首頁提醒用的短句，例如「2 台沒在錄影」 */
   short: string;
-  /** 一句白話說明（影像解碼退回處理器、RTSP port 被佔用），狀態頁直接顯示 */
+  /** 一句白話說明（影像解碼退回處理器、RTSP port 被佔用、錄影沒有寫入權限），狀態頁直接顯示 */
   detail?: string;
 }
 
@@ -116,11 +116,16 @@ export function assessHealth(input: HealthInput): Health {
   if (input.decodeWarning) {
     issues.push({ kind: "decode", tone: "warn", cameras: [], title: "影像解碼改用處理器", short: "影像解碼改用處理器", detail: input.decodeWarning });
   }
+  // 錄影寫不進儲存位置時重新開始也沒用，要讓使用者知道是權限；這些攝影機另外列一張
+  const denied = (id: CameraId) => worker(`record:${id}`)?.stderrTail.some((l) => l.includes("Permission denied")) ?? false;
   for (const g of CAMERA_ISSUES) {
-    const cameras = input.cams.filter((c) => statuses.get(c.id)!.kind === g.kind).map((c) => ({ id: c.id, name: c.config.name }));
-    if (cameras.length === 0) continue;
-    const title = cameras.length === 1 ? g.one(cameras[0]!.name) : `${cameras.length} 台${g.many}：${cameras.map((c) => c.name).join("、")}`;
-    issues.push({ kind: g.kind, tone: g.tone, cameras, title, short: `${cameras.length} 台${g.many}` });
+    const all = input.cams.filter((c) => statuses.get(c.id)!.kind === g.kind).map((c) => ({ id: c.id, name: c.config.name }));
+    const groups = g.kind === "offline" ? [{ cameras: all, denied: false }] : [{ cameras: all.filter((c) => denied(c.id)), denied: true }, { cameras: all.filter((c) => !denied(c.id)), denied: false }];
+    for (const { cameras, denied: d } of groups) {
+      if (cameras.length === 0) continue;
+      const title = cameras.length === 1 ? g.one(cameras[0]!.name) : `${cameras.length} 台${g.many}：${cameras.map((c) => c.name).join("、")}`;
+      issues.push({ kind: g.kind, tone: g.tone, cameras, title, short: `${cameras.length} 台${g.many}`, ...(d ? { detail: "沒有權限寫入錄影位置" } : {}) });
+    }
   }
 
   const { totalBytes: total, freeBytes: free } = input.disk;
