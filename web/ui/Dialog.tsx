@@ -12,12 +12,33 @@ export interface DialogProps {
   onClosed?: () => void;
 }
 
+// Safari 與 iOS 點按鈕時按鈕不會取得焦點，Base UI 就不知道關閉後要回到哪；自己記住最後被點的按鈕
+let lastPressed: { el: HTMLElement; at: number } | null = null;
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "click",
+    (e) => {
+      const el = e.target instanceof Element ? e.target.closest<HTMLElement>("button, a[href]") : null;
+      lastPressed = el ? { el, at: performance.now() } : null;
+    },
+    true,
+  );
+}
+
 /**
  * 對話框（Base UI Dialog）：桌面置中，手機是底部面板；Esc 與點背景都會關閉。
  * 手機開鍵盤時面板跟著往上移（iOS 開鍵盤只縮 visualViewport，不會推動 fixed 的元素）。
  */
 export function Dialog({ open, onOpenChange, title, children, initialFocus, onClosed }: DialogProps) {
   const popup = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current) {
+    const a = document.activeElement;
+    const pressed = lastPressed && performance.now() - lastPressed.at < 1000 ? lastPressed.el : null;
+    opener.current = pressed ?? (a instanceof HTMLElement && a !== document.body ? a : null);
+  }
+  wasOpen.current = open;
   useEffect(() => {
     const vv = window.visualViewport;
     if (!open || !vv) return;
@@ -36,7 +57,7 @@ export function Dialog({ open, onOpenChange, title, children, initialFocus, onCl
     <Base.Root open={open} onOpenChange={(next) => onOpenChange(next)} onOpenChangeComplete={(next) => !next && onClosed?.()}>
       <Base.Portal>
         <Base.Backdrop className="dlg-backdrop" />
-        <Base.Popup ref={popup} className="dlg" initialFocus={initialFocus}>
+        <Base.Popup ref={popup} className="dlg" initialFocus={initialFocus} finalFocus={() => (opener.current?.isConnected ? opener.current : true)}>
           <Base.Title>{title}</Base.Title>
           {children}
         </Base.Popup>
