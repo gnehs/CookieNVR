@@ -69,6 +69,8 @@ export class Player {
   private recoveries = 0;
   private liveSegId: number | null = null;
   private watchdog: ReturnType<typeof setInterval>;
+  /** removes the listeners on the video, which outlives the player when React re-creates it on the same element */
+  private readonly life = new AbortController();
   private readonly Ctor: MediaSourceCtor;
 
   constructor(
@@ -81,7 +83,7 @@ export class Player {
     this.Ctor = Ctor;
     // ManagedMediaSource only opens when AirPlay has no alternative source to switch to.
     video.disableRemotePlayback = true;
-    const on = (type: string, fn: () => void) => video.addEventListener(type, fn);
+    const on = (type: string, fn: () => void) => video.addEventListener(type, fn, { signal: this.life.signal });
     on("playing", () => this.setStatus({ kind: "playing" }));
     on("pause", () => this.pending === null && this.setStatus({ kind: "paused" }));
     on("waiting", () => this.setStatus(this.atEnd() ? { kind: "ended" } : { kind: "waiting" }));
@@ -164,6 +166,7 @@ export class Player {
   destroy() {
     this.gen++;
     this.ctrl.abort();
+    this.life.abort();
     clearInterval(this.watchdog);
     this.video.pause();
     this.video.removeAttribute("src");
