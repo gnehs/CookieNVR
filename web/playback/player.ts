@@ -177,7 +177,8 @@ export class Player {
   }
 
   private setStatus(s: PlayerStatus) {
-    if (this.status.kind === "error" && s.kind !== "loading") return;
+    // an error stays up through pause and waiting events, but a new load or actual playback clears it
+    if (this.status.kind === "error" && s.kind !== "loading" && s.kind !== "playing") return;
     this.status = s;
     this.onStatus(s);
   }
@@ -240,7 +241,8 @@ export class Player {
     this.pending = w;
     this.exhausted = false;
     this.lastWall = w;
-    if (this.status.kind !== "error") this.setStatus({ kind: "loading" });
+    // a new seek is a fresh attempt, also after an error
+    this.setStatus({ kind: "loading" });
 
     if (!this.opened || this.ms?.readyState === "closed") await this.open();
     await this.opened;
@@ -259,6 +261,8 @@ export class Player {
       try {
         const loc = await this.source.locate(w);
         if (gen !== this.gen) return;
+        // a retry after the error went through: show loading until it plays
+        if (this.status.kind === "error") this.setStatus({ kind: "loading" });
         if (!loc) {
           this.pending = null;
           this.exhausted = true;
@@ -274,11 +278,10 @@ export class Player {
           this.setStatus({ kind: "error", message: e.message });
           return;
         }
-        if (++failures >= 4) {
-          this.setStatus({ kind: "error", message: "無法載入錄影，請檢查連線後再試一次。" });
-          return;
-        }
-        await sleep(1_000 * failures, signal);
+        console.warn("[player] 載入錄影失敗", e);
+        // after a few quick retries show the error, but keep trying slowly so a passing hiccup recovers on its own
+        if (++failures >= 4) this.setStatus({ kind: "error", message: "暫時無法載入錄影，正在重試…" });
+        await sleep(failures >= 4 ? 5_000 : 1_000 * failures, signal);
         // resume where the playhead is, so a retry does not replay what was already watched
         w = this.wall() ?? w;
         this.map = [];

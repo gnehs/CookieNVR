@@ -31,6 +31,8 @@ const RATES = [1, 2, 4, 8, 16];
 const RATE_ENTRIES = RATES.map((r) => ({ value: String(r), label: `${r}×`, desc: r === 1 ? "正常速度" : undefined }));
 /** "回到現在" lands this far behind the newest recording, so the indexer's lag never starves playback. */
 const LIVE_LAG_MS = 30_000;
+/** 快轉中追到錄製中的片段、距離現在不到這麼久時，改回 1 倍速 */
+const CATCH_UP_MS = 10_000;
 const DAY_POLL_MS = 10_000;
 /** 播放位置寫回網址（replace）的最短間隔，暫停與跳轉時立刻寫 */
 const URL_WRITE_MS = 5_000;
@@ -179,6 +181,14 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
         s.lastSec = sec;
         setClock({ wall: w, live: p.live });
         setCurrentEvent(eventAt(s.events, w + 1, Date.now())?.id ?? null);
+      }
+      // fast-forwarding has caught up with what is being recorded: back to real time
+      if (rate > 1 && p.live && Date.now() - w < CATCH_UP_MS) {
+        setRate(1);
+        p.setRate(1);
+        setGapNote("已追到最新，改回 1 倍速");
+        clearTimeout(s.noteTimer);
+        s.noteTimer = setTimeout(() => setGapNote(null), 4_000);
       }
       // a forward jump far beyond what the playback rate explains is a skipped gap
       if (s.prevWall !== null && p.state.kind === "playing") {
@@ -502,7 +512,7 @@ function Overlay({ status }: { status: PlayerStatus }) {
     return (
       <span className="loading">
         <span className="spin" />
-        {status.kind === "loading" ? "載入中" : "緩衝中"}
+        載入中
       </span>
     );
   if (status.kind === "ended") return <span className="pb-msg">已經播到最新的錄影</span>;
