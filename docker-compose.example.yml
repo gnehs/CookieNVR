@@ -4,9 +4,13 @@ services:
     restart: unless-stopped
     # 主機上的埠要和容器內的埠一樣：App 顯示給使用者的 RTSP 網址用的是容器內的 8554。
     ports: ["8765:8765", "8554:8554"]
-    # 使用 Apple 家庭（HKSV）時改用 host 網路（拿掉 ports）：iPhone 靠 mDNS 找到攝影機，
-    # 每台攝影機佔一個 port（預設從 51826 起；主機上已有 Homebridge 時會自動跳過被佔用的 port）。
+    # 想讓 Home Assistant 自動找到 CookieNVR，或使用 Apple 家庭（HKSV）時，改用 host 網路（拿掉 ports）：
+    # 兩者都靠 mDNS。HKSV 每台攝影機佔一個 port（預設從 51826 起；主機上已有 Homebridge 時會自動跳過被佔用的 port）。
+    # bridge 網路下 mDNS 廣播出不去，HA 那邊改成手動輸入網址，之後一樣在網頁上按「允許」就好。
     # network_mode: host
+    # 自動發現的相關環境變數（都是選用）：
+    #   DISCOVERY=false   不在區域網路上廣播
+    #   PUBLIC_PORT=8765  廣播出去的網頁埠；只有對外看到的埠和 PORT 不同時（例如 br0 加埠轉址）才需要
     # 要設時區就加 environment: ["TZ=Asia/Taipei"]（和下面的 Nvidia 設定合併成同一個清單）。
     # 錄影檔名一律是 UTC，不受時區影響。
     volumes:

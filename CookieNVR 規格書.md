@@ -34,7 +34,6 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 - 手機 App（網頁做 RWD 即可）
 - 硬體加速解碼（VAAPI / NVDEC）：子碼流解碼很便宜，GPU 只用於物件辨識
 - 多鏡頭同步回放、逐幀播放
-- zeroconf 自動發現（HA 整合手動填網址）
 
 ## 部署：單一 Docker 容器
 
@@ -44,7 +43,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 - **映像版本**：`latest` 含 CPU 與 Intel 內顯（OpenVINO）推論；`latest-nvidia` 改含 Nvidia（CUDA）推論。不用物件辨識時兩者沒有差別。
 - **平台**：`latest` 支援 `linux/amd64` 與 `linux/arm64`；`latest-nvidia` 只有 `linux/amd64`。
 - **GPU（選用，物件辨識用）**：Intel 內顯掛入 `/dev/dri`；Nvidia 需主機裝好 NVIDIA Container Toolkit（Unraid 用 Nvidia Driver 外掛），並以 `--gpus all` 或 `runtime: nvidia` 啟動。沒有 GPU 時用 CPU 推論。
-- **網路**：容器需能連到攝影機的 554（RTSP）與 2020（Tapo ONVIF）。不用 HKSV 時 bridge 模式即可；啟用 HKSV 時要用 host 網路，或 Unraid 的 br0 給獨立 IP，因為 HomeKit 靠 mDNS 找裝置。
+- **網路**：容器需能連到攝影機的 554（RTSP）與 2020（Tapo ONVIF）。bridge 模式即可運作；想讓 Home Assistant 自動發現、或啟用 HKSV 時要用 host 網路，或 Unraid 的 br0 給獨立 IP，因為兩者都靠 mDNS。
 
 | 項目 | 值 | 說明 |
 | --- | --- | --- |
@@ -55,6 +54,8 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 | Volume | `/recordings` | 錄影。量大，放一般硬碟即可。掛了就自動使用；沒掛時錄影放在 `/data/recordings` |
 | `RECORDINGS_DIR` | 選用 | 明確指定錄影的預設位置，優先於上面的自動判斷 |
 | `PORT` | 選用 | 覆寫網頁 port |
+| `DISCOVERY` | 選用 | `false` 時不在區域網路上廣播（預設開啟） |
+| `PUBLIC_PORT` | 選用 | mDNS 廣播的網頁埠，預設同 `PORT`；對外看到的埠不同時才需要 |
 
 時區不需要設定：顯示一律用瀏覽器的時區，錄影檔名與資料庫一律存 UTC。
 
@@ -70,7 +71,7 @@ services:
     image: ghcr.io/<owner>/cookienvr:latest
     restart: unless-stopped
     ports: ["8765:8765", "8554:8554"]
-    # 啟用 HKSV 時改用 host 網路（拿掉 ports）：
+    # 讓 HA 自動發現或啟用 HKSV 時改用 host 網路（拿掉 ports）：
     # network_mode: host
     volumes:
       - /mnt/user/appdata/cookienvr:/data
@@ -425,6 +426,21 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 - 登入失敗限流：同一 IP＋帳號連續失敗 5 次後開始鎖定，時間指數增加，最長 15 分鐘。
 - 改變狀態的 API（POST/PUT/DELETE）只接受 JSON，加上 SameSite cookie 防 CSRF。
 
+### 授權連結（免 Token 連接 App）
+
+仿 OAuth 2.0 裝置授權（RFC 8628），讓 HA 這類 App 不用使用者複製 Token（`src/auth/link.ts`、`src/http/link-routes.ts`、核准頁 `web/pages/link.ts`）：
+
+1. App 呼叫 `POST /api/link`（`{app}`），拿到給人看的短碼 `code`（`XXXX-XXXX`，20 個子音字母，約 34.6 bits）、核准網址 `approveUrl`（`<NVR>/#/link/<code>`，以 App 連進來的網址組成）、只有 App 知道的輪詢憑證 `pollSecret`（32 bytes）、`expiresAt`（10 分鐘）與輪詢間隔。
+2. 使用者開核准網址；未登入先登入再回來。頁面顯示同一組短碼、App 名稱、請求來源 IP、允許後能做什麼（一般使用者會看到「錄影與偵測開關不會出現」），按「允許」或「拒絕」。
+3. App 以 `POST /api/link/poll`（`{pollSecret}`）輪詢：`pending`、`denied`、`expired`、`claimed`，或一次性的 `approved`（附 token、帳號、角色）。Token 在被取走的當下以核准者身分建立，名稱如「Home Assistant（192.168.1.20，2026-11-19）」，出現在「帳號 → 連接其他 App」可撤銷。
+
+安全性：
+- 請求只存在記憶體，重啟後失效。只能核准一次、token 只能取走一次；知道短碼拿不到 token（要 `pollSecret`）。
+- 核准只接受瀏覽器 session（API Token 不行），且必須同源：Fetch Metadata `Sec-Fetch-Site: same-origin`，沒有這個標頭的舊瀏覽器比對 `Origin`；加上全站只收 JSON 與 SameSite cookie。
+- 防嵌入：核准頁在 iframe 中只顯示「請直接開啟」，不顯示按鈕；SameSite=Lax 的 cookie 在跨站 iframe 也不會送出。Bun 的 HTML bundle 路由不能加回應標頭，所以沒有 `X-Frame-Options`。
+- 限流：每 IP 每 10 分鐘最多建立 10 筆、同時待核准 5 筆、全體 200 筆；每 IP 每分鐘輪詢 90 次、用錯輪詢憑證 10 分鐘 20 次；每位使用者查不到短碼 10 分鐘 10 次。
+- 結束（拒絕、取走、過期）的請求再保留 10 分鐘讓輪詢拿到明確狀態，之後回 404。
+
 ### API Token
 
 - 在「帳號 → 連接其他 App」（預設收合）建立，名稱如「Home Assistant」「電視牆」；完整 token 只在建立時顯示一次，格式 `cnvr_…`。
@@ -496,9 +512,11 @@ HA 整合是獨立的 HACS repo `cookienvr-ha`（domain `cookienvr`），用 UI 
 
 ### 設定流程
 
-1. 在 CookieNVR 建一個 API Token（看畫面與控制 PTZ 用一般使用者即可；要在 HA 切換錄影／偵測開關，需用管理員帳號建 Token）。
-2. HA → 新增整合 → CookieNVR，填 NVR 網址與 Token；整合會先呼叫 `/api/info` 確認連線與 API 版本。
-3. 每台攝影機自動成為一個 HA 裝置；之後在 NVR 新增或刪除攝影機，HA 會自動同步。
+1. 自動發現：NVR 以 mDNS 廣播 `_cookienvr._tcp`（`src/discovery/`，自己實作的最小回應器，不靠套件），TXT 帶 `id`（實例識別碼）、`version`、`api`。HA 的整合頁出現「已發現」，按「新增」。mDNS 出不去（bridge 網路）時改為手動輸入網址。
+2. 授權：整合走「授權連結」流程，HA 畫面顯示核准連結與短碼，使用者在 CookieNVR 按「允許」後 HA 自動完成，全程不碰 Token。Token 繼承核准者的角色（要在 HA 切換錄影／偵測開關需用管理員核准）。手動貼 Token 保留為進階欄位。
+3. 唯一識別：`/api/info` 的 `instanceId`（第一次啟動產生，存在資料庫 settings 表）。NVR 換 IP 後再次被發現時，HA 更新既有設定的網址而不是新增一台；舊版以網址為識別的設定在啟動時改用 `instanceId`。
+4. Token 被撤銷時 HA 進入重新驗證，走同一個授權流程。
+5. 每台攝影機自動成為一個 HA 裝置；之後在 NVR 新增或刪除攝影機，HA 會自動同步。
 
 ### 每台攝影機的實體
 
@@ -644,7 +662,9 @@ cookienvr-ha/
 
 | 方法 | 路徑 | 用途 | 角色 |
 | --- | --- | --- | --- |
-| GET | `/api/info` | 版本、apiVersion、是否需要初始設定、站點名稱 `siteName`（登入頁、初始設定頁與側欄顯示） | 公開 |
+| GET | `/api/info` | 版本、apiVersion、是否需要初始設定、站點名稱 `siteName`（登入頁、初始設定頁與側欄顯示）、實例識別碼 `instanceId` | 公開 |
+| POST | `/api/link` · `/api/link/poll` | 建立授權連結請求／App 以輪詢憑證查狀態並一次性取回 token（見「授權連結」） | 公開（限流） |
+| GET / POST | `/api/link/:code` | 核准頁讀取請求／允許或拒絕（`{decision}`；只限瀏覽器 session、同源） | 一般使用者 |
 | POST | `/api/auth/setup` | 建立第一位管理員（只在沒有帳號時可用） | 公開 |
 | POST | `/api/auth/login` · `/logout` | 登入／登出 | 公開 |
 | GET / PUT | `/api/me` | 自己的資料、改密碼 | 一般使用者 |
