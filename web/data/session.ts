@@ -1,5 +1,5 @@
-import { queryOptions, useQuery, type QueryClient } from "@tanstack/react-query";
-import { redirect } from "@tanstack/react-router";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import { redirect, useRouteContext } from "@tanstack/react-router";
 import type { MeDto } from "../../src/api-types.ts";
 import { api, ApiError } from "../api.ts";
 
@@ -36,11 +36,12 @@ export async function logout(): Promise<void> {
   location.replace("/login");
 }
 
-/** 目前登入的使用者。只能用在 `_authed` 底下的頁面：那裡保證已經登入 */
+/**
+ * 目前登入的使用者，取自 `_authed` 的 beforeLoad（每次換頁都重新確認）。不直接讀 meQuery：登入失效時快取先變成 null，
+ * 查詢的通知要到下一個 task 才送出，這段時間外殼若因換頁而重畫就會讀到 null；路由 context 在離開 `_authed` 前都不會變。
+ */
 export function useMe(): MeDto {
-  const me = useQuery(meQuery).data;
-  if (!me) throw new Error("useMe() 只能用在需要登入的頁面");
-  return me;
+  return useRouteContext({ from: "/_authed", select: (c) => c.me });
 }
 
 /** 管理員專屬頁面的 beforeLoad：一般使用者導回首頁（跟舊版一樣，不顯示錯誤） */
