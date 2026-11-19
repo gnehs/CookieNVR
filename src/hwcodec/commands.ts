@@ -51,11 +51,15 @@ function hwaccelDevice(api: HwApi): string | null {
   }
 }
 
-/** 放在 `-i` 前面的解碼參數 */
+/**
+ * 放在 `-i` 前面的解碼參數。`-threads 1`：ffmpeg 預設依核心數開解碼執行緒，硬體解碼時每條執行緒要多一個顯示卡上的畫面緩衝，
+ * 而 NVDEC 最多 32 個（ffmpeg 7.1 的 decode.c `avcodec_get_hw_frames_parameters`、nvdec.c `ff_nvdec_decode_init`）。
+ * 12 核心的主機開 13 條就超過，解碼器建立失敗。解碼在顯示卡上做，多開執行緒也省不到什麼。
+ */
 export function hwDecodeArgs(api: HwApi): string[] {
   const spec = API[api.type];
   const device = hwaccelDevice(api);
-  return ["-hwaccel", spec.hwaccel, ...(device === null ? [] : ["-hwaccel_device", device]), "-hwaccel_output_format", spec.outputFormat];
+  return ["-threads", "1", "-hwaccel", spec.hwaccel, ...(device === null ? [] : ["-hwaccel_device", device]), "-hwaccel_output_format", spec.outputFormat];
 }
 
 export const encoderName = (api: HwApi, codec: CodecName) => API[api.type].encoder[codec];
@@ -64,9 +68,14 @@ const QUIET = ["-hide_banner", "-nostdin", "-loglevel", "error"];
 const TEST_FRAMES = 10;
 const TEST_SOURCE = ["-f", "lavfi", "-i", "testsrc2=size=640x360:rate=10"];
 
-/** 用 CPU 產生試跑用的短片（640×360、10 張，8 位元 4:2:0，和一般攝影機的子碼流同一類） */
+/**
+ * 用 CPU 產生試跑用的短片（640×360、10 張，8 位元 4:2:0，和一般攝影機的子碼流同一類）。
+ * 參考幀開到 8 張（libx265 在這個設定下的上限），顯示卡要準備的畫面緩衝不少於一般攝影機，
+ * 緩衝不夠的問題在試跑就會出現，而不是試跑說可以、實際串流才失敗。H.264 不開到規格上限的 16 張：
+ * 那樣離 NVDEC 的 32 個只剩一個，ffmpeg 多保留一點緩衝就會讓每台攝影機都只能用處理器。
+ */
 export function sampleCommand(ffmpeg: string, codec: CodecName, out: string): string[] {
-  const enc = codec === "h264" ? ["-c:v", "libx264"] : ["-c:v", "libx265", "-x265-params", "log-level=error"];
+  const enc = codec === "h264" ? ["-c:v", "libx264", "-refs", "8"] : ["-c:v", "libx265", "-x265-params", "log-level=error:ref=8"];
   return [ffmpeg, ...QUIET, ...TEST_SOURCE, "-frames:v", String(TEST_FRAMES), ...enc, "-pix_fmt", "yuv420p", "-y", out];
 }
 
@@ -89,7 +98,7 @@ export interface HwFailure {
   detail: string;
 }
 
-/** 依 ffmpeg 的錯誤訊息猜最可能的原因；猜不到就說哪一步失敗。順序是先環境（裝置、驅動）再能力 */
+/** 依 ffmpeg 的錯誤訊息猜最可能的原因；猜不到就說哪一步失敗。順序是先環境（裝置、驅動），再能力不足，最後是解碼器建不起來 */
 const RULES: { api?: HwApi["type"]; test: RegExp; reason: (api: HwApi, what: string) => string }[] = [
   { api: "vaapi", test: /No such file or directory|Device creation failed: -2\b/i, reason: (a) => `容器裡沒有這張顯示卡的裝置（${a.type === "vaapi" ? a.node : ""}），請在容器設定掛入 /dev/dri` },
   // libva 只說開不了，不說是沒有節點還是沒權限；沒有節點的情況在列裝置時就擋掉了，所以多半是權限
@@ -98,7 +107,8 @@ const RULES: { api?: HwApi["type"]; test: RegExp; reason: (api: HwApi, what: str
   { api: "vaapi", test: /va_openDriver\(\) returns|vaInitialize failed|Failed to initiali[sz]e VAAPI|libva: .*(not found|init failed)/i, reason: () => "找不到 Intel 的影像驅動程式（VAAPI），映像可能缺少 intel-media-va-driver" },
   { api: "cuda", test: /Cannot load libnvcuvid|Cannot load libnvidia-encode|nvcuvid|NvEncodeAPI|OpenEncodeSessionEx failed: unsupported device/i, reason: () => "容器沒有載入 Nvidia 的影像編解碼元件，容器設定的 NVIDIA_DRIVER_CAPABILITIES 需要包含 video" },
   { api: "cuda", test: /Cannot load libcuda|cu->cuInit|CUDA_ERROR_NO_DEVICE|no CUDA-capable device/i, reason: () => "容器裡沒有 Nvidia 驅動程式，請用 NVIDIA Container Toolkit 啟動容器" },
-  { test: /Impossible to convert between the formats|Failed setup for format|hwaccel initiali[sz]ation returned error|No support for codec|not supported|Unsupported|No usable encoding profile|does not support/i, reason: (_a, what) => `這張顯示卡不支援${what}` },
+  { test: /No support for codec|not supported|Unsupported|lacking required capabilities|not within range|No usable encoding profile|does not support/i, reason: (_a, what) => `這張顯示卡不支援 ${what}` },
+  { test: /cuvidCreateDecoder|decode surfaces|hwaccel initiali[sz]ation returned error|Failed setup for format/i, reason: (_a, what) => `顯示卡啟動 ${what}失敗` },
 ];
 
 /** stderr 的最後幾行，夠判斷原因也不會把整段日誌塞進診斷資訊 */
@@ -114,7 +124,18 @@ export function stderrTail(stderr: string, lines = 6): string {
 /** `what` 是「H.265 硬體解碼」這類說法，用在能力不足與無法判斷的情況 */
 export function explainHwFailure(api: HwApi, what: string, stderr: string, opts: { timedOut?: boolean; exitCode?: number | null } = {}): HwFailure {
   const detail = stderrTail(stderr) || (opts.timedOut ? "timed out" : `exit ${opts.exitCode ?? "?"}`);
-  if (opts.timedOut) return { reason: `顯示卡沒有在時限內完成${what}`, detail };
+  if (opts.timedOut) return { reason: `顯示卡沒有在時限內完成 ${what}`, detail };
   const rule = RULES.find((r) => (!r.api || r.api === api.type) && r.test.test(stderr));
-  return { reason: rule ? rule.reason(api, what) : `顯示卡無法${what}`, detail };
+  return { reason: rule ? rule.reason(api, what) : `顯示卡沒有完成 ${what}`, detail };
+}
+
+const INPUT_FAILURE = /method \w+ failed|Server returned \d|Error opening input|Connection refused|Connection timed out|No route to host|Network is unreachable/i;
+const HW_TRACE = /hwaccel|Failed setup for format|Device creation failed|cuvid|nvdec|CUDA_ERROR|libcuda|vaapi|VA display|libva|videotoolbox|hwdownload|Impossible to convert/i;
+
+/**
+ * 輸入端打不開（轉發層還沒有這條 path、相機連不上）：解碼器還沒開始，顯示卡根本沒試到，不算硬體失敗。
+ * 有任何顯示卡相關的訊息就不算，寧可退回處理器也不讓真正的硬體問題一直重試。
+ */
+export function inputFailed(stderr: string): boolean {
+  return INPUT_FAILURE.test(stderr) && !HW_TRACE.test(stderr);
 }

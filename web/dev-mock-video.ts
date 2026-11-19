@@ -18,7 +18,7 @@ const INTEL: VideoDeviceDto = {
   name: "Intel 內顯",
   pci: "0000:00:02.0",
   decode: { h264: ok(182), hevc: ok(195) },
-  encode: { h264: ok(240), hevc: no("這張顯示卡不支援H.265 硬體編碼", "[hevc_vaapi @ 0x55] No usable encoding profile found.") },
+  encode: { h264: ok(240), hevc: no("這張顯示卡不支援 H.265 硬體編碼", "[hevc_vaapi @ 0x55] No usable encoding profile found.") },
 };
 const NVIDIA: VideoDeviceDto = {
   id: "nvidia:GPU-8c6d1a2e-0b4f-4c55-9d1a-2b3c4d5e6f70",

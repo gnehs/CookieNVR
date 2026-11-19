@@ -3,7 +3,7 @@ import { detectCommand, parseHwDecode } from "../detect/command.ts";
 import { fakeIo, ok } from "../metrics/fake-io.ts";
 import { videoCodecOf } from "../restream/restream.ts";
 import type { CameraId } from "../types.ts";
-import { decodeTestCommand, encodeTestCommand, explainHwFailure, hwEnv, type HwApi } from "./commands.ts";
+import { decodeTestCommand, encodeTestCommand, explainHwFailure, hwEnv, inputFailed, sampleCommand, type HwApi } from "./commands.ts";
 import { listVideoDevices, parseNvidiaList } from "./devices.ts";
 import { planDecode, type HwDecode } from "./plan.ts";
 import { probeVideoDevices, type CodecCheck, type ProbedDevice, type RunOutcome } from "./probe.ts";
@@ -63,6 +63,55 @@ test("worker 收到壞掉的硬體設定就當作 CPU", () => {
   expect(parseHwDecode(JSON.stringify(hwOf(VAAPI)))?.api).toEqual(VAAPI);
 });
 
+// 使用者在 RTX 5060 Ti（12 核心）上的 ffmpeg 7.1.5 輸出，位址遮蔽過
+const NVDEC_SURFACES = `[h264 @ 0x55fcef2cc0c0] decoder->cvdl->cuvidCreateDecoder(&decoder->decoder, params) failed -> CUDA_ERROR_INVALID_VALUE: invalid argument
+[h264 @ 0x55fcef2cc0c0] Using more than 32 (34) decode surfaces might cause nvdec to fail.
+[h264 @ 0x55fcef2cc0c0] Try lowering the amount of threads. Using 13 right now.
+[h264 @ 0x55fcef2cc0c0] Failed setup for format cuda: hwaccel initialisation returned error.
+Impossible to convert between the formats supported by the filter 'Parsed_fps_0' and the filter 'auto_scale_0'
+[fc#0 @ 0x1] Error reinitializing filters!
+[vost#1:0/mjpeg @ 0x1] Could not open encoder before EOF
+[out#0/rawvideo @ 0x1] Nothing was written into output file, because at least one of its streams received no packets.`;
+const PATH_MISSING = `[rtsp @ 0x1] method DESCRIBE failed: 404 Not Found
+Error opening input file rtsp://***@127.0.0.1:8554/y3z77qrh/sub.
+Error opening input files: Server returned 404 Not Found`;
+const PATH_BAD_REQUEST = `[rtsp @ 0x1] method DESCRIBE failed: 400 Bad Request
+[in#0 @ 0x1] Error opening input: Server returned 400 Bad Request
+Error opening input file rtsp://***@127.0.0.1:8554/y3z77qrh/main.`;
+const NVDEC_LACKING = `[hevc @ 0x1] Hardware is lacking required capabilities
+[hevc @ 0x1] Failed setup for format cuda: hwaccel initialisation returned error.
+Impossible to convert between the formats supported by the filter 'Parsed_fps_0' and the filter 'auto_scale_0'`;
+
+test("失敗原因：NVDEC 的解碼器建不起來是啟動失敗，不是不支援", () => {
+  expect(explainHwFailure(CUDA, "H.264 硬體解碼", NVDEC_SURFACES).reason).toBe("顯示卡啟動 H.264 硬體解碼失敗");
+  expect(explainHwFailure(VAAPI, "H.264 硬體解碼", "[h264 @ 0x1] Failed setup for format vaapi: hwaccel initialisation returned error.").reason).toBe("顯示卡啟動 H.264 硬體解碼失敗");
+});
+
+test("輸入端打不開不算顯示卡失敗；有任何顯示卡的訊息就算", () => {
+  expect(inputFailed(PATH_MISSING)).toBe(true);
+  expect(inputFailed(PATH_BAD_REQUEST)).toBe(true);
+  expect(inputFailed("[tcp @ 0x1] Connection to tcp://10.0.0.9:554?timeout=10000000 failed: Connection refused\nError opening input file rtsp://***@10.0.0.9/stream1.")).toBe(true);
+  expect(inputFailed(NVDEC_SURFACES)).toBe(false);
+  expect(inputFailed(NVDEC_LACKING)).toBe(false);
+  expect(inputFailed("")).toBe(false);
+  expect(inputFailed(`[rtsp @ 0x1] method DESCRIBE failed: 404 Not Found\nDevice creation failed: -22.`)).toBe(false);
+});
+
+test("硬體解碼只用一條解碼執行緒：NVDEC 的畫面緩衝依執行緒數增加，上限 32；試跑與 worker 是同一組參數", () => {
+  const { cmd } = detectCommand("ffmpeg", "rtsp://x/sub", 1, hwOf(CUDA));
+  expect(after(cmd, "-threads")).toBe("1");
+  expect(cmd.indexOf("-threads")).toBeLessThan(cmd.indexOf("-i"));
+  const probe = decodeTestCommand("ffmpeg", CUDA, "/t/s.mp4");
+  expect(after(probe, "-threads")).toBe("1");
+  expect(probe.indexOf("-threads")).toBeLessThan(probe.indexOf("-i"));
+  expect(detectCommand("ffmpeg", "rtsp://x/sub", 1, null).cmd).not.toContain("-threads");
+});
+
+test("試跑短片的參考幀不少於一般攝影機，畫面緩衝不夠的問題在試跑就出現", () => {
+  expect(after(sampleCommand("ffmpeg", "h264", "/t/s.mp4"), "-refs")).toBe("8");
+  expect(after(sampleCommand("ffmpeg", "hevc", "/t/s.mp4"), "-x265-params")).toContain("ref=8");
+});
+
 test("失敗原因：先認環境問題（裝置、權限、驅動元件），再認能力不足，認不出時說哪一步失敗", () => {
   const what = "H.265 硬體解碼";
   expect(explainHwFailure(VAAPI, what, "Failed to open the DRM device /dev/dri/renderD128: No such file or directory").reason).toContain("掛入 /dev/dri");
@@ -73,10 +122,10 @@ test("失敗原因：先認環境問題（裝置、權限、驅動元件），�
   expect(explainHwFailure(VAAPI, what, "libva info: va_openDriver() returns -1\nFailed to initialise VAAPI connection: -1 (unknown libva error).").reason).toContain("intel-media-va-driver");
   expect(explainHwFailure(CUDA, what, "Cannot load libnvcuvid.so.1").reason).toContain("NVIDIA_DRIVER_CAPABILITIES");
   expect(explainHwFailure(CUDA, what, "Cannot load libcuda.so.1\nDevice creation failed: -1.").reason).toContain("NVIDIA Container Toolkit");
-  expect(explainHwFailure(CUDA, what, "Impossible to convert between the formats supported by the filter").reason).toBe("這張顯示卡不支援H.265 硬體解碼");
-  expect(explainHwFailure(VAAPI, what, "", { timedOut: true }).reason).toBe("顯示卡沒有在時限內完成H.265 硬體解碼");
+  expect(explainHwFailure(CUDA, what, NVDEC_LACKING).reason).toBe("這張顯示卡不支援 H.265 硬體解碼");
+  expect(explainHwFailure(VAAPI, what, "", { timedOut: true }).reason).toBe("顯示卡沒有在時限內完成 H.265 硬體解碼");
   const odd = explainHwFailure(VAAPI, what, "a\nb\nc\nd\ne\nf\ng\nsomething odd");
-  expect(odd.reason).toBe("顯示卡無法H.265 硬體解碼");
+  expect(odd.reason).toBe("顯示卡沒有完成 H.265 硬體解碼");
   expect(odd.detail.split("\n")).toHaveLength(6);
 });
 
@@ -122,7 +171,7 @@ function dev(id: string, kind: ProbedDevice["kind"], h264: CodecCheck, hevc: Cod
   return { id, kind, name: id, pci: null, api, blocked: null, decode: { h264, hevc }, encode: { h264: yes, hevc: yes } };
 }
 const intel = dev("intel:GPU.0", "intel", yes, yes);
-const oldNvidia = dev("nvidia:GPU-1", "nvidia", yes, nope("這張顯示卡不支援H.265 硬體解碼"));
+const oldNvidia = dev("nvidia:GPU-1", "nvidia", yes, nope("這張顯示卡不支援 H.265 硬體解碼"));
 
 test("規劃：cpu 與還沒試跑完都用 CPU，不算退回", () => {
   expect(planDecode("cpu", [intel], "h264")).toEqual({ hw: null, note: null });
@@ -133,7 +182,7 @@ test("規劃：指定的卡支援這個格式就用它，不支援就用 CPU 並
   expect(planDecode("nvidia:GPU-1", [oldNvidia, intel], "h264").hw?.deviceId).toBe("nvidia:GPU-1");
   const p = planDecode("nvidia:GPU-1", [oldNvidia, intel], "hevc");
   expect(p.hw).toBeNull();
-  expect(p.note?.reason).toBe("這張顯示卡不支援H.265 硬體解碼");
+  expect(p.note?.reason).toBe("這張顯示卡不支援 H.265 硬體解碼");
 });
 
 test("規劃：自動依序 Nvidia、Intel，跳過不支援這個格式的卡；格式未知時當作 H.264", () => {
@@ -170,14 +219,14 @@ test("試跑：每張卡每種格式各跑一次解碼與編碼，失敗附白�
       ran.push({ cmd, env });
       if (cmd.includes("-version")) return done(0);
       if (cmd.includes("hevc_nvenc")) return done(1, "[hevc_nvenc @ 0x1] OpenEncodeSessionEx failed: unsupported device (2)");
-      if (cmd.includes("cuda") && cmd.some((a) => a.endsWith("sample-hevc.mp4"))) return done(1, "Impossible to convert between the formats supported by the filter");
+      if (cmd.includes("cuda") && cmd.some((a) => a.endsWith("sample-hevc.mp4"))) return done(1, NVDEC_LACKING);
       return done(0);
     },
   });
   expect(report.ffmpeg).toBe("ffmpeg version 7.1.5");
   const [nv, it] = report.devices;
   expect(nv!.decode.h264.ok).toBe(true);
-  expect(nv!.decode.hevc).toMatchObject({ ok: false, reason: "這張顯示卡不支援H.265 硬體解碼" });
+  expect(nv!.decode.hevc).toMatchObject({ ok: false, reason: "這張顯示卡不支援 H.265 硬體解碼" });
   expect(nv!.encode.hevc).toMatchObject({ ok: false, reason: expect.stringContaining("NVIDIA_DRIVER_CAPABILITIES") });
   expect(it!.decode.hevc.ok).toBe(true);
   expect(ran.filter((r) => r.cmd.includes("cuda") || r.cmd.some((a) => a.includes("nvenc"))).every((r) => r.env.CUDA_VISIBLE_DEVICES === "GPU-aaaa-1111")).toBe(true);

@@ -2,8 +2,9 @@
 // 一個 ffmpeg 解碼一次，輸出兩路：每秒 5 張 320×180 灰階 raw（stdout）給差分，每秒 1 張（開物件辨識時依辨識頻率，最多 5 張）640 寬 JPEG（fd 3）給快照與辨識。
 // 結果與 JPEG 以 protocol.ts 的格式寫到自己的 stdout，由主程序讀取。
 // 硬體解碼在第一張畫面之前就失敗（裝置、驅動、格式不支援、逾時）時，同一次執行內改用 CPU 重開 ffmpeg，偵測不中斷。
+// 輸入端打不開（轉發層還沒有這條 path、相機連不上）時顯示卡還沒試到，直接結束，supervisor 重啟後照樣先試硬體。
 import { readFileSync } from "node:fs";
-import { CODEC_LABEL, explainHwFailure, type HwFailure } from "../hwcodec/commands.ts";
+import { CODEC_LABEL, explainHwFailure, inputFailed, type HwFailure } from "../hwcodec/commands.ts";
 import type { HwDecode } from "../hwcodec/plan.ts";
 import { detectCommand, HW_DECODE_ENV, parseHwDecode } from "./command.ts";
 import { PREVIEW_THRESHOLDS } from "./config.ts";
@@ -156,7 +157,7 @@ for (;;) {
     else if (failure) report({ mode: "cpu", ...failure });
   });
   code = r.code;
-  if (!alive || !current || r.frames > 0) break;
+  if (!alive || !current || r.frames > 0 || inputFailed(r.stderr)) break;
   failure = explainHwFailure(current.api, `${CODEC_LABEL[current.codec]} 硬體解碼`, r.stderr, { timedOut: r.timedOut, exitCode: r.code });
   console.error(`[detect] ${current.deviceId} 硬體解碼沒有成功，改用 CPU：${failure.reason}`);
   hw = null;
