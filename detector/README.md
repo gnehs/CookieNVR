@@ -7,7 +7,7 @@
 | 映像 | 平台 | 推論裝置 | 內容 |
 | --- | --- | --- | --- |
 | `latest` | linux/amd64、linux/arm64 | CPU；amd64 另有 Intel 內顯 | `onnxruntime`，amd64 加 `onnxruntime-ep-openvino` 與 Intel 運算驅動 |
-| `latest-nvidia` | 只有 linux/amd64 | CPU、Nvidia | `onnxruntime-gpu` 1.26（CUDA 12、cuDNN 9.11） |
+| `latest-nvidia` | 只有 linux/amd64 | CPU、Intel 內顯、Nvidia | `onnxruntime-gpu` 1.26（CUDA 12、cuDNN 9.11），加 `onnxruntime-ep-openvino` 與 Intel 運算驅動 |
 
 - Intel 內顯：同時裝 Intel compute-runtime 26.40（Gen12 以後：11 代 Core 起、N100、Arc）與 legacy 24.35（Gen8 到 Gen11：6 到 10 代 Core 的 UHD 630 等、Apollo Lake、Gemini Lake 如 J4125）。
 - Nvidia：主機驅動 525 以上（Blackwell／RTX 50 要 570 以上）。cuDNN 釘在 9.11，是 CUDA 12 版最後一個還支援 Maxwell、Pascal、Volta（GTX 9xx、10xx、Quadro P400）的版本；舊卡實際能不能跑還沒有實機驗證。
@@ -52,7 +52,8 @@ docker run --rm --gpus all cookienvr:test-nvidia detector-selftest --expect nvid
 docker run --rm --gpus all cookienvr:test-nvidia sh -c 'nvidia-smi -L'        # 對照 UUID
 docker run --rm --gpus all cookienvr:test-nvidia detector-selftest --expect nvidia:GPU-<uuid>
 
-# 同時有 Intel 內顯與 Nvidia：用 -nvidia 映像只看得到 Nvidia；latest 映像只看得到 Intel 與 CPU
+# 同時有 Intel 內顯與 Nvidia：用 -nvidia 映像並同時掛 /dev/dri，兩種都會列出、都會測
+docker run --rm --gpus all --device /dev/dri:/dev/dri cookienvr:test-nvidia detector-selftest --expect intel,nvidia
 ```
 
 NVR 裡在「推論裝置」選單選特定的卡，設定存的是識別字（`nvidia:GPU-<uuid>`、`intel:GPU.0`），重開機或換插槽不會指到別張卡；那張卡不見時改用自動並在設定頁說明。設定頁的「測速」可以勾選多個裝置並排比較。
@@ -93,7 +94,7 @@ compose 寫法見 repo 根目錄的 `docker-compose.example.yml`（`devices: ["/
 
 ### 預期輸出
 
-最後一段摘要長這樣（數字因機器而異；CPU 那行的格式取自 Apple M 系列的實測，Intel 那行是示意，不是實測）：
+最後一段摘要長這樣（數字因機器而異；CPU 那行的格式取自 Apple M 系列的實測，Intel 那行是示意，不是實測）。「實際執行」是載入時量到的各 provider 佔推論時間的比例：顯示卡那行應該幾乎都是 `OpenVINOExecutionProvider` 或 `CUDAExecutionProvider`；如果顯示卡沒有實際執行模型（全部交回 `CPUExecutionProvider`），那行會是失敗，NVR 也會改用其他裝置。
 
 ```text
 ----- 摘要（可直接貼給 AI 或開發者）-----
@@ -104,8 +105,8 @@ CookieNVR detector selftest: PASS
 - /dev/dri：/dev/dri/renderD128（可讀寫）；Intel GPU：card0 8086:3e92 driver=i915
 - Nvidia：沒有 /dev/nvidia*；nvidia-smi：無法執行
 - 模型 yolox_tiny.onnx，每個裝置測速 5 秒，換算以每台每秒 2 次
-- Intel(R) Core(TM) i5-9400 CPU @ 2.90GHz [cpu]: OK 載入 70 ms，40.1 張/秒（平均 24.9 ms），約 10 台；car 0.85, person 0.83
-- Intel(R) UHD Graphics 630 [intel:GPU.0]: OK 載入 9000 ms，90.0 張/秒（平均 11.1 ms），約 36 台；car 0.85, person 0.83，與 CPU 一致
+- Intel(R) Core(TM) i5-9400 CPU @ 2.90GHz [cpu]: OK 載入 70 ms，40.1 張/秒（平均 24.9 ms），約 10 台；實際執行 CPUExecutionProvider 100%；car 0.85, person 0.83
+- Intel(R) UHD Graphics 630 [intel:GPU.0]: OK 載入 9000 ms，90.0 張/秒（平均 11.1 ms），約 36 台；實際執行 OpenVINOExecutionProvider 100%；car 0.85, person 0.83，與 CPU 一致
 - Nvidia 顯卡: 略過（這個映像沒有 Nvidia 推論元件，請改用 latest-nvidia 映像）
 - 自動模式：Intel(R) UHD Graphics 630（intel:GPU.0）
 -----

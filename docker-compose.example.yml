@@ -1,7 +1,7 @@
 services:
   cookienvr:
     # latest：CPU 推論，amd64 另含 Intel 內顯（linux/amd64、linux/arm64）
-    # latest-nvidia：CPU 與 Nvidia 顯卡（只有 linux/amd64）。也有固定版本，例如 1.2.3 與 1.2.3-nvidia。
+    # latest-nvidia：CPU、Intel 內顯與 Nvidia 顯卡（只有 linux/amd64）。也有固定版本，例如 1.2.3 與 1.2.3-nvidia。
     # edge、edge-nvidia：main 最新的建置，還沒發版時用這個。
     image: ghcr.io/gnehs/cookienvr:latest
     restart: unless-stopped
@@ -31,7 +31,7 @@ services:
       # 拿掉這一行的話，錄影會放在 /data/recordings。
       - /mnt/user/recordings:/recordings
 
-    # 物件辨識或影像硬體解碼用 Intel 內顯（amd64；硬體解碼兩種映像都可以，物件辨識要 latest）：
+    # 物件辨識或影像硬體解碼用 Intel 內顯（amd64，兩種映像都可以）：
     # devices: ["/dev/dri:/dev/dri"]
     # 設了 PUID 時，容器會自動把 /dev/dri 裝置的群組加進去，不需要 group_add。
     # 不用 PUID、改用 user: 直接以一般使用者啟動時，才要自己加上主機 render 群組的 gid

@@ -1,10 +1,12 @@
 # -nvidia 映像的 Python 相依（只有 linux x86_64）。同一個環境只能裝一種 onnxruntime 套件，所以這裡沒有 onnxruntime。
+# onnxruntime-ep-openvino 是 plugin EP，不是另一份 onnxruntime：它沒有宣告任何相依，載入到 onnxruntime-gpu 裡，
+# 所以同一個環境可以同時用 CUDA 與 Intel 內顯。
 # onnxruntime-gpu 1.26.0 是最後一版預設 CUDA 12 的版本（1.27 起改 CUDA 13，需要驅動 580 以上，且不支援 Turing 之前的顯卡）。
 # CUDA 與 cuDNN 用 pip 的 nvidia-* 函式庫，不需要 nvidia/cuda 基底映像；主機驅動 525 以上即可。
 # cuDNN 釘在 9.11：9.12 起 CUDA 12 版也拿掉了 Maxwell、Pascal、Volta（例如 GTX 10xx、Quadro P400）。
 # 整個相依閉包都釘住版本。改版本後用這行重新解出：
 #   uv pip compile --python-platform x86_64-manylinux_2_28 --python-version 3.13 --no-header --no-annotate <頂層套件檔>
-#   頂層：onnxruntime-gpu[cuda,cudnn]==1.26.0、nvidia-cudnn-cu12==9.11.1.4、numpy、pillow
+#   頂層：onnxruntime-gpu[cuda,cudnn]==1.26.0、nvidia-cudnn-cu12==9.11.1.4、onnxruntime-ep-openvino==1.8.1、numpy、pillow
 # 要改用 CUDA 13：docker build --build-arg VARIANT=nvidia --build-arg ONNXRUNTIME_GPU='onnxruntime-gpu[cuda,cudnn]==1.32.0'
 flatbuffers==25.12.19
 numpy==2.5.5
@@ -15,6 +17,7 @@ nvidia-cudnn-cu12==9.11.1.4
 nvidia-cufft-cu12==11.4.1.4
 nvidia-curand-cu12==10.3.10.19
 nvidia-nvjitlink-cu12==12.9.86
+onnxruntime-ep-openvino==1.8.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'
 onnxruntime-gpu==1.26.0
 packaging==26.3
 pillow==13.0.0

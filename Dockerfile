@@ -2,7 +2,7 @@
 
 ARG BUN_VERSION=1
 ARG MEDIAMTX_VERSION=1.21.4
-# default：CPU 推論，amd64 另含 Intel 內顯（OpenVINO）；nvidia：CPU 與 Nvidia（CUDA 12），只有 amd64。
+# default：CPU 推論，amd64 另含 Intel 內顯（OpenVINO）；nvidia：CPU、Intel 內顯與 Nvidia（CUDA 12），只有 amd64。
 ARG VARIANT=default
 
 # Own stage so curl and the archive never reach the final image.
@@ -42,7 +42,7 @@ RUN set -eux; \
         fi; \
         req=/src/requirements-nvidia.txt; \
         if [ -n "$ONNXRUNTIME_GPU" ]; then \
-          grep -viE '^(onnxruntime|nvidia-)' "$req" > /tmp/requirements.txt; \
+          grep -viE '^(onnxruntime-gpu|nvidia-)' "$req" > /tmp/requirements.txt; \
           echo "$ONNXRUNTIME_GPU" >> /tmp/requirements.txt; \
           req=/tmp/requirements.txt; \
         fi ;; \
@@ -71,7 +71,8 @@ ARG VARIANT
 # and Vulkan. They are only dlopen'ed for GPU filters and hwaccel, neither of which recording,
 # snapshots or probing use, so they are purged (about 180 MB). --force-depends leaves dpkg's
 # dependency state inconsistent: do not run apt-get install in this stage after this layer.
-# Intel's OpenCL runtime for OpenVINO's GPU plugin is installed in the same layer so the .deb files
+# Intel's OpenCL runtime for OpenVINO's GPU plugin (both variants on amd64: an Nvidia box often has an
+# Intel iGPU too) is installed in the same layer so the .deb files
 # never land in one. Trixie does not package it. The GPU plugin links only libOpenCL, so the Level Zero
 # drivers are left out. Two generations side by side, as Frigate does:
 # 26.40 covers Gen12 and newer (Tiger Lake, Alder Lake, N100, Arc); the legacy1 24.35 packages cover
@@ -86,7 +87,7 @@ ARG VARIANT
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     intel=""; va=""; \
-    if [ "$VARIANT" = default ] && [ "$arch" = amd64 ]; then intel=ocl-icd-libopencl1; fi; \
+    if [ "$arch" = amd64 ]; then intel=ocl-icd-libopencl1; fi; \
     if [ "$arch" = amd64 ]; then va="intel-media-va-driver i965-va-driver"; fi; \
     apt-get update; \
     apt-get install -y --no-install-recommends ffmpeg tini ca-certificates python3 $intel $va; \

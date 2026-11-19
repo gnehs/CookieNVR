@@ -1,4 +1,5 @@
 # 物件辨識 worker 的 Python 相依：預設映像（CPU，linux/amd64 另有 Intel 內顯）與從原始碼執行。
+# -nvidia 映像用 requirements-nvidia.txt，裡面釘的 onnxruntime-ep-openvino 要和這裡相同。
 # 整個相依閉包都釘住版本，重建結果固定。改版本後用這行重新解出：
 #   uv pip compile --universal --python-version 3.13 --no-header --no-annotate <只列下面四個頂層套件的檔案>
 # onnxruntime-ep-openvino 是 OpenVINO 的 plugin EP（自帶 OpenVINO 與 TBB），只有 linux x86_64 的 wheel。

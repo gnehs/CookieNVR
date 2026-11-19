@@ -65,7 +65,7 @@ def hints(device: str, error: str, p: eng.Probe) -> list[str]:
                 "常見原因：驅動版本不支援這顆顯示卡的運算、或模型用了這個裝置不支援的運算。CookieNVR 會自動改用其他裝置。"]
     if device == "intel":
         if not p.has_openvino:
-            return ["這個映像不含 OpenVINO plugin：Intel 內顯只有 linux/amd64 的 latest（預設）映像支援，-nvidia 與 arm64 映像沒有。"]
+            return ["這個映像不含 OpenVINO plugin：Intel 內顯只有 linux/amd64 的映像（latest 與 latest-nvidia）支援，arm64 映像沒有。"]
         if not p.dri_nodes:
             return ["容器裡沒有 /dev/dri：docker run 加 `--device /dev/dri:/dev/dri`（compose 用 `devices: [\"/dev/dri:/dev/dri\"]`）。",
                     "主機上先確認 `ls -l /dev/dri` 有 renderD128；Unraid 需要載入 i915（或新平台的 xe）驅動，例如安裝 Intel GPU TOP 外掛。"]

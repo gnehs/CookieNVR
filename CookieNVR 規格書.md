@@ -40,7 +40,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 整套系統是一個容器、一個 port、一個 volume，在 Unraid 用 Docker Compose 或 Docker 頁面都能直接跑。
 
 - **映像內容**：`oven/bun`（Debian slim）＋ ffmpeg / ffprobe ＋ MediaMTX ＋ 物件辨識用的 Python 與 ONNX Runtime ＋ CookieNVR 原始碼與建置好的網頁介面（`dist/web`）。Dockerfile 多一個建置階段跑 `vite build`，前端套件不進最終映像。
-- **映像版本**：`latest` 含 CPU 推論，amd64 另含 Intel 內顯（OpenVINO plugin EP 與 Intel OpenCL 驅動，26.40 與 24.35 legacy 並裝）；`latest-nvidia` 改含 Nvidia（CUDA 12、cuDNN 9.11，主機驅動 525 以上）。不用物件辨識時兩者沒有差別，detector 不啟動，只是映像比較大（壓縮後 arm64 約 301 MB、amd64 約 680 MB；M3 時約 217 MB；-nvidia 估計約 2 GB）。
+- **映像版本**：`latest` 含 CPU 推論，amd64 另含 Intel 內顯（OpenVINO plugin EP 與 Intel OpenCL 驅動，26.40 與 24.35 legacy 並裝）；`latest-nvidia` 另含 Nvidia（CUDA 12、cuDNN 9.11，主機驅動 525 以上），也含同一套 Intel 內顯元件（plugin EP 沒有相依，載入到 `onnxruntime-gpu` 裡），同一台機器可以在內顯與 Nvidia 之間選。不用物件辨識時兩者沒有差別，detector 不啟動，只是映像比較大（壓縮後 arm64 約 301 MB、amd64 約 680 MB；M3 時約 217 MB；-nvidia 估計約 2 GB）。
 - **平台**：`latest` 支援 `linux/amd64` 與 `linux/arm64`；`latest-nvidia` 只有 `linux/amd64`。
 - **GPU（選用，物件辨識與影像硬體解碼用）**：Intel 內顯掛入 `/dev/dri`；Nvidia 需主機裝好 NVIDIA Container Toolkit（Unraid 用 Nvidia Driver 外掛），並以 `--gpus all` 或 `runtime: nvidia` 啟動，硬體解碼另需 `NVIDIA_DRIVER_CAPABILITIES` 含 `video`（映像預設 `compute,utility,video`）。amd64 映像都含 Intel 的 VA 驅動（`intel-media-va-driver`、`i965-va-driver`）。沒有 GPU 時用 CPU。
 - **網路**：容器需能連到攝影機的 554（RTSP）與 2020（Tapo ONVIF）。bridge 模式即可運作；想讓 Home Assistant 自動發現、或啟用 HKSV 時要用 host 網路，或 Unraid 的 br0 給獨立 IP，因為兩者都靠 mDNS。
@@ -289,7 +289,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 
 | 裝置 | 執行方式 | 映像 | 容器需求 |
 | --- | --- | --- | --- |
-| Intel 內顯 | ONNX Runtime ＋ OpenVINO plugin EP（`onnxruntime-ep-openvino`） | `latest`（只有 amd64） | 掛入 `/dev/dri` |
+| Intel 內顯 | ONNX Runtime ＋ OpenVINO plugin EP（`onnxruntime-ep-openvino`） | `latest` 與 `latest-nvidia`（只有 amd64） | 掛入 `/dev/dri` |
 | Nvidia 顯卡 | ONNX Runtime ＋ CUDA 12（`onnxruntime-gpu` 1.26） | `latest-nvidia`（只有 amd64） | NVIDIA Container Toolkit，`--gpus all` 或 `runtime: nvidia`；主機驅動 525 以上 |
 | CPU | ONNX Runtime | 兩者皆可（arm64 只有 CPU） | 無 |
 
@@ -297,7 +297,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 - 設定存成「工作 → 裝置」的對應 `settings.devices`（`objects` 是這裡的推論，`decode` 是影像解碼，見「影像硬體解碼」），值是 `auto`、`cpu` 或識別字。在「設定 → 一般 → 物件辨識」選擇，預設「自動」：依序試 Nvidia、Intel、CPU。不提供「不同攝影機用不同裝置」：所有攝影機共用一個推論程序，一次一張，分裝置要多開程序與佇列，這一版不做。
 - 指定或自動選到的 GPU 載入失敗時改用下一個（最後是 CPU）；指定的裝置不見了（拔卡、換卡）改用自動。實際使用的裝置與原因回報給主程序，顯示在設定頁（「使用中：Intel UHD Graphics 630」與警示）與診斷資訊。
 - **實際在哪裡執行**：EP 建得起來不代表模型在 GPU 上跑。EP 不支援的節點會交給 CPU EP，`get_providers()` 照樣列著它（例如 OpenVINO 看得到內顯卻編譯不了這個模型）。所以載入時開 ONNX Runtime profiling 跑兩次空白畫面，從第二次的節點事件（`args.provider`、`dur`）算各 provider 佔的推論時間，然後 `end_profiling()`（之後不再記錄）並刪掉檔案。GPU 的 EP 佔不到一成：視為這個裝置不能跑這個模型，改用下一個，原因寫「<型號>沒有實際執行這個模型（OpenVINO 把運算交回處理器）」；CUDA 把形狀計算放在 CPU 只佔約 1%，不受影響。一成以上照常使用，處理器佔一成以上時設定頁寫出比例（過半用警示色：「實際上大多在處理器上執行」）。各 provider 的比例進診斷資訊。
-- 分成兩個映像：官方文件說同一個環境只能裝一種 ONNX Runtime 套件，而且 Nvidia 的 CUDA／cuDNN 函式庫壓縮後就有約 1.7 GB。-nvidia 釘在 CUDA 12（`onnxruntime-gpu` 1.26.0、cuDNN 9.11），涵蓋 Maxwell 以後的卡（家用常見的 Pascal，例如 P400、GTX 10 系列）；cuDNN 9.12 起只支援 Turing 以後，所以不升級。要 CUDA 13 可用 build arg `ONNXRUNTIME_GPU`。TensorRT 需要另外數 GB 的函式庫與建引擎時間，不放。
+- 分成兩個映像：官方文件說同一個環境只能裝一種 ONNX Runtime 套件（OpenVINO plugin EP 不算，它是載入 ONNX Runtime 的外掛），而且 Nvidia 的 CUDA／cuDNN 函式庫壓縮後就有約 1.7 GB。-nvidia 釘在 CUDA 12（`onnxruntime-gpu` 1.26.0、cuDNN 9.11），涵蓋 Maxwell 以後的卡（家用常見的 Pascal，例如 P400、GTX 10 系列）；cuDNN 9.12 起只支援 Turing 以後，所以不升級。要 CUDA 13 可用 build arg `ONNXRUNTIME_GPU`。TensorRT 需要另外數 GB 的函式庫與建引擎時間，不放。
 - Intel 內顯需要容器內的 OpenCL 驅動：Debian trixie 沒有打包，映像內並裝 Intel compute-runtime 26.40（Gen12 以後）與 24.35 的 legacy1 套件（Gen8 到 Gen11，例如 8 到 10 代 Core 的 UHD 630、J4125），下載時驗 SHA-256。
 - Nvidia 卡的使用率與顯示記憶體由 detector 每 10 秒以 nvidia-smi 讀取，主程序以 `ObjectDetection.resources()` 匯出給狀態頁；Intel 內顯沒有便宜的讀法，不提供。
 

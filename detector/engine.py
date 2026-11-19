@@ -2,7 +2,7 @@
 
 裝置的實作只有 ONNX Runtime 的 execution provider：
 - cpu：CPUExecutionProvider（所有映像都有）
-- intel：OpenVINO plugin EP（`onnxruntime-ep-openvino`，只有 amd64 預設映像），OpenVINO 的 GPU.0、GPU.1…，需要 /dev/dri
+- intel：OpenVINO plugin EP（`onnxruntime-ep-openvino`，兩種映像的 amd64 都有），OpenVINO 的 GPU.0、GPU.1…，需要 /dev/dri
 - nvidia：CUDAExecutionProvider（`onnxruntime-gpu`，只有 -nvidia 映像），每張卡一個裝置，需要 NVIDIA Container Toolkit
 
 每個裝置有穩定的識別字，設定存的是它而不是清單順序：
@@ -41,6 +41,7 @@ KINDS = ("cpu", "intel", "nvidia")
 KIND_NAMES = {"cpu": "CPU", "intel": "Intel 內顯", "nvidia": "Nvidia 顯卡"}
 RUNTIME_NAMES = {"intel": "OpenVINO", "nvidia": "CUDA"}
 CPU_EP = "CPUExecutionProvider"
+INTEL_VENDOR = 0x8086
 #: GPU 的 EP 分到的推論時間低於這個比例，就當作這個裝置沒有在跑這個模型。
 #: CUDA 把形狀計算之類的小節點放在 CPU 是正常的，只佔約 1%；不到一成表示幾乎全部交回處理器，用這張卡沒有好處，
 #: 還多了搬資料的成本。
@@ -150,6 +151,9 @@ def _intel_devices(ort, p: Probe) -> list[Device]:
         ov = str(d.ep_metadata.get("ov_device", ""))
         if not ov.startswith("GPU"):
             continue
+        # OpenVINO 的 GPU plugin 只列 Intel 的 OpenCL 裝置；-nvidia 映像裡還有 Nvidia 的 OpenCL ICD，保險起見再擋一次
+        if getattr(d.device, "vendor_id", INTEL_VENDOR) not in (INTEL_VENDOR, 0):
+            continue
         meta = {**dict(d.device.metadata), **dict(d.ep_metadata)}
         name = next((str(v) for k, v in meta.items() if "name" in k.lower() or "description" in k.lower()), "")
         found.append(Device(f"intel:{ov}", "intel", name or f"Intel 內顯（{ov}）", ov_device=ov))
@@ -226,7 +230,7 @@ def unavailable_reason(kind: str, p: Probe) -> Fallback | None:
     if kind == "intel":
         if not p.has_openvino:
             detail = p.openvino_plugin_error or "onnxruntime-ep-openvino 沒有安裝"
-            return Fallback("這個映像沒有 Intel 內顯推論元件（只有 amd64 的 latest 映像有）", detail)
+            return Fallback("這個映像沒有 Intel 內顯推論元件（只有 amd64 的映像有）", detail)
         if not p.dri_nodes:
             return Fallback("容器裡找不到 Intel 內顯（/dev/dri），請在容器設定掛入 /dev/dri", "no /dev/dri/renderD*")
         if not p.dri_accessible:

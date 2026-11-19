@@ -11,7 +11,7 @@
   <Support>https://github.com/gnehs/CookieNVR/issues</Support>
   <Project>https://github.com/gnehs/CookieNVR</Project>
   <ReadMe>https://github.com/gnehs/CookieNVR#readme</ReadMe>
-  <Overview>CookieNVR 是家用 NVR：24 小時錄影、動作偵測、鏡頭控制（PTZ）與 Home Assistant 連動，物件辨識為選用功能。錄影直接複製攝影機的串流，不轉碼。啟動後開啟 WebUI 建立管理員帳號並新增攝影機。這是 Nvidia 版：物件辨識與影像硬體解碼可以用 Nvidia 顯示卡。目前是開發中的 edge 版本，尚未發布正式版。</Overview>
+  <Overview>CookieNVR 是家用 NVR：24 小時錄影、動作偵測、鏡頭控制（PTZ）與 Home Assistant 連動，物件辨識為選用功能。錄影直接複製攝影機的串流，不轉碼。啟動後開啟 WebUI 建立管理員帳號並新增攝影機。這是 Nvidia 版：物件辨識與影像硬體解碼可以用 Nvidia 顯示卡，主機有 Intel 內顯時也可以用內顯。目前是開發中的 edge 版本，尚未發布正式版。</Overview>
   <Category>Security: HomeAutomation:</Category>
   <WebUI>http://[IP]:[PORT:8765]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/gnehs/CookieNVR/main/unraid/cookienvr-nvidia.xml</TemplateURL>

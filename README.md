@@ -58,14 +58,14 @@ services:
 | 標籤 | 內容 | 平台 |
 | --- | --- | --- |
 | `edge` | CPU 推論；amd64 另含 Intel 內顯 | `linux/amd64`、`linux/arm64` |
-| `edge-nvidia` | CPU 與 Nvidia（CUDA 12） | `linux/amd64` |
+| `edge-nvidia` | CPU、Intel 內顯與 Nvidia（CUDA 12） | `linux/amd64` |
 
 發布正式版本後會有 `latest`、`latest-nvidia` 與版本號標籤。
 
 ### 顯示卡（選用）
 
 - **Intel 內顯**：加上 `devices: ["/dev/dri:/dev/dri"]`。設了 `PUID` 時，容器會自動加入裝置的群組。
-- **Nvidia**：主機裝好 NVIDIA Container Toolkit，映像改用 `edge-nvidia`，並以 `runtime: nvidia` 或 `--gpus all` 啟動。
+- **Nvidia**：主機裝好 NVIDIA Container Toolkit，映像改用 `edge-nvidia`，並以 `runtime: nvidia` 或 `--gpus all` 啟動。同時有 Intel 內顯時再掛 `/dev/dri`，兩種都能選。
 
 設好後可以在容器裡檢查每張卡實際能做什麼，輸出可以直接貼到 issue（`docker exec` 預設以 root 執行；設了 `PUID` 時加上 `-u 99:100` 會更接近 NVR 實際的權限）：
 
