@@ -1,4 +1,5 @@
 import type { ProbeResult, StreamInfo, SystemDto } from "./api-types.ts";
+import type { DetectDiagnostics } from "./detect/manager.ts";
 import type { PtzDiagnostics } from "./ptz/hub.ts";
 import type { Camera, CameraConnection, Settings, WorkerStatus } from "./types.ts";
 import type { RestartRecord } from "./workers/restart-log.ts";
@@ -11,6 +12,8 @@ export interface DiagnosticsCamera {
   probe: { at: number; result: ProbeResult } | null;
   /** ONVIF 與 PTZ 的現況；沒有提供時報告不列這一項 */
   ptz?: PtzDiagnostics;
+  /** 動作偵測的現況；沒有提供時報告不列這一項 */
+  detect?: { state: DetectDiagnostics | null; eventsLast24h: number };
 }
 
 export interface DiagnosticsInput {
@@ -120,6 +123,36 @@ function ptzLines(p: PtzDiagnostics, now: number): string[] {
   return lines;
 }
 
+const SOURCE_TEXT = { pixel: "畫面差分", onvif: "相機事件（ONVIF）", both: "畫面差分＋相機事件" } as const;
+
+function subscriberLine(s: NonNullable<DetectDiagnostics["onvif"]>, now: number): string {
+  const st = s.status;
+  const state =
+    st.state === "active"
+      ? `active（${duration(now - st.since)}前建立）`
+      : st.state === "backoff"
+        ? `backoff，第 ${st.attempt} 次重試，錯誤 ${st.error.kind}${st.error.kind === "auth" ? "（請檢查相機帳密）" : ""}`
+        : st.state === "unsupported"
+          ? "unsupported（相機不支援 PullPoint 事件，已停止訂閱）"
+          : st.state;
+  const last = s.lastEvent ? `；最近一次通知 ${s.lastEvent.topic}=${s.lastEvent.active}（${duration(now - s.lastEvent.at)}前）` : "；還沒收到通知";
+  return `- ONVIF 事件訂閱：${state}${last}`;
+}
+
+function detectLines(d: NonNullable<DiagnosticsCamera["detect"]>, now: number): string[] {
+  const st = d.state;
+  if (!st) return ["- 動作偵測：攝影機停用，沒有執行"];
+  const c = st.config;
+  const lines = [
+    `- 動作偵測：${c.enabled ? `開啟，來源 ${SOURCE_TEXT[c.source]}` : "關閉（仍解碼供快照）"}；像素門檻 ${c.threshold}，最小面積 ${(c.minArea * 100).toFixed(2)}%，冷卻 ${c.cooldownSec} 秒，遮罩 ${c.masks.length} 個`,
+    `- 偵測畫面：${st.lastFrame ? `最近一張 ${duration(now - st.lastFrame.at)}前，狀態 ${st.lastFrame.state}，分數 ${st.lastFrame.score?.toFixed(4) ?? "—"}；60 秒內最高 ${st.peakScore?.toFixed(4) ?? "—"}` : "還沒收到畫面"}${st.paused ? "；鏡頭移動中暫停" : ""}`,
+    `- 快照：${st.jpegAt ? `${duration(now - st.jpegAt)}前更新` : "還沒有"}`,
+  ];
+  if (c.enabled && c.source !== "pixel") lines.push(st.onvif ? subscriberLine(st.onvif, now) : "- ONVIF 事件訂閱：沒有設定 ONVIF，相機事件不會觸發");
+  lines.push(`- 最近 24 小時事件：${d.eventsLast24h} 筆`);
+  return lines;
+}
+
 function onvifProbeLine(r: Extract<ProbeResult, { ok: true }>["onvif"]): string {
   if (r.state === "unconfigured") return "ONVIF 未設定";
   if (r.state === "available") return `ONVIF 可用，${r.ptz ? "有" : "沒有"} PTZ`;
@@ -149,6 +182,7 @@ function cameraBlock(c: DiagnosticsCamera, input: DiagnosticsInput): string[] {
     );
   } else lines.push("- 最近一次測試連線：本次啟動後沒有紀錄，碼流編碼與解析度未知");
   if (c.ptz) lines.push(...ptzLines(c.ptz, input.now));
+  if (c.detect) lines.push(...detectLines(c.detect, input.now));
   lines.push(
     usage
       ? `- 錄影用量：${bytes(usage.bytes)}，最早一段 ${usage.oldestMs !== null ? iso(usage.oldestMs) : "未知"}`

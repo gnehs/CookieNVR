@@ -6,15 +6,16 @@ import type { EventDto } from "../api-types.ts";
 import { openDb } from "../db.ts";
 import type { Route } from "../types.ts";
 import { eventRoutes, thumbPath } from "./routes.ts";
+import { createEventTracker } from "./tracker.ts";
 
 async function setup() {
   const dataDir = await mkdtemp(join(tmpdir(), "cookienvr-events-"));
   const db = openDb(":memory:");
-  const routes = eventRoutes({ db, dataDir });
-  const call = (path: string, routePath: string, params: Record<string, string> = {}) => {
-    const route = routes.find((r) => r.path === routePath) as Route;
+  const routes = eventRoutes({ db, dataDir, events: createEventTracker({ db, dataDir }) });
+  const call = (path: string, routePath: string, params: Record<string, string> = {}, method = "GET") => {
+    const route = routes.find((r) => r.path === routePath && r.method === method) as Route;
     const url = new URL(`http://nvr${path}`);
-    return route.handler({ req: new Request(url), url, params, principal: null, ip: "127.0.0.1" });
+    return route.handler({ req: new Request(url, { method }), url, params, principal: null, ip: "127.0.0.1" });
   };
   const insert = (camera: string, start: number, end: number | null, labels: string[] = [], hasThumb = false) =>
     db
@@ -27,12 +28,38 @@ async function setup() {
   return { dataDir, call, insert, list, routes };
 }
 
-test("both routes require a signed-in user", async () => {
+test("reading needs a signed-in user, deleting an admin", async () => {
   const { routes } = await setup();
   expect(routes.map((r) => [r.method, r.path, r.access])).toEqual([
     ["GET", "/api/events", "user"],
+    ["GET", "/api/events/:id", "user"],
+    ["DELETE", "/api/events/:id", "admin"],
     ["GET", "/api/events/:id/thumb.jpg", "user"],
   ]);
+});
+
+test("before pages newest first across cameras", async () => {
+  const { insert, list } = await setup();
+  for (let i = 1; i <= 5; i++) insert(i % 2 ? "cam1" : "cam2", i * 1000, i * 1000 + 500);
+  expect((await list("before=99999&limit=2")).body.map((e) => e.startMs)).toEqual([5000, 4000]);
+  expect((await list("before=4000&limit=2")).body.map((e) => e.startMs)).toEqual([3000, 2000]);
+  expect((await list("before=99999&camera=cam2")).body.map((e) => e.startMs)).toEqual([4000, 2000]);
+  expect((await list("before=x")).status).toBe(400);
+});
+
+test("deleting removes the event and its thumbnail, but not while it is in progress", async () => {
+  const { dataDir, call, insert } = await setup();
+  const done = insert("cam1", 1_000, 2_000, [], true).id;
+  const running = insert("cam1", 3_000, null).id;
+  const path = thumbPath(dataDir, done);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, "jpeg");
+  const del = (id: number) => call(`/api/events/${id}`, "/api/events/:id", { id: String(id) }, "DELETE");
+  expect((await del(running)).status).toBe(409);
+  expect((await del(done)).status).toBe(204);
+  expect(await Bun.file(path).exists()).toBe(false);
+  expect((await call(`/api/events/${done}`, "/api/events/:id", { id: String(done) })).status).toBe(404);
+  expect((await del(done)).status).toBe(404);
 });
 
 test("an empty events table lists nothing", async () => {

@@ -7,15 +7,15 @@ import { backupOnce } from "./backup/index.ts";
 import type { CameraDto, ProbeResult, SystemDto } from "./api-types.ts";
 import { createAuth } from "./auth/index.ts";
 import { probeCamera } from "./camera/probe.ts";
-import { createSnapshots } from "./camera/snapshot.ts";
 import { openDb } from "./db.ts";
 import { buildDiagnostics } from "./diagnostics.ts";
-import { eventRoutes } from "./events/index.ts";
+import { createDetection } from "./detect/manager.ts";
+import { createEventTracker, eventRoutes } from "./events/index.ts";
+import { countEventsSince } from "./events/store.ts";
 import { createExports, exportRoutes } from "./export/index.ts";
 import { readEnv } from "./env.ts";
 import { coreRoutes, createRouter, HttpError, redactConfig } from "./http/index.ts";
 import { createLive } from "./live/live.ts";
-import { queryEvents } from "./events/store.ts";
 import {
   createIndexer,
   createRetention,
@@ -84,7 +84,20 @@ const live = createLive({
   onChange: () => void reconcileWorkers().catch((e) => log("workers", e)),
 });
 const indexer = createIndexer({ db, settings: settings.get });
-const retention = createRetention({ db, settings: settings.get });
+const retention = createRetention({ db, settings: settings.get, dataDir: env.dataDir });
+const events = createEventTracker({ db, dataDir: env.dataDir, onError: (e) => log("events", e) });
+const detection = createDetection({
+  env,
+  controlDir: join(env.dataDir, "detect"),
+  events,
+  sourceUrl(camera) {
+    if (!camera.config.enabled) return null;
+    const hasSub = sourceUrls(camera.config.connection).sub !== null;
+    return restream.internalUrl(camera.id, hasSub ? "sub" : "main");
+  },
+  isBusy: (id) => ptz.isBusy(id),
+  onError: log,
+});
 
 function log(scope: string, error: unknown): void {
   console.error(`[${scope}]`, error instanceof Error ? error.message : error);
@@ -123,7 +136,7 @@ function purgeCameraRecordings(id: CameraId): void {
 }
 
 function desiredWorkers(): WorkerSpec[] {
-  const specs = [restream.workerSpec(), ...live.workerSpecs()];
+  const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs()];
   for (const camera of cameras.list()) {
     if (!isRecording(camera)) continue;
     const input = camera.config.record.direct
@@ -204,7 +217,7 @@ const hub = createStreamHub({
   snapshot: (client) => ({
     cameras: cameras.list().map((c) => cameraDto(c, client)),
     workers: client.principal.role === "admin" ? supervisor.status() : null,
-    events: queryEvents(db, { cameraId: null, startMs: Date.now(), endMs: Date.now() + 1, limit: 100 }).filter((e) => e.endMs === null),
+    events: events.active(),
   }),
 });
 
@@ -240,6 +253,7 @@ async function diagnostics(only: string | null): Promise<string> {
         ...cameraStatus(camera.id),
         probe: probes.get(JSON.stringify(camera.config.connection)) ?? null,
         ptz: await ptz.inspect(camera.id, PTZ_INSPECT_MS),
+        detect: { state: detection.diagnostics(camera.id), eventsLast24h: countEventsSince(db, camera.id, Date.now() - 86_400_000) },
       })),
     ),
     only: only as CameraId | null,
@@ -274,18 +288,10 @@ const routes = [
     purgeOrphans: () =>
       indexer.exclusive(() => purgeOrphans(purgeDeps, (id) => cameras.get(id) !== null || hasRecordWorker(id))),
   }),
-  ...eventRoutes({ db, dataDir: env.dataDir }),
+  ...eventRoutes({ db, dataDir: env.dataDir, events }),
   ...exportRoutes(exportJobs),
   ...ptzRoutes({ hub: ptz }),
-  createSnapshots({
-    env,
-    sourceUrl: (id) => {
-      const camera = cameras.get(id);
-      if (!camera?.config.enabled) return null;
-      const hasSub = sourceUrls(camera.config.connection).sub !== null;
-      return restream.internalUrl(id, hasSub ? "sub" : "main");
-    },
-  }).route(),
+  ...detection.routes(),
   ...live.routes(),
   hub.route(),
   restream.rtspAuthRoute({
@@ -306,11 +312,13 @@ const server = Bun.serve({
 await supervisor.ready;
 await ensureDayDirs(cameras.list(), settings.get(), Date.now());
 await indexer.reconcile(Date.now());
+detection.sync(cameras.list());
 supervisor.apply(desiredWorkers());
 void restream.sync(cameras.list()).catch((e) => log("restream", e));
 
 cameras.subscribe((list) => {
   ptz.reconcile(list);
+  detection.sync(list);
   for (const c of list) sentStatus.set(c.id, JSON.stringify(cameraStatus(c.id)));
   hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
   void reconcileWorkers().catch((e) => log("workers", e));
@@ -319,6 +327,11 @@ cameras.subscribe((list) => {
 supervisor.subscribe((status) => {
   hub.publish((client) => (client.principal.role === "admin" ? { type: "worker", data: status } : null));
   if (status.kind === "record") publishCameraChanges();
+});
+events.subscribe(({ phase, event }) => {
+  if (phase === "update") return;
+  hub.publish(() => ({ type: "event", data: { phase, event } }));
+  hub.publish(() => ({ type: "motion", data: { cameraId: event.cameraId, active: phase === "start" } }));
 });
 settings.subscribe(() => void reconcileWorkers().catch((e) => log("workers", e)));
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => log("restream", e));
@@ -386,7 +399,7 @@ async function shutdown(exitCode = 0): Promise<void> {
   memory.stop();
   stopSync();
   void server.stop(true);
-  await Promise.all([supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose()]);
+  await Promise.all([supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop()]);
   db.close();
   process.exit(exitCode);
 }

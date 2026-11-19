@@ -22,19 +22,20 @@ async function setup(segmentsDaysAgo: number[], freeBytes = plenty) {
     paths.push(await writeSegment(settings, "cam1", start, 1000, start + 60_000));
   }
   await createIndexer({ db, settings: () => settings }).reconcile(NOW);
-  const retention = createRetention({ db, settings: () => settings, freeBytes });
+  const dataDir = settings.storagePath + "-data";
+  const retention = createRetention({ db, settings: () => settings, freeBytes, dataDir });
   const remaining = () => allSegments(db).map((s) => s.path).sort();
   const addEvent = (startMs: number, endMs: number | null) =>
     db.query("INSERT INTO events (camera_id, source, start_ms, end_ms) VALUES ('cam1', 'pixel', ?, ?)").run(startMs, endMs);
-  return { settings, db, paths, retention, remaining, addEvent };
+  return { settings, db, paths, retention, remaining, addEvent, dataDir };
 }
 
 test("continuous recording older than 7 days is deleted from disk and index", async () => {
   const { paths, retention, remaining } = await setup([8, 6]);
-  expect(await retention.runOnce(NOW)).toEqual({ deleted: 1, freedBytes: 1000 });
+  expect(await retention.runOnce(NOW)).toEqual({ deleted: 1, freedBytes: 1000, events: 0 });
   expect(remaining()).toEqual([paths[1]!]);
   expect(await exists(paths[0]!)).toBe(false);
-  expect(await retention.runOnce(NOW)).toEqual({ deleted: 0, freedBytes: 0 });
+  expect(await retention.runOnce(NOW)).toEqual({ deleted: 0, freedBytes: 0, events: 0 });
 });
 
 test("segments overlapping an event (with 5 s buffer) are kept for 30 days", async () => {
@@ -56,6 +57,19 @@ test("an ongoing event (no end yet) protects segments after its start", async ()
   expect(remaining()).toEqual([paths[0]!]);
 });
 
+test("events past the event retention are deleted with their thumbnails; open ones stay", async () => {
+  const { db, retention, addEvent, dataDir } = await setup([]);
+  addEvent(NOW - 31 * DAY, NOW - 31 * DAY + 5_000);
+  addEvent(NOW - 29 * DAY, NOW - 29 * DAY + 5_000);
+  addEvent(NOW - 40 * DAY, null);
+  const ids = (db.query("SELECT id FROM events ORDER BY id").all() as { id: number }[]).map((r) => r.id);
+  for (const id of ids) await Bun.write(join(dataDir, "thumbs", `${id}.jpg`), "jpeg");
+  expect((await retention.runOnce(NOW)).events).toBe(1);
+  expect((db.query("SELECT id FROM events ORDER BY id").all() as { id: number }[]).map((r) => r.id)).toEqual([ids[1]!, ids[2]!]);
+  expect(await exists(join(dataDir, "thumbs", `${ids[0]}.jpg`))).toBe(false);
+  expect(await exists(join(dataDir, "thumbs", `${ids[1]}.jpg`))).toBe(true);
+});
+
 test("low disk space evicts the oldest segments regardless of events, never the recording one", async () => {
   let free = 0;
   const { settings, db, paths, retention, remaining, addEvent } = await setup([3, 2, 1], async () => free);
@@ -64,7 +78,7 @@ test("low disk space evicts the oldest segments regardless of events, never the 
   await createIndexer({ db, settings: () => settings }).scanOnce(NOW);
 
   free = settings.retention.minFreeBytes - 1500;
-  expect(await retention.runOnce(NOW)).toEqual({ deleted: 2, freedBytes: 2000 });
+  expect(await retention.runOnce(NOW)).toEqual({ deleted: 2, freedBytes: 2000, events: 0 });
   expect(remaining()).toEqual([paths[2]!, recording].sort());
 
   free = 0;

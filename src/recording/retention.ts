@@ -2,6 +2,8 @@ import type { Database } from "bun:sqlite";
 import { readdir, rm, rmdir, statfs } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { EVENT_BUFFER_MS, type Settings } from "../types.ts";
+import { thumbPath } from "../events/paths.ts";
+import { deleteEventRow, expiredEventIds } from "../events/store.ts";
 import { DAY_MS, dayKey, isDayKey } from "./layout.ts";
 import { deleteSegment, retentionCandidates } from "./store.ts";
 
@@ -15,6 +17,8 @@ export const statfsFreeBytes: FreeBytes = async (path) => {
 export interface RetentionResult {
   deleted: number;
   freedBytes: number;
+  /** 超過事件保留天數而刪除的事件（含縮圖） */
+  events: number;
 }
 
 export interface Retention {
@@ -24,6 +28,8 @@ export interface Retention {
 export function createRetention(deps: {
   db: Database;
   settings: () => Settings;
+  /** 縮圖在 <dataDir>/thumbs */
+  dataDir: string;
   freeBytes?: FreeBytes;
 }): Retention {
   const { db } = deps;
@@ -57,7 +63,14 @@ export function createRetention(deps: {
         freedBytes += c.size;
       }
       await removeEmptyPastDayDirs(storagePath, now);
-      return { deleted: doomed.size, freedBytes };
+
+      // 事件本身與縮圖照事件保留天數；縮圖先刪，中斷時留下的是沒有縮圖的事件而不是孤兒檔
+      const expired = expiredEventIds(db, now - retention.eventDays * DAY_MS);
+      for (const id of expired) {
+        await rm(thumbPath(deps.dataDir, id), { force: true });
+        deleteEventRow(db, id);
+      }
+      return { deleted: doomed.size, freedBytes, events: expired.length };
     },
   };
 }
