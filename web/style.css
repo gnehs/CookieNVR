@@ -592,15 +592,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .disk-big b { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .disk-nums { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); flex-wrap: wrap; gap: 4px 12px; }
 .disk-nums .mono { overflow-wrap: anywhere; }
-.usage-row { display: grid; grid-template-columns: minmax(70px, 160px) 1fr auto; gap: 14px; align-items: center; padding: 11px 0; }
-.usage-row.has-action { grid-template-columns: minmax(70px, 160px) 1fr auto auto; }
-@media (max-width: 560px) {
-  .usage-row.has-action { grid-template-columns: 1fr auto auto; }
-  .usage-row.has-action .bar { display: none; }
-}
-.usage-row + .usage-row { border-top: 1px solid var(--border); }
-.usage-row > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.usage-row .num { text-align: right; }
 
 /* probe */
 .probe { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
@@ -853,13 +844,18 @@ dialog.dlg h2 { font-size: 17px; font-weight: 650; margin-bottom: 10px; overflow
 details.disclosure { border-top: 1px solid var(--border); }
 details.disclosure > summary {
   list-style: none; display: flex; align-items: center; gap: 8px; padding: 16px 22px; cursor: pointer;
-  font-weight: 650; font-size: 15px; color: var(--text); border-radius: 0 0 var(--r-lg) var(--r-lg);
+  font-weight: 650; font-size: 15px; color: var(--text);
 }
 details.disclosure > summary::-webkit-details-marker { display: none; }
 details.disclosure > summary .icon { color: var(--muted); transition: transform var(--dur-2) var(--ease-out); }
 details.disclosure[open] > summary .icon { transform: rotate(90deg); }
 details.disclosure > summary small { font-weight: 450; color: var(--muted); font-size: 13px; }
-@media (hover: hover) { details.disclosure > summary:hover { background: var(--fill); } }
+/* 標題列跟展開的內容是同一塊：只有收合時 hover 才鋪底色，展開後不會變成一條跟內容分開的色帶 */
+@media (hover: hover) {
+  details.disclosure:not([open]) > summary:hover { background: var(--fill); }
+  details.disclosure[open] > summary:hover .icon { color: var(--text-2); }
+}
+details.disclosure:not([open]):last-child > summary { border-radius: 0 0 var(--r-lg) var(--r-lg); }
 details.disclosure > summary:focus-visible { outline-offset: -2px; }
 details.disclosure > .disclosure-body { padding: 4px 22px 22px; display: grid; gap: 16px; }
 details.disclosure::details-content {
@@ -895,13 +891,6 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
 .choice-custom { display: flex; align-items: center; gap: 8px; }
 .choice-custom input[type="number"] { width: 110px; font-variant-numeric: tabular-nums; }
 .choice-custom .unit { color: var(--muted); font-size: 14px; }
-.estimate {
-  display: flex; gap: 14px; align-items: center; padding: 16px 18px; border-radius: var(--r);
-  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-}
-.estimate .icon { color: var(--accent-text); }
-.estimate b { display: block; font-size: 15px; font-weight: 650; }
-.estimate small { display: block; color: var(--text-2); font-size: 13px; margin-top: 2px; }
 
 /* ---------- 狀態頁 ---------- */
 /* 總結與問題清單同一張卡：小圓點＋一句話，每個問題一列，紅色只在膠囊與圓點 */

@@ -80,6 +80,7 @@ addCam({ name: "車庫", enabled: true, connection: { type: "rtsp", mainUrl: "rt
 addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "both", threshold: 15, minArea: 0.01, cooldownSec: 30, masks: [] } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
 addCam({ name: "車道", enabled: true, connection: { type: "tapo", host: "192.168.1.53", username: "nvr", password: "secret123" }, record: { enabled: true, audio: false, direct: false } });
+let mockFreeBytes = 1.6 * 1024 ** 4;
 // 每台攝影機佔用的錄影空間；攝影機刪掉後沒清除的錄影會留在這裡，成為「已刪除的攝影機」
 const usage = new Map<string, { bytes: number; oldestMs: number }>(
   cams.slice(0, 2).map((c, i) => [c.id, { bytes: (180 - i * 90) * 1024 ** 3, oldestMs: now() - (6 - i * 3) * 86_400_000 }]),
@@ -877,10 +878,18 @@ async function route(req: Request, url: URL): Promise<Response> {
     }
     return json({ segments, events: 0, bytes });
   }
+  // 儲存空間頁的各種情況：POST /api/mock/storage?free=<GB>&orphan=1（空間不夠、有已刪除攝影機的錄影）
+  if (path === "/mock/storage" && m === "POST") {
+    const q = url.searchParams;
+    mockFreeBytes = q.has("free") ? Number(q.get("free")) * 1024 ** 3 : 1.6 * 1024 ** 4;
+    usage.delete("cam-gone");
+    if (q.get("orphan") === "1") usage.set("cam-gone", { bytes: 42 * 1024 ** 3, oldestMs: now() - 9 * 86_400_000 });
+    return json({ ok: true });
+  }
   if (path === "/system" && m === "GET") {
     const sys: SystemDto = {
       workers,
-      disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: 1.6 * 1024 ** 4 },
+      disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: mockFreeBytes },
       usage: [...usage].map(([cameraId, u]) => ({ cameraId: cameraId as CameraId, ...u })),
       logs: Array.from({ length: 60 }, (_, i) => `${new Date(now() - (60 - i) * 5000).toISOString()} INFO tick ${i} worker ok`),
     };
