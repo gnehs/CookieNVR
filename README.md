@@ -42,6 +42,8 @@ services:
 
 完整的設定（host 網路、Intel 內顯、Nvidia）見 [`docker-compose.example.yml`](docker-compose.example.yml)。
 
+**Unraid**：把 [`unraid/cookienvr.xml`](unraid/cookienvr.xml) 存到 `/boot/config/plugins/dockerMan/templates-user/my-cookienvr.xml`，在 Docker 頁面按「Add Container」，從 Template 選單選 `cookienvr`。
+
 ### 映像
 
 | 標籤 | 內容 | 平台 |

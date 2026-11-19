@@ -20,19 +20,19 @@ export interface Env {
 }
 
 export function readEnv(source: Record<string, string | undefined> = process.env): Env {
-  const port = Number(source.PORT ?? 8765);
+  const port = Number(source.PORT || 8765);
   return {
-    dataDir: source.DATA_DIR ?? "/data",
+    dataDir: source.DATA_DIR || "/data",
     recordingsDir: source.RECORDINGS_DIR || null,
     port,
-    rtspPort: Number(source.RTSP_PORT ?? 8554),
-    mediamtxApiPort: Number(source.MEDIAMTX_API_PORT ?? 9997),
-    mainMemoryLimitMb: Number(source.MAIN_MEMORY_LIMIT_MB ?? 512),
-    mediamtxBin: source.MEDIAMTX_BIN ?? "mediamtx",
-    ffmpegBin: source.FFMPEG_BIN ?? "ffmpeg",
-    ffprobeBin: source.FFPROBE_BIN ?? "ffprobe",
-    discovery: !/^(0|false|off|no)$/i.test(source.DISCOVERY ?? ""),
-    publicPort: Number(source.PUBLIC_PORT ?? port),
-    detectorPython: source.DETECTOR_PYTHON ?? "python3",
+    rtspPort: Number(source.RTSP_PORT || 8554),
+    mediamtxApiPort: Number(source.MEDIAMTX_API_PORT || 9997),
+    mainMemoryLimitMb: Number(source.MAIN_MEMORY_LIMIT_MB || 512),
+    mediamtxBin: source.MEDIAMTX_BIN || "mediamtx",
+    ffmpegBin: source.FFMPEG_BIN || "ffmpeg",
+    ffprobeBin: source.FFPROBE_BIN || "ffprobe",
+    discovery: !/^(0|false|off|no)$/i.test(source.DISCOVERY || ""),
+    publicPort: Number(source.PUBLIC_PORT || port),
+    detectorPython: source.DETECTOR_PYTHON || "python3",
   };
 }

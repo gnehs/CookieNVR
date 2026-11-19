@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>cookienvr</Name>
+  <Repository>ghcr.io/gnehs/cookienvr:edge</Repository>
+  <Registry>https://github.com/gnehs/CookieNVR/pkgs/container/cookienvr</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <MyMAC/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/gnehs/CookieNVR/issues</Support>
+  <Project>https://github.com/gnehs/CookieNVR</Project>
+  <ReadMe>https://github.com/gnehs/CookieNVR#readme</ReadMe>
+  <Overview>CookieNVR 是家用 NVR：24 小時錄影、動作偵測、鏡頭控制（PTZ）與 Home Assistant 連動，物件辨識為選用功能。錄影直接複製攝影機的串流，不轉碼。啟動後開啟 WebUI 建立管理員帳號並新增攝影機。目前是開發中的 edge 版本，尚未發布正式版。</Overview>
+  <Category>Security: HomeAutomation:</Category>
+  <WebUI>http://[IP]:[PORT:8765]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/gnehs/CookieNVR/main/unraid/cookienvr.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/gnehs/CookieNVR/main/web/assets/logo.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>顯示卡為選用。Intel 內顯：在 Extra Parameters 加上 --device=/dev/dri。Nvidia：安裝 Nvidia Driver 外掛，Repository 改成 ghcr.io/gnehs/cookienvr:edge-nvidia，Extra Parameters 加上 --runtime=nvidia，並新增變數 NVIDIA_VISIBLE_DEVICES=all 與 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video。要讓 Home Assistant 自動發現或使用 Apple 家庭時，Network Type 改成 Host 或 br0（兩者都靠 mDNS）。</Requires>
+  <Config Name="WebUI" Target="8765" Default="8765" Mode="tcp" Description="網頁介面與 API" Type="Port" Display="always" Required="true" Mask="false">8765</Config>
+  <Config Name="RTSP" Target="8554" Default="8554" Mode="tcp" Description="RTSP 轉發，給 Home Assistant 與其他軟體取得串流。主機埠必須和容器埠相同（8554），介面顯示的 RTSP 網址用的是這個埠。" Type="Port" Display="always" Required="true" Mask="false">8554</Config>
+  <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/cookienvr" Mode="rw" Description="資料庫、縮圖與設定。量小但讀寫頻繁，建議放 SSD（快取池）。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/cookienvr</Config>
+  <Config Name="Recordings" Target="/recordings" Default="/mnt/user/recordings/cookienvr" Mode="rw" Description="錄影檔。量大，放一般硬碟的共享資料夾即可。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/recordings/cookienvr</Config>
+  <TailscaleStateDir/>
+</Container>
