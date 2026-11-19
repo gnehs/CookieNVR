@@ -334,3 +334,22 @@ describe("orphans from a killed main process", () => {
     await until(() => one(sup, "a")?.state === "running");
   });
 });
+
+describe("stdout as data", () => {
+  test("each run's stdout goes to readStdout and stays out of the tail", async () => {
+    const { sup } = makeSupervisor();
+    const runs: string[] = [];
+    sup.apply([
+      sh("a", "printf 'frame-bytes'; echo log-line >&2; sleep 0.1", {
+        readStdout: async (stdout) => {
+          runs.push(await new Response(stdout).text());
+        },
+      }),
+    ]);
+    await until(() => runs.length >= 2);
+    expect(runs.slice(0, 2)).toEqual(["frame-bytes", "frame-bytes"]);
+    const tail = one(sup, "a")!.stderrTail;
+    expect(tail).toContain("log-line");
+    expect(tail.some((l) => l.includes("frame-bytes"))).toBe(false);
+  });
+});

@@ -127,6 +127,11 @@ export interface WorkerSpec {
     graceMs: number;
     healthy: () => boolean | Promise<boolean>;
   };
+  /**
+   * 宣告後 stdout 是資料而不是日誌：每次啟動都把該次的 stdout 交給它讀到結束，不進輸出尾端（stderr 照舊）。
+   * 讀取要跟得上輸出，否則子程序會卡在寫入。
+   */
+  readStdout?: (stdout: ReadableStream<Uint8Array>) => Promise<void>;
 }
 
 export type WorkerState = "starting" | "running" | "backoff" | "stopped";

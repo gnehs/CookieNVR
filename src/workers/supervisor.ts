@@ -222,12 +222,16 @@ export function createSupervisor(opts: SupervisorOptions): CookieSupervisor {
       afterRun(w, "exit", null, null, cfg.now());
       return;
     }
+    const { readStdout } = w.spec;
+    const stdout = readStdout
+      ? readStdout(proc.stdout).catch((e) => pushTail(w, `[supervisor] stdout reader failed: ${(e as Error).message}`))
+      : pumpLines(w, proc.stdout);
     const run: Run = {
       proc,
       pid: proc.pid,
       startedAt: cfg.now(),
-      // MediaMTX logs to stdout, ffmpeg to stderr; both feed the same tail.
-      output: Promise.all([pumpLines(w, proc.stdout), pumpLines(w, proc.stderr)]).then(() => undefined),
+      // MediaMTX logs to stdout, ffmpeg to stderr; both feed the same tail unless stdout carries data.
+      output: Promise.all([stdout, pumpLines(w, proc.stderr)]).then(() => undefined),
       stallTimer: null,
       killTimer: null,
     };
