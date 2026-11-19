@@ -8,7 +8,7 @@ import { createAuth } from "./auth/index.ts";
 import { createLinkService } from "./auth/link.ts";
 import { probeCamera } from "./camera/probe.ts";
 import { openDb } from "./db.ts";
-import { buildDiagnostics } from "./diagnostics.ts";
+import { buildDiagnostics, redact } from "./diagnostics.ts";
 import { createDetection } from "./detect/manager.ts";
 import { createEventTracker, eventRoutes } from "./events/index.ts";
 import { countEventsSince } from "./events/store.ts";
@@ -42,7 +42,7 @@ import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore } from "./stores/index.ts";
 import { createStreamHub, type StreamClient } from "./stream/hub.ts";
-import type { Camera, CameraConfig, CameraConnection, CameraId, WorkerSpec } from "./types.ts";
+import type { Camera, CameraConfig, CameraConnection, CameraId, WorkerSpec, WorkerStatus } from "./types.ts";
 import { createMemoryMonitor, type MemoryTarget } from "./workers/memory.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
@@ -221,12 +221,15 @@ async function refreshOnline(): Promise<void> {
 
 const decodeStatus = () => decodeStatusDto(settings.get().devices.decode, detection.decodeStatus(), (id) => cameras.get(id)?.config.name ?? id);
 
+/** 對外的 worker 狀態：輸出尾端可能帶著串流網址裡的帳密，送出前一律遮蔽 */
+const publicWorker = (w: WorkerStatus): WorkerStatus => ({ ...w, stderrTail: w.stderrTail.map((line) => redact(line, cameras.list())) });
+
 async function system(): Promise<SystemDto> {
   const path = settings.get().storagePath;
   mkdirSync(path, { recursive: true });
   const fs = await statfs(path);
   return {
-    workers: supervisor.status(),
+    workers: supervisor.status().map(publicWorker),
     disk: { path, totalBytes: fs.blocks * fs.bsize, freeBytes: fs.bavail * fs.bsize },
     usage: usageByCamera(db),
     logs: readRestartLog(logDir, 100).map((r) => {
@@ -281,7 +284,7 @@ const hub = createStreamHub({
   stillAuthorized: (client) => auth.authenticate(client.req, new URL(client.req.url))?.role === client.principal.role,
   snapshot: (client) => ({
     cameras: cameras.list().map((c) => cameraDto(c, client)),
-    workers: client.principal.role === "admin" ? supervisor.status() : null,
+    workers: client.principal.role === "admin" ? supervisor.status().map(publicWorker) : null,
     events: events.active(),
   }),
 });
@@ -425,7 +428,7 @@ cameras.subscribe((list) => {
   void restream.sync(list).catch((e) => log("restream", e));
 });
 supervisor.subscribe((status) => {
-  hub.publish((client) => (client.principal.role === "admin" ? { type: "worker", data: status } : null));
+  hub.publish((client) => (client.principal.role === "admin" ? { type: "worker", data: publicWorker(status) } : null));
   if (status.kind === "record") publishCameraChanges();
   homekit.workerStatus(status);
 });
