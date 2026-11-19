@@ -567,7 +567,7 @@ export function createMockStates(deps: MockStatesDeps) {
       const label = url.searchParams.get("label") ?? "all";
       if (label !== "all" && label !== "pending" && !s.config.classes.includes(label)) return err(400, `沒有「${label}」這個類別`);
       const list = s.images.filter((i) => (label === "all" ? true : label === "pending" ? i.label === null : i.label === label)).sort((a, b) => b.createdAt - a.createdAt);
-      return json(list.map((i) => imageDto(s, i)));
+      return json({ images: list.map((i) => imageDto(s, i)) });
     }
     const one = sub.match(/^images\/([^/]+)$/);
     if (one && method === "GET") {

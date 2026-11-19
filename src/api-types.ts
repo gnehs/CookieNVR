@@ -751,7 +751,7 @@ export interface StateSensorDto {
 /** source：recording = 建立時從錄影抽樣；live = 辨識時自動存下；import = 匯入的資料集 */
 export type StateImageSource = "recording" | "live" | "import";
 
-/** GET /api/states/:id/images?label=pending|<類別>|all（一般使用者），新的在前 */
+/** GET /api/states/:id/images?label=pending|<類別>|all（一般使用者）回 `{ images: StateImageDto[] }`，新的在前 */
 export interface StateImageDto {
   id: string;
   /** 已標記的類別；待標記為 null */
