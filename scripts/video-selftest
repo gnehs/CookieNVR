@@ -1,0 +1,6 @@
+#!/bin/sh
+# 影像硬體解碼／編碼自我檢查：video-selftest [--ffmpeg /path/to/ffmpeg]
+# 容器內在 PATH 上；原始碼目錄裡用 scripts/video-selftest。輸出整段貼回來即可。
+set -eu
+here="$(dirname "$(readlink -f "$0")")"
+exec bun "$here/video-selftest.ts" "$@"
