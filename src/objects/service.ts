@@ -20,6 +20,7 @@ import type { Env } from "../env.ts";
 import type { EventTracker } from "../events/tracker.ts";
 import { HttpError } from "../http/errors.ts";
 import { asObject } from "../http/validate.ts";
+import { normalizePciId } from "../metrics/parse.ts";
 import type { Camera, CameraId, DeviceRef, ObjectSettings, Route, WorkerSpec } from "../types.ts";
 import { camerasSupported, DROP_WARN_RATIO, loadSample, verdict } from "./capacity.ts";
 import { toHits, type Detection } from "./hits.ts";
@@ -109,6 +110,8 @@ export interface ObjectDetection {
   jpegFps(camera: Camera): number;
   status(): ObjectsStatusDto;
   resources(): DetectorResources;
+  /** 系統資源的 GPU 卡片下方要補充的資訊：物件辨識正在用這張卡時回傳推論速率 */
+  gpuExtras(gpu: { id: string; vendor: string }): { label: string; value: string }[];
   diagnostics(): ObjectsDiagnostics;
   routes(): Route[];
   stop(): Promise<void>;
@@ -376,13 +379,13 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
         const out = JSON.parse(await new Response(proc.stdout).text()) as { devices?: unknown[]; unavailable?: Record<string, { reason?: string } | null> };
         const devices = (out.devices ?? []).flatMap((d) => {
           const v = d as Partial<InferenceDeviceDto>;
-          return typeof v.id === "string" && (v.kind === "cpu" || v.kind === "intel" || v.kind === "nvidia") ? [{ id: v.id, kind: v.kind, name: String(v.name ?? v.id) }] : [];
+          return typeof v.id === "string" && (v.kind === "cpu" || v.kind === "intel" || v.kind === "nvidia") ? [{ id: v.id, kind: v.kind, name: String(v.name ?? v.id), pci: typeof v.pci === "string" ? v.pci : null }] : [];
         });
         const reason = (k: string) => out.unavailable?.[k]?.reason ?? null;
         deviceCache = { at: now(), devices, unavailable: { intel: reason("intel"), nvidia: reason("nvidia") } };
       } catch (e) {
         report(e);
-        deviceCache = { at: now(), devices: [{ id: "cpu", kind: "cpu", name: "CPU" }], unavailable: { intel: null, nvidia: null } };
+        deviceCache = { at: now(), devices: [{ id: "cpu", kind: "cpu", name: "CPU", pci: null }], unavailable: { intel: null, nvidia: null } };
       } finally {
         clearTimeout(timer);
         deviceProbe = null;
@@ -568,6 +571,16 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
     resources() {
       const st = status();
       return { state: st.state, device: st.device, rateFps: st.rateFps, queued: queue.length, dropRatio: st.dropRatio, processed, dropped: queue.dropped, gpu };
+    },
+    gpuExtras(gpu) {
+      if (phase.tag !== "ready" || !enabled()) return [];
+      const d = phase.info.device;
+      if (d.kind !== gpu.vendor) return [];
+      const pci = gpu.id.slice(gpu.id.indexOf(":") + 1);
+      // 沒有 PCI 位址（多顆 Intel 內顯）時對不上是哪一張，寧可不標
+      if (!d.pci || normalizePciId(d.pci) !== normalizePciId(pci)) return [];
+      const st = status();
+      return [{ label: "物件辨識", value: st.paused ? "測速中" : `每秒 ${st.rateFps} 張` }];
     },
     diagnostics: () => ({
       settings: cfg(),

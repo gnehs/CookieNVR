@@ -47,7 +47,7 @@ const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is
 
 function device(v: unknown): InferenceDeviceDto | null {
   if (!isObj(v) || typeof v.id !== "string" || !DEVICES.has(v.kind as InferenceDeviceKind)) return null;
-  return { id: v.id, kind: v.kind as InferenceDeviceKind, name: text(v.name, v.id) };
+  return { id: v.id, kind: v.kind as InferenceDeviceKind, name: text(v.name, v.id), pci: typeof v.pci === "string" ? v.pci : null };
 }
 
 function gpu(v: unknown): GpuUsageDto | null {
@@ -81,7 +81,7 @@ function ready(v: Obj): ReadyInfo | null {
   const classes = strings(model.classes);
   const titles = strings(model.titles);
   return {
-    device: { id, kind, name: text(v.deviceName, id) },
+    device: devices.find((d) => d.id === id) ?? { id, kind, name: text(v.deviceName, id), pci: null },
     devices,
     fallback: fb,
     model: { file: text(model.file), format: text(model.format), input, classes, titles: titles.length === classes.length ? titles : classes },

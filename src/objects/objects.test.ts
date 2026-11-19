@@ -296,3 +296,23 @@ test("the public config lists only labels in force, and a round trip keeps the s
   expect(mergeCameraConfig({ ...off, detect: { ...off.detect, labels: [] } }, saved, true).detect!.labels).toEqual(["person"]);
   expect(mergeCameraConfig({ ...saved, detect: { ...saved.detect!, labels: ["dog"] } }, saved, true).detect!.labels).toEqual(["dog"]);
 });
+
+test("the GPU card in system resources shows the recognition rate when it is the card in use", async () => {
+  const h = await harness();
+  h.send({
+    type: "status",
+    state: "ready",
+    device: "nvidia",
+    deviceId: "nvidia:GPU-1",
+    deviceName: "GTX 1650",
+    devices: [{ id: "cpu", kind: "cpu", name: "Test CPU" }, { id: "nvidia:GPU-1", kind: "nvidia", name: "GTX 1650", pci: "00000000:01:00.0" }],
+    fallback: null,
+    model: { file: "yolox_tiny.onnx", format: "yolox", input: [416, 416], classes: ["person"], titles: ["person"] },
+  });
+  await h.settle();
+  expect(h.objects.gpuExtras({ id: "nvidia:0000:01:00.0", vendor: "nvidia" })).toEqual([{ label: "物件辨識", value: "每秒 0 張" }]);
+  expect(h.objects.gpuExtras({ id: "nvidia:0000:02:00.0", vendor: "nvidia" })).toEqual([]);
+  expect(h.objects.gpuExtras({ id: "intel:0000:00:02.0", vendor: "intel" })).toEqual([]);
+  h.client.end();
+  await h.objects.stop();
+});

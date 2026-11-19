@@ -135,7 +135,7 @@ const homekit = createHomekit({
   onError: log,
 });
 
-const metrics = createMetrics({ targets: () => processTargets(), onError: (e) => log("metrics", e) });
+const metrics = createMetrics({ targets: () => processTargets(), gpuExtras: (gpu) => objects.gpuExtras(gpu), onError: (e) => log("metrics", e) });
 
 function log(scope: string, error: unknown): void {
   console.error(`[${scope}]`, error instanceof Error ? error.message : error);

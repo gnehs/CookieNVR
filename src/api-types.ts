@@ -406,6 +406,8 @@ export interface InferenceDeviceDto {
   kind: InferenceDeviceKind;
   /** 型號，例如「Intel(R) UHD Graphics 630」「NVIDIA GeForce GTX 1650」 */
   name: string;
+  /** PCI 位址，對應系統資源 `GpuDto.id` 的 `<vendor>:<PCI 位址>`；拿不到為 null（CPU、多顆 Intel 內顯） */
+  pci: string | null;
 }
 
 /** Nvidia 卡的使用率與顯示記憶體（每 10 秒更新）；其他裝置拿不到為 null */

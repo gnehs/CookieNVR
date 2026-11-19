@@ -56,9 +56,11 @@ class Device:
     index: int = 0
     #: intel：OpenVINO 的裝置名稱，例如 GPU.0
     ov_device: str | None = None
+    #: PCI 位址（例如 0000:01:00.0），對得上主程序系統資源裡的 GPU；拿不到為 None
+    pci: str | None = None
 
     def to_json(self) -> dict:
-        return {"id": self.id, "kind": self.kind, "name": self.name}
+        return {"id": self.id, "kind": self.kind, "name": self.name, "pci": self.pci}
 
 
 @dataclass
@@ -140,17 +142,35 @@ def _intel_devices(ort, p: Probe) -> list[Device]:
         meta = {**dict(d.device.metadata), **dict(d.ep_metadata)}
         name = next((str(v) for k, v in meta.items() if "name" in k.lower() or "description" in k.lower()), "")
         found.append(Device(f"intel:{ov}", "intel", name or f"Intel 內顯（{ov}）", ov_device=ov))
+    # OpenVINO 不給 PCI 位址；只有一顆 Intel 顯示卡時才能確定是哪一顆
+    pcis = intel_pci_addresses()
+    if len(found) == 1 and len(pcis) == 1:
+        d = found[0]
+        found[0] = Device(d.id, d.kind, d.name, ov_device=d.ov_device, pci=pcis[0])
     return found
 
 
+def intel_pci_addresses() -> list[str]:
+    out = []
+    for card in sorted(glob.glob("/sys/class/drm/card[0-9]")):
+        try:
+            with open(f"{card}/device/vendor", encoding="utf-8") as f:
+                if f.read().strip() != "0x8086":
+                    continue
+        except OSError:
+            continue
+        out.append(os.path.basename(os.path.realpath(f"{card}/device")))
+    return out
+
+
 def _nvidia_devices(p: Probe) -> list[Device]:
-    out = sh(["nvidia-smi", "--query-gpu=index,uuid,name", "--format=csv,noheader"])
+    out = sh(["nvidia-smi", "--query-gpu=index,uuid,pci.bus_id,name", "--format=csv,noheader"])
     if out:
         found = []
         for line in out.splitlines():
-            parts = [x.strip() for x in line.split(",", 2)]
-            if len(parts) == 3 and parts[0].isdigit():
-                found.append(Device(f"nvidia:{parts[1]}", "nvidia", parts[2], index=int(parts[0])))
+            parts = [x.strip() for x in line.split(",", 3)]
+            if len(parts) == 4 and parts[0].isdigit():
+                found.append(Device(f"nvidia:{parts[1]}", "nvidia", parts[3], index=int(parts[0]), pci=parts[2]))
         if found:
             return found
     return [Device(f"nvidia:{i}", "nvidia", f"Nvidia 顯卡 {i}", index=i) for i in range(len(p.nvidia_nodes))]
