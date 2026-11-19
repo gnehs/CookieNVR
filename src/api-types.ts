@@ -1,5 +1,5 @@
 import type { OnvifErrorKind } from "./onvif/errors.ts";
-import type { CameraConfig, CameraId, DeviceRef, PtzMode, Role, Settings, WorkerStatus } from "./types.ts";
+import type { CameraConfig, CameraId, DeviceRef, PtzMode, PtzPrefs, Role, Settings, WorkerStatus } from "./types.ts";
 
 export const API_VERSION = 1;
 
@@ -142,7 +142,7 @@ export type PtzDto =
       maxPresets: number | null;
       presets: PtzPresetDto[];
       /** 這台攝影機設定的偏好；請求沒帶 mode、speed 時後端用它們 */
-      prefs: { mode: PtzMode; speed: number };
+      prefs: PtzPrefs;
     };
 
 /**

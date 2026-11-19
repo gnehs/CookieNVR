@@ -14,7 +14,7 @@ import {
   type PtzPreset,
 } from "../onvif/index.ts";
 import type { Camera, CameraId, CameraStore, OnvifEndpoint, PtzMode } from "../types.ts";
-import { onvifEndpointOf, ptzPrefsOf } from "./config.ts";
+import { onvifEndpointOf, orientMove, ptzPrefsOf } from "./config.ts";
 import { toHttpError } from "./errors.ts";
 import { MotionTracker } from "./motion.ts";
 
@@ -210,7 +210,7 @@ export function createPtzHub(opts: PtzHubOptions): PtzHub {
       if (mode === "continuous" && !caps.continuous) throw new HttpError(409, "這台相機不支援持續移動，請改用微調或自動模式");
       if (mode === "relative" && !caps.relative) throw new HttpError(409, "這台相機不支援微調，請改用持續移動或自動模式");
       const controller = controllerFor(id, entry, mode);
-      const kind = await call(entry, () => controller.move(move, move.speed ?? prefs.speed));
+      const kind = await call(entry, () => controller.move(orientMove(move, prefs), move.speed ?? prefs.speed));
       if (kind === "continuous") motion.continuousMove(id);
       else motion.settle(id);
       return kind;

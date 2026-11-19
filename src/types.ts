@@ -26,6 +26,12 @@ export interface PtzPrefs {
   mode: PtzMode;
   /** 前端沒指定速度時使用，0.1 到 1.0 */
   speed: number;
+  /**
+   * 反轉左右／上下：有些相機（例如部分 Tapo 型號透過 ONVIF 控制時，或倒裝、開了畫面翻轉）的方向和
+   * ONVIF 標準相反。在後端套用，網頁與 Home Assistant 看到的方向一致；舊資料沒有這兩個欄位時視為 false。
+   */
+  invertPan?: boolean;
+  invertTilt?: boolean;
 }
 
 /** pixel = 畫面差分；onvif = 相機內建偵測；both = 任一來源觸發就算 */

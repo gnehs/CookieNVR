@@ -8,7 +8,7 @@ import { createRouter, type ServerLike } from "../http/router.ts";
 import { FakeOnvif, type FakeOnvifOptions } from "../onvif/fake-onvif.ts";
 import { createCameraStore } from "../stores/index.ts";
 import { defaultSettings, type Camera, type CameraConfig, type CameraId, type CameraStore, type OnvifEndpoint } from "../types.ts";
-import { onvifEndpointOf, ptzPrefsOf } from "./config.ts";
+import { onvifEndpointOf, orientMove, ptzPrefsOf } from "./config.ts";
 import { createPtzHub, type PtzHub } from "./hub.ts";
 import { probeOnvif } from "./probe.ts";
 import { ptzRoutes } from "./routes.ts";
@@ -179,7 +179,7 @@ describe("能力與不支援", () => {
       zoom: false,
       maxPresets: 8,
       presets: [{ token: "p1", name: "大門" }],
-      prefs: { mode: "auto", speed: 0.5 },
+      prefs: { mode: "auto", speed: 0.5, invertPan: false, invertTilt: false },
     });
   });
 
@@ -205,15 +205,16 @@ describe("能力與不支援", () => {
   test("舊資料沒有 ptz 欄位時用預設偏好", () => {
     const old = rtspCamera("old");
     expect(old.ptz).toBeUndefined();
-    expect(ptzPrefsOf(old)).toEqual({ mode: "auto", speed: 0.5 });
-    expect(ptzPrefsOf(rtspCamera("x", undefined, { mode: "relative", speed: 0.8 }))).toEqual({ mode: "relative", speed: 0.8 });
+    expect(ptzPrefsOf(old)).toEqual({ mode: "auto", speed: 0.5, invertPan: false, invertTilt: false });
+    expect(ptzPrefsOf(rtspCamera("x", undefined, { mode: "relative", speed: 0.8 }))).toEqual({ mode: "relative", speed: 0.8, invertPan: false, invertTilt: false });
   });
 
   test("攝影機設定的 ptz 欄位選填，有填時驗證模式與速度", () => {
     const base = rtspCamera("x");
     expect(parseCameraConfig(base).ptz).toBeUndefined();
-    expect(parseCameraConfig({ ...base, ptz: { mode: "relative", speed: 0.1 } }).ptz).toEqual({ mode: "relative", speed: 0.1 });
-    for (const ptz of [{ mode: "fast", speed: 0.5 }, { mode: "auto", speed: 0.05 }, { mode: "auto", speed: 1.5 }, { mode: "auto" }, "auto"]) {
+    expect(parseCameraConfig({ ...base, ptz: { mode: "relative", speed: 0.1 } }).ptz).toEqual({ mode: "relative", speed: 0.1, invertPan: false, invertTilt: false });
+    expect(parseCameraConfig({ ...base, ptz: { mode: "auto", speed: 0.5, invertPan: true } }).ptz).toEqual({ mode: "auto", speed: 0.5, invertPan: true, invertTilt: false });
+    for (const ptz of [{ mode: "fast", speed: 0.5 }, { mode: "auto", speed: 0.05 }, { mode: "auto", speed: 1.5 }, { mode: "auto" }, "auto", { mode: "auto", speed: 0.5, invertPan: "yes" }]) {
       expect(() => parseCameraConfig({ ...base, ptz })).toThrow();
     }
   });
@@ -236,6 +237,17 @@ describe("移動與安全停止", () => {
     const body = f.requests.find((r) => r.action === "ContinuousMove")!.body;
     expect(body).toContain('x="-0.4"');
     expect(body).toContain('y="0.2"');
+  });
+
+  test("反轉左右／上下時送給相機的方向相反，變焦不受影響", async () => {
+    const f = await startFake();
+    const c = onFake(f, "cam", { mode: "auto", speed: 0.5, invertPan: true, invertTilt: true });
+    await req(ptzPath(c), { method: "POST", as: user, json: { action: "move", pan: -1, tilt: 1, speed: 0.4 } });
+    const body = f.requests.find((r) => r.action === "ContinuousMove")!.body;
+    expect(body).toContain('x="0.4"');
+    expect(body).toContain('y="-0.4"');
+    const prefs = { mode: "auto" as const, speed: 0.5, invertPan: true, invertTilt: false };
+    expect(orientMove({ pan: 1, tilt: 1, zoom: 1 }, prefs)).toEqual({ pan: -1, tilt: 1, zoom: 1 });
   });
 
   test("沒指定速度時用攝影機的偏好速度", async () => {

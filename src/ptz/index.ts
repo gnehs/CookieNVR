@@ -1,4 +1,4 @@
-export { DEFAULT_PTZ_PREFS, onvifEndpointOf, ptzPrefsOf, TAPO_ONVIF_PORT } from "./config.ts";
+export { DEFAULT_PTZ_PREFS, onvifEndpointOf, orientMove, ptzPrefsOf, TAPO_ONVIF_PORT } from "./config.ts";
 export { describeOnvifError, toHttpError } from "./errors.ts";
 export { createPtzHub, DEFAULT_IDLE_STOP_MS } from "./hub.ts";
 export type { PtzDiagnostics, PtzHub, PtzHubOptions, PtzInfo, PtzMove } from "./hub.ts";

@@ -39,7 +39,7 @@ export interface Draft extends Fields {
 
 export type CardKey = "basic" | "conn" | "rec" | "detect" | "ptz" | "homekit";
 
-export const DEFAULT_PTZ: PtzPrefs = { mode: "auto", speed: 0.5 };
+export const DEFAULT_PTZ: PtzPrefs = { mode: "auto", speed: 0.5, invertPan: false, invertTilt: false };
 
 export function draftOf(c: CameraConfig | null): Draft {
   const d: Draft = {

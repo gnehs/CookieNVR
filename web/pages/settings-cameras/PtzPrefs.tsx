@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { OnvifProbeDto } from "../../../src/api-types.ts";
 import type { PtzMode, PtzPrefs } from "../../../src/types.ts";
-import { Tiles } from "../../ui/controls.tsx";
+import { SwitchRow, Tiles } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 
 const MODES: { value: PtzMode; label: string; desc: string }[] = [
@@ -10,9 +10,12 @@ const MODES: { value: PtzMode; label: string; desc: string }[] = [
   { value: "relative", label: "點一下一步", desc: "每按一下轉一小步" },
 ];
 
-export const ptzSummary = (p: PtzPrefs) => `${MODES.find((m) => m.value === p.mode)!.label} · 速度 ${Math.round(p.speed * 100)}%`;
+export const ptzSummary = (p: PtzPrefs) => {
+  const inverted = [p.invertPan && "左右反轉", p.invertTilt && "上下反轉"].filter(Boolean);
+  return [MODES.find((m) => m.value === p.mode)!.label, `速度 ${Math.round(p.speed * 100)}%`, ...inverted].join(" · ");
+};
 
-/** 攝影機設定裡的鏡頭控制偏好（移動方式、預設速度）。只有這台已知支援鏡頭控制時才出現 */
+/** 攝影機設定裡的鏡頭控制偏好（移動方式、預設速度、方向反轉）。只有這台已知支援鏡頭控制時才出現 */
 export function PtzPrefsField({ value, onChange }: { value: PtzPrefs; onChange: (p: PtzPrefs) => void }) {
   const speedId = useId();
   const pct = `${Math.round(value.speed * 100)}%`;
@@ -29,6 +32,8 @@ export function PtzPrefsField({ value, onChange }: { value: PtzPrefs; onChange: 
           {pct}
         </output>
       </label>
+      <SwitchRow title="左右反轉" desc="按「左」時鏡頭往右轉，就打開這個。" checked={value.invertPan ?? false} onChange={(invertPan) => onChange({ ...value, invertPan })} />
+      <SwitchRow title="上下反轉" desc="鏡頭倒裝或在相機 App 開了畫面翻轉時，上下通常也會相反。" checked={value.invertTilt ?? false} onChange={(invertTilt) => onChange({ ...value, invertTilt })} />
     </div>
   );
 }

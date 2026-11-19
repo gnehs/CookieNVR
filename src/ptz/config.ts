@@ -3,11 +3,16 @@ import type { CameraConfig, CameraConnection, OnvifEndpoint, PtzPrefs } from "..
 
 export const TAPO_ONVIF_PORT = 2020;
 
-export const DEFAULT_PTZ_PREFS: PtzPrefs = { mode: "auto", speed: 0.5 };
+export const DEFAULT_PTZ_PREFS: PtzPrefs = { mode: "auto", speed: 0.5, invertPan: false, invertTilt: false };
 
 /** 舊資料沒有 ptz 欄位 */
 export function ptzPrefsOf(config: CameraConfig): PtzPrefs {
   return { ...DEFAULT_PTZ_PREFS, ...config.ptz };
+}
+
+/** 依這台的反轉設定換算移動方向；變焦不受影響 */
+export function orientMove<T extends { pan: number; tilt: number }>(move: T, prefs: PtzPrefs): T {
+  return { ...move, pan: prefs.invertPan ? -move.pan : move.pan, tilt: prefs.invertTilt ? -move.tilt : move.tilt };
 }
 
 /**

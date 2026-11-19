@@ -60,7 +60,13 @@ function parsePtzPrefs(value: unknown): PtzPrefs {
   if (typeof speed !== "number" || !Number.isFinite(speed) || speed < MIN_SPEED || speed > MAX_SPEED) {
     throw new HttpError(400, `欄位 ptz.speed 必須是 ${MIN_SPEED} 到 ${MAX_SPEED} 的數字`);
   }
-  return { mode: oneOf(o, "mode", PTZ_MODES, "ptz.mode"), speed };
+  const flag = (key: "invertPan" | "invertTilt") => {
+    const v = o[key];
+    if (v === undefined) return false;
+    if (typeof v !== "boolean") throw new HttpError(400, `欄位 ptz.${key} 必須是 true 或 false`);
+    return v;
+  };
+  return { mode: oneOf(o, "mode", PTZ_MODES, "ptz.mode"), speed, invertPan: flag("invertPan"), invertTilt: flag("invertTilt") };
 }
 
 function num(o: JsonObject, key: string, min: number, max: number, path: string): number {
