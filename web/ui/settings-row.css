@@ -16,6 +16,7 @@
   min-height: 68px; padding: 14px 20px;
 }
 .set-row.wide { grid-template-columns: minmax(0, 1fr) minmax(0, 360px); }
+.set-row.is-toggle { cursor: pointer; }
 .set-row-title { display: block; font-weight: 600; font-size: 14.5px; color: var(--text); }
 .set-row-desc { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 2px; max-width: 54ch; }
 .set-row-control { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }

@@ -45,7 +45,7 @@
 .sel-sep { height: 1px; margin: 4px 6px; background: var(--border); }
 
 @media (pointer: coarse), (max-width: 760px) {
-  .sel-trigger { min-height: 44px; }
+  .sel-trigger, .sel-trigger.quiet { min-height: 44px; }
 }
 @media (max-width: 560px), (pointer: coarse) and (max-height: 500px) {
   .sel-opt { min-height: 50px; padding: 4px 12px; font-size: 15.5px; border-radius: 12px; }

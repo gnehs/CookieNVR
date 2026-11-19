@@ -37,7 +37,7 @@
   .dp-title { font-size: 16px; }
   .dp-day { height: 48px; font-size: 16px; }
   .dp-num { width: 44px; height: 44px; border-radius: 12px; }
-  .dp-foot .btn { flex: 1; min-height: 44px; }
+  .dp-foot .btn.small { flex: 1; min-height: 44px; font-size: 15px; }
 }
 @media (pointer: coarse) and (max-height: 500px) {
   /* 橫拿的手機：高度只有三百多，格子留 44 但月曆放在面板中間 */

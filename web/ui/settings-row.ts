@@ -38,12 +38,22 @@ export function settingRow(opts: SettingRowOpts): HTMLElement {
     opts.input.id ||= nextId("si");
     title = h("label", { class: "set-row-title", for: opts.input.id }, opts.title);
   } else title = h("div", { class: "set-row-title" }, opts.title);
-  return h(
+  const row = h(
     "div",
     { class: `set-row${opts.wide ? " wide" : ""}${opts.class ? ` ${opts.class}` : ""}` },
     h("div", { class: "set-row-text" }, title, opts.desc ? h("div", { class: "set-row-desc", id: descId }, opts.desc) : null),
     opts.control || opts.input ? h("div", { class: "set-row-control" }, opts.control ?? opts.input) : null,
   );
+  // 開關列：整列都能點（開關本身只有 42×25），說明裡的連結與「細節」照常運作
+  const sw = opts.input;
+  if (sw instanceof HTMLInputElement && sw.type === "checkbox") {
+    row.classList.add("is-toggle");
+    row.addEventListener("click", (e) => {
+      if (sw.disabled || (e.target as Element).closest("a, button, summary, details, input, label, select, textarea")) return;
+      sw.click();
+    });
+  }
+  return row;
 }
 
 /**
