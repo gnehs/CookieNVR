@@ -337,6 +337,15 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 - 安全停止：前端按住時每 500 ms 送一次 move；後端 1.5 秒沒收到就自動 Stop，網路斷掉也不會一直轉。
 - 所有使用者都能操作 PTZ，儲存／刪除預置點限管理員。
 
+### 後端實作（`src/ptz/`）
+
+- 每台攝影機一個長期存在的 `PtzController`（自動模式學到的結果與安全停止的計時才會延續），ONVIF 連線設定（Tapo 由主機推導，host 欄的 RTSP 埠忽略）變動或攝影機刪除時釋放並重建；移動中被釋放（含主程序關閉）會先送 Stop。只改名稱、PTZ 偏好不重建。
+- `GET /api/cameras/:id/ptz` 回能力（持續、相對、變焦、預置點上限）、預置點清單與該台偏好；沒設定 ONVIF 或相機沒有 PTZ 回 `{ supported: false, reason }`，不是錯誤。`POST` 的 body 是 `{ action: "move" | "stop" | "preset", ... }`，move 的 pan／tilt／zoom 各 −1 到 1（至少一軸非 0）、`speed` 0.1 到 1.0、`mode` 為 auto／continuous／relative，沒帶就用攝影機偏好；請求的 mode 與偏好不同時各自有一個控制器，Stop 會取消全部的安全停止。`POST`／`DELETE .../presets` 的 body 為 `{ name, token? }`、`{ token }`；沒帶 token 是新增，超過相機回報的上限回 409。
+- 錯誤：連不上 503、逾時 504、帳密錯誤與相機回錯 502（不能用 401，前端遇到 401 會登出網站）、相機沒有 ONVIF／PTZ／變焦或不支援該模式 409、預置點不存在 404。訊息一律是中文，不含相機回傳的英文原文與密碼。
+- 攝影機設定多一個選填的 `ptz: { mode, speed }`（預設 auto、0.5），舊資料沒有這個欄位時用預設。
+- `hub.isBusy(cameraId)`：鏡頭正在移動，或剛停止不到 3 秒（持續移動以「安全停止送出後再 3 秒」為上限，手動停止、相對移動與前往預置點是「現在起 3 秒」）。動作偵測用它暫停偵測。
+- 測試連線（`POST /api/cameras/test`）成功時多一個 `onvif` 欄位：`unconfigured`、`available`（含 ptz、zoom、maxPresets）或 `unavailable`（含 kind 與中文 message）。ONVIF 連不上不算測試失敗。診斷資訊每台列出 ONVIF 與 PTZ 能力、偏好與最近的錯誤種類。
+
 ### 動作偵測與 PTZ 的互動
 
 鏡頭移動中不偵測；停止後 3 秒重設背景再繼續，避免轉鏡頭被當成動作。遮罩是針對畫面位置，鏡頭轉開後會失效，前端要提示這點。

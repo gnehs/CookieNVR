@@ -359,7 +359,7 @@ function onvifProbeOf(conn: any): OnvifProbeDto {
   return { state: "available", ptz: true, zoom: true, maxPresets: 8 };
 }
 const ptzRoute = (path: string) => path.match(/^\/cameras\/([^/]+)\/ptz(\/presets)?$/);
-async function ptzApi(req: Request, path: string, admin: boolean): Promise<Response | null> {
+async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): Promise<Response | null> {
   const mm = ptzRoute(path);
   if (!mm) return null;
   const m = req.method;
@@ -373,7 +373,7 @@ async function ptzApi(req: Request, path: string, admin: boolean): Promise<Respo
       return json({ supported: true, continuous, relative, zoom, maxPresets, presets, prefs: { mode: c.config.ptz?.mode ?? "auto", speed: c.config.ptz?.speed ?? 0.5 } } satisfies PtzDto);
     }
     if (m !== "POST") return null;
-    const b: any = await req.json().catch(() => ({}));
+    const b: any = parsed ?? (await req.json().catch(() => ({})));
     if (found.kind === "no-onvif") return err(409, "這台相機沒有設定 ONVIF，無法控制鏡頭");
     if (found.kind === "no-ptz") return err(409, "這台相機沒有鏡頭控制功能");
     if (b.action === "stop") return noContent();
@@ -387,7 +387,7 @@ async function ptzApi(req: Request, path: string, admin: boolean): Promise<Respo
   if (!admin) return err(403, "需要管理員權限");
   if (found.kind !== "ok") return err(409, found.kind === "no-onvif" ? "這台相機沒有設定 ONVIF，無法控制鏡頭" : "這台相機沒有鏡頭控制功能");
   const ptz = found.ptz;
-  const b: any = await req.json().catch(() => ({}));
+  const b: any = parsed ?? (await req.json().catch(() => ({})));
   if (m === "POST") {
     const name = String(b.name ?? "").trim();
     if (!name) return err(400, "欄位 name 不能為空");
@@ -510,7 +510,7 @@ async function api(req: Request, url: URL): Promise<Response> {
     return new Response(Bun.file(thumbFiles[id % thumbFiles.length]!), { headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=3600" } });
   }
 
-  const ptzResponse = await ptzApi(req, path, admin);
+  const ptzResponse = await ptzApi(req, path, admin, body);
   if (ptzResponse) return ptzResponse;
 
   const denied = path.startsWith("/cameras") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
