@@ -45,10 +45,7 @@ function matchSegments(pattern: string[], actual: string[]): Record<string, stri
   return params;
 }
 
-function isJson(req: Request): boolean {
-  const type = req.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
-  return type === "application/json";
-}
+const contentType = (req: Request) => req.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
 
 export function createRouter(
   routes: Route[],
@@ -92,8 +89,10 @@ export function createRouter(
     if ((access === "user" || access === "admin") && !principal) return errorResponse(401, "請先登入");
     if (access === "admin" && principal?.role !== "admin") return errorResponse(403, "需要管理員權限");
 
-    if (BODY_METHODS.has(req.method) && req.body !== null && !isJson(req)) {
-      return errorResponse(415, "請求的 Content-Type 必須是 application/json");
+    // HTML 表單送不出 application/json 或 zip：只收這些類型，跨站請求就偽造不了
+    const type = contentType(req);
+    if (BODY_METHODS.has(req.method) && req.body !== null && type !== "application/json" && !(type && route.accepts?.includes(type))) {
+      return errorResponse(415, `請求的 Content-Type 必須是 ${route.accepts?.join("、") ?? "application/json"}`);
     }
 
     return route.handler({ req, url, params: hit.params, principal, ip });

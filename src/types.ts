@@ -185,6 +185,7 @@ export type WorkerKind =
   | "record"
   | "detect"
   | "detector"
+  | "classifier"
   | "live"
   | "homekit"
   | "hksv-stream"
@@ -266,5 +267,7 @@ export interface Route {
   path: string;
   /** internal = 只接受 127.0.0.1 */
   access: RouteAccess;
+  /** 接受的非 JSON 請求本體（例如上傳 zip）；沒寫時 POST／PUT／DELETE 的本體必須是 application/json */
+  accepts?: readonly string[];
   handler(ctx: RouteContext): Response | Promise<Response>;
 }

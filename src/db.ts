@@ -78,6 +78,39 @@ const MIGRATIONS: string[] = [
   CREATE INDEX events_camera_start ON events (camera_id, start_ms);
   CREATE INDEX events_start ON events (start_ms);
   `,
+  // 狀態辨識：感應器、訓練用的圖片（檔案在 <dataDir>/states/<感應器>/images）、狀態切換紀錄
+  `
+  CREATE TABLE state_sensors (
+    id TEXT PRIMARY KEY,
+    camera_id TEXT NOT NULL,
+    config TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE state_images (
+    id TEXT PRIMARY KEY,
+    sensor_id TEXT NOT NULL REFERENCES state_sensors(id) ON DELETE CASCADE,
+    file TEXT NOT NULL,
+    label TEXT,
+    source TEXT NOT NULL CHECK (source IN ('recording', 'live', 'import')),
+    created_at INTEGER NOT NULL,
+    guess_label TEXT,
+    guess_score REAL
+  );
+  CREATE INDEX state_images_sensor ON state_images (sensor_id, created_at);
+  CREATE TABLE state_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sensor_id TEXT NOT NULL,
+    camera_id TEXT NOT NULL,
+    at INTEGER NOT NULL,
+    from_state TEXT,
+    to_state TEXT NOT NULL,
+    score REAL NOT NULL,
+    has_thumb INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX state_changes_sensor_at ON state_changes (sensor_id, at);
+  CREATE INDEX state_changes_at ON state_changes (at);
+  `,
 ];
 
 /** 開啟資料庫並升級到最新 schema。測試可傳 ":memory:"。 */

@@ -42,6 +42,8 @@ import {
 import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore, followRecordingsDefault } from "./stores/index.ts";
+import { createStateClassification } from "./states/service.ts";
+import { segmentsInRange } from "./recording/store.ts";
 import { createStreamHub, type StreamClient } from "./stream/hub.ts";
 import type { Camera, CameraConfig, CameraConnection, CameraId, WorkerSpec, WorkerStatus } from "./types.ts";
 import { createMemoryMonitor, type MemoryTarget } from "./workers/memory.ts";
@@ -141,7 +143,23 @@ const detection = createDetection({
   decodePlan: (camera) => planDecode(settings.get().devices.decode, videoCodecs.current()?.devices ?? null, detectCodecs.get(camera.id) ?? null),
   isBusy: (id) => ptz.isBusy(id),
   jpegFps: (camera) => objects.jpegFps(camera),
-  onJpeg: (id, jpeg, at) => objects.offerJpeg(id, jpeg, at),
+  onJpeg: (id, jpeg, at) => {
+    objects.offerJpeg(id, jpeg, at);
+    states.offerJpeg(id, jpeg, at);
+  },
+  onError: log,
+});
+const states = createStateClassification({
+  db,
+  env,
+  cameras: () => cameras.list(),
+  blocked: (id) => {
+    const state = detection.diagnostics(id)?.lastFrame?.state;
+    return ptz.isBusy(id) || state === "paused" || state === "light";
+  },
+  segments: (id) => segmentsInRange(db, id, 0, Date.now()),
+  publish: (msg) => hub.publish(() => msg),
+  onWorkersChanged: () => void reconcileWorkers().catch((e) => log("workers", e)),
   onError: log,
 });
 
@@ -208,7 +226,7 @@ function purgeCameraRecordings(id: CameraId): void {
 }
 
 function desiredWorkers(): WorkerSpec[] {
-  const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs(), ...homekit.workerSpecs(), ...objects.workerSpecs()];
+  const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs(), ...homekit.workerSpecs(), ...objects.workerSpecs(), ...states.workerSpecs()];
   for (const camera of cameras.list()) {
     if (!isRecording(camera)) continue;
     const input = camera.config.record.direct
@@ -304,7 +322,7 @@ const hub = createStreamHub({
     cameras: cameras.list().map((c) => cameraDto(c, client)),
     workers: client.principal.role === "admin" ? supervisor.status().map(publicWorker) : null,
     events: events.active(),
-    stateSensors: [],
+    stateSensors: states.list(),
   }),
 });
 
@@ -348,6 +366,7 @@ async function diagnostics(only: string | null): Promise<string> {
     homekit: hk,
     only: only as CameraId | null,
     objects: objects.diagnostics(),
+    states: states.diagnostics(),
     workers: sys.workers,
     restarts: readRestartLog(logDir, 50),
     disk: sys.disk,
@@ -392,6 +411,7 @@ const routes = [
   ...ptzRoutes({ hub: ptz }),
   ...detection.routes(),
   ...objects.routes(),
+  ...states.routes(),
   ...videoCodecs.routes(decodeStatus),
   ...live.routes(),
   ...homekit.routes(),
@@ -425,6 +445,7 @@ await supervisor.ready;
 await ensureDayDirs(cameras.list(), settings.get(), Date.now());
 await indexer.reconcile(Date.now());
 detection.sync(cameras.list());
+states.sync(cameras.list());
 homekit.sync();
 supervisor.apply(desiredWorkers());
 void restream.sync(cameras.list()).catch((e) => logRestream(e));
@@ -450,6 +471,7 @@ if (env.discovery) {
 cameras.subscribe((list) => {
   ptz.reconcile(list);
   detection.sync(list);
+  states.sync(list);
   homekit.sync();
   for (const c of list) sentStatus.set(c.id, JSON.stringify(cameraStatus(c.id)));
   hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
@@ -549,6 +571,8 @@ const timers = [
   }, TICK_MS),
   setInterval(() => {
     void retention.runOnce(Date.now()).catch((e) => log("retention", e));
+    const eventDays = settings.get().retention.eventDays;
+    if (eventDays > 0) void states.prune(Date.now() - eventDays * 86_400_000).catch((e) => log("states", e));
     pruneRestartLog(logDir);
   }, RETENTION_MS),
   setInterval(() => {
@@ -569,7 +593,7 @@ async function shutdown(exitCode = 0): Promise<void> {
   metrics.stop();
   stopSync();
   void server.stop(true);
-  await Promise.all([mdns?.stop(), supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop(), objects.stop()]);
+  await Promise.all([mdns?.stop(), supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop(), objects.stop(), states.stop()]);
   homekit.stop();
   db.close();
   process.exit(exitCode);

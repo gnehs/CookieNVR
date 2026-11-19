@@ -7,6 +7,7 @@
 //   x 介於 10% 到 60%、y 介於 40% 到 57%）；light 是整體變亮。結尾省略代表一直持續。
 //   測物件辨識用：street（不帶時間）把背景換成有一台停著的汽車的街景（汽車約在 x 45%–54%、y 43%–49%）；
 //   person=20-35 是一個行人在畫面左側來回走（x 介於 5% 到 42%、y 50% 到 78%）。兩張圖都是 CC0，見 detector/assets/README.md。
+//   測狀態辨識用：door=20-40 是畫面右側一塊靜止的白色「門板」（x 65%–95%、y 15%–85%），可以重複寫多段，例如 "door=0-30;door=60-90"。
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -49,6 +50,8 @@ function sceneFilter(spec: string, size: string, rate: number): string {
       // 素材是在 1280 寬的街景上約 150 寬的行人
       chains.push(`${still("person.jpg", rate)},scale=${Math.round((w * 150) / 1280)}:-2[p${n}]`);
       chains.push(`${from}[p${n}]overlay=x='W*(0.05+0.25*abs(mod(t/6\\,2)-1))':y=H*0.5:shortest=0:enable='${enable(range)}'${to}`);
+    } else if (kind === "door") {
+      chains.push(`${from}drawbox=x=iw*0.65:y=ih*0.15:w=iw*0.3:h=ih*0.7:color=white:t=fill:enable='${enable(range)}'${to}`);
     } else if (kind === "light") chains.push(`${from}eq=brightness=0.3:enable='${enable(range)}'${to}`);
     else throw new Error(`不認得的場景項目：${item}`);
   }

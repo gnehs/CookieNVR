@@ -13,6 +13,7 @@ export const CATEGORY_OF: Record<WorkerKind, UsageCategory> = {
   record: "record",
   detect: "detect",
   detector: "detector",
+  classifier: "detector",
   live: "live",
   restream: "restream",
   homekit: "homekit",

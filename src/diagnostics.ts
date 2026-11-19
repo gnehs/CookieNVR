@@ -8,6 +8,7 @@ import { metricsReport } from "./metrics/report.ts";
 import type { MetricsDiagnostics } from "./metrics/sampler.ts";
 import type { ObjectsDiagnostics } from "./objects/service.ts";
 import type { PtzDiagnostics } from "./ptz/hub.ts";
+import type { StateDiagnostics } from "./states/service.ts";
 import type { Camera, CameraConnection, Settings, WorkerStatus } from "./types.ts";
 import type { RestartRecord } from "./workers/restart-log.ts";
 
@@ -35,6 +36,8 @@ export interface DiagnosticsInput {
   only: Camera["id"] | null;
   /** 物件辨識；沒有提供時報告不列這一節 */
   objects?: ObjectsDiagnostics;
+  /** 狀態辨識；沒有提供或沒有任何感應器時報告不列這一節 */
+  states?: StateDiagnostics;
   workers: WorkerStatus[];
   restarts: RestartRecord[];
   disk: SystemDto["disk"];
@@ -323,6 +326,29 @@ function objectsLines(o: ObjectsDiagnostics, cameras: DiagnosticsCamera[], now: 
   return lines;
 }
 
+function statesLines(st: StateDiagnostics, cameras: DiagnosticsCamera[], now: number): string[] {
+  const w = st.worker;
+  const lines = [`- classifier worker：${w.phase}${w.backbone ? `，骨幹 ${w.backbone}，載入 ${w.loadMs} ms` : ""}${w.error ? `；錯誤：${w.error}${w.detail ? `（${w.detail}）` : ""}` : ""}`];
+  const names = new Map(cameras.map((c) => [c.camera.id, c.camera.config.name]));
+  for (const s of st.sensors.filter((x) => names.has(x.cameraId))) {
+    const c = s.config;
+    lines.push(
+      `- 「${c.name}」（${s.id}，攝影機 ${names.get(s.cameraId)}）：類別 ${c.classes.join("／")}，區域 [${c.crop.map((n) => n.toFixed(3)).join(", ")}]，門檻 ${c.threshold}，每 ${c.intervalSec || "—"} 秒${c.onMotion ? "＋區域有變化時" : ""}${c.enabled ? "" : "，已暫停"}`,
+      `  - 狀態：${s.state ?? "未知"}${s.since ? `（${duration(now - s.since)}前切換）` : ""}${s.candidate ? `，驗證中 ${s.candidate.label} ×${s.candidate.count}` : ""}${s.problem ? `；沒在辨識：${s.problem.code}（${s.problem.message}）` : ""}`,
+      `  - 圖片：待標記 ${s.images.pending}，已標記 ${s.images.labeled.map((l) => `${l.label} ${l.count}`).join("、")}`,
+    );
+    const m = s.model;
+    if (m) {
+      const v = m.validation;
+      lines.push(
+        `  - 模型：${iso(m.trainedAt)} 訓練，${m.backbone}，類別 ${m.classes.join("／")}，張數 ${m.counts.map((x) => `${x.label} ${x.count}`).join("、")}，訓練 ${m.trainMs} ms；${v ? `${v.folds}-fold 交叉驗證準確度 ${(v.accuracy * 100).toFixed(1)}%，混淆矩陣 ${JSON.stringify(v.confusion)}` : "沒有交叉驗證（某類少於 2 張）"}`,
+      );
+    } else lines.push("  - 模型：還沒訓練");
+    if (s.job) lines.push(`  - 最近的背景工作：${s.job.kind} ${s.job.state}${"error" in s.job ? `：${s.job.error}` : "message" in s.job ? `：${s.job.message}` : ""}`);
+    if (s.recent.length) lines.push(`  - 最近讀數：${s.recent.map((r) => `${duration(now - r.at)}前 ${r.label} ${r.score.toFixed(2)}`).join("、")}`);
+  }
+  return lines;
+}
 
 /** "record:<id>"、"live:<id>:main"、"hksv-live:<id>:<session>" → 攝影機 id */
 const workerCamera = (id: string) => id.split(":")[1] ?? null;
@@ -351,12 +377,13 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     `- 本次已執行 ${duration(input.runtime.uptimeMs)}`,
     "",
     ...(input.objects ? ["## 物件辨識（YOLO）", ...objectsLines(input.objects, cameras, input.now), ""] : []),
+    ...(input.states?.sensors.length ? ["## 狀態辨識", ...statesLines(input.states, cameras, input.now), ""] : []),
     ...(input.video ? ["## 影像硬體解碼（detect worker）", ...videoLines(input.video, cameras, input.now), ""] : []),
     `## 攝影機（${cameras.length} 台）`,
     ...(cameras.length ? cameras.flatMap((c) => [...cameraBlock(c, input), ""]) : ["沒有攝影機。", ""]),
     `## 背景程序（${workers.length} 個）`,
     "restream 是 MediaMTX 轉發層，record:<攝影機 id> 是該攝影機的 ffmpeg 錄影程序；homekit 是 Apple 家庭（HAP-NodeJS）程序，hksv-live／hksv-record 是家庭 App 觀看與安全錄影用的 ffmpeg。",
-    "detect:<攝影機 id> 是解碼與動作偵測，detector 是物件辨識（Python＋ONNX Runtime）。",
+    "detect:<攝影機 id> 是解碼與動作偵測，detector 是物件辨識（Python＋ONNX Runtime），classifier 是狀態辨識（同一套 Python 環境，固定用 CPU）。",
     "",
     ...(workers.length ? workers.flatMap((w) => [...workerBlock(w, input), ""]) : ["沒有背景程序。", ""]),
     `## 最近的重啟紀錄（最多 20 筆，新的在前）`,

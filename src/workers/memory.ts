@@ -9,6 +9,7 @@ export const MEMORY_LIMIT_BYTES: Record<WorkerKind, number> = {
   record: 256 * MB,
   detect: 384 * MB,
   detector: 2048 * MB,
+  classifier: 1024 * MB,
   live: 128 * MB,
   homekit: 256 * MB,
   "hksv-stream": 256 * MB,
