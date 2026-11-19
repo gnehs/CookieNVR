@@ -1,4 +1,5 @@
 import type { ProbeResult, StreamInfo, SystemDto } from "./api-types.ts";
+import type { PtzDiagnostics } from "./ptz/hub.ts";
 import type { Camera, CameraConnection, Settings, WorkerStatus } from "./types.ts";
 import type { RestartRecord } from "./workers/restart-log.ts";
 
@@ -8,6 +9,8 @@ export interface DiagnosticsCamera {
   recording: boolean;
   /** 最近一次用相同連線設定測試的結果，本次啟動後沒測過就是 null */
   probe: { at: number; result: ProbeResult } | null;
+  /** ONVIF 與 PTZ 的現況；沒有提供時報告不列這一項 */
+  ptz?: PtzDiagnostics;
 }
 
 export interface DiagnosticsInput {
@@ -101,6 +104,28 @@ function connectionLines(conn: CameraConnection): string[] {
   return lines;
 }
 
+function ptzLines(p: PtzDiagnostics, now: number): string[] {
+  const caps =
+    p.caps === "unknown"
+      ? "尚未連上過，能力未知"
+      : p.caps === "no-ptz"
+        ? "ONVIF 可用，相機沒有 PTZ"
+        : `有 PTZ（${[p.caps.continuous && "持續移動", p.caps.relative && "相對移動"].filter(Boolean).join("、") || "無移動方式"}；${p.caps.zoom ? "有" : "沒有"}變焦；預置點上限 ${p.caps.maxPresets ?? "未回報"}）`;
+  const lines = [
+    `- ONVIF／PTZ：${p.configured ? caps : "未設定 ONVIF"}`,
+    `- PTZ 偏好：移動模式 ${p.prefs.mode}，預設速度 ${p.prefs.speed}`,
+  ];
+  if (p.lastError) lines.push(`- ONVIF 最近的錯誤：${p.lastError.kind}（${iso(p.lastError.at)}，${duration(now - p.lastError.at)}前）`);
+  else if (p.configured) lines.push("- ONVIF 最近的錯誤：無");
+  return lines;
+}
+
+function onvifProbeLine(r: Extract<ProbeResult, { ok: true }>["onvif"]): string {
+  if (r.state === "unconfigured") return "ONVIF 未設定";
+  if (r.state === "available") return `ONVIF 可用，${r.ptz ? "有" : "沒有"} PTZ`;
+  return `ONVIF 不可用（${r.kind}）`;
+}
+
 function cameraBlock(c: DiagnosticsCamera, input: DiagnosticsInput): string[] {
   const { camera } = c;
   const cfg = camera.config;
@@ -119,10 +144,11 @@ function cameraBlock(c: DiagnosticsCamera, input: DiagnosticsInput): string[] {
     const when = `${iso(c.probe.at)}，${duration(input.now - c.probe.at)}前`;
     lines.push(
       r.ok
-        ? `- 最近一次測試連線（${when}）：成功；主碼流 ${stream(r.main)}；子碼流 ${r.sub ? stream(r.sub) : "無"}`
+        ? `- 最近一次測試連線（${when}）：成功；主碼流 ${stream(r.main)}；子碼流 ${r.sub ? stream(r.sub) : "無"}；${onvifProbeLine(r.onvif)}`
         : `- 最近一次測試連線（${when}）：失敗，${r.error}`,
     );
   } else lines.push("- 最近一次測試連線：本次啟動後沒有紀錄，碼流編碼與解析度未知");
+  if (c.ptz) lines.push(...ptzLines(c.ptz, input.now));
   lines.push(
     usage
       ? `- 錄影用量：${bytes(usage.bytes)}，最早一段 ${usage.oldestMs !== null ? iso(usage.oldestMs) : "未知"}`

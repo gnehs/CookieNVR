@@ -1,4 +1,5 @@
-import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "./types.ts";
+import type { OnvifErrorKind } from "./onvif/errors.ts";
+import type { CameraConfig, CameraId, PtzMode, Role, Settings, WorkerStatus } from "./types.ts";
 
 export const API_VERSION = 1;
 
@@ -65,9 +66,82 @@ export interface StreamInfo {
   audioCodec: string | null;
 }
 
+/**
+ * 測試連線時順便探測 ONVIF 的結果。連不上不算測試失敗，主碼流成功就是 `ok: true`。
+ * - unconfigured：通用 RTSP 沒填 ONVIF
+ * - available：連上了；ptz 說明有沒有鏡頭控制
+ * - unavailable：連不上、逾時、帳密錯誤或相機回錯；message 是給使用者看的中文
+ */
+export type OnvifProbeDto =
+  | { state: "unconfigured" }
+  | { state: "available"; ptz: boolean; zoom: boolean; maxPresets: number | null }
+  | { state: "unavailable"; kind: OnvifErrorKind; message: string };
+
 export type ProbeResult =
-  | { ok: true; main: StreamInfo; sub: StreamInfo | null; snapshotJpegBase64: string | null }
+  | { ok: true; main: StreamInfo; sub: StreamInfo | null; snapshotJpegBase64: string | null; onvif: OnvifProbeDto }
   | { ok: false; error: string };
+
+export interface PtzPresetDto {
+  token: string;
+  name: string;
+}
+
+/**
+ * GET /api/cameras/:id/ptz。不支援不是錯誤：
+ * - no-onvif：這台沒有設定 ONVIF（通用 RTSP 沒填）
+ * - no-ptz：ONVIF 連得上，但相機沒有 PTZ
+ * 連不上、逾時、帳密錯誤、相機回錯則是 HTTP 錯誤（503、504、502），訊息已是中文。
+ */
+export type PtzDto =
+  | { supported: false; reason: "no-onvif" | "no-ptz" }
+  | {
+      supported: true;
+      continuous: boolean;
+      relative: boolean;
+      zoom: boolean;
+      /** 相機沒回報上限時為 null */
+      maxPresets: number | null;
+      presets: PtzPresetDto[];
+      /** 這台攝影機設定的偏好；請求沒帶 mode、speed 時後端用它們 */
+      prefs: { mode: PtzMode; speed: number };
+    };
+
+/**
+ * POST /api/cameras/:id/ptz。
+ * - move：pan、tilt、zoom 各 -1 到 1（至少一軸不為 0），speed 0.1 到 1.0；mode 沒帶用攝影機偏好。
+ *   持續移動要每 500 ms 重送，後端 1.5 秒沒收到新的移動就自動停止。
+ * - stop：停止所有軸。
+ * - preset：前往預置點。
+ */
+export type PtzCommandDto =
+  | { action: "move"; pan?: number; tilt?: number; zoom?: number; speed?: number; mode?: PtzMode }
+  | { action: "stop" }
+  | { action: "preset"; token: string; speed?: number };
+
+/** move 的回應：實際使用的移動方式（自動模式會因相機而變）。stop 與 preset 回 204 */
+export interface PtzMoveResultDto {
+  mode: "continuous" | "relative";
+}
+
+/** POST /api/cameras/:id/ptz/presets（管理員）。沒帶 token 是新增，帶了是覆寫該預置點 */
+export interface PtzSavePresetDto {
+  name: string;
+  token?: string;
+}
+
+/** DELETE /api/cameras/:id/ptz/presets（管理員）的請求內容 */
+export interface PtzRemovePresetDto {
+  token: string;
+}
+
+export interface PtzPresetsDto {
+  presets: PtzPresetDto[];
+}
+
+export interface PtzPresetSavedDto extends PtzPresetsDto {
+  /** 剛儲存的預置點 */
+  token: string;
+}
 
 export interface SegmentDto {
   id: number;

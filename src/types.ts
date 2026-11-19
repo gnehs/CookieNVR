@@ -19,10 +19,20 @@ export type CameraConnection =
       onvif?: OnvifEndpoint;
     };
 
+export type PtzMode = "auto" | "continuous" | "relative";
+
+/** 每台攝影機的 PTZ 偏好；舊資料沒有這個欄位，一律經 `ptzPrefsOf` 取得預設值 */
+export interface PtzPrefs {
+  mode: PtzMode;
+  /** 前端沒指定速度時使用，0.1 到 1.0 */
+  speed: number;
+}
+
 export interface CameraConfig {
   name: string;
   enabled: boolean;
   connection: CameraConnection;
+  ptz?: PtzPrefs;
   record: {
     enabled: boolean;
     audio: boolean;

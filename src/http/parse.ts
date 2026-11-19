@@ -1,4 +1,5 @@
-import type { CameraConfig, CameraConnection, OnvifEndpoint, Settings } from "../types.ts";
+import { MAX_SPEED, MIN_SPEED } from "../onvif/index.ts";
+import type { CameraConfig, CameraConnection, OnvifEndpoint, PtzPrefs, Settings } from "../types.ts";
 import { HttpError } from "./errors.ts";
 import { asObject, bool, int, isObject, oneOf, optStr, str, type JsonObject } from "./validate.ts";
 
@@ -49,11 +50,22 @@ export function parseConnection(value: unknown, base = "connection"): CameraConn
   return conn;
 }
 
+const PTZ_MODES = ["auto", "continuous", "relative"] as const;
+
+function parsePtzPrefs(value: unknown): PtzPrefs {
+  const o = asObject(value, "ptz");
+  const speed = o.speed;
+  if (typeof speed !== "number" || !Number.isFinite(speed) || speed < MIN_SPEED || speed > MAX_SPEED) {
+    throw new HttpError(400, `欄位 ptz.speed 必須是 ${MIN_SPEED} 到 ${MAX_SPEED} 的數字`);
+  }
+  return { mode: oneOf(o, "mode", PTZ_MODES, "ptz.mode"), speed };
+}
+
 export function parseCameraConfig(value: unknown): CameraConfig {
   const o = asObject(value);
   const name = str(o, "name", { max: 100 }).trim();
   const record = asObject(o.record, "record");
-  return {
+  const config: CameraConfig = {
     name,
     enabled: bool(o, "enabled"),
     connection: parseConnection(o.connection),
@@ -63,6 +75,8 @@ export function parseCameraConfig(value: unknown): CameraConfig {
       direct: bool(record, "direct", "record.direct"),
     },
   };
+  if (o.ptz !== undefined && o.ptz !== null) config.ptz = parsePtzPrefs(o.ptz);
+  return config;
 }
 
 const SETTINGS_KEYS = ["siteName", "storagePath", "retention", "rtsp"];

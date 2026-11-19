@@ -7,6 +7,13 @@ import type {
   InfoDto,
   MeDto,
   ProbeResult,
+  PtzCommandDto,
+  PtzDto,
+  PtzMoveResultDto,
+  PtzPresetSavedDto,
+  PtzPresetsDto,
+  PtzRemovePresetDto,
+  PtzSavePresetDto,
   PurgeDto,
   SegmentDto,
   SessionDto,
@@ -102,6 +109,16 @@ export const api = {
   createExport: (req: ExportRequestDto) => post<ExportDto>("/exports", req),
   deleteExport: (id: string) => del(`/exports/${encodeURIComponent(id)}`),
   exportFileUrl: (id: string) => `/api/exports/${encodeURIComponent(id)}/file`,
+  ptz: (id: string) => get<PtzDto>(`/cameras/${encodeURIComponent(id)}/ptz`),
+  ptzMove: (id: string, move: Omit<Extract<PtzCommandDto, { action: "move" }>, "action">) =>
+    post<PtzMoveResultDto>(`/cameras/${encodeURIComponent(id)}/ptz`, { action: "move", ...move }),
+  ptzStop: (id: string) => post<void>(`/cameras/${encodeURIComponent(id)}/ptz`, { action: "stop" }),
+  ptzGotoPreset: (id: string, token: string, speed?: number) =>
+    post<void>(`/cameras/${encodeURIComponent(id)}/ptz`, { action: "preset", token, speed }),
+  ptzSavePreset: (id: string, preset: PtzSavePresetDto) =>
+    post<PtzPresetSavedDto>(`/cameras/${encodeURIComponent(id)}/ptz/presets`, preset),
+  ptzRemovePreset: (id: string, preset: PtzRemovePresetDto) =>
+    request<PtzPresetsDto>("DELETE", `/cameras/${encodeURIComponent(id)}/ptz/presets`, preset),
   system: () => get<SystemDto>("/system"),
   diagnostics: async (camera?: string): Promise<string> => {
     const res = await fetch(`/api/system/diagnostics${camera ? `?camera=${encodeURIComponent(camera)}` : ""}`, { credentials: "same-origin" });

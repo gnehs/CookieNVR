@@ -51,7 +51,7 @@ function input(overrides: Partial<DiagnosticsInput> = {}): DiagnosticsInput {
         recording: false,
         probe: {
           at: NOW - 60_000,
-          result: { ok: true, main: { videoCodec: "h264", width: 2560, height: 1440, fps: 15, audioCodec: "aac" }, sub: null, snapshotJpegBase64: "AAAA" },
+          result: { ok: true, main: { videoCodec: "h264", width: 2560, height: 1440, fps: 15, audioCodec: "aac" }, sub: null, snapshotJpegBase64: "AAAA", onvif: { state: "unconfigured" } },
         },
       },
     ],

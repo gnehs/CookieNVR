@@ -1,11 +1,13 @@
 import type { ProbeResult, StreamInfo } from "../api-types.ts";
 import type { Env } from "../env.ts";
 import type { CameraConnection } from "../types.ts";
+import { probeOnvif, type OnvifProbeOptions } from "../ptz/probe.ts";
 import { sourceUrls } from "../restream/source-urls.ts";
 
 export interface ProbeOptions {
   /** 單一 ffprobe / ffmpeg 呼叫的時間上限 */
   timeoutMs?: number;
+  onvif?: OnvifProbeOptions;
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -133,6 +135,8 @@ export async function probeCamera(
     return info ? { ok: true, value: info } : { ok: false, error: "串流中沒有影像軌" };
   }
 
+  // ONVIF 與串流同時探測，連不上不影響串流測試的結果
+  const onvif = probeOnvif(conn, opts.onvif);
   const main = await probeStream(urls.main);
   if (!main.ok) return { ok: false, error: `主碼流：${main.error}` };
 
@@ -144,7 +148,7 @@ export async function probeCamera(
     else if (!isTapo) return { ok: false, error: `子碼流：${r.error}` };
   }
 
-  return { ok: true, main: main.value, sub, snapshotJpegBase64: await snapshot(urls.main) };
+  return { ok: true, main: main.value, sub, snapshotJpegBase64: await snapshot(urls.main), onvif: await onvif };
 
   async function snapshot(url: string): Promise<string | null> {
     const r = await run(

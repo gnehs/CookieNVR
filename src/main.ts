@@ -25,6 +25,7 @@ import {
   recordWorkerSpec,
   usageByCamera,
 } from "./recording/index.ts";
+import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore } from "./stores/index.ts";
 import type { CameraConnection, CameraId, WorkerSpec } from "./types.ts";
@@ -37,6 +38,7 @@ const RETENTION_MS = 60_000;
 const ONLINE_POLL_MS = 5_000;
 const BACKUP_CHECK_MS = 60 * 60_000;
 const EXPORT_SWEEP_MS = 60_000;
+const PTZ_INSPECT_MS = 3_000;
 
 const env = readEnv();
 const logDir = join(env.dataDir, "logs");
@@ -66,6 +68,7 @@ const exportJobs = createExports({
     return fs.bavail * fs.bsize;
   },
 });
+const ptz = createPtzHub({ cameras, onError: (id, e) => log(`ptz:${id}`, e) });
 const indexer = createIndexer({ db, settings: settings.get });
 const retention = createRetention({ db, settings: settings.get });
 
@@ -178,11 +181,14 @@ async function diagnostics(only: string | null): Promise<string> {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
     settings: settings.get(),
-    cameras: list.map((camera) => ({
-      camera,
-      ...cameraStatus(camera.id),
-      probe: probes.get(JSON.stringify(camera.config.connection)) ?? null,
-    })),
+    cameras: await Promise.all(
+      list.map(async (camera) => ({
+        camera,
+        ...cameraStatus(camera.id),
+        probe: probes.get(JSON.stringify(camera.config.connection)) ?? null,
+        ptz: await ptz.inspect(camera.id, PTZ_INSPECT_MS),
+      })),
+    ),
     only: only as CameraId | null,
     workers: sys.workers,
     restarts: readRestartLog(logDir, 50),
@@ -225,6 +231,7 @@ const routes = [
   }),
   ...eventRoutes({ db, dataDir: env.dataDir }),
   ...exportRoutes(exportJobs),
+  ...ptzRoutes({ hub: ptz }),
   createSnapshots({
     env,
     sourceUrl: (id) => {
@@ -254,6 +261,7 @@ supervisor.apply(desiredWorkers());
 void restream.sync(cameras.list()).catch((e) => log("restream", e));
 
 cameras.subscribe((list) => {
+  ptz.reconcile(list);
   void reconcileWorkers().catch((e) => log("workers", e));
   void restream.sync(list).catch((e) => log("restream", e));
 });
@@ -319,7 +327,7 @@ async function shutdown(exitCode = 0): Promise<void> {
   memory.stop();
   stopSync();
   void server.stop(true);
-  await Promise.all([supervisor.shutdown(), exportJobs.shutdown()]);
+  await Promise.all([supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose()]);
   db.close();
   process.exit(exitCode);
 }

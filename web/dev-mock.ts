@@ -5,7 +5,7 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CameraDto, EventDto, ExportDto, ProbeResult, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { CameraDto, EventDto, ExportDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import { explainFailure } from "../src/camera/probe.ts";
@@ -338,6 +338,79 @@ async function exportApi(req: Request, url: URL, path: string, body: any): Promi
   return null;
 }
 
+// ---------- 假 PTZ：能力依攝影機而不同，方便做介面時看各種情況 ----------
+// 客廳：持續＋相對＋變焦、預置點上限 8；前門：只有相對移動、沒有變焦、上限 3；
+// 車道（Tapo 但相機沒有 PTZ）、車庫與停用的後院（通用 RTSP 沒填 ONVIF）：不支援。
+interface MockPtz { continuous: boolean; relative: boolean; zoom: boolean; maxPresets: number; presets: PtzPresetDto[]; nextToken: number }
+const ptzByName: Record<string, MockPtz> = {
+  客廳: { continuous: true, relative: true, zoom: true, maxPresets: 8, presets: [{ token: "1", name: "大門" }, { token: "2", name: "沙發" }, { token: "3", name: "窗邊" }], nextToken: 4 },
+  前門: { continuous: false, relative: true, zoom: false, maxPresets: 3, presets: [{ token: "1", name: "門口" }], nextToken: 2 },
+};
+function mockPtzOf(c: (typeof cams)[number]): { kind: "no-onvif" } | { kind: "no-ptz" } | { kind: "ok"; ptz: MockPtz } {
+  if (c.config.connection.type === "rtsp" && !c.config.connection.onvif) return { kind: "no-onvif" };
+  const ptz = ptzByName[c.config.name];
+  return ptz ? { kind: "ok", ptz } : { kind: "no-ptz" };
+}
+function onvifProbeOf(conn: any): OnvifProbeDto {
+  if (conn.type === "rtsp" && !conn.onvif) return { state: "unconfigured" };
+  const host = String(conn.type === "tapo" ? conn.host : conn.onvif.host);
+  if (host.includes("onvifdown")) return { state: "unavailable", kind: "unreachable", message: "連不上相機的控制連線，請確認相機已開機、與本機在同一個網路，且 ONVIF 位址與埠號正確" };
+  if (host.includes("noptz")) return { state: "available", ptz: false, zoom: false, maxPresets: null };
+  return { state: "available", ptz: true, zoom: true, maxPresets: 8 };
+}
+const ptzRoute = (path: string) => path.match(/^\/cameras\/([^/]+)\/ptz(\/presets)?$/);
+async function ptzApi(req: Request, path: string, admin: boolean): Promise<Response | null> {
+  const mm = ptzRoute(path);
+  if (!mm) return null;
+  const m = req.method;
+  const c = cams.find((x) => x.id === mm[1]);
+  if (!c) return err(404, "找不到攝影機");
+  const found = mockPtzOf(c);
+  if (!mm[2]) {
+    if (m === "GET") {
+      if (found.kind !== "ok") return json({ supported: false, reason: found.kind } satisfies PtzDto);
+      const { continuous, relative, zoom, maxPresets, presets } = found.ptz;
+      return json({ supported: true, continuous, relative, zoom, maxPresets, presets, prefs: { mode: c.config.ptz?.mode ?? "auto", speed: c.config.ptz?.speed ?? 0.5 } } satisfies PtzDto);
+    }
+    if (m !== "POST") return null;
+    const b: any = await req.json().catch(() => ({}));
+    if (found.kind === "no-onvif") return err(409, "這台相機沒有設定 ONVIF，無法控制鏡頭");
+    if (found.kind === "no-ptz") return err(409, "這台相機沒有鏡頭控制功能");
+    if (b.action === "stop") return noContent();
+    if (b.action === "preset") return found.ptz.presets.some((p) => p.token === b.token) ? noContent() : err(502, "相機拒絕了這個指令，請稍後再試");
+    if (b.action !== "move") return err(400, "欄位 action 必須是 move 或 stop 或 preset");
+    if (Number(b.zoom ?? 0) !== 0 && !found.ptz.zoom) return err(409, "這台相機沒有變焦功能");
+    const mode = b.mode ?? c.config.ptz?.mode ?? "auto";
+    if (mode === "continuous" && !found.ptz.continuous) return err(409, "這台相機不支援持續移動，請改用微調或自動模式");
+    return json({ mode: mode === "auto" ? (found.ptz.continuous ? "continuous" : "relative") : mode });
+  }
+  if (!admin) return err(403, "需要管理員權限");
+  if (found.kind !== "ok") return err(409, found.kind === "no-onvif" ? "這台相機沒有設定 ONVIF，無法控制鏡頭" : "這台相機沒有鏡頭控制功能");
+  const ptz = found.ptz;
+  const b: any = await req.json().catch(() => ({}));
+  if (m === "POST") {
+    const name = String(b.name ?? "").trim();
+    if (!name) return err(400, "欄位 name 不能為空");
+    if (b.token !== undefined) {
+      const p = ptz.presets.find((x) => x.token === b.token);
+      if (!p) return err(404, "找不到這個預置點");
+      p.name = name;
+      return json({ token: p.token, presets: ptz.presets });
+    }
+    if (ptz.presets.length >= ptz.maxPresets) return err(409, `預置點已滿，這台相機最多 ${ptz.maxPresets} 個，請先刪除一個`);
+    const token = String(ptz.nextToken++);
+    ptz.presets.push({ token, name });
+    return json({ token, presets: ptz.presets }, 201);
+  }
+  if (m === "DELETE") {
+    const i = ptz.presets.findIndex((x) => x.token === b.token);
+    if (i < 0) return err(404, "找不到這個預置點");
+    ptz.presets.splice(i, 1);
+    return json({ presets: ptz.presets });
+  }
+  return null;
+}
+
 async function api(req: Request, url: URL): Promise<Response> {
   const path = url.pathname.slice(4);
   const m = req.method;
@@ -437,6 +510,9 @@ async function api(req: Request, url: URL): Promise<Response> {
     return new Response(Bun.file(thumbFiles[id % thumbFiles.length]!), { headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=3600" } });
   }
 
+  const ptzResponse = await ptzApi(req, path, admin);
+  if (ptzResponse) return ptzResponse;
+
   const denied = path.startsWith("/cameras") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
   if (denied) return denied;
 
@@ -455,6 +531,7 @@ async function api(req: Request, url: URL): Promise<Response> {
       main: { videoCodec: "h264", width: 2560, height: 1440, fps: 15, audioCodec: "pcm_alaw" },
       sub: body.type === "rtsp" && !body.subUrl ? null : { videoCodec: "h264", width: 640, height: 360, fps: 15, audioCodec: null },
       snapshotJpegBase64: snapB64,
+      onvif: onvifProbeOf(body),
     } satisfies ProbeResult);
   }
   mm = path.match(/^\/cameras\/([^/]+)$/);
