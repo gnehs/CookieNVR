@@ -35,6 +35,8 @@ jobs:
           sudo tar -xzf "${file}" -C /usr/local/bin mediamtx
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
+      # 測試不需要 dist/web；先建置是為了在每個分支就抓到前端建置失敗，不必等 docker-e2e。
+      - run: bun run build
       - run: bun test
       # 物件辨識 worker：與映像同一份釘住的相依（amd64 會連 OpenVINO plugin 一起裝），下載內建模型後跑單元測試與 CPU 自我檢查。
       - uses: actions/setup-python@v7
