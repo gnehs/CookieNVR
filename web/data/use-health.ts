@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { assessHealth, type Health } from "../health.ts";
+import { statesQuery } from "../states/queries.ts";
 import { camerasQuery, metricsQuery, settingsQuery, systemQuery, workersQuery } from "./queries.ts";
 
 /** 磁碟、設定與系統資源不推送，每分鐘重抓（分頁在背景時暫停）；攝影機與 worker 跟著 SSE */
@@ -17,6 +18,7 @@ export function useHealth(admin: boolean): Health | null {
   const metrics = useQuery({ ...metricsQuery(), ...extras }).data;
   const cams = useQuery({ ...camerasQuery, enabled: admin }).data;
   const workers = useQuery({ ...workersQuery, enabled: admin }).data;
+  const stateSensors = useQuery({ ...statesQuery, enabled: admin }).data;
   return useMemo(() => {
     if (!sys || !settings || !cams) return null;
     return assessHealth({
@@ -27,6 +29,7 @@ export function useHealth(admin: boolean): Health | null {
       minFreeBytes: settings.retention.minFreeBytes,
       resources: metrics?.history,
       decodeWarning: sys.decode?.warning ?? null,
+      stateSensors,
     });
-  }, [sys, settings, metrics, cams, workers]);
+  }, [sys, settings, metrics, cams, workers, stateSensors]);
 }

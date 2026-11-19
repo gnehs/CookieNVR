@@ -14,6 +14,7 @@ import { Icon } from "../../ui/Icon.tsx";
 import { Badge } from "../../ui/Panel.tsx";
 import { EmptyState, ErrorBox, Spinner } from "../../ui/states.tsx";
 import { PtzPanel } from "./PtzPanel.tsx";
+import { StateChips } from "./StateChips.tsx";
 
 const QUALITY_KEY = "cookienvr.liveQuality";
 
@@ -104,6 +105,7 @@ function Live({ cam }: { cam: CameraDto }) {
         </div>
       </header>
       <LivePtzBody cam={cam} isAdmin={isAdmin} onTarget={onTarget} />
+      <StateChips cam={cam} admin={isAdmin} />
       {liveSupported() ? null : (
         <p className="live-fallback-note below">
           <Icon name="info" size={16} />

@@ -4,7 +4,10 @@ import type { Health, Issue } from "../../health.ts";
 import type { IconName } from "../../ui/icons.ts";
 import { CATEGORY_LABEL } from "./ResourcesCard.tsx";
 
-export type IssueTarget = { to: "/settings/system" | "/settings/storage" | "/settings/cameras" } | { to: "/settings/cameras/$id"; params: { id: string } };
+export type IssueTarget =
+  | { to: "/settings/system" | "/settings/storage" | "/settings/cameras" }
+  | { to: "/settings/cameras/$id"; params: { id: string } }
+  | { to: "/settings/cameras/$id/states/$sensorId"; params: { id: string; sensorId: string } };
 
 export interface Restart {
   ids: string[];
@@ -37,13 +40,55 @@ function topUser(snap: Snapshot, by: "cpuPct" | "memBytes"): string {
   return top && top[by] > 0 ? `目前用最多的是「${CATEGORY_LABEL[top.category]}」。` : "";
 }
 
-export const SYSTEM_ICON: Partial<Record<Issue["kind"], IconName>> = { restream: "server", objects: "server", objectsLoad: "server", decode: "server", cpuBusy: "activity", memoryHigh: "activity" };
+export const SYSTEM_ICON: Partial<Record<Issue["kind"], IconName>> = { restream: "server", objects: "server", objectsLoad: "server", decode: "server", stateWorker: "server", cpuBusy: "activity", memoryHigh: "activity" };
 
 /** 每一類問題只寫一次：一句下一步、收起來的原因、一個最可能有用的動作 */
 export function explain(issue: Issue, snap: Snapshot): Explained {
   const one = issue.cameras.length === 1;
   const names = issue.cameras.map((c) => c.name).join("、");
+  const sensors = issue.sensors ?? [];
+  const sensorNames = sensors.map((s) => s.name).join("、");
+  const camOf = (id: string) => issue.cameras.find((c) => c.id === id)?.name ?? "";
+  const sensorWho = sensors.length === 1 ? `${camOf(sensors[0]!.cameraId)}的「${sensors[0]!.name}」` : sensorNames;
+  const sensorAction = (label: string): Action =>
+    sensors.length === 1
+      ? { label, to: "/settings/cameras/$id/states/$sensorId", params: { id: sensors[0]!.cameraId, sensorId: sensors[0]!.id } }
+      : issue.cameras.length === 1
+        ? { label, to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } }
+        : { label, to: "/settings/cameras" };
   switch (issue.kind) {
+    case "stateUntrained":
+      return {
+        who: sensorWho,
+        pill: { label: "還沒訓練", tone: "warn" },
+        next: "標記每一類的畫面後按「開始訓練」",
+        why: "狀態感應器要先看過每一種樣子（例如門開著、關著的畫面）才會判斷。標記好之後訓練只要幾秒到幾十秒。不需要了也可以直接刪除它。",
+        action: sensorAction("去標記"),
+      };
+    case "stateStale":
+      return {
+        who: sensorWho,
+        pill: { label: "要重新訓練", tone: "warn" },
+        next: "類別改過了，重新訓練後才會繼續辨識",
+        why: "新增或刪除類別後，之前學到的已經對不上新的類別，所以暫停判斷。新增的類別要先標記幾張畫面，再按「重新訓練」。",
+        action: sensorAction("重新訓練"),
+      };
+    case "stateNoFrames":
+      return {
+        who: sensorWho,
+        pill: { label: "看不到畫面", tone: "warn" },
+        next: "攝影機有連上，但狀態辨識收不到畫面",
+        why: "狀態辨識跟動作偵測用同一份畫面；這台的偵測畫面中斷時就沒辦法判斷。到攝影機設定確認「偵測」有開啟，仍然不行時，用頁面下方的「複製診斷資訊」找原因。",
+        action: issue.cameras.length === 1 ? { label: "檢查設定", to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } } : { label: "檢查設定", to: "/settings/cameras" },
+      };
+    case "stateWorker":
+      return {
+        who: "狀態辨識",
+        pill: { label: "已停止", tone: "warn" },
+        next: issue.detail ?? "重新啟動，通常就會恢復",
+        why: "負責判斷畫面狀態的程序沒有在運作，所有狀態感應器都會停在「未知」。錄影與動作偵測不受影響。剛開機時會先啟動一下子；一直沒有恢復時重新啟動它，仍然不行請用頁面下方的「複製診斷資訊」找原因。",
+        action: { label: "重新啟動", restart: { ids: ["classifier"], title: "重新啟動狀態辨識？", message: "狀態會先變成未知，幾秒後重新確認。錄影不受影響。", done: "已重新啟動狀態辨識" } },
+      };
     case "restream":
       if (issue.detail)
         return {

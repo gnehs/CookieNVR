@@ -29,6 +29,12 @@ import type {
   MetricsDto,
   TokenDto,
   UserDto,
+  CreateStateSensorDto,
+  FrigateConfigResultDto,
+  StateChangeDto,
+  StateImageDto,
+  StateSensorConfigInput,
+  StateSensorDto,
 } from "../src/api-types.ts";
 import type { CameraConfig, CameraConnection, ObjectSettings, Role, Settings } from "../src/types.ts";
 
@@ -156,4 +162,37 @@ export const api = {
     return res.text();
   },
   restartWorker: (id: string) => post<void>(`/system/workers/${encodeURIComponent(id)}/restart`),
+  states: () => get<StateSensorDto[]>("/states"),
+  createState: (req: CreateStateSensorDto) => post<StateSensorDto>("/states", req),
+  updateState: (id: string, config: StateSensorConfigInput) => put<StateSensorDto>(`/states/${encodeURIComponent(id)}`, { config }),
+  deleteState: (id: string) => del(`/states/${encodeURIComponent(id)}`),
+  renameStateClass: (id: string, from: string, to: string) => post<StateSensorDto>(`/states/${encodeURIComponent(id)}/classes/rename`, { from, to }),
+  collectStateImages: (id: string) => post<StateSensorDto>(`/states/${encodeURIComponent(id)}/collect`),
+  trainState: (id: string) => post<StateSensorDto>(`/states/${encodeURIComponent(id)}/train`),
+  /** label：pending、all 或類別名稱 */
+  stateImages: (id: string, label: string) =>
+    get<{ images: StateImageDto[] }>(`/states/${encodeURIComponent(id)}/images?label=${encodeURIComponent(label)}`).then((r) => r.images),
+  labelStateImages: (id: string, ids: string[], label: string | null) => post<StateSensorDto>(`/states/${encodeURIComponent(id)}/images/label`, { ids, label }),
+  deleteStateImages: (id: string, ids: string[]) => post<StateSensorDto>(`/states/${encodeURIComponent(id)}/images/delete`, { ids }),
+  stateChanges: (sensorId: string, limit: number) => get<StateChangeDto[]>(`/state-changes?sensorId=${encodeURIComponent(sensorId)}&limit=${limit}`),
+  frigateConfig: (yaml: string) => post<FrigateConfigResultDto>("/states/frigate-config", { yaml }),
+  /** 上傳 Frigate 匯出的資料集 zip；用 XHR 才拿得到上傳進度（0 到 1） */
+  importStateDataset: (id: string, file: Blob, onProgress: (p: number) => void) =>
+    new Promise<StateSensorDto>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `/api/states/${encodeURIComponent(id)}/import`);
+      xhr.setRequestHeader("content-type", "application/zip");
+      xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+      xhr.onerror = () => reject(new ApiError(0, "無法連線到伺服器"));
+      xhr.onload = () => {
+        let data: any = null;
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {}
+        if (xhr.status >= 200 && xhr.status < 300) return resolve(data as StateSensorDto);
+        if (xhr.status === 401) onUnauthorized();
+        reject(new ApiError(xhr.status, data?.error ?? (xhr.status === 413 ? "檔案太大，上限 100 MB" : `錯誤 ${xhr.status}`)));
+      };
+      xhr.send(file);
+    }),
 };

@@ -7,7 +7,7 @@ import { Segmented } from "../../ui/controls.tsx";
 export const CATEGORY_LABEL: Record<UsageCategory, string> = {
   record: "錄影",
   detect: "動作偵測",
-  detector: "物件辨識",
+  detector: "影像辨識",
   live: "即時觀看",
   restream: "影像服務",
   homekit: "Apple 家庭",

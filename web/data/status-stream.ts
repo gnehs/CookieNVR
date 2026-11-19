@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { CameraDto, EventDto, StreamSnapshotDto } from "../../src/api-types.ts";
+import type { CameraDto, EventDto, StateChangeDto, StateSensorDto, StreamSnapshotDto } from "../../src/api-types.ts";
 import type { WorkerStatus } from "../../src/types.ts";
+import { onSensorMessage, onSensorRemoved, onStateChange, statesQuery } from "../states/queries.ts";
 import { activeEventsQuery, camerasQuery, systemQuery, workersQuery } from "./queries.ts";
 
 const POLL_MS = 5_000;
@@ -15,8 +16,8 @@ function upsert<T extends { id: string | number }>(list: T[], item: T): T[] {
 const parse = <T,>(e: Event): T => JSON.parse((e as MessageEvent<string>).data) as T;
 
 /**
- * 全站唯一一條 `GET /api/stream`：攝影機、worker 與進行中的事件推進 Query 快取
- * （`camerasQuery`、`workersQuery`、`activeEventsQuery`），頁面照常 useQuery 就會跟著更新。
+ * 全站唯一一條 `GET /api/stream`：攝影機、worker、進行中的事件與狀態感應器推進 Query 快取
+ * （`camerasQuery`、`workersQuery`、`activeEventsQuery`、`statesQuery`），頁面照常 useQuery 就會跟著更新。
  * SSE 一直連不上時改成每 5 秒輪詢同樣三份資料。回傳的函式關掉連線並停止一切計時器。
  */
 export function startStatusStream(qc: QueryClient, opts: { admin: boolean }): () => void {
@@ -40,8 +41,13 @@ export function startStatusStream(qc: QueryClient, opts: { admin: boolean }): ()
       qc.setQueryData(camerasQuery.queryKey, s.cameras);
       qc.setQueryData(workersQuery.queryKey, s.workers);
       qc.setQueryData(activeEventsQuery.queryKey, s.events);
-      // 重新連上：磁碟與設定這些不推送的資料，斷線期間錯過的變化一次補齊
-      if (snapshots++ > 0 && opts.admin) void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
+      qc.setQueryData(statesQuery.queryKey, s.stateSensors);
+      // 重新連上：磁碟與設定這些不推送的資料、狀態切換紀錄與圖片清單，斷線期間錯過的變化一次補齊
+      if (snapshots++ > 0) {
+        if (opts.admin) void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
+        void qc.invalidateQueries({ queryKey: ["state-changes"] });
+        void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "states" && q.queryKey.length > 1 });
+      }
     });
     es.addEventListener("cameras", (e) => qc.setQueryData(camerasQuery.queryKey, parse<CameraDto[]>(e)));
     es.addEventListener("camera", (e) => setCams((cams) => upsert(cams, parse<CameraDto>(e))));
@@ -54,6 +60,9 @@ export function startStatusStream(qc: QueryClient, opts: { admin: boolean }): ()
       // update：進行中的事件類別變了（物件辨識確認了新的東西），換成最新的那筆
       setEvents((list) => (phase === "end" ? list.filter((x) => x.id !== event.id) : upsert(list, event)));
     });
+    es.addEventListener("state-sensor", (e) => onSensorMessage(qc, parse<StateSensorDto>(e)));
+    es.addEventListener("state-sensor-removed", (e) => onSensorRemoved(qc, parse<{ id: string }>(e).id));
+    es.addEventListener("state-change", (e) => onStateChange(qc, parse<StateChangeDto>(e)));
     es.onerror = () => {
       // CONNECTING：瀏覽器已經在重試，重連後伺服器會先送完整狀態
       if (es.readyState !== EventSource.CLOSED) return;
@@ -68,6 +77,7 @@ export function startStatusStream(qc: QueryClient, opts: { admin: boolean }): ()
     if (document.hidden) return;
     void qc.fetchQuery({ ...camerasQuery, staleTime: 0 }).catch(() => {});
     void qc.fetchQuery({ ...activeEventsQuery, staleTime: 0 }).catch(() => {});
+    void qc.fetchQuery({ ...statesQuery, staleTime: 0 }).catch(() => {});
     if (opts.admin) void qc.fetchQuery({ ...workersQuery, staleTime: 0 }).catch(() => {});
   };
 

@@ -46,6 +46,8 @@ import {
 } from "./form-model.ts";
 import { HomekitSection, homekitQuery, homekitSummary } from "./HomekitSection.tsx";
 import { PtzPrefsField, ptzSummary, PtzSupportNote } from "./PtzPrefs.tsx";
+import { sensorsOf, StatesSection, statesSummary } from "./StatesSection.tsx";
+import { statesQuery } from "../../states/queries.ts";
 import { useDeleteCamera } from "./useDeleteCamera.tsx";
 
 export type CameraFormMode = "welcome" | "new" | "edit";
@@ -154,6 +156,7 @@ function CameraForm({ existing, mode, onAgain }: { existing: CameraDto | null; m
 
   const objectsOn = useQuery({ ...settingsQuery, enabled: !!existing }).data?.objects.enabled ?? false;
   const homekit = useQuery({ ...homekitQuery(existing?.id ?? ""), enabled: !!existing }).data;
+  const sensors = useQuery({ ...statesQuery, enabled: !!existing, select: (list) => sensorsOf(list, existing?.id ?? "") }).data;
   const ptzSupported = useQuery({ ...ptzQuery(existing?.id ?? ""), enabled: !!existing }).data?.supported === true;
   const del = useDeleteCamera();
 
@@ -357,6 +360,11 @@ function CameraForm({ existing, mode, onAgain }: { existing: CameraDto | null; m
           <FormCard title="偵測" icon="activity" className="fcard-detect" summary={detectSummary(detect, objectsText)} {...card("detect")}>
             <span ref={detectProbe} hidden />
             <DetectSection camera={existing} value={detect} saved={saved.detect!} onChange={(patch) => set({ detect: { ...detect, ...patch } })} onvif={onvif} active={detectOpen} objects={objectsOn} />
+          </FormCard>
+        ) : null}
+        {existing ? (
+          <FormCard title="狀態辨識" icon="toggle" className="fcard-states" summary={statesSummary(sensors)}>
+            <StatesSection camera={existing} />
           </FormCard>
         ) : null}
         {existing && ptzSupported ? (

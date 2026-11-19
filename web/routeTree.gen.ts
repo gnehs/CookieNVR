@@ -28,8 +28,10 @@ import { Route as AuthedShellSettingsStorageRouteImport } from './routes/_authed
 import { Route as AuthedShellSettingsSystemRouteImport } from './routes/_authed/_shell/settings/system'
 import { Route as AuthedShellSettingsUsersRouteImport } from './routes/_authed/_shell/settings/users'
 import { Route as AuthedShellSettingsCamerasIndexRouteImport } from './routes/_authed/_shell/settings/cameras/index'
-import { Route as AuthedShellSettingsCamerasIdRouteImport } from './routes/_authed/_shell/settings/cameras/$id'
 import { Route as AuthedShellSettingsCamerasNewRouteImport } from './routes/_authed/_shell/settings/cameras/new'
+import { Route as AuthedShellSettingsCamerasIdIndexRouteImport } from './routes/_authed/_shell/settings/cameras/$id/index'
+import { Route as AuthedShellSettingsCamerasIdStatesSensorIdRouteImport } from './routes/_authed/_shell/settings/cameras/$id/states/$sensorId'
+import { Route as AuthedShellSettingsCamerasIdStatesNewRouteImport } from './routes/_authed/_shell/settings/cameras/$id/states/new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -130,16 +132,28 @@ const AuthedShellSettingsCamerasIndexRoute =
     path: '/cameras/',
     getParentRoute: () => AuthedShellSettingsRouteRoute,
   } as any)
-const AuthedShellSettingsCamerasIdRoute =
-  AuthedShellSettingsCamerasIdRouteImport.update({
-    id: '/cameras/$id',
-    path: '/cameras/$id',
-    getParentRoute: () => AuthedShellSettingsRouteRoute,
-  } as any)
 const AuthedShellSettingsCamerasNewRoute =
   AuthedShellSettingsCamerasNewRouteImport.update({
     id: '/cameras/new',
     path: '/cameras/new',
+    getParentRoute: () => AuthedShellSettingsRouteRoute,
+  } as any)
+const AuthedShellSettingsCamerasIdIndexRoute =
+  AuthedShellSettingsCamerasIdIndexRouteImport.update({
+    id: '/cameras/$id/',
+    path: '/cameras/$id/',
+    getParentRoute: () => AuthedShellSettingsRouteRoute,
+  } as any)
+const AuthedShellSettingsCamerasIdStatesSensorIdRoute =
+  AuthedShellSettingsCamerasIdStatesSensorIdRouteImport.update({
+    id: '/cameras/$id/states/$sensorId',
+    path: '/cameras/$id/states/$sensorId',
+    getParentRoute: () => AuthedShellSettingsRouteRoute,
+  } as any)
+const AuthedShellSettingsCamerasIdStatesNewRoute =
+  AuthedShellSettingsCamerasIdStatesNewRouteImport.update({
+    id: '/cameras/$id/states/new',
+    path: '/cameras/$id/states/new',
     getParentRoute: () => AuthedShellSettingsRouteRoute,
   } as any)
 
@@ -160,9 +174,11 @@ export interface FileRoutesByFullPath {
   '/settings/system': typeof AuthedShellSettingsSystemRoute
   '/settings/users': typeof AuthedShellSettingsUsersRoute
   '/cameras/': typeof AuthedShellCamerasIndexRoute
-  '/settings/cameras/$id': typeof AuthedShellSettingsCamerasIdRoute
   '/settings/cameras/new': typeof AuthedShellSettingsCamerasNewRoute
   '/settings/cameras/': typeof AuthedShellSettingsCamerasIndexRoute
+  '/settings/cameras/$id/': typeof AuthedShellSettingsCamerasIdIndexRoute
+  '/settings/cameras/$id/states/$sensorId': typeof AuthedShellSettingsCamerasIdStatesSensorIdRoute
+  '/settings/cameras/$id/states/new': typeof AuthedShellSettingsCamerasIdStatesNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -181,9 +197,11 @@ export interface FileRoutesByTo {
   '/settings/system': typeof AuthedShellSettingsSystemRoute
   '/settings/users': typeof AuthedShellSettingsUsersRoute
   '/cameras': typeof AuthedShellCamerasIndexRoute
-  '/settings/cameras/$id': typeof AuthedShellSettingsCamerasIdRoute
   '/settings/cameras/new': typeof AuthedShellSettingsCamerasNewRoute
   '/settings/cameras': typeof AuthedShellSettingsCamerasIndexRoute
+  '/settings/cameras/$id': typeof AuthedShellSettingsCamerasIdIndexRoute
+  '/settings/cameras/$id/states/$sensorId': typeof AuthedShellSettingsCamerasIdStatesSensorIdRoute
+  '/settings/cameras/$id/states/new': typeof AuthedShellSettingsCamerasIdStatesNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -205,9 +223,11 @@ export interface FileRoutesById {
   '/_authed/_shell/settings/system': typeof AuthedShellSettingsSystemRoute
   '/_authed/_shell/settings/users': typeof AuthedShellSettingsUsersRoute
   '/_authed/_shell/cameras/': typeof AuthedShellCamerasIndexRoute
-  '/_authed/_shell/settings/cameras/$id': typeof AuthedShellSettingsCamerasIdRoute
   '/_authed/_shell/settings/cameras/new': typeof AuthedShellSettingsCamerasNewRoute
   '/_authed/_shell/settings/cameras/': typeof AuthedShellSettingsCamerasIndexRoute
+  '/_authed/_shell/settings/cameras/$id/': typeof AuthedShellSettingsCamerasIdIndexRoute
+  '/_authed/_shell/settings/cameras/$id/states/$sensorId': typeof AuthedShellSettingsCamerasIdStatesSensorIdRoute
+  '/_authed/_shell/settings/cameras/$id/states/new': typeof AuthedShellSettingsCamerasIdStatesNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -228,9 +248,11 @@ export interface FileRouteTypes {
     | '/settings/system'
     | '/settings/users'
     | '/cameras/'
-    | '/settings/cameras/$id'
     | '/settings/cameras/new'
     | '/settings/cameras/'
+    | '/settings/cameras/$id/'
+    | '/settings/cameras/$id/states/$sensorId'
+    | '/settings/cameras/$id/states/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -249,9 +271,11 @@ export interface FileRouteTypes {
     | '/settings/system'
     | '/settings/users'
     | '/cameras'
-    | '/settings/cameras/$id'
     | '/settings/cameras/new'
     | '/settings/cameras'
+    | '/settings/cameras/$id'
+    | '/settings/cameras/$id/states/$sensorId'
+    | '/settings/cameras/$id/states/new'
   id:
     | '__root__'
     | '/'
@@ -272,9 +296,11 @@ export interface FileRouteTypes {
     | '/_authed/_shell/settings/system'
     | '/_authed/_shell/settings/users'
     | '/_authed/_shell/cameras/'
-    | '/_authed/_shell/settings/cameras/$id'
     | '/_authed/_shell/settings/cameras/new'
     | '/_authed/_shell/settings/cameras/'
+    | '/_authed/_shell/settings/cameras/$id/'
+    | '/_authed/_shell/settings/cameras/$id/states/$sensorId'
+    | '/_authed/_shell/settings/cameras/$id/states/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -419,18 +445,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedShellSettingsCamerasIndexRouteImport
       parentRoute: typeof AuthedShellSettingsRouteRoute
     }
-    '/_authed/_shell/settings/cameras/$id': {
-      id: '/_authed/_shell/settings/cameras/$id'
-      path: '/cameras/$id'
-      fullPath: '/settings/cameras/$id'
-      preLoaderRoute: typeof AuthedShellSettingsCamerasIdRouteImport
-      parentRoute: typeof AuthedShellSettingsRouteRoute
-    }
     '/_authed/_shell/settings/cameras/new': {
       id: '/_authed/_shell/settings/cameras/new'
       path: '/cameras/new'
       fullPath: '/settings/cameras/new'
       preLoaderRoute: typeof AuthedShellSettingsCamerasNewRouteImport
+      parentRoute: typeof AuthedShellSettingsRouteRoute
+    }
+    '/_authed/_shell/settings/cameras/$id/': {
+      id: '/_authed/_shell/settings/cameras/$id/'
+      path: '/cameras/$id'
+      fullPath: '/settings/cameras/$id/'
+      preLoaderRoute: typeof AuthedShellSettingsCamerasIdIndexRouteImport
+      parentRoute: typeof AuthedShellSettingsRouteRoute
+    }
+    '/_authed/_shell/settings/cameras/$id/states/$sensorId': {
+      id: '/_authed/_shell/settings/cameras/$id/states/$sensorId'
+      path: '/cameras/$id/states/$sensorId'
+      fullPath: '/settings/cameras/$id/states/$sensorId'
+      preLoaderRoute: typeof AuthedShellSettingsCamerasIdStatesSensorIdRouteImport
+      parentRoute: typeof AuthedShellSettingsRouteRoute
+    }
+    '/_authed/_shell/settings/cameras/$id/states/new': {
+      id: '/_authed/_shell/settings/cameras/$id/states/new'
+      path: '/cameras/$id/states/new'
+      fullPath: '/settings/cameras/$id/states/new'
+      preLoaderRoute: typeof AuthedShellSettingsCamerasIdStatesNewRouteImport
       parentRoute: typeof AuthedShellSettingsRouteRoute
     }
   }
@@ -441,9 +481,11 @@ interface AuthedShellSettingsRouteRouteChildren {
   AuthedShellSettingsStorageRoute: typeof AuthedShellSettingsStorageRoute
   AuthedShellSettingsSystemRoute: typeof AuthedShellSettingsSystemRoute
   AuthedShellSettingsUsersRoute: typeof AuthedShellSettingsUsersRoute
-  AuthedShellSettingsCamerasIdRoute: typeof AuthedShellSettingsCamerasIdRoute
   AuthedShellSettingsCamerasNewRoute: typeof AuthedShellSettingsCamerasNewRoute
   AuthedShellSettingsCamerasIndexRoute: typeof AuthedShellSettingsCamerasIndexRoute
+  AuthedShellSettingsCamerasIdIndexRoute: typeof AuthedShellSettingsCamerasIdIndexRoute
+  AuthedShellSettingsCamerasIdStatesSensorIdRoute: typeof AuthedShellSettingsCamerasIdStatesSensorIdRoute
+  AuthedShellSettingsCamerasIdStatesNewRoute: typeof AuthedShellSettingsCamerasIdStatesNewRoute
 }
 
 const AuthedShellSettingsRouteRouteChildren: AuthedShellSettingsRouteRouteChildren =
@@ -452,9 +494,14 @@ const AuthedShellSettingsRouteRouteChildren: AuthedShellSettingsRouteRouteChildr
     AuthedShellSettingsStorageRoute: AuthedShellSettingsStorageRoute,
     AuthedShellSettingsSystemRoute: AuthedShellSettingsSystemRoute,
     AuthedShellSettingsUsersRoute: AuthedShellSettingsUsersRoute,
-    AuthedShellSettingsCamerasIdRoute: AuthedShellSettingsCamerasIdRoute,
     AuthedShellSettingsCamerasNewRoute: AuthedShellSettingsCamerasNewRoute,
     AuthedShellSettingsCamerasIndexRoute: AuthedShellSettingsCamerasIndexRoute,
+    AuthedShellSettingsCamerasIdIndexRoute:
+      AuthedShellSettingsCamerasIdIndexRoute,
+    AuthedShellSettingsCamerasIdStatesSensorIdRoute:
+      AuthedShellSettingsCamerasIdStatesSensorIdRoute,
+    AuthedShellSettingsCamerasIdStatesNewRoute:
+      AuthedShellSettingsCamerasIdStatesNewRoute,
   }
 
 const AuthedShellSettingsRouteRouteWithChildren =

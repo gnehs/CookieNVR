@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CameraDto } from "../src/api-types.ts";
+import type { CameraDto, StateSensorDto } from "../src/api-types.ts";
 import type { CameraId, WorkerStatus } from "../src/types.ts";
 import { alertSummary, assessHealth, cameraStatus } from "./health.ts";
 
@@ -193,3 +193,54 @@ describe("appdata 硬碟", () => {
   });
 });
 
+
+describe("狀態感應器", () => {
+  const sensor = (id: string, cameraId: string, code: NonNullable<StateSensorDto["problem"]>["code"] | null, name = "鐵捲門"): StateSensorDto => ({
+    id,
+    cameraId: cameraId as CameraId,
+    config: { name, classes: ["關", "開"], crop: [0, 0, 1, 1], threshold: 0.8, intervalSec: 10, onMotion: true, enabled: code !== "disabled" },
+    state: null,
+    since: null,
+    score: null,
+    candidate: null,
+    lastReading: null,
+    model: null,
+    images: { pending: 0, labeled: [] },
+    trainable: false,
+    job: null,
+    problem: code ? { code, message: code === "worker" ? "狀態辨識程序無法啟動：缺少模型檔" : "m" } : null,
+    createdAt: 0,
+  });
+
+  test("暫停與正常的不是問題；還沒訓練、要重新訓練各一張卡，帶著感應器", () => {
+    const h = assessHealth({ ...healthy, cams: [cam("a", "車庫")], stateSensors: [sensor("s1", "a", null), sensor("s2", "a", "disabled"), sensor("s3", "a", "paused"), sensor("s4", "a", "untrained", "車庫門"), sensor("s5", "a", "stale-model")] });
+    expect(h.issues.map((i) => [i.kind, i.title])).toEqual([
+      ["stateStale", "「鐵捲門」要重新訓練"],
+      ["stateUntrained", "「車庫門」還沒訓練"],
+    ]);
+    expect(h.issues[1]!.sensors).toEqual([{ id: "s4", cameraId: "a" as CameraId, name: "車庫門" }]);
+    expect(h.issues[1]!.cameras).toEqual([{ id: "a" as CameraId, name: "車庫" }]);
+  });
+
+  test("同類合併", () => {
+    const h = assessHealth({ ...healthy, cams: [cam("a", "車庫"), cam("b", "後院")], stateSensors: [sensor("s1", "a", "untrained"), sensor("s2", "b", "untrained", "窗戶")] });
+    expect(h.issues.map((i) => i.short)).toEqual(["2 個狀態感應器還沒訓練"]);
+    expect(h.issues[0]!.cameras.map((c) => c.id)).toEqual(["a", "b"] as CameraId[]);
+  });
+
+  test("攝影機停用或連不上時不另外提沒有畫面", () => {
+    const h = assessHealth({ ...healthy, cams: [cam("a", "車庫", { enabled: false }), cam("b", "後院", { online: false }), cam("c", "前門")], stateSensors: [sensor("s1", "a", "camera-off"), sensor("s2", "b", "camera-off"), sensor("s3", "c", "camera-off")] });
+    expect(h.issues.map((i) => [i.kind, i.sensors?.map((s) => s.id) ?? null])).toEqual([
+      ["offline", null],
+      ["stateNoFrames", ["s3"]],
+    ]);
+  });
+
+  test("辨識程序的問題只列一次，說明用後端給的白話", () => {
+    const h = assessHealth({ ...healthy, cams: [cam("a", "車庫")], stateSensors: [sensor("s1", "a", "worker"), sensor("s2", "a", "worker")] });
+    expect(h.issues).toHaveLength(1);
+    expect(h.issues[0]).toMatchObject({ kind: "stateWorker", title: "狀態辨識沒有正常運作", detail: "狀態辨識程序無法啟動：缺少模型檔" });
+    const crashed = assessHealth({ ...healthy, workers: [worker("restream"), worker("classifier", { kind: "classifier", state: "backoff" })], cams: [], stateSensors: [] });
+    expect(crashed.issues.map((i) => i.kind)).toEqual(["stateWorker"]);
+  });
+});

@@ -1,4 +1,4 @@
-import type { CameraDto, DetectFrameState, MetricsPointDto } from "../src/api-types.ts";
+import type { CameraDto, DetectFrameState, MetricsPointDto, StateSensorDto } from "../src/api-types.ts";
 import type { CameraId, WorkerStatus } from "../src/types.ts";
 
 export type CameraStatusKind = "recording" | "unstable" | "notRecording" | "offline" | "viewOnly" | "disabled";
@@ -40,7 +40,23 @@ export function cameraStatus(cam: Pick<CameraDto, "config" | "online" | "recordi
   return { kind, ...STATUS[kind] };
 }
 
-export type IssueKind = "restream" | "objects" | "objectsLoad" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "dataDiskLow" | "cpuBusy" | "memoryHigh" | "decode";
+export type IssueKind =
+  | "restream"
+  | "objects"
+  | "objectsLoad"
+  | "offline"
+  | "notRecording"
+  | "unstable"
+  | "diskLow"
+  | "diskFull"
+  | "dataDiskLow"
+  | "cpuBusy"
+  | "memoryHigh"
+  | "decode"
+  | "stateUntrained"
+  | "stateStale"
+  | "stateNoFrames"
+  | "stateWorker";
 
 export interface Issue {
   kind: IssueKind;
@@ -52,6 +68,8 @@ export interface Issue {
   short: string;
   /** 一句白話說明（影像解碼退回處理器、RTSP port 被佔用、錄影沒有寫入權限），狀態頁直接顯示 */
   detail?: string;
+  /** 狀態感應器的問題：是哪幾個感應器（狀態頁的按鈕直接帶到它的頁面） */
+  sensors?: { id: string; cameraId: CameraId; name: string }[];
 }
 
 export interface HealthInput {
@@ -65,6 +83,8 @@ export interface HealthInput {
   resources?: MetricsPointDto[] | null;
   /** `SystemDto.decode.warning`：影像解碼退回處理器的說明；沒有退回或讀不到時為 null */
   decodeWarning?: string | null;
+  /** 狀態感應器（`statesQuery`）；沒有時不判斷 */
+  stateSensors?: StateSensorDto[] | null;
 }
 
 export interface Health {
@@ -128,6 +148,8 @@ export function assessHealth(input: HealthInput): Health {
     }
   }
 
+  issues.push(...stateIssues(input, statuses, worker("classifier")));
+
   const { totalBytes: total, freeBytes: free } = input.disk;
   const usedPct = total ? ((total - free) / total) * 100 : 0;
   let diskTone: StatusTone = "ok";
@@ -156,6 +178,41 @@ export function assessHealth(input: HealthInput): Health {
   // 穩定排序：同色調維持上面的先後（系統 → 攝影機 → 磁碟 → 資源）
   issues.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === "bad" ? -1 : 1));
   return { issues, statuses, disk: { usedPct, free, total, tone: diskTone }, dataDisk };
+}
+
+const STATE_ISSUES: { kind: Extract<IssueKind, `state${string}`>; code: "untrained" | "stale-model" | "camera-off"; one: (n: string) => string; many: (n: number) => string }[] = [
+  { kind: "stateStale", code: "stale-model", one: (n) => `「${n}」要重新訓練`, many: (n) => `${n} 個狀態感應器要重新訓練` },
+  { kind: "stateUntrained", code: "untrained", one: (n) => `「${n}」還沒訓練`, many: (n) => `${n} 個狀態感應器還沒訓練` },
+  { kind: "stateNoFrames", code: "camera-off", one: (n) => `「${n}」看不到畫面`, many: (n) => `${n} 個狀態感應器看不到畫面` },
+];
+
+/**
+ * 狀態感應器沒在辨識的原因。暫停（使用者自己關的、鏡頭移動中）不是問題；
+ * 攝影機停用或連不上時，攝影機那張卡已經說了，這裡不重複。辨識程序的問題所有感應器共用一張。
+ */
+function stateIssues(input: HealthInput, statuses: Map<CameraId, CameraStatus>, classifier: WorkerStatus | undefined): Issue[] {
+  const sensors = (input.stateSensors ?? []).filter((s) => s.problem && s.problem.code !== "disabled" && s.problem.code !== "paused");
+  const camName = (id: CameraId) => input.cams.find((c) => c.id === id)?.config.name ?? "";
+  const ref = (s: StateSensorDto) => ({ id: s.id, cameraId: s.cameraId, name: s.config.name });
+  const issues: Issue[] = [];
+  const brokenWorker = classifier && (classifier.state === "backoff" || classifier.state === "stopped" || classifier.unstable);
+  const workerSensors = sensors.filter((s) => s.problem!.code === "worker");
+  if (workerSensors.length || brokenWorker) {
+    issues.push({ kind: "stateWorker", tone: "warn", cameras: [], title: "狀態辨識沒有正常運作", short: "狀態辨識停止", sensors: workerSensors.map(ref), ...(workerSensors[0] ? { detail: workerSensors[0].problem!.message } : {}) });
+  }
+  for (const g of STATE_ISSUES) {
+    const list = sensors.filter((s) => {
+      if (s.problem!.code !== g.code) return false;
+      if (g.code !== "camera-off") return true;
+      const st = statuses.get(s.cameraId)?.kind;
+      return st !== undefined && st !== "disabled" && st !== "offline";
+    });
+    if (!list.length) continue;
+    const cameras = [...new Set(list.map((s) => s.cameraId))].map((id) => ({ id, name: camName(id) }));
+    const title = list.length === 1 ? g.one(list[0]!.config.name) : g.many(list.length);
+    issues.push({ kind: g.kind, tone: "warn", cameras, title, short: title, sensors: list.map(ref) });
+  }
+  return issues;
 }
 
 /**
