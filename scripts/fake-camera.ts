@@ -2,6 +2,9 @@
 // 用法：bun scripts/fake-camera.ts --port 28555 [--user NAME --pass SECRET] [--ffmpeg ffmpeg] [--mediamtx mediamtx]
 // mediamtx 內建帳密只接受 A-Z 0-9 與 !$()*+.;<=>[]^_-,@#& 這些字元（: / ? 不行）。
 // 兩條串流都上線後，stdout 會印出一行 "READY rtsp://127.0.0.1:<port>"。
+// --scene 改用可控的畫面測動作偵測：靜止的彩條加少量雜訊，依時間表（推流開始後的秒數）出現移動物體或亮度突變。
+//   例：--scene "box=20-35;light=60-80;box=100-"。box 是畫面左半中段來回移動的黑色方塊（約占畫面 10%×17%，
+//   x 介於 10% 到 60%、y 介於 40% 到 57%）；light 是整體變亮。結尾省略代表一直持續。
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,8 +17,32 @@ const { values } = parseArgs({
     pass: { type: "string" },
     ffmpeg: { type: "string", default: "ffmpeg" },
     mediamtx: { type: "string", default: "mediamtx" },
+    scene: { type: "string" },
   },
 });
+
+/** "box=20-35;light=60-" → lavfi 濾鏡圖；時間是推流開始後的秒數。drawbox 的位置不吃 t，移動的方塊用 overlay 疊 */
+function sceneFilter(spec: string, size: string, rate: number): string {
+  const [w, h] = size.split("x").map(Number) as [number, number];
+  const enable = (range: string) => {
+    const [from, to] = range.split("-");
+    return to ? `between(t\\,${Number(from)}\\,${Number(to)})` : `gte(t\\,${Number(from)})`;
+  };
+  const chains = [`smptehdbars=size=${size}:rate=${rate},format=yuv420p,noise=alls=3:allf=t[v0]`];
+  let n = 0;
+  for (const item of spec.split(";").filter(Boolean)) {
+    const [kind, range = "0-"] = item.split("=");
+    const from = `[v${n}]`;
+    const to = `[v${++n}]`;
+    if (kind === "box") {
+      chains.push(`color=c=black:size=${Math.round(w / 10)}x${Math.round(h / 6)}:rate=${rate}[b${n}]`);
+      chains.push(`${from}[b${n}]overlay=x='W*(0.1+0.4*abs(mod(t/6\\,2)-1))':y=H*0.4:shortest=0:enable='${enable(range)}'${to}`);
+    } else if (kind === "light") chains.push(`${from}eq=brightness=0.3:enable='${enable(range)}'${to}`);
+    else throw new Error(`不認得的場景項目：${item}`);
+  }
+  chains.push(`[v${n}]null`);
+  return chains.join(";");
+}
 
 const port = Number(values.port);
 const { user, pass } = values;
@@ -101,7 +128,7 @@ void (async () => {
 function publish(name: string, video: string, rate: number, bitrate: string) {
   const args = [
     values.ffmpeg!, "-hide_banner", "-loglevel", "error", "-re",
-    "-f", "lavfi", "-i", `testsrc2=size=${video}:rate=${rate}`,
+    "-f", "lavfi", "-i", values.scene ? sceneFilter(values.scene, video, rate) : `testsrc2=size=${video}:rate=${rate}`,
     "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=8000",
     "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
     "-pix_fmt", "yuv420p", "-g", String(rate * 2), "-b:v", bitrate,
@@ -111,6 +138,8 @@ function publish(name: string, video: string, rate: number, bitrate: string) {
   const run = async () => {
     while (!stopping) {
       const p = Bun.spawn(args, { stdout: "ignore", stderr: "ignore" });
+      // 場景的時間從推流程序啟動算起；測試用這行換算成牆上時間
+      if (values.scene) console.log(`PUBLISH ${name} ${Date.now()}`);
       children.add(p);
       await p.exited;
       children.delete(p);
