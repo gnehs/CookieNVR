@@ -115,10 +115,13 @@ export function parseCameraConfig(value: unknown): CameraConfig {
   };
   if (o.ptz !== undefined && o.ptz !== null) config.ptz = parsePtzPrefs(o.ptz);
   if (o.detect !== undefined && o.detect !== null) config.detect = parseDetect(o.detect);
+  if (o.homekit !== undefined && o.homekit !== null) {
+    config.homekit = { enabled: bool(asObject(o.homekit, "homekit"), "enabled", "homekit.enabled") };
+  }
   return config;
 }
 
-const SETTINGS_KEYS = ["siteName", "storagePath", "retention", "rtsp"];
+const SETTINGS_KEYS = ["siteName", "storagePath", "retention", "rtsp", "homekit"];
 
 function rejectUnknown(o: JsonObject, allowed: string[], base: string) {
   for (const key of Object.keys(o)) {
@@ -153,6 +156,12 @@ export function parseSettingsPatch(value: unknown, current: Settings): Partial<S
     if (!isObject(o.rtsp)) throw new HttpError(400, "欄位 rtsp 必須是物件");
     rejectUnknown(o.rtsp, ["externalEnabled"], "rtsp");
     patch.rtsp = { externalEnabled: bool({ ...current.rtsp, ...o.rtsp }, "externalEnabled", "rtsp.externalEnabled") };
+  }
+  if (o.homekit !== undefined) {
+    if (!isObject(o.homekit)) throw new HttpError(400, "欄位 homekit 必須是物件");
+    rejectUnknown(o.homekit, ["enabled", "basePort"], "homekit");
+    const merged = { ...current.homekit, ...o.homekit };
+    patch.homekit = { enabled: bool(merged, "enabled", "homekit.enabled"), basePort: int(merged, "basePort", 1024, 65000, "homekit.basePort") };
   }
   return patch;
 }

@@ -50,12 +50,18 @@ export interface DetectConfig {
   masks: MaskPolygon[];
 }
 
+/** 加入 Apple 家庭（HKSV）；舊資料沒有這個欄位，視為關閉 */
+export interface HomekitCameraConfig {
+  enabled: boolean;
+}
+
 export interface CameraConfig {
   name: string;
   enabled: boolean;
   connection: CameraConnection;
   ptz?: PtzPrefs;
   detect?: DetectConfig;
+  homekit?: HomekitCameraConfig;
   record: {
     enabled: boolean;
     audio: boolean;
@@ -82,6 +88,8 @@ export interface Settings {
     minFreeBytes: number;
   };
   rtsp: { externalEnabled: boolean };
+  /** HKSV 總開關；關閉時不載入 HAP-NodeJS、不啟動 homekit worker。basePort 是第一台配件的 port */
+  homekit: { enabled: boolean; basePort: number };
 }
 
 export const SEGMENT_SECONDS = 60;
@@ -93,6 +101,7 @@ export function defaultSettings(dataDir: string): Settings {
     storagePath: `${dataDir}/recordings`,
     retention: { continuousDays: 7, eventDays: 30, minFreeBytes: 5 * 1024 ** 3 },
     rtsp: { externalEnabled: true },
+    homekit: { enabled: false, basePort: 51826 },
   };
 }
 

@@ -14,6 +14,7 @@ import { createEventTracker, eventRoutes } from "./events/index.ts";
 import { countEventsSince } from "./events/store.ts";
 import { createExports, exportRoutes } from "./export/index.ts";
 import { readEnv } from "./env.ts";
+import { createHomekit } from "./homekit/manager.ts";
 import { coreRoutes, createRouter, HttpError, redactConfig } from "./http/index.ts";
 import { createLive } from "./live/live.ts";
 import {
@@ -99,6 +100,18 @@ const detection = createDetection({
   onError: log,
 });
 
+const homekit = createHomekit({
+  dataDir: env.dataDir,
+  env,
+  cameras,
+  settings,
+  events,
+  mainUrl: (id) => restream.internalUrl(id, "main"),
+  latestJpeg: (id) => detection.latestJpeg(id),
+  onChange: () => void reconcileWorkers().catch((e) => log("workers", e)),
+  onError: log,
+});
+
 function log(scope: string, error: unknown): void {
   console.error(`[${scope}]`, error instanceof Error ? error.message : error);
 }
@@ -136,7 +149,7 @@ function purgeCameraRecordings(id: CameraId): void {
 }
 
 function desiredWorkers(): WorkerSpec[] {
-  const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs()];
+  const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs(), ...homekit.workerSpecs()];
   for (const camera of cameras.list()) {
     if (!isRecording(camera)) continue;
     const input = camera.config.record.direct
@@ -236,6 +249,7 @@ async function diagnostics(only: string | null): Promise<string> {
   const list = cameras.list();
   if (only !== null && !list.some((c) => c.id === only)) throw new HttpError(404, "找不到攝影機");
   const sys = await system();
+  const hk = homekit.diagnostics();
   return buildDiagnostics({
     now: Date.now(),
     version: pkg.version,
@@ -254,8 +268,10 @@ async function diagnostics(only: string | null): Promise<string> {
         probe: probes.get(JSON.stringify(camera.config.connection)) ?? null,
         ptz: await ptz.inspect(camera.id, PTZ_INSPECT_MS),
         detect: { state: detection.diagnostics(camera.id), eventsLast24h: countEventsSince(db, camera.id, Date.now() - 86_400_000) },
+        homekit: hk.cameras.get(camera.id),
       })),
     ),
+    homekit: hk,
     only: only as CameraId | null,
     workers: sys.workers,
     restarts: readRestartLog(logDir, 50),
@@ -293,6 +309,7 @@ const routes = [
   ...ptzRoutes({ hub: ptz }),
   ...detection.routes(),
   ...live.routes(),
+  ...homekit.routes(),
   hub.route(),
   restream.rtspAuthRoute({
     verify: async (username, secret) => (await auth.verifyCredentials(username, secret)) !== null,
@@ -313,12 +330,14 @@ await supervisor.ready;
 await ensureDayDirs(cameras.list(), settings.get(), Date.now());
 await indexer.reconcile(Date.now());
 detection.sync(cameras.list());
+homekit.sync();
 supervisor.apply(desiredWorkers());
 void restream.sync(cameras.list()).catch((e) => log("restream", e));
 
 cameras.subscribe((list) => {
   ptz.reconcile(list);
   detection.sync(list);
+  homekit.sync();
   for (const c of list) sentStatus.set(c.id, JSON.stringify(cameraStatus(c.id)));
   hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
   void reconcileWorkers().catch((e) => log("workers", e));
@@ -327,13 +346,17 @@ cameras.subscribe((list) => {
 supervisor.subscribe((status) => {
   hub.publish((client) => (client.principal.role === "admin" ? { type: "worker", data: status } : null));
   if (status.kind === "record") publishCameraChanges();
+  homekit.workerStatus(status);
 });
 events.subscribe(({ phase, event }) => {
   if (phase === "update") return;
   hub.publish(() => ({ type: "event", data: { phase, event } }));
   hub.publish(() => ({ type: "motion", data: { cameraId: event.cameraId, active: phase === "start" } }));
 });
-settings.subscribe(() => void reconcileWorkers().catch((e) => log("workers", e)));
+settings.subscribe(() => {
+  homekit.sync();
+  void reconcileWorkers().catch((e) => log("workers", e));
+});
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => log("restream", e));
 
 function runBackup(): void {
@@ -400,6 +423,7 @@ async function shutdown(exitCode = 0): Promise<void> {
   stopSync();
   void server.stop(true);
   await Promise.all([supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop()]);
+  homekit.stop();
   db.close();
   process.exit(exitCode);
 }

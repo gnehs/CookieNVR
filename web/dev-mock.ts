@@ -61,6 +61,7 @@ let settings: Settings = {
   storagePath: "/data/recordings",
   retention: { continuousDays: 7, eventDays: 30, minFreeBytes: 5 * 1024 ** 3 },
   rtsp: { externalEnabled: true },
+  homekit: { enabled: false, basePort: 51826 },
 };
 
 const cams: { id: CameraId; position: number; config: CameraConfig }[] = [];

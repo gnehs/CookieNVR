@@ -267,3 +267,24 @@ export type StreamMessage =
   | { type: "worker"; data: WorkerStatus }
   | { type: "event"; data: { phase: "start" | "end"; event: EventDto } }
   | { type: "motion"; data: { cameraId: CameraId; active: boolean } };
+
+/** 主碼流是否符合 HKSV 的前提；unknown = 還沒讀到畫面（離線或檢查中斷） */
+export type HomekitCheckDto =
+  | { state: "ok"; keyframeIntervalSec: number | null; warning: "keyframe-interval" | null }
+  | { state: "blocked"; reason: "not-h264" | "no-video"; videoCodec: string | null }
+  | { state: "unknown" };
+
+/**
+ * `GET /api/cameras/:id/homekit`。status：off = 這台沒開或總開關關閉；starting = 等 homekit worker 發布；
+ * ready = 已在區網廣播；failed = 發布失敗（原因在診斷資訊）。
+ */
+export interface HomekitDto {
+  systemEnabled: boolean;
+  enabled: boolean;
+  check: HomekitCheckDto;
+  /** 開啟後才有 */
+  pairing: { code: string; setupUri: string; paired: boolean } | null;
+  status: "off" | "starting" | "ready" | "failed";
+}
+
+export type HomekitActionDto = { action: "enable" | "disable" | "reset" };

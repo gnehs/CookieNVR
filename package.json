@@ -12,5 +12,9 @@
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "hap-nodejs": "0.14.3",
+    "tweetnacl": "1.0.3"
   }
 }

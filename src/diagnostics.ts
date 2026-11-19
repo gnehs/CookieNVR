@@ -1,5 +1,6 @@
 import type { ProbeResult, StreamInfo, SystemDto } from "./api-types.ts";
 import type { DetectDiagnostics } from "./detect/manager.ts";
+import type { HomekitCameraDiagnostics, HomekitDiagnostics } from "./homekit/manager.ts";
 import type { PtzDiagnostics } from "./ptz/hub.ts";
 import type { Camera, CameraConnection, Settings, WorkerStatus } from "./types.ts";
 import type { RestartRecord } from "./workers/restart-log.ts";
@@ -14,6 +15,8 @@ export interface DiagnosticsCamera {
   ptz?: PtzDiagnostics;
   /** 動作偵測的現況；沒有提供時報告不列這一項 */
   detect?: { state: DetectDiagnostics | null; eventsLast24h: number };
+  /** Apple 家庭（HKSV）的現況；沒有提供時報告不列這一項 */
+  homekit?: HomekitCameraDiagnostics;
 }
 
 export interface DiagnosticsInput {
@@ -28,6 +31,7 @@ export interface DiagnosticsInput {
   restarts: RestartRecord[];
   disk: SystemDto["disk"];
   usage: SystemDto["usage"];
+  homekit?: Pick<HomekitDiagnostics, "systemEnabled" | "workerConnected" | "lastHeartbeatAt">;
 }
 
 const MASK = "***";
@@ -153,6 +157,35 @@ function detectLines(d: NonNullable<DiagnosticsCamera["detect"]>, now: number): 
   return lines;
 }
 
+function homekitLines(h: HomekitCameraDiagnostics, now: number): string[] {
+  if (!h.enabled) return ["- Apple 家庭（HKSV）：這台沒有開啟"];
+  const lines = [
+    `- Apple 家庭（HKSV）：開啟；配件 port ${h.identity?.port ?? "未分配"}，device id ${h.identity?.deviceId ?? "無"}；${h.paired ? "已配對" : "尚未配對"}`,
+  ];
+  const c = h.check;
+  if (!c) lines.push("- HKSV 主碼流檢查：還沒有結果");
+  else if ("error" in c) lines.push(`- HKSV 主碼流檢查（${duration(now - c.at)}前）：讀取失敗，${c.error}`);
+  else {
+    const r = c.result;
+    lines.push(
+      `- HKSV 主碼流檢查（${duration(now - c.at)}前）：${r.videoCodec ?? "沒有影像"} ${r.width ?? "?"}×${r.height ?? "?"}，關鍵幀間隔 ${r.keyframeIntervalSec ?? "未知（檢查時間內不到兩個關鍵幀）"} 秒，音訊 ${r.audioCodec ?? "無"}`,
+    );
+  }
+  const w = h.worker;
+  if (!w) lines.push("- HKSV 配件：homekit worker 沒有回報這台（未連線或未發布）");
+  else {
+    lines.push(
+      `- HKSV 配件：${w.published ? "已發布（mDNS 廣播中）" : `未發布${w.error ? `，錯誤 ${w.error}` : ""}`}；安全錄影 ${w.recording.active ? "已開啟" : "未開啟"}，${w.recording.configured ? "中樞已選定錄影設定" : "中樞尚未選定錄影設定"}，預緩衝 ${w.recording.prebufferMs} ms${w.recording.streaming ? "，正在送錄影串流" : ""}`,
+    );
+    for (const [kind, label] of [["snapshot", "快照"], ["live", "即時觀看"], ["recording", "錄影串流"]] as const) {
+      const r = w.requests[kind];
+      lines.push(r ? `- 最近一次${label}請求（${duration(now - r.at)}前）：${r.ok ? "成功" : "失敗"}，${r.detail}` : `- 最近一次${label}請求：本次啟動後沒有`);
+    }
+  }
+  if (h.sessions.length) lines.push(`- 進行中的 HomeKit 串流：${h.sessions.join("、")}`);
+  return lines;
+}
+
 function onvifProbeLine(r: Extract<ProbeResult, { ok: true }>["onvif"]): string {
   if (r.state === "unconfigured") return "ONVIF 未設定";
   if (r.state === "available") return `ONVIF 可用，${r.ptz ? "有" : "沒有"} PTZ`;
@@ -183,6 +216,7 @@ function cameraBlock(c: DiagnosticsCamera, input: DiagnosticsInput): string[] {
   } else lines.push("- 最近一次測試連線：本次啟動後沒有紀錄，碼流編碼與解析度未知");
   if (c.ptz) lines.push(...ptzLines(c.ptz, input.now));
   if (c.detect) lines.push(...detectLines(c.detect, input.now));
+  if (c.homekit) lines.push(...homekitLines(c.homekit, input.now));
   lines.push(
     usage
       ? `- 錄影用量：${bytes(usage.bytes)}，最早一段 ${usage.oldestMs !== null ? iso(usage.oldestMs) : "未知"}`
@@ -206,7 +240,8 @@ function workerBlock(w: WorkerStatus, input: DiagnosticsInput): string[] {
   return lines;
 }
 
-const workerCamera = (id: string) => (id.includes(":") ? id.slice(id.indexOf(":") + 1) : null);
+/** "record:<id>"、"live:<id>:main"、"hksv-live:<id>:<session>" → 攝影機 id */
+const workerCamera = (id: string) => id.split(":")[1] ?? null;
 
 export function buildDiagnostics(input: DiagnosticsInput): string {
   const { settings: s, only } = input;
@@ -234,7 +269,7 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     `## 攝影機（${cameras.length} 台）`,
     ...(cameras.length ? cameras.flatMap((c) => [...cameraBlock(c, input), ""]) : ["沒有攝影機。", ""]),
     `## 背景程序（${workers.length} 個）`,
-    "restream 是 MediaMTX 轉發層，record:<攝影機 id> 是該攝影機的 ffmpeg 錄影程序。",
+    "restream 是 MediaMTX 轉發層，record:<攝影機 id> 是該攝影機的 ffmpeg 錄影程序；homekit 是 Apple 家庭（HAP-NodeJS）程序，hksv-live／hksv-record 是家庭 App 觀看與安全錄影用的 ffmpeg。",
     "",
     ...(workers.length ? workers.flatMap((w) => [...workerBlock(w, input), ""]) : ["沒有背景程序。", ""]),
     `## 最近的重啟紀錄（最多 20 筆，新的在前）`,
@@ -255,6 +290,11 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     `- 儲存路徑：${s.storagePath}`,
     `- 保留：連續錄影 ${s.retention.continuousDays} 天，事件 ${s.retention.eventDays} 天（0 = 不依天數刪除），最低剩餘空間 ${bytes(s.retention.minFreeBytes)}`,
     `- 對外 RTSP 轉發：${s.rtsp.externalEnabled ? "開啟" : "關閉"}`,
+    `- Apple 家庭（HKSV，實驗性）：${s.homekit.enabled ? `開啟，配件 port 從 ${s.homekit.basePort} 起` : "關閉"}${
+      input.homekit && s.homekit.enabled
+        ? `；homekit worker ${input.homekit.workerConnected ? "已連線" : "未連線"}，最近心跳 ${input.homekit.lastHeartbeatAt !== null ? `${duration(input.now - input.homekit.lastHeartbeatAt)}前` : "無"}`
+        : ""
+    }`,
     "",
   ];
   return redact(lines.join("\n"), input.cameras.map((c) => c.camera));
