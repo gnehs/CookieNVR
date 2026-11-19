@@ -1,4 +1,5 @@
 import type { EventDto, SegmentDto } from "../../src/api-types.ts";
+import { labelName } from "../../src/objects/labels.ts";
 import { GAP_MS } from "../playback/timemap.ts";
 
 /** Playback starts this long before an event, matching the backend's event buffer. */
@@ -158,17 +159,5 @@ export function eventAt(events: readonly EventDto[], w: number, now: number): Ev
   return null;
 }
 
-const LABELS: Record<string, string> = {
-  person: "人",
-  car: "車",
-  truck: "卡車",
-  bus: "公車",
-  bicycle: "腳踏車",
-  motorcycle: "機車",
-  cat: "貓",
-  dog: "狗",
-  bird: "鳥",
-  package: "包裹",
-};
-
-export const labelText = (labels: readonly string[]) => (labels.length ? labels.map((l) => LABELS[l] ?? l).join("、") : "動作");
+/** 事件的標題：看到了什麼；沒有類別就是「動作」 */
+export const labelText = (labels: readonly string[]) => (labels.length ? [...new Set(labels.map(labelName))].join("、") : "動作");

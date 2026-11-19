@@ -5,11 +5,12 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CameraDto, HomekitDto, EventDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { CameraDto, HomekitDto, EventDto, InferenceDeviceKind, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import { detectConfigOf, usesPixel } from "../src/detect/config.ts";
-import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
+import type { CameraConfig, CameraId, InferenceDevice, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import { setupUri } from "../src/homekit/identity.ts";
+import type { ObjectsDiagnostics } from "../src/objects/service.ts";
 import { explainFailure } from "../src/camera/probe.ts";
 import { exportFileName } from "../src/export/filename.ts";
 import { planExport } from "../src/export/plan.ts";
@@ -66,7 +67,53 @@ let settings: Settings = {
   retention: { continuousDays: 7, eventDays: 30, minFreeBytes: 5 * 1024 ** 3 },
   rtsp: { externalEnabled: true },
   homekit: { enabled: false, basePort: 51826 },
+  objects: { enabled: false, device: "auto", model: "builtin" },
 };
+
+// 物件辨識情境：MOCK_OBJECTS=intel|cpu|fallback|error|loading 會讓系統設定一開始就開啟並固定成該結果；
+// 不設時是關閉，之後在設定頁打開，依選的裝置與模型走：啟動中 → 載入中 → 使用中
+const OBJECTS_SCENARIO = process.env.MOCK_OBJECTS ?? "";
+if (OBJECTS_SCENARIO) settings.objects.enabled = true; // down：detector 程序一直重啟，用來看狀態頁的提醒
+let objectsOnAt = now() - 60_000;
+const OBJECT_MODELS: ObjectModelDto[] = [
+  { id: "builtin", name: "內建模型", builtin: true, sizeBytes: null },
+  { id: "yolo11s.onnx", name: "yolo11s.onnx", builtin: false, sizeBytes: 38_600_000 },
+  { id: "broken.onnx", name: "broken.onnx", builtin: false, sizeBytes: 1_200 },
+];
+
+function objectsStatus(): ObjectsStatusDto {
+  const s = settings.objects;
+  const model = { id: s.model, name: s.model === "builtin" ? "內建模型" : s.model, format: null as string | null, input: null as [number, number] | null };
+  const base: Omit<ObjectsStatusDto, "state"> = { requested: s.device, device: null, fallback: null, error: null, model, latencyMs: null, processed: 0, dropped: 0 };
+  if (!s.enabled) return { ...base, state: "off" };
+  const age = now() - objectsOnAt;
+  if (age < 1_500 || OBJECTS_SCENARIO === "down") return { ...base, state: "starting" };
+  if (age < 4_000 || OBJECTS_SCENARIO === "loading") return { ...base, state: "loading" };
+  if (OBJECTS_SCENARIO === "error" || s.model === "broken.onnx") return { ...base, state: "error", error: "這個檔案不是有效的 ONNX 模型，請換一個模型。" };
+  const wants = (OBJECTS_SCENARIO === "fallback" ? "nvidia" : OBJECTS_SCENARIO === "cpu" ? "cpu" : OBJECTS_SCENARIO === "intel" ? "intel" : s.device === "auto" ? "intel" : s.device) as InferenceDevice;
+  const fell = wants === "nvidia";
+  const device: InferenceDeviceKind = fell ? "cpu" : wants === "auto" ? "intel" : wants;
+  const ready = { ...base, state: "ready" as const, device, model: { ...model, format: "yolo", input: [640, 640] as [number, number] }, processed: 1840 + Math.floor((now() - objectsOnAt) / 500), dropped: 0 };
+  const latencyMs = device === "cpu" ? { last: 71, avg: 68.4, max: 120 } : { last: 11, avg: 12.4, max: 31 };
+  return {
+    ...ready,
+    latencyMs,
+    fallback: fell ? { reason: "找不到可以使用的 Nvidia 顯卡，已改用 CPU 辨識。", detail: "CUDAExecutionProvider not in ort.get_available_providers(); /dev/nvidiactl missing" } : null,
+  };
+}
+
+function objectsDiagnostics(): ObjectsDiagnostics {
+  const status = objectsStatus();
+  return {
+    settings: settings.objects,
+    status,
+    ready: status.state === "ready" ? { device: status.device!, fallback: status.fallback, model: { file: status.model.id === "builtin" ? "yolo11n.onnx" : status.model.id, format: "yolo", input: [640, 640] }, loadMs: 2300, providers: status.device === "cpu" ? ["CPUExecutionProvider"] : ["OpenVINOExecutionProvider", "CPUExecutionProvider"], threads: 4, attempts: [{ device: status.requested, ok: !status.fallback }], probe: null } : null,
+    errorDetail: status.state === "error" ? "onnxruntime InvalidProtobuf: Protobuf parsing failed" : null,
+    probe: { openvino: true, nvidia: false },
+    queued: 0,
+    recent: cams.slice(0, 2).map((c) => ({ cameraId: c.id, at: now() - 4_000, detections: [{ label: "person", score: 0.83 }] })),
+  };
+}
 
 const cams: { id: CameraId; position: number; config: CameraConfig }[] = [];
 let camSeq = 1;
@@ -75,9 +122,9 @@ function addCam(config: CameraConfig) {
   cams.push({ id, position: cams.length, config });
   return cams[cams.length - 1]!;
 }
-addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "pixel", threshold: 25, minArea: 0.005, cooldownSec: 10, masks: [{ points: [[0.62, 0.04], [0.98, 0.04], [0.98, 0.2], [0.62, 0.2]] }] } });
+addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "pixel", threshold: 25, minArea: 0.005, cooldownSec: 10, masks: [{ points: [[0.62, 0.04], [0.98, 0.04], [0.98, 0.2], [0.62, 0.2]] }], labels: ["person", "cat"], objectMode: "annotate", objectScore: 0.5 } });
 addCam({ name: "車庫", enabled: true, connection: { type: "rtsp", mainUrl: "rtsp://u:p@192.168.1.60/s1", subUrl: "rtsp://u:p@192.168.1.60/s2", transport: "tcp" }, record: { enabled: true, audio: false, direct: true } });
-addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "both", threshold: 15, minArea: 0.01, cooldownSec: 30, masks: [] } });
+addCam({ name: "前門", enabled: true, connection: { type: "tapo", host: "192.168.1.52", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "both", threshold: 15, minArea: 0.01, cooldownSec: 30, masks: [], labels: ["person", "car"], objectMode: "filter", objectScore: 0.6 } });
 addCam({ name: "後院（停用）", enabled: false, connection: { type: "rtsp", mainUrl: "rtsp://192.168.1.61/s1", transport: "udp" }, record: { enabled: false, audio: false, direct: false } });
 addCam({ name: "車道", enabled: true, connection: { type: "tapo", host: "192.168.1.53", username: "nvr", password: "secret123" }, record: { enabled: true, audio: false, direct: false } });
 let mockFreeBytes = 1.6 * 1024 ** 4;
@@ -158,7 +205,7 @@ function rng(seed: number) {
   };
 }
 
-const LABEL_SETS = [["person"], ["person"], ["car"], ["cat"], ["person", "car"], ["dog"], ["package", "person"], [], []];
+const LABEL_SETS = [["person"], ["person"], ["car"], ["cat"], ["person", "car"], ["dog"], ["vehicle"], ["pet"], [], []];
 const eventCache = new Map<string, EventDto[]>();
 
 /** 某台攝影機某一天的假事件：零散分布的幾十筆，加上 18:00 起一段密集的 */
@@ -235,7 +282,7 @@ function frontDoorEvents(dayStart: number): EventDto[] {
   if (cam) {
     for (let i = 0; i < 32; i++) {
       const start = dayStart + Math.floor(r() * 1440) * MIN + Math.floor(r() * 60_000);
-      out.push({ id: 3_000_000 + daysAgo(dayStart) * 1_000 + i, cameraId: cam.id, source: r() < 0.5 ? "both" : "onvif", startMs: start, endMs: start + 4_000 + Math.round(r() * 50_000), score: Math.round((0.02 + r() * 0.3) * 100) / 100, labels: r() < 0.4 ? ["person"] : [], hasThumb: r() < 0.92 });
+      out.push({ id: 3_000_000 + daysAgo(dayStart) * 1_000 + i, cameraId: cam.id, source: r() < 0.5 ? "both" : "onvif", startMs: start, endMs: start + 4_000 + Math.round(r() * 50_000), score: Math.round((0.02 + r() * 0.3) * 100) / 100, labels: LABEL_SETS[Math.floor(r() * LABEL_SETS.length)]!, hasThumb: r() < 0.92 });
     }
   }
   frontDoorCache.set(dayStart, out);
@@ -256,6 +303,8 @@ function allEvents(cameraId: string | null): EventDto[] {
   return out.filter((e) => !deletedEvents.has(e.id));
 }
 
+const hasAnyLabel = (e: EventDto, labels: string[] | null) => !labels || e.labels.some((l) => labels.includes(l));
+
 function eventsIn(cameraId: string | null, start: number, end: number, limit: number): EventDto[] {
   return allEvents(cameraId)
     .filter((e) => e.startMs < end && (e.endMs ?? Infinity) > start)
@@ -263,9 +312,9 @@ function eventsIn(cameraId: string | null, start: number, end: number, limit: nu
     .slice(0, limit);
 }
 
-function eventsBefore(cameraId: string | null, before: number, limit: number): EventDto[] {
+function eventsBefore(cameraId: string | null, before: number, limit: number, labels: string[] | null = null): EventDto[] {
   return allEvents(cameraId)
-    .filter((e) => e.startMs < before)
+    .filter((e) => e.startMs < before && hasAnyLabel(e, labels))
     .sort((a, b) => b.startMs - a.startMs || b.id - a.id)
     .slice(0, limit);
 }
@@ -315,6 +364,7 @@ function motionResponse(c: (typeof cams)[number]): Response {
 const workers: WorkerStatus[] = [
   { id: "restream", kind: "restream", state: "running", unstable: false, pid: 4101, startedAt: now() - 3 * 3600_000, restarts: 0, lastRestart: null, stderrTail: [] },
   ...cams.slice(0, 2).map((c, i): WorkerStatus => ({ id: `record:${c.id}`, kind: "record", state: i ? "backoff" : "running", unstable: i === 1, pid: i ? null : 4200 + i, startedAt: now() - 600_000, restarts: i ? 14 : 2, lastRestart: { reason: i ? "exit" : "stall", at: now() - 120_000, exitCode: i ? 1 : null }, stderrTail: i ? ["[tcp @ 0x1] Connection timed out", "rtsp://u:***@192.168.1.60/s1: Operation timed out"] : [] })),
+  ...(OBJECTS_SCENARIO === "down" ? [{ id: "detector", kind: "detector", state: "backoff", unstable: true, pid: null, startedAt: now() - 300_000, restarts: 9, lastRestart: { reason: "exit", at: now() - 20_000, exitCode: 1 }, stderrTail: ["ModuleNotFoundError: No module named 'onnxruntime'"] } satisfies WorkerStatus] : []),
 ];
 
 function userDto(u: MockUser): UserDto {
@@ -769,7 +819,8 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (exported) return exported;
   if (path === "/events" && m === "GET") {
     const q = url.searchParams;
-    if (q.has("before")) return json(eventsBefore(q.get("camera"), Number(q.get("before")), Number(q.get("limit") ?? 50)));
+    const labels = q.get("label")?.split(",").filter(Boolean) ?? null;
+    if (q.has("before")) return json(eventsBefore(q.get("camera"), Number(q.get("before")), Number(q.get("limit") ?? 50), labels));
     return json(eventsIn(q.get("camera"), Number(q.get("start") ?? 0), Number(q.get("end") ?? Number.MAX_SAFE_INTEGER), Number(q.get("limit") ?? 1000)));
   }
   mm = path.match(/^\/events\/(\d+)$/);
@@ -863,10 +914,14 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (path === "/settings") {
     if (m === "GET") return json(settings);
     if (m === "PUT") {
-      settings = { ...settings, ...body, retention: { ...settings.retention, ...body.retention }, rtsp: { ...settings.rtsp, ...body.rtsp } };
+      const wasOn = settings.objects.enabled;
+      const loadChanged = body.objects && (body.objects.device !== undefined || body.objects.model !== undefined);
+      settings = { ...settings, ...body, retention: { ...settings.retention, ...body.retention }, rtsp: { ...settings.rtsp, ...body.rtsp }, objects: { ...settings.objects, ...body.objects } };
+      if ((!wasOn && settings.objects.enabled) || (settings.objects.enabled && loadChanged)) objectsOnAt = now();
       return json(settings);
     }
   }
+  if (path === "/objects" && m === "GET") return json({ status: objectsStatus(), models: OBJECT_MODELS, modelsDir: "/data/models" } satisfies ObjectsDto);
   if (path === "/recordings/orphaned" && m === "DELETE") {
     let bytes = 0;
     let segments = 0;
@@ -913,6 +968,7 @@ async function route(req: Request, url: URL): Promise<Response> {
       restarts: [],
       disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: 1.6 * 1024 ** 4 },
       usage: [],
+      ...(settings.objects.enabled ? { objects: objectsDiagnostics() } : {}),
     });
     return new Response(text, { headers: { "content-type": "text/plain; charset=utf-8" } });
   }

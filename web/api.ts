@@ -9,6 +9,7 @@ import type {
   InfoDto,
   LinkRequestDto,
   MeDto,
+  ObjectsDto,
   ProbeResult,
   PtzCommandDto,
   PtzDto,
@@ -26,7 +27,7 @@ import type {
   TokenDto,
   UserDto,
 } from "../src/api-types.ts";
-import type { CameraConfig, CameraConnection, Role, Settings } from "../src/types.ts";
+import type { CameraConfig, CameraConnection, ObjectSettings, Role, Settings } from "../src/types.ts";
 
 export class ApiError extends Error {
   constructor(
@@ -95,7 +96,7 @@ export const api = {
   updateUser: (id: number, patch: { role?: Role; password?: string }) => put<UserDto>(`/users/${id}`, patch),
   deleteUser: (id: number) => del(`/users/${id}`),
   settings: () => get<SettingsDto>("/settings"),
-  updateSettings: (patch: Partial<Settings>) => put<SettingsDto>("/settings", patch),
+  updateSettings: (patch: Partial<Omit<Settings, "objects">> & { objects?: Partial<ObjectSettings> }) => put<SettingsDto>("/settings", patch),
   cameras: () => get<CameraDto[]>("/cameras"),
   createCamera: (config: CameraConfig) => post<CameraDto>("/cameras", config),
   updateCamera: (id: string, config: CameraConfig) => put<CameraDto>(`/cameras/${encodeURIComponent(id)}`, config),
@@ -116,8 +117,9 @@ export const api = {
   /** 所有攝影機在這段時間內還沒結束的事件；事件最長 10 分鐘，since 往前抓 10 分鐘以上就不會漏 */
   activeEvents: (since: number, until: number) => get<EventDto[]>(`/events?start=${since}&end=${until}`).then((list) => list.filter((e) => e.endMs === null)),
   /** 開始時間早於 before 的事件，由新到舊；camera 為 null 時是所有攝影機 */
-  eventsBefore: (before: number, limit: number, camera: string | null) =>
-    get<EventDto[]>(`/events?before=${before}&limit=${limit}${camera ? `&camera=${encodeURIComponent(camera)}` : ""}`),
+  eventsBefore: (before: number, limit: number, camera: string | null, label: string | null = null) =>
+    get<EventDto[]>(`/events?before=${before}&limit=${limit}${camera ? `&camera=${encodeURIComponent(camera)}` : ""}${label ? `&label=${encodeURIComponent(label)}` : ""}`),
+  objects: () => get<ObjectsDto>("/objects"),
   event: (id: number) => get<EventDto>(`/events/${id}`),
   deleteEvent: (id: number) => del(`/events/${id}`),
   eventThumbUrl: (id: number) => `/api/events/${id}/thumb.jpg`,

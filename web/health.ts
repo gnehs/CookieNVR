@@ -40,7 +40,7 @@ export function cameraStatus(cam: Pick<CameraDto, "config" | "online" | "recordi
   return { kind, ...STATUS[kind] };
 }
 
-export type IssueKind = "restream" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh";
+export type IssueKind = "restream" | "objects" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh";
 
 export interface Issue {
   kind: IssueKind;
@@ -83,6 +83,11 @@ export function assessHealth(input: HealthInput): Health {
   const restream = worker("restream");
   if (restream && (restream.state === "backoff" || restream.state === "stopped" || restream.unstable)) {
     issues.push({ kind: "restream", tone: "bad", cameras: [], title: "影像服務沒有正常運作", short: "影像服務停止" });
+  }
+  // 物件辨識沒開時 detector worker 不存在；有就代表使用者開了它
+  const detector = worker("detector");
+  if (detector && (detector.state === "backoff" || detector.state === "stopped" || detector.unstable)) {
+    issues.push({ kind: "objects", tone: "warn", cameras: [], title: "物件辨識沒有正常運作", short: "物件辨識停止" });
   }
   for (const g of CAMERA_ISSUES) {
     const cameras = input.cams.filter((c) => statuses.get(c.id)!.kind === g.kind).map((c) => ({ id: c.id, name: c.config.name }));

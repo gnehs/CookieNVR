@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { EventDto, SegmentDto } from "../../src/api-types.ts";
-import { clusterEvents, eventAt, nextEvent, playableFrom, prevEvent, recordedSpans, tickLabel, ticks, tickSteps } from "./model.ts";
+import { clusterEvents, eventAt, labelText, nextEvent, playableFrom, prevEvent, recordedSpans, tickLabel, ticks, tickSteps } from "./model.ts";
 
 const T = Date.UTC(2026, 10, 18, 4, 0, 0);
 const seg = (id: number, start: number, end: number | null): SegmentDto => ({ id, cameraId: "c" as never, startMs: start, endMs: end, size: 1 });
@@ -109,4 +109,10 @@ test("the event under the playhead, an in-progress one included", () => {
   expect(eventAt(events, T + 5_000, now)?.id).toBe(1);
   expect(eventAt(events, T + 20_000, now)).toBeNull();
   expect(eventAt(events, T + 90_000, now)?.id).toBe(2);
+});
+
+test("事件類別用全站同一份中文名稱，沒有類別時是動作，重複的合併", () => {
+  expect(labelText([])).toBe("動作");
+  expect(labelText(["person", "car"])).toBe("人、汽車");
+  expect(labelText(["vehicle", "pet", "person", "person"])).toBe("車輛、寵物、人");
 });

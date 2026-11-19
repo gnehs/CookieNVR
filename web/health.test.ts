@@ -116,3 +116,17 @@ describe("資源吃緊", () => {
     expect(alertSummary(h.issues)).toBe("1 台連不上、處理器長時間忙碌");
   });
 });
+
+describe("物件辨識 detector", () => {
+  const detector = (o: Partial<WorkerStatus> = {}) => worker("detector", { kind: "detector", ...o });
+
+  test("沒開物件辨識（沒有 detector worker）或運作正常都沒有提醒", () => {
+    expect(assessHealth({ ...healthy, cams: [] }).issues).toEqual([]);
+    expect(assessHealth({ ...healthy, workers: [worker("restream"), detector()], cams: [] }).issues).toEqual([]);
+  });
+
+  test("detector 一直重啟是警告，不影響攝影機與錄影的問題", () => {
+    const h = assessHealth({ ...healthy, workers: [worker("restream"), detector({ state: "backoff" })], cams: [] });
+    expect(h.issues).toMatchObject([{ kind: "objects", tone: "warn", short: "物件辨識停止" }]);
+  });
+});

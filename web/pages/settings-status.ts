@@ -51,6 +51,14 @@ function explain(issue: Issue, snap: HealthSnapshot): Explained {
         why: "所有攝影機的畫面都會經過這個服務，它停下來時畫面與錄影都會中斷。重新啟動期間會中斷幾秒。",
         action: { label: "重新啟動", icon: "refresh", run: () => restartWorkers(["restream"], "重新啟動影像服務？", "所有攝影機的畫面與錄影會中斷幾秒鐘。", "已重新啟動影像服務") },
       };
+    case "objects":
+      return {
+        who: "物件辨識",
+        pill: { label: "已停止", tone: "warn" },
+        next: "重新啟動，通常就會恢復辨識",
+        why: "物件辨識停下來時，錄影與動作偵測不受影響，只是事件不會標上看到的東西；設成「過濾」的攝影機會改成照一般動作建立事件。重新啟動後仍然停止，請用頁面下方的「複製診斷資訊」找原因，也可以到「設定 → 一般」換一個辨識模型或推論裝置。",
+        action: { label: "重新啟動", icon: "refresh", run: () => restartWorkers(["detector"], "重新啟動物件辨識？", "辨識會中斷幾秒鐘，錄影不受影響。", "已重新啟動物件辨識") },
+      };
     case "offline":
       return {
         who: names,
@@ -129,7 +137,7 @@ function thumb(cameraId: string): HTMLElement {
   return box;
 }
 
-const SYSTEM_ICON: Partial<Record<Issue["kind"], string>> = { restream: "server", cpuBusy: "activity", memoryHigh: "activity" };
+const SYSTEM_ICON: Partial<Record<Issue["kind"], string>> = { restream: "server", objects: "server", cpuBusy: "activity", memoryHigh: "activity" };
 
 function issueRow(issue: Issue, snap: HealthSnapshot): HTMLElement {
   const e = explain(issue, snap);
