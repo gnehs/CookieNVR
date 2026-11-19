@@ -22,6 +22,7 @@ import type {
   SessionDto,
   SettingsDto,
   SystemDto,
+  MetricsDto,
   TokenDto,
   UserDto,
 } from "../src/api-types.ts";
@@ -137,6 +138,8 @@ export const api = {
   ptzRemovePreset: (id: string, preset: PtzRemovePresetDto) =>
     request<PtzPresetsDto>("DELETE", `/cameras/${encodeURIComponent(id)}/ptz/presets`, preset),
   system: () => get<SystemDto>("/system"),
+  /** watch：狀態頁開著，後端才會讀 GPU 與各程序的用量 */
+  metrics: (watch: boolean) => get<MetricsDto>(`/system/metrics${watch ? "?watch=1" : ""}`),
   diagnostics: async (camera?: string): Promise<string> => {
     const res = await fetch(`/api/system/diagnostics${camera ? `?camera=${encodeURIComponent(camera)}` : ""}`, { credentials: "same-origin" });
     if (!res.ok) throw new ApiError(res.status, ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? `錯誤 ${res.status}`);

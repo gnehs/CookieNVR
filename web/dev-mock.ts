@@ -16,6 +16,7 @@ import { planExport } from "../src/export/plan.ts";
 import { encodeFrame, FrameKind } from "../src/live/mux.ts";
 import { createLinkService } from "../src/auth/link.ts";
 import { HttpError } from "../src/http/errors.ts";
+import { mockMetrics, setMockMetrics } from "./dev-mock-metrics.ts";
 import index from "./index.html";
 
 const PORT = Number(process.env.PORT ?? 48765);
@@ -781,6 +782,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   const ptzResponse = await ptzApi(req, path, admin, body);
   if (ptzResponse) return ptzResponse;
 
+  if (path === "/mock/metrics" && m === "GET") return json(setMockMetrics(url.searchParams));
   const denied = path.startsWith("/cameras") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
   if (denied) return denied;
   const homekitResponse = await homekitApi(path, m, body);
@@ -874,6 +876,7 @@ async function route(req: Request, url: URL): Promise<Response> {
     };
     return json(sys);
   }
+  if (path === "/system/metrics" && m === "GET") return json(mockMetrics(cams.filter((c) => c.config.enabled).map((c) => c.id)));
   if (path === "/system/diagnostics" && m === "GET") {
     const only = url.searchParams.get("camera");
     if (only && !cams.some((c) => c.id === only)) return err(404, "找不到攝影機");

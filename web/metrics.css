@@ -1,0 +1,56 @@
+/* 狀態頁「系統資源」：CPU、記憶體、每張 GPU 一格，下面是依類別的用量 */
+.res-body { display: grid; gap: 18px; }
+.res-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 136px), 1fr)); gap: 10px; }
+/* 只有 CPU 與記憶體時兩格並排，GPU 多時自動換行，每格一樣寬 */
+@media (min-width: 720px) { .res-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+
+.res-tile {
+  display: grid; gap: 8px; align-content: start; min-width: 0;
+  padding: 14px 14px 12px; border-radius: var(--r); background: var(--frame); border: 1px solid var(--border);
+  --res-tone: var(--accent);
+}
+.res-tile[data-tone="warn"] { --res-tone: var(--warn); }
+.res-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+/* 顯示卡型號可能很長：最多兩行，數字永遠在右上 */
+.res-label {
+  font-size: 13.5px; font-weight: 600; line-height: 1.3; color: var(--text-2); min-width: 0; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.res-value { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; flex: none; }
+.res-tile[data-tone="warn"] .res-value { color: var(--warn-text); }
+.res-sub { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+
+.res-bar { height: 6px; border-radius: 99px; background: var(--fill-2); overflow: hidden; }
+.res-bar > i, .res-row-bar > i {
+  display: block; height: 100%; border-radius: 99px; background: var(--res-tone, var(--accent));
+  transform-origin: left center; transform: scaleX(0);
+}
+/* 走勢：線用主色，下面的面是主色對卡片底色混出來的實色，不用透明度 */
+.res-spark { display: block; width: 100%; height: 28px; overflow: visible; }
+.res-spark-line { fill: none; stroke: var(--res-tone); stroke-width: 1.5px; stroke-linejoin: round; stroke-linecap: round; }
+.res-spark-area { fill: color-mix(in srgb, var(--res-tone) 16%, var(--frame)); stroke: none; }
+.res-extras { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 12.5px; color: var(--text-2); }
+
+.res-note { font-size: 13px; color: var(--muted); }
+.res-note:empty { display: none; }
+.res-usage { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--border); }
+.res-usage-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.res-usage-head h3 { font-size: 14.5px; font-weight: 650; }
+.res-rows { display: grid; gap: 2px; }
+.res-row { display: grid; grid-template-columns: minmax(84px, 9em) minmax(0, 1fr) 4.5em; align-items: center; gap: 12px; min-height: 30px; font-size: 14px; }
+.res-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.res-row .num { text-align: right; color: var(--text-2); }
+.res-row-bar { height: 8px; border-radius: 99px; background: var(--fill); overflow: hidden; }
+.res-row.muted-row .res-row-name, .res-row.muted-row .num { color: var(--muted); }
+.res-row.muted-row .res-row-bar > i { background: color-mix(in srgb, var(--muted) 55%, var(--surface)); }
+.res-cams { display: grid; gap: 8px; }
+.res-cams > .res-rows { margin-top: 6px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .res-bar > i, .res-row-bar > i { transition: transform var(--dur-3) var(--ease-out); }
+}
+@media (max-width: 560px) {
+  .res-tile { padding: 12px; }
+  .res-value { font-size: 20px; }
+  .res-row { grid-template-columns: minmax(72px, 7.5em) minmax(0, 1fr) 4.2em; gap: 10px; }
+}

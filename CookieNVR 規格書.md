@@ -474,7 +474,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 | 設定 → 錄影與儲存 | 儲存路徑、保留天數、最低剩餘空間；各攝影機用量 | 管理員 |
 | 設定 → 系統 | 站點名稱、RTSP 轉發開關、HKSV 開關、物件辨識開關、推論裝置與模型 | 管理員 |
 | 設定 → 使用者 | 新增、改角色、重設密碼、刪除 | 管理員 |
-| 設定 → 狀態 | 一張卡：一句話總結，下面每類問題一列（快照縮圖、攝影機名稱＋狀態膠囊、一句下一步、收合的「可能的原因」、一個動作），同類問題合併成一列（例如「前門、車道 · 沒在錄影」）；下方只列沒有問題的攝影機與儲存空間。worker、PID、stderr 等技術細節不直接顯示，收在頁底唯一的「複製診斷資訊」裡 | 管理員 |
+| 設定 → 狀態 | 一張卡：一句話總結，下面每類問題一列（快照縮圖、攝影機名稱＋狀態膠囊、一句下一步、收合的「可能的原因」、一個動作），同類問題合併成一列（例如「前門、車道 · 沒在錄影」）；下方只列沒有問題的攝影機、儲存空間與系統資源（見「系統資源」）。worker、PID、stderr 等技術細節不直接顯示，收在頁底唯一的「複製診斷資訊」裡 | 管理員 |
 | 帳號 | 外觀、改密碼、登入裝置（目前這台置頂）、連接其他 App（API Token） | 一般使用者 |
 
 ### 狀態用語
@@ -482,6 +482,15 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 - 攝影機狀態在首頁、設定的攝影機清單與狀態頁共用同一套說法（`web/health.ts`）：錄影中（綠）、不錄影（使用者自己關掉，中性，首頁不標示）、已停用（中性）、沒在錄影（開了錄影卻沒在錄，紅）、連不上（紅）、錄影不穩定（黃）。
 - 紅色只代表需要處理；回放的「錄製中」與進行中的事件用平靜的綠色與主色。首頁卡片在有進行中的事件時，名稱前加主色小點、畫面加主色細框，不閃爍。
 - 管理員有問題時，首頁頁首出現一條中性底色、帶紅點的提醒（例如「1 台連不上、2 台沒在錄影 · 查看」）連到狀態頁，側欄底部的使用者卡片（手機底部列的「我的」）加上提示點，選單裡的「狀態」顯示問題數；沒有問題時都不顯示。
+
+### 系統資源
+
+- 量測在 `src/metrics/`：每 5 秒取樣一次，保留最近 10 分鐘。容器設了上限（cgroup v2 的 `cpu.max`、`cpuset.cpus.effective` 小於主機，或 `memory.max` 小於主機記憶體）時量容器：CPU 用 `cpu.stat` 的 `usage_usec`，記憶體用 `memory.current − inactive_file`（與 `docker stats` 相同）；沒有上限時量整台主機（`/proc/stat`、`/proc/meminfo` 的 `MemTotal − MemAvailable`；macOS 開發機用 `vm_stat`，近似「活動監視器」的已使用記憶體）。cgroup v1 不讀上限，一律量主機。
+- 各類工作的用量：每個 worker 的程序樹（含 ffmpeg 子程序）依類別加總成錄影、動作偵測、物件辨識、即時觀看、影像服務、Apple 家庭、匯出影片、系統本身；錄影、偵測、即時觀看與 HKSV 串流可再分到每台攝影機。CPU 以全部可用核心為 100%，跟整體同一個基準，整體減去這些就是「其他程式」。
+- GPU：Nvidia 用 `nvidia-smi --query-gpu`（容器要用 NVIDIA Container Toolkit 啟動，`NVIDIA_DRIVER_CAPABILITIES` 要含 `utility`，預設就有）；Intel 用 `/sys/class/drm` 找卡、用自己程序的 DRM fdinfo（`drm-engine-*`，xe 是 `drm-cycles-*`）算最忙的引擎使用率，不需要 `intel_gpu_top` 要的 perf 權限，但只算得到容器內看得到的程序；容器沒有掛 `/dev/dri` 時視為讀不到。macOS 開發機用 `ioreg` 讀 Apple GPU。讀不到的原因寫進診斷資訊。
+- 只有狀態頁開著時（`GET /api/system/metrics?watch=1`，20 秒內有輪詢）才讀各程序與 GPU，其他時候只讀 CPU 與記憶體，維持資源吃緊判斷需要的走勢。狀態頁用輪詢不用 SSE：只有這一頁需要，輪詢本身就告訴後端有人在看，也不會推給每個開著的頁面。
+- 狀態頁：CPU、記憶體、每張 GPU 各一格（大數字、量表、10 分鐘走勢）；沒有 GPU 時一句話帶過。「資源花在哪裡」依類別的橫條，可切換處理器／記憶體，展開可看每台攝影機。
+- 資源吃緊（`web/health.ts`）：最近 5 分鐘有九成以上的取樣在 90% 以上，CPU 或記憶體各算一個黃色問題，進總結、問題列與首頁提醒；取樣涵蓋不到 5 分鐘時不判斷。
 
 ### 導覽
 
@@ -627,6 +636,7 @@ cookienvr/
 │  ├─ camera/          錄影、偵測、快照
 │  ├─ live/            即時串流 worker、fragment 分發、多台串流格式
 │  ├─ stream/          SSE 狀態推送
+│  ├─ metrics/         CPU、記憶體、GPU 與各類工作用量的量測
 │  ├─ restream/        MediaMTX 控制
 │  ├─ onvif/           ONVIF 客戶端、PTZ、事件
 │  └─ homekit/         HKSV worker
@@ -694,7 +704,8 @@ cookienvr-ha/
 | GET / DELETE | `/api/exports/:id` · `/:id/file` | 查進度；下載完成的 MP4（支援 Range）；DELETE 取消排隊中或執行中的工作，已完成的則移除 | 一般使用者 |
 | GET | `/api/stream` | SSE：動作、事件、攝影機狀態、worker 狀態 | 一般使用者 |
 | GET | `/api/system` | worker 狀態、磁碟、各攝影機用量與最早錄影時間、日誌 | 管理員 |
-| GET | `/api/system/diagnostics?camera=` | 診斷資訊純文字（`text/plain`）：版本、執行環境、各 worker 狀態與重啟紀錄、輸出尾端、攝影機類型與最近一次測試的碼流資訊、上線與錄影狀態、磁碟、設定。開頭說明用途，方便貼給 AI；所有密碼、相機帳號、網址帳密、API Token 與 session 一律遮蔽。帶 `camera` 時只含該台與共用的轉發程序 | 管理員 |
+| GET | `/api/system/metrics?watch=1` | 系統資源：CPU、記憶體（含範圍是容器或主機）、每張 GPU、依類別與攝影機的用量、最近 10 分鐘走勢；`watch=1` 時後端才讀 GPU 與各程序 | 管理員 |
+| GET | `/api/system/diagnostics?camera=` | 診斷資訊純文字（`text/plain`）：版本、執行環境、各 worker 狀態與重啟紀錄、輸出尾端、攝影機類型與最近一次測試的碼流資訊、上線與錄影狀態、磁碟、系統資源（量測範圍、各程序用量、每種 GPU 讀取方式成功或失敗的原因）、設定。開頭說明用途，方便貼給 AI；所有密碼、相機帳號、網址帳密、API Token 與 session 一律遮蔽。帶 `camera` 時只含該台與共用的轉發程序 | 管理員 |
 | POST | `/api/system/workers/:id/restart` | 手動重啟某個 worker | 管理員 |
 | GET / POST | `/api/cameras/:id/homekit` | `HomekitDto`：總開關、這台開關、主碼流檢查、配對碼與 setup URI、是否已配對、發布狀態／`{action: "enable" \| "disable" \| "reset"}`（主碼流不是 H.264 或讀不到時 enable 回 409） | 管理員 |
 

@@ -84,3 +84,35 @@ describe("assessHealth", () => {
     expect(h.disk.tone).toBe("bad");
   });
 });
+
+describe("資源吃緊", () => {
+  const points = (minutes: number, cpu: (i: number) => number | null, mem: (i: number) => number = () => 40) =>
+    Array.from({ length: minutes * 12 + 1 }, (_, i) => ({ at: 1_000_000 + i * 5_000, cpuPct: cpu(i), memPct: mem(i), gpus: {} }));
+  const kinds = (resources: ReturnType<typeof points>) => assessHealth({ ...healthy, cams: [], resources }).issues.map((i) => i.kind);
+
+  test("整整 5 分鐘都在 90% 以上才提醒", () => {
+    expect(kinds(points(6, () => 97))).toEqual(["cpuBusy"]);
+    expect(kinds(points(6, () => 20, () => 95))).toEqual(["memoryHigh"]);
+  });
+
+  test("一兩分鐘的尖峰不算，偶爾掉下來一點也不會漏報", () => {
+    expect(kinds(points(10, (i) => (i > 100 ? 100 : 30)))).toEqual([]);
+    expect(kinds(points(10, (i) => (i % 20 === 0 ? 70 : 96)))).toEqual(["cpuBusy"]);
+    // 一半時間在高點，例如每隔一段時間的轉檔
+    expect(kinds(points(10, (i) => (i % 2 ? 100 : 50)))).toEqual([]);
+  });
+
+  test("剛啟動、取樣還不滿 5 分鐘時不判斷", () => {
+    expect(kinds(points(4, () => 100, () => 100))).toEqual([]);
+  });
+
+  test("讀不到 CPU 的取樣不算數，也不會變成警告", () => {
+    expect(kinds(points(6, () => null))).toEqual([]);
+  });
+
+  test("資源警告排在紅色問題後面，首頁提醒用一般說法", () => {
+    const h = assessHealth({ ...healthy, cams: [cam("a", "前門", { online: false })], resources: points(6, () => 99) });
+    expect(h.issues.map((i) => i.kind)).toEqual(["offline", "cpuBusy"]);
+    expect(alertSummary(h.issues)).toBe("1 台連不上、處理器長時間忙碌");
+  });
+});

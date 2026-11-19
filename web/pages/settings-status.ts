@@ -1,7 +1,8 @@
 import { api } from "../api.ts";
 import { badge, confirmDialog, copyButton, errMsg, formatBytes, formatClock, h, icon, toast } from "../dom.ts";
 import type { Issue } from "../health.ts";
-import { type HealthSnapshot, onHealth, refreshHealth } from "../health-watch.ts";
+import { type HealthSnapshot, onHealth, pushMetrics, refreshHealth } from "../health-watch.ts";
+import { CATEGORY_LABEL, createResourcesCard } from "../resources.ts";
 import type { PageCtx } from "../router.ts";
 import { settingsLayout } from "./settings-shell.ts";
 
@@ -29,6 +30,12 @@ interface Explained {
   /** 較長的可能原因，收在「可能的原因」裡 */
   why: string;
   action?: Action;
+}
+
+/** 「目前最花處理器的是錄影」；還沒算出各類用量時是空字串 */
+function topUser(snap: HealthSnapshot, by: "cpuPct" | "memBytes"): string {
+  const top = [...(snap.metrics?.usage ?? [])].sort((a, b) => b[by] - a[by])[0];
+  return top && top[by] > 0 ? `目前用最多的是「${CATEGORY_LABEL[top.category]}」。` : "";
 }
 
 /** 每一類問題只寫一次：一句下一步、收起來的原因、一個最可能有用的動作 */
@@ -93,6 +100,20 @@ function explain(issue: Issue, snap: HealthSnapshot): Explained {
         why: `已用 ${snap.health.disk.usedPct.toFixed(0)}%。空間用完前會自動刪除最舊的錄影，縮短保留天數可以避免重要片段被刪掉。`,
         action: { label: "調整保留", icon: "hdd", href: "#/settings/storage" },
       };
+    case "cpuBusy":
+      return {
+        who: "處理器",
+        pill: { label: "長時間忙碌", tone: "warn" },
+        next: "減少同時進行的工作，或換效能更好的主機",
+        why: `過去 5 分鐘處理器幾乎一直在 90% 以上，畫面可能延遲、錄影可能掉格。${topUser(snap, "cpuPct")}可以關掉不需要的動作偵測、少開幾個即時畫面，或讓攝影機改用解析度較低的子碼流偵測。`,
+      };
+    case "memoryHigh":
+      return {
+        who: "記憶體",
+        pill: { label: "快不夠了", tone: "warn" },
+        next: "減少攝影機的工作，或增加記憶體",
+        why: `過去 5 分鐘記憶體幾乎一直用到 90% 以上；用完時系統會強制結束程式，錄影可能中斷。${topUser(snap, "memBytes")}如果 CookieNVR 跑在 Docker 裡並設了記憶體上限，可以把上限調高。`,
+      };
   }
 }
 
@@ -108,6 +129,8 @@ function thumb(cameraId: string): HTMLElement {
   return box;
 }
 
+const SYSTEM_ICON: Partial<Record<Issue["kind"], string>> = { restream: "server", cpuBusy: "activity", memoryHigh: "activity" };
+
 function issueRow(issue: Issue, snap: HealthSnapshot): HTMLElement {
   const e = explain(issue, snap);
   const a = e.action;
@@ -118,7 +141,7 @@ function issueRow(issue: Issue, snap: HealthSnapshot): HTMLElement {
       : h("button", { class: "btn small", type: "button", onclick: () => void a.run() }, a.label);
   const thumbs = issue.cameras.length
     ? h("span", { class: "issue-thumbs", "aria-hidden": "true" }, issue.cameras.slice(0, 3).map((c) => thumb(c.id)))
-    : h("span", { class: "issue-thumbs", "aria-hidden": "true" }, h("span", { class: "issue-thumb sys" }, icon(issue.kind === "restream" ? "server" : "hdd", 18)));
+    : h("span", { class: "issue-thumbs", "aria-hidden": "true" }, h("span", { class: "issue-thumb sys" }, icon(SYSTEM_ICON[issue.kind] ?? "hdd", 18)));
   return h(
     "article",
     { class: "issue-row", "data-tone": issue.tone, "aria-label": issue.title },
@@ -142,10 +165,16 @@ export async function settingsStatusPage(ctx: PageCtx): Promise<Node> {
   const camsPanel = h("section", { class: "card" }, h("h2", { class: "card-title" }, camsTitle), camsBody);
   const diskBody = h("div", { class: "card-body" });
   const stamp = h("span", { class: "num" });
+  const resources = createResourcesCard();
+  resources.el.hidden = true;
   let lastKey = "";
 
   function paint(snap: HealthSnapshot) {
     stamp.textContent = `每 5 秒自動更新・上次 ${formatClock(snap.at)}`;
+    if (snap.metrics) {
+      resources.el.hidden = false;
+      resources.update(snap.metrics, snap.cams);
+    }
     const hl = snap.health;
     // 問題已經在上面的卡片說過，下面只列沒事的攝影機
     const fine = snap.cams.filter((c) => !hl.statuses.get(c.id)!.problem);
@@ -199,6 +228,13 @@ export async function settingsStatusPage(ctx: PageCtx): Promise<Node> {
 
   await refreshHealth();
   ctx.onCleanup(onHealth((s) => ctx.isCurrent() && paint(s)));
+  // 系統資源只在這一頁每 5 秒抓（watch=1 讓後端讀 GPU 與各程序）；其他頁面跟著每分鐘的重抓判斷資源吃緊
+  const pollMetrics = () => {
+    if (!document.hidden && ctx.isCurrent()) api.metrics(true).then(pushMetrics, () => {});
+  };
+  pollMetrics();
+  const metricsTimer = setInterval(pollMetrics, 5_000);
+  ctx.onCleanup(() => clearInterval(metricsTimer));
 
   return settingsLayout(
     "status",
@@ -208,6 +244,7 @@ export async function settingsStatusPage(ctx: PageCtx): Promise<Node> {
       healthEl,
       camsPanel,
       h("section", { class: "card" }, h("h2", { class: "card-title" }, "儲存空間"), diskBody),
+      resources.el,
       h(
         "footer",
         { class: "status-foot" },

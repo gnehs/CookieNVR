@@ -1,4 +1,4 @@
-import type { CameraDto, DetectFrameState } from "../src/api-types.ts";
+import type { CameraDto, DetectFrameState, MetricsPointDto } from "../src/api-types.ts";
 import type { CameraId, WorkerStatus } from "../src/types.ts";
 
 export type CameraStatusKind = "recording" | "unstable" | "notRecording" | "offline" | "viewOnly" | "disabled";
@@ -40,7 +40,7 @@ export function cameraStatus(cam: Pick<CameraDto, "config" | "online" | "recordi
   return { kind, ...STATUS[kind] };
 }
 
-export type IssueKind = "restream" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull";
+export type IssueKind = "restream" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh";
 
 export interface Issue {
   kind: IssueKind;
@@ -57,6 +57,8 @@ export interface HealthInput {
   workers: WorkerStatus[];
   disk: { totalBytes: number; freeBytes: number };
   minFreeBytes: number;
+  /** 系統資源的近期走勢（`MetricsDto.history`）；沒有時不判斷資源吃緊 */
+  resources?: MetricsPointDto[] | null;
 }
 
 export interface Health {
@@ -99,9 +101,30 @@ export function assessHealth(input: HealthInput): Health {
     diskTone = "warn";
     issues.push({ kind: "diskFull", tone: "warn", cameras: [], title: "儲存空間快滿了", short: "儲存空間快滿了" });
   }
-  // 穩定排序：同色調維持上面的先後（系統 → 攝影機 → 磁碟）
+  const pressure = resourcePressure(input.resources ?? []);
+  if (pressure.cpu) issues.push({ kind: "cpuBusy", tone: "warn", cameras: [], title: "處理器長時間忙碌", short: "處理器長時間忙碌" });
+  if (pressure.memory) issues.push({ kind: "memoryHigh", tone: "warn", cameras: [], title: "記憶體快不夠了", short: "記憶體快不夠了" });
+  // 穩定排序：同色調維持上面的先後（系統 → 攝影機 → 磁碟 → 資源）
   issues.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === "bad" ? -1 : 1));
   return { issues, statuses, disk: { usedPct, free, total, tone: diskTone } };
+}
+
+/**
+ * 資源吃緊的門檻。刻意保守：要整整 5 分鐘、九成以上的取樣都在 90% 以上才算，
+ * 錄影開始、轉檔或匯出這類幾十秒的尖峰不會讓首頁跳出提醒。
+ */
+export const PRESSURE = { windowMs: 5 * 60_000, pct: 90, share: 0.9, minSamples: 30 } as const;
+
+/** 依近期走勢判斷 CPU 與記憶體是否長時間偏高；取樣涵蓋不到整個時間窗（剛啟動、剛重連）就不判斷 */
+export function resourcePressure(history: readonly MetricsPointDto[]): { cpu: boolean; memory: boolean } {
+  const last = history.at(-1);
+  if (!last || history[0]!.at > last.at - PRESSURE.windowMs) return { cpu: false, memory: false };
+  const recent = history.filter((p) => p.at >= last.at - PRESSURE.windowMs);
+  const sustained = (values: number[]) => values.length >= PRESSURE.minSamples && values.filter((v) => v >= PRESSURE.pct).length >= values.length * PRESSURE.share;
+  return {
+    cpu: sustained(recent.map((p) => p.cpuPct).filter((v): v is number => v !== null)),
+    memory: sustained(recent.map((p) => p.memPct)),
+  };
 }
 
 /** 首頁提醒的文字：「1 台連不上、2 台沒在錄影」；沒有問題時是 null */
