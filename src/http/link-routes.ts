@@ -1,3 +1,4 @@
+import type { LinkProofDto } from "../api-types.ts";
 import type { LinkService } from "../auth/link.ts";
 import type { Principal, Route, RouteContext } from "../types.ts";
 import { isSecure } from "./auth-routes.ts";
@@ -29,8 +30,25 @@ function approver(ctx: RouteContext): Principal {
   return p;
 }
 
-export function linkRoutes(links: LinkService): Route[] {
+export function linkRoutes(
+  links: LinkService,
+  proof: { proveToken: (lookup: string, message: string) => string | null; instanceId: string },
+): Route[] {
   return [
+    {
+      method: "POST",
+      path: "/api/link/proof",
+      access: "public",
+      async handler(ctx) {
+        const body = asObject(await readJson(ctx.req));
+        const lookup = str(body, "lookup", { max: 64 });
+        const nonce = str(body, "nonce", { max: 128 });
+        // 訊息綁上實例識別碼，答案不能拿去冒充別台
+        const answer = proof.proveToken(lookup, `${nonce}|${proof.instanceId}`);
+        if (answer === null) throw new HttpError(404, "找不到這個連線");
+        return json({ proof: answer } satisfies LinkProofDto, 200, NO_STORE);
+      },
+    },
     {
       method: "POST",
       path: "/api/link",

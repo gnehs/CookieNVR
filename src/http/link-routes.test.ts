@@ -48,7 +48,7 @@ beforeEach(async () => {
   const db = openDb(":memory:");
   auth = createAuth({ db, now: () => clock });
   const links = createLinkService({ tokens: auth, now: () => clock });
-  handler = createRouter([...authRoutes(auth, "1.0.0", () => "CookieNVR", loadInstanceId(db)), ...linkRoutes(links)], auth);
+  handler = createRouter([...authRoutes(auth, "1.0.0", () => "CookieNVR", loadInstanceId(db)), ...linkRoutes(links, { proveToken: auth.proveToken, instanceId: "nvr-1" })], auth);
   adminCookie = cookieOf(await call("/api/auth/setup", { json: { username: "admin", password: "password1" } }));
   await auth.createUser("viewer", "password1", "user");
   userCookie = cookieOf(await call("/api/auth/login", { json: { username: "viewer", password: "password1" } }));
@@ -231,6 +231,31 @@ describe("rate limits", () => {
     expect((await call(`/api/link/${link.code}`, { cookie: userCookie })).status).toBe(429);
     expect((await call(`/api/link/${link.code}`, { cookie: adminCookie })).status).toBe(200);
   });
+});
+
+describe("proving token possession without sending the token", () => {
+  const hex = (alg: string, data: string, key?: string) =>
+    (key ? new Bun.CryptoHasher("sha256", key) : new Bun.CryptoHasher(alg as "sha256")).update(data).digest("hex");
+
+  test("answers an HMAC that only a holder of the token can predict, bound to this NVR", async () => {
+    const { token } = auth.createToken(1, "Home Assistant");
+    const key = hex("sha256", token);
+    const lookup = hex("sha256", `cnvr-proof-id:${key}`);
+    const res = await call("/api/link/proof", { json: { lookup, nonce: "n-1" } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).proof).toBe(hex("sha256", "n-1|nvr-1", key));
+    expect((await call("/api/link/proof", { json: { lookup: "0".repeat(64), nonce: "n-1" } })).status).toBe(404);
+    auth.revokeToken(1, auth.listTokens(1)[0]!.id);
+    expect((await call("/api/link/proof", { json: { lookup, nonce: "n-1" } })).status).toBe(404);
+  });
+});
+
+test("expiresIn counts down from the NVR clock", async () => {
+  const link = await start();
+  expect(link.expiresIn).toBe(LINK_TTL_MS / 1000);
+  clock += 60_000;
+  const view = await (await call(`/api/link/${link.code}`, { cookie: adminCookie })).json();
+  expect(view.expiresIn).toBe(LINK_TTL_MS / 1000 - 60);
 });
 
 test("the instance id is generated once and survives a restart", () => {

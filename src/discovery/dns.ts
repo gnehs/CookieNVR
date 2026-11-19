@@ -8,6 +8,11 @@ const TOP_BIT = 0x8000;
 const FLAG_RESPONSE = 0x8000;
 const FLAG_AUTHORITATIVE = 0x0400;
 const MAX_NAME_JUMPS = 32;
+/** RFC 6762 §17：mDNS 封包不超過 9000 bytes；名稱最長 255 bytes（RFC 1035 §2.3.4） */
+export const MAX_PACKET_BYTES = 9000;
+const MAX_NAME_BYTES = 255;
+/** 每一段的筆數上限：正常查詢不到十筆，擋住用大量指標灌爆解析時間的封包 */
+const MAX_SECTION_COUNT = 64;
 
 interface RecordBase {
   name: string;
@@ -165,11 +170,12 @@ class Reader {
     this.offset += n;
     return b;
   }
-  /** 支援名稱壓縮指標；限制跳躍次數避免惡意封包造成無限迴圈 */
+  /** 支援名稱壓縮指標；指標只能往前指、總長不超過 255 bytes，惡意封包不會造成迴圈或大量運算 */
   name(): string {
     const labels: string[] = [];
     let at = this.offset;
     let jumped = false;
+    let bytes = 0;
     for (let jumps = 0; ; ) {
       this.need(1, at);
       const len = this.buf[at]!;
@@ -182,10 +188,14 @@ class Reader {
         if (++jumps > MAX_NAME_JUMPS) throw new DnsParseError("name compression loop");
         if (!jumped) this.offset = at + 2;
         jumped = true;
-        at = ((len & 0x3f) << 8) | this.buf[at + 1]!;
+        const target = ((len & 0x3f) << 8) | this.buf[at + 1]!;
+        if (target >= at) throw new DnsParseError("forward compression pointer");
+        at = target;
         continue;
       }
       if (len > 63) throw new DnsParseError("bad label length");
+      bytes += len + 1;
+      if (bytes > MAX_NAME_BYTES) throw new DnsParseError("name too long");
       this.need(1 + len, at);
       labels.push(decoder.decode(this.buf.subarray(at + 1, at + 1 + len)));
       at += 1 + len;
@@ -240,6 +250,7 @@ function readRecord(r: Reader): DnsRecord {
 }
 
 export function decodeMessage(buf: Uint8Array): DnsMessage {
+  if (buf.length > MAX_PACKET_BYTES) throw new DnsParseError("packet too large");
   const r = new Reader(buf);
   const id = r.u16();
   const flags = r.u16();
@@ -247,6 +258,7 @@ export function decodeMessage(buf: Uint8Array): DnsMessage {
   const an = r.u16();
   const ns = r.u16();
   const ar = r.u16();
+  if ([qd, an, ns, ar].some((n) => n > MAX_SECTION_COUNT)) throw new DnsParseError("too many records");
   const questions: DnsQuestion[] = [];
   for (let i = 0; i < qd; i++) {
     const name = r.name();

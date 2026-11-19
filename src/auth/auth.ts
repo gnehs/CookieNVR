@@ -55,6 +55,11 @@ export interface Auth {
   listTokens(userId: number): TokenDto[];
   createToken(userId: number, name: string): CreatedTokenDto;
   revokeToken(userId: number, tokenId: number): boolean;
+  /**
+   * 不送出 token 也能證明「我是發這個 token 的那台 NVR」：key 是 token 的 SHA-256（資料庫存的就是它），
+   * `lookup` 是 `sha256("cnvr-proof-id:" + key)`，回傳 `HMAC-SHA256(key, message)`；找不到回 null。
+   */
+  proveToken(lookup: string, message: string): string | null;
 
   getUser(id: number): UserDto | null;
   listUsers(): UserDto[];
@@ -377,6 +382,12 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
         .query("INSERT INTO api_tokens (user_id, name, token_hash, prefix, created_at) VALUES (?, ?, ?, ?, ?) RETURNING id")
         .get(userId, name, sha256Hex(token), prefix, createdAt) as { id: number };
       return { id: row.id, name, prefix, createdAt, lastUsedAt: null, token };
+    },
+
+    proveToken(lookup, message) {
+      const rows = db.query("SELECT token_hash FROM api_tokens").all() as { token_hash: string }[];
+      const row = rows.find((r) => sha256Hex(`cnvr-proof-id:${r.token_hash}`) === lookup);
+      return row ? new Bun.CryptoHasher("sha256", row.token_hash).update(message).digest("hex") : null;
     },
 
     revokeToken(userId, tokenId) {

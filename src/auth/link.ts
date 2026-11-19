@@ -8,7 +8,8 @@ import type { Auth } from "./auth.ts";
  * 使用者在已登入的網頁上核准，App 用輪詢憑證取回以核准者身分建立的 API Token。
  *
  * 狀態轉移：pending →（核准）approved →（取走）claimed；pending →（拒絕）denied；
- * pending／approved 到期後一律視為 expired。Token 在取走當下才建立，沒取走就不會留下孤兒 token。
+ * pending／approved 到期後一律視為 expired。Token 在取走當下才建立，核准後沒人來取就不會多一顆 token
+ *（取走的回應若在網路上遺失，token 已建立但 App 沒收到，它會留在「連接其他 App」裡可撤銷）。
  */
 
 export const LINK_TTL_MS = 10 * 60_000;
@@ -25,8 +26,10 @@ const LIMITS = {
   createPerIp: { limit: 10, windowMs: 10 * 60_000 },
   /** 每個 IP 同時待核准的上限 */
   pendingPerIp: 5,
-  /** 記憶體中最多保留幾筆，避免被灌爆 */
-  total: 200,
+  /** 同時待核准的上限（全體） */
+  pendingTotal: 100,
+  /** 記憶體中最多保留幾筆（含已結束、保留中的），避免被灌爆 */
+  total: 1000,
   /** 每個 IP 每分鐘輪詢次數 */
   pollPerIp: { limit: 90, windowMs: 60_000 },
   /** 每個 IP 用錯輪詢憑證的次數 */
@@ -157,6 +160,7 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
       ip: req.ip,
       createdAt: req.createdAt,
       expiresAt: req.expiresAt,
+      expiresIn: Math.max(0, Math.round((req.expiresAt - now()) / 1000)),
       status: statusOf(req),
     };
   }
@@ -192,7 +196,10 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
       if (wait > 0) throw tooMany(wait, "建立連結請求太頻繁，請稍後再試");
       const pendingFromIp = [...byCode.values()].filter((r) => r.ip === ip && statusOf(r) === "pending").length;
       if (pendingFromIp >= LIMITS.pendingPerIp) throw tooMany(LINK_TTL_MS, "待核准的連結請求太多，請先完成或等它們過期");
-      if (byCode.size >= LIMITS.total) throw tooMany(RETAIN_MS, "目前有太多連結請求，請稍後再試");
+      const pendingAll = [...byCode.values()].filter((r) => statusOf(r) === "pending").length;
+      if (pendingAll >= LIMITS.pendingTotal || byCode.size >= LIMITS.total) {
+        throw tooMany(RETAIN_MS, "目前有太多連結請求，請稍後再試");
+      }
       createLimit.record(ip);
 
       let code = randomCode();
@@ -215,6 +222,7 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
         approveUrl: `${origin}/#/link/${formatCode(code)}`,
         pollSecret,
         expiresAt: req.expiresAt,
+        expiresIn: LINK_TTL_MS / 1000,
         interval: POLL_INTERVAL_S,
       };
     },

@@ -53,6 +53,25 @@ describe("dns codec", () => {
     expect(() => decodeMessage(hex("000000000001000000000000c00c000c0001"))).toThrow(DnsParseError);
   });
 
+  test("rejects packets built to make parsing expensive", () => {
+    const header = (qd: number) => [0, 0, 0, 0, qd >> 8, qd & 0xff, 0, 0, 0, 0, 0, 0];
+    expect(() => decodeMessage(new Uint8Array(9001))).toThrow(DnsParseError);
+    expect(() => decodeMessage(Uint8Array.from(header(65)))).toThrow(DnsParseError);
+    // 名稱超過 255 bytes
+    const long = [...header(1), ...Array.from({ length: 5 }, () => [63, ...new Array(63).fill(97)]).flat(), 0, 0, 12, 0, 1];
+    expect(() => decodeMessage(Uint8Array.from(long))).toThrow(DnsParseError);
+    // 往後指的壓縮指標
+    expect(() => decodeMessage(Uint8Array.from([...header(1), 0xc0, 20, 0, 12, 0, 1, 1, 97, 0]))).toThrow(DnsParseError);
+
+    // 很多問題都指向同一串長 label：在上限內解析仍然很快
+    const labels = Array.from({ length: 3 }, () => [63, ...new Array(63).fill(98)]).flat();
+    const bomb = [...header(64), ...labels, 0, 0, 12, 0, 1];
+    for (let i = 1; i < 64; i++) bomb.push(0xc0, 12, 0, 12, 0, 1);
+    const started = performance.now();
+    expect(decodeMessage(Uint8Array.from(bomb)).questions).toHaveLength(64);
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+
   test("skips record types it does not understand", () => {
     const aaaa = hex(
       "000084000000000100000000" + "04686f7374056c6f63616c00" + "001c8001" + "00000078" + "0010" + "fe800000000000000000000000000001",

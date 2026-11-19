@@ -58,6 +58,8 @@ export interface LinkCreatedDto {
   approveUrl: string;
   pollSecret: string;
   expiresAt: number;
+  /** 幾秒後過期；兩端時鐘可能不同步，用這個而不是 expiresAt 倒數（RFC 8628 的 expires_in） */
+  expiresIn: number;
   /** 建議的輪詢間隔（秒） */
   interval: number;
 }
@@ -74,7 +76,14 @@ export interface LinkRequestDto {
   ip: string;
   createdAt: number;
   expiresAt: number;
+  /** 剩幾秒過期，前端用它倒數 */
+  expiresIn: number;
   status: LinkStatus;
+}
+
+/** POST /api/link/proof：App 不送出 token，確認新位址上的確實是發 token 的那台 NVR */
+export interface LinkProofDto {
+  proof: string;
 }
 
 export interface CameraDto {

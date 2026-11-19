@@ -1,6 +1,6 @@
 import dgram from "node:dgram";
 import { networkInterfaces } from "node:os";
-import { decodeMessage, encodeMessage, type DnsMessage } from "./dns.ts";
+import { decodeMessage, encodeMessage, MAX_PACKET_BYTES, type DnsMessage } from "./dns.ts";
 import { announcement, answerQuery, type ServiceInfo } from "./service.ts";
 
 const GROUP = "224.0.0.251";
@@ -124,6 +124,11 @@ export async function startMdns(opts: MdnsOptions): Promise<MdnsResponder> {
   }
 
   socket.on("message", (buf, rinfo) => {
+    // 回應（QR 位元）與過大的封包連解析都不做
+    if (buf.length < 12 || buf.length > MAX_PACKET_BYTES || (buf[2]! & 0x80) !== 0) return;
+    // 只回答同一個區域網路上的查詢（RFC 6762 §11），避免被當成反射放大器
+    const matching = ifaces.filter((i) => sameSubnet(i, rinfo.address));
+    if (matching.length === 0) return;
     let query: DnsMessage;
     try {
       query = decodeMessage(buf);
@@ -132,8 +137,7 @@ export async function startMdns(opts: MdnsOptions): Promise<MdnsResponder> {
     }
     if (query.isResponse || query.questions.length === 0) return;
     const legacy = rinfo.port !== PORT;
-    const matching = ifaces.filter((i) => sameSubnet(i, rinfo.address));
-    for (const iface of matching.length > 0 ? matching : ifaces) {
+    for (const iface of matching) {
       const reply = answerQuery(query, current, iface.address, legacy);
       if (!reply) return;
       void send(reply, iface, legacy ? { address: rinfo.address, port: rinfo.port } : undefined);

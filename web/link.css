@@ -20,3 +20,5 @@
 .link-card > a.btn { justify-content: center; min-height: 44px; }
 .link-code-input { text-align: center; font: 600 22px/1.2 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 0.1em; text-transform: uppercase; }
 .link-card .auth-title { text-wrap: balance; }
+.link-source { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 14px; color: var(--text); }
+.link-source .icon { color: var(--muted); }

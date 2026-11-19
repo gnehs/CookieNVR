@@ -3,8 +3,10 @@ import { api, ApiError } from "../api.ts";
 import { brandMark, errMsg, h, icon } from "../dom.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
+import { isLocalAddress } from "../link-address.ts";
 
 type View = "ask" | "approved" | "denied" | "expired" | "used";
+
 
 function frame(...content: (Node | null)[]): HTMLElement {
   return h(
@@ -28,8 +30,8 @@ function outcome(tone: "ok" | "bad" | "muted", iconName: string, title: string, 
   );
 }
 
-function minutesLeft(expiresAt: number): string {
-  const s = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+function minutesLeft(deadline: number): string {
+  const s = Math.max(0, Math.round((deadline - Date.now()) / 1000));
   return s >= 60 ? `${Math.ceil(s / 60)} 分鐘內有效` : `${s} 秒內有效`;
 }
 
@@ -82,6 +84,8 @@ export async function linkPage(ctx: PageCtx): Promise<Node> {
   }
 
   const me = state.me!;
+  // 用 NVR 給的剩餘秒數在本機倒數，瀏覽器時鐘不準也不影響
+  const deadline = Date.now() + req.expiresIn * 1000;
   const root = h("div", { style: "display:contents" });
   const show = (view: View) => {
     if (view === "ask") return root.replaceChildren(ask());
@@ -98,15 +102,18 @@ export async function linkPage(ctx: PageCtx): Promise<Node> {
 
   const ask = (): HTMLElement => {
     const isAdmin = me.role === "admin";
-    const left = h("span", null, minutesLeft(req.expiresAt));
+    const left = h("span", null, minutesLeft(deadline));
     const err = h("p", { class: "form-error", role: "alert" });
     const allow = h("button", { class: "btn primary", type: "button" }, "允許");
     const deny = h("button", { class: "btn", type: "button" }, "拒絕");
 
     ctx.every(1000, () => {
-      if (Date.now() >= req.expiresAt) show("expired");
-      else left.textContent = minutesLeft(req.expiresAt);
+      if (Date.now() >= deadline) show("expired");
+      else left.textContent = minutesLeft(deadline);
     });
+    // 頁面剛出現時先停用按鈕一下，避免被誘導連點時第二下剛好落在「允許」
+    allow.disabled = deny.disabled = true;
+    setTimeout(() => (allow.disabled = deny.disabled = false), 600);
 
     const act = async (decision: "approve" | "deny") => {
       allow.disabled = deny.disabled = true;
@@ -143,23 +150,27 @@ export async function linkPage(ctx: PageCtx): Promise<Node> {
           h("li", null, icon("activity", 16), "在有動靜時收到通知"),
           h("li", null, icon("crosshair", 16), "轉動可以轉的鏡頭"),
           isAdmin
-            ? h("li", null, icon("rec", 16), "開關錄影與偵測（因為你是管理員）")
+            ? h("li", null, icon("settings", 16), "開關錄影與偵測，也能變更所有設定（和你的管理員帳號一樣）")
             : h("li", { class: "link-grant-no" }, icon("lock", 16), "錄影與偵測開關不會出現（需要管理員帳號）"),
         ),
       ),
-      err,
-      h("div", { class: "link-actions" }, deny, allow),
       h(
         "p",
-        { class: "link-meta" },
-        `來自 ${req.ip}`,
-        " · ",
-        left,
-        h("br"),
-        "如果不是你剛剛在 ",
-        req.app,
-        " 裡按的，請按拒絕。",
+        { class: "link-source" },
+        icon("globe", 16),
+        h("span", null, "請求來自 ", h("b", { translate: "no" }, req.ip)),
       ),
+      isLocalAddress(req.ip)
+        ? null
+        : h(
+            "div",
+            { class: "callout warn" },
+            icon("alert"),
+            h("p", null, "這個請求不是從你家裡的網路送出的。除非你很確定，否則請按拒絕。"),
+          ),
+      err,
+      h("div", { class: "link-actions" }, deny, allow),
+      h("p", { class: "link-meta" }, left, h("br"), `如果不是你剛剛在 ${req.app} 裡按的，請按拒絕。`),
     );
   };
 

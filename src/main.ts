@@ -232,7 +232,8 @@ function cameraDto(camera: Camera, client: StreamClient): CameraDto {
 }
 
 const hub = createStreamHub({
-  stillAuthorized: (client) => auth.authenticate(client.req, new URL(client.req.url)) !== null,
+  // 撤銷或降級後切斷，讓用戶端重連時拿到新的權限
+  stillAuthorized: (client) => auth.authenticate(client.req, new URL(client.req.url))?.role === client.principal.role,
   snapshot: (client) => ({
     cameras: cameras.list().map((c) => cameraDto(c, client)),
     workers: client.principal.role === "admin" ? supervisor.status() : null,
@@ -311,7 +312,7 @@ const routes = [
     purgeOrphans: () =>
       indexer.exclusive(() => purgeOrphans(purgeDeps, (id) => cameras.get(id) !== null || hasRecordWorker(id))),
   }),
-  ...linkRoutes(links),
+  ...linkRoutes(links, { proveToken: auth.proveToken, instanceId }),
   ...eventRoutes({ db, dataDir: env.dataDir, events }),
   ...exportRoutes(exportJobs),
   ...ptzRoutes({ hub: ptz }),

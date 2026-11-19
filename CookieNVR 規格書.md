@@ -438,7 +438,10 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 - 請求只存在記憶體，重啟後失效。只能核准一次、token 只能取走一次；知道短碼拿不到 token（要 `pollSecret`）。
 - 核准只接受瀏覽器 session（API Token 不行），且必須同源：Fetch Metadata `Sec-Fetch-Site: same-origin`，沒有這個標頭的舊瀏覽器比對 `Origin`；加上全站只收 JSON 與 SameSite cookie。
 - 防嵌入：核准頁在 iframe 中只顯示「請直接開啟」，不顯示按鈕；SameSite=Lax 的 cookie 在跨站 iframe 也不會送出。Bun 的 HTML bundle 路由不能加回應標頭，所以沒有 `X-Frame-Options`。
-- 限流：每 IP 每 10 分鐘最多建立 10 筆、同時待核准 5 筆、全體 200 筆；每 IP 每分鐘輪詢 90 次、用錯輪詢憑證 10 分鐘 20 次；每位使用者查不到短碼 10 分鐘 10 次。
+- 釣魚（別人建立請求後把核准連結傳給使用者）：核准頁顯示請求來源 IP，來源不是家用網段時加警告；按鈕在頁面出現後 0.6 秒才能按（擋誘導連點）；管理員核准時明講 App 會有完整管理權限。不要把 `/api/link` 開到外網（經反向代理時看到的來源 IP 會是代理，限流也會變成全體共用）。
+- 換位址的證明：`POST /api/link/proof`（`{lookup, nonce}`）回 `HMAC-SHA256(sha256(token), nonce|instanceId)`，`lookup = sha256("cnvr-proof-id:" + sha256(token))`。App 在把 token 送往新位址前用它確認對方真的是發 token 的那台，token 本身不會送出。
+- mDNS 解析器只處理 9000 bytes 以內、非回應、每段不超過 64 筆的封包，名稱不超過 255 bytes、壓縮指標只能往前指；只回答本機子網送來的查詢。
+- 限流：每 IP 每 10 分鐘最多建立 10 筆、同時待核准 5 筆、全體待核准 100 筆（記憶體中含已結束最多 1000 筆）；每 IP 每分鐘輪詢 90 次、用錯輪詢憑證 10 分鐘 20 次；每位使用者查不到短碼 10 分鐘 10 次。
 - 結束（拒絕、取走、過期）的請求再保留 10 分鐘讓輪詢拿到明確狀態，之後回 404。
 
 ### API Token
@@ -663,7 +666,7 @@ cookienvr-ha/
 | 方法 | 路徑 | 用途 | 角色 |
 | --- | --- | --- | --- |
 | GET | `/api/info` | 版本、apiVersion、是否需要初始設定、站點名稱 `siteName`（登入頁、初始設定頁與側欄顯示）、實例識別碼 `instanceId` | 公開 |
-| POST | `/api/link` · `/api/link/poll` | 建立授權連結請求／App 以輪詢憑證查狀態並一次性取回 token（見「授權連結」） | 公開（限流） |
+| POST | `/api/link` · `/api/link/poll` · `/api/link/proof` | 建立授權連結請求／App 以輪詢憑證查狀態並一次性取回 token／不送出 token 證明持有（見「授權連結」） | 公開（限流） |
 | GET / POST | `/api/link/:code` | 核准頁讀取請求／允許或拒絕（`{decision}`；只限瀏覽器 session、同源） | 一般使用者 |
 | POST | `/api/auth/setup` | 建立第一位管理員（只在沒有帳號時可用） | 公開 |
 | POST | `/api/auth/login` · `/logout` | 登入／登出 | 公開 |
