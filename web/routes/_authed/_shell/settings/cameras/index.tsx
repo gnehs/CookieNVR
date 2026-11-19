@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { NotConverted } from "../../../../../app/NotConverted.tsx";
+import { CamerasListPage } from "../../../../../pages/settings-cameras/CamerasListPage.tsx";
 
 export const Route = createFileRoute("/_authed/_shell/settings/cameras/")({
-  component: () => <NotConverted title="攝影機設定" legacy="web/legacy/pages/settings-cameras.ts" />,
+  component: CamerasListPage,
 });
