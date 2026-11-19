@@ -1,0 +1,56 @@
+/* 下拉選單（web/ui/select.ts）；觸發按鈕也給日期選擇用 */
+.sel { display: inline-flex; min-width: 0; max-width: 100%; }
+
+.sel-trigger {
+  display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; min-height: 40px; padding: 0 10px 0 12px;
+  border-radius: 11px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+  font-weight: 600; text-align: left; cursor: pointer; box-shadow: var(--shadow-sm);
+  user-select: none; -webkit-user-select: none;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform var(--dur-1) var(--ease-out);
+}
+.sel-trigger .icon { color: var(--muted); }
+.sel-value { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sel-trigger[data-placeholder] .sel-value { color: var(--muted); font-weight: 500; }
+.sel-chevron { display: inline-flex; margin-left: auto; color: var(--muted); transition: transform var(--dur-2) var(--ease-out); }
+@media (hover: hover) { .sel-trigger:hover:not(:disabled) { background: var(--fill); border-color: var(--field-border); } }
+.sel-trigger:active:not(:disabled) { transform: scale(0.98); }
+.sel-trigger[data-popup-open] { border-color: var(--accent-line); background: var(--surface); }
+.sel-trigger[data-popup-open] .sel-chevron { transform: rotate(180deg); }
+.sel-trigger:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.sel-trigger:disabled { background: var(--fill); color: var(--muted); border-color: var(--border); box-shadow: none; cursor: not-allowed; }
+
+/* 播放器控制列上：沒有外框，跟旁邊的圖示按鈕一樣 */
+.sel-trigger.quiet { min-height: 40px; padding: 0 8px 0 12px; gap: 4px; border-color: transparent; background: transparent; box-shadow: none; color: var(--text-2); font-weight: 650; }
+@media (hover: hover) { .sel-trigger.quiet:hover:not(:disabled) { background: var(--fill); border-color: transparent; color: var(--text); } }
+.sel-trigger.quiet[data-popup-open] { background: var(--fill); border-color: transparent; }
+.sel-trigger.quiet:focus-visible { box-shadow: none; outline: 2px solid var(--accent); outline-offset: 0; }
+
+.sel-pop { min-width: 180px; }
+.sel-pop:focus { outline: none; }
+.sel-opt {
+  display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px; border-radius: 9px;
+  font-size: 14px; cursor: pointer; outline: none; user-select: none; -webkit-user-select: none;
+}
+.sel-opt > .icon { color: var(--text-2); }
+.sel-opt-text { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
+.sel-opt-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-opt-text small { color: var(--muted); font-size: 12.5px; }
+.sel-check { display: inline-flex; color: var(--accent-text); visibility: hidden; }
+.sel-opt[aria-selected="true"] { font-weight: 600; }
+.sel-opt[aria-selected="true"] .sel-check { visibility: visible; }
+.sel-opt[data-highlighted] { background: var(--fill-2); }
+.sel-opt[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; }
+.sel-opt[aria-disabled="true"] > .icon { color: var(--muted); }
+.sel-heading { padding: 8px 10px 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.sel-sep { height: 1px; margin: 4px 6px; background: var(--border); }
+
+@media (pointer: coarse), (max-width: 760px) {
+  .sel-trigger { min-height: 44px; }
+}
+@media (max-width: 560px), (pointer: coarse) and (max-height: 500px) {
+  .sel-opt { min-height: 50px; padding: 4px 12px; font-size: 15.5px; border-radius: 12px; }
+  .sel-heading { padding: 10px 12px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sel-trigger:active:not(:disabled) { transform: none; }
+}

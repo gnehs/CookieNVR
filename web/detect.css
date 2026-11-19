@@ -11,29 +11,12 @@
 /* ---------- 事件頁 ---------- */
 .ev-head { align-items: center; }
 .ev-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
-.ev-filters .cam-pick select { min-height: 40px; }
-.ev-date { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.ev-date-face {
-  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 12px; min-width: 0;
-  border-radius: 11px; border: 1px solid var(--field-border); background: var(--field); font-weight: 600; cursor: pointer;
-  transition: border-color 150ms ease;
-}
-.ev-date-face .icon { color: var(--muted); }
-.ev-date-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (hover: hover) { .ev-date-face:hover { border-color: var(--text-2); } }
-.ev-date-face:has(:focus-visible) { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, var(--surface)); }
-/* 原生日期欄位蓋在按鈕上，點哪裡都會打開選擇器（iOS、Android 也一樣） */
-.ev-date-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; margin: 0; }
-.ev-date-input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+.ev-filters > .sel { max-width: 240px; }
 @media (max-width: 760px) {
   .ev-head h1 { width: 100%; }
   .ev-filters { width: 100%; flex-wrap: nowrap; }
-  .ev-filters .cam-pick { flex: 1 1 0; min-width: 0; }
-  .ev-filters .cam-pick .icon { display: none; }
-  .ev-filters .cam-pick select { flex: 1; max-width: none; }
-  .ev-date { flex: 1 1 0; }
-  .ev-date-face { flex: 1; justify-content: center; }
-  .ev-filters .cam-pick select, .ev-date-face { min-height: 44px; }
+  .ev-filters > * { flex: 1 1 0; max-width: none; }
+  .ev-filters .sel-trigger { flex: 1; }
 }
 
 .ev-day + .ev-day { margin-top: 26px; }

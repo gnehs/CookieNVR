@@ -1,0 +1,45 @@
+/* 日期選擇（web/ui/date-picker.ts）：觸發按鈕沿用 .sel-trigger，彈出的是月曆 */
+.dp { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
+.dp > .sel { flex: 1 1 auto; }
+.dp-step { flex: none; }
+
+.dp-pop { width: 304px; padding: 10px 10px 8px; }
+.dp-head { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+.dp-title { flex: 1; text-align: center; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.dp-nav { min-height: 36px; }
+
+.dp-grid { width: 100%; border-collapse: separate; border-spacing: 0 2px; table-layout: fixed; }
+.dp-grid th { height: 30px; padding: 0; color: var(--muted); font-size: 12px; font-weight: 600; }
+.dp-day { padding: 0; height: 38px; text-align: center; cursor: pointer; outline: none; font-size: 14px; font-variant-numeric: tabular-nums; }
+.dp-num {
+  position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+@media (hover: hover) { .dp-day:not([aria-disabled]):hover .dp-num { background: var(--fill-2); } }
+.dp-day[data-out] { color: var(--muted); }
+/* 不能選的日子：比次要文字再淡一階（停用的內容不受對比要求），不用 opacity */
+.dp-day[aria-disabled] { color: color-mix(in srgb, var(--muted) 55%, var(--overlay)); cursor: default; }
+.dp-day[aria-current="date"] .dp-num { color: var(--accent-text); font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--accent-line); }
+.dp-day[aria-selected="true"] .dp-num { background: var(--accent); color: var(--accent-fg); font-weight: 700; box-shadow: none; }
+/* 有資料的日子：數字下方一個小點 */
+.dp-day[data-marked] .dp-num::after {
+  content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent);
+}
+.dp-day[data-marked][aria-selected="true"] .dp-num::after { background: var(--accent-fg); }
+.dp-day:focus-visible .dp-num { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.dp-foot { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border); }
+.dp-foot .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); }
+
+@media (max-width: 560px), (pointer: coarse) and (max-height: 500px) {
+  .dp-pop { width: 100%; padding: 8px 12px calc(12px + env(safe-area-inset-bottom)); }
+  .dp-pop .popup-title { padding-inline: 4px; }
+  .dp-title { font-size: 16px; }
+  .dp-day { height: 48px; font-size: 16px; }
+  .dp-num { width: 44px; height: 44px; border-radius: 12px; }
+  .dp-foot .btn { flex: 1; min-height: 44px; }
+}
+@media (pointer: coarse) and (max-height: 500px) {
+  /* 橫拿的手機：高度只有三百多，格子留 44 但月曆放在面板中間 */
+  .dp-pop { max-width: 420px; margin-inline: auto !important; inset: auto 0 0 0 !important; }
+}

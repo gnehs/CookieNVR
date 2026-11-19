@@ -7,6 +7,9 @@ import { browserTz, state } from "../state.ts";
 import { EVENT_PREROLL_MS, eventAt, labelText, nextEvent, playableFrom, prevEvent, segEnd } from "../timeline/model.ts";
 import { Timeline } from "../timeline/timeline.ts";
 import { createExportUi } from "./export-panel.ts";
+import { datePicker } from "../ui/date-picker.ts";
+import { parseDayKey, type DayKey } from "../ui/date-logic.ts";
+import { select } from "../ui/select.ts";
 
 const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -64,11 +67,17 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
 
   const wanted = ctx.query.get("camera");
   const cam: CameraDto = cams.find((c) => c.id === wanted) ?? cams[0]!;
-  const camSelect = h("select", { "aria-label": "攝影機" }, cams.map((c) => h("option", { value: c.id, selected: c.id === cam.id }, c.config.name)));
-  camSelect.addEventListener("change", () => {
-    location.hash = `#/recordings?camera=${encodeURIComponent(camSelect.value)}`;
+  const camSelect = select({
+    label: "攝影機",
+    icon: "camera",
+    class: "pb-cam",
+    entries: cams.map((c) => ({ value: c.id, label: c.config.name })),
+    value: cam.id,
+    onChange: (id) => {
+      location.hash = `#/recordings?camera=${encodeURIComponent(id)}`;
+    },
   });
-  const camPick = h("div", { class: "cam-pick" }, icon("camera", 18), camSelect);
+  const camPick = camSelect.el;
 
   let days = (await api.days(cam.id, browserTz())).slice().sort();
   if (days.length === 0) {
@@ -94,28 +103,41 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     );
   }
 
-  const q = ctx.query.get("date");
-  let date = q && days.includes(q) ? q : days[days.length - 1]!;
+  const q = parseDayKey(ctx.query.get("date"));
+  let date = (q && days.includes(q) ? q : days[days.length - 1]!) as DayKey;
   let segs: SegmentDto[] = [];
   let events: EventDto[] = [];
 
-  const dateSelect = h("select", { "aria-label": "日期" });
-  const prevDay = h("button", { class: "btn icon-only", type: "button", "aria-label": "前一天", onclick: () => stepDay(-1) }, icon("left", 18));
-  const nextDay = h("button", { class: "btn icon-only", type: "button", "aria-label": "後一天", onclick: () => stepDay(1) }, icon("right", 18));
-  dateSelect.addEventListener("change", () => setDate(dateSelect.value, true));
+  // 日曆上標出有錄影的日子，只能選那些天；前一天、後一天也只會跳到有錄影的日子
+  const datePick = datePicker({
+    label: "日期",
+    value: date,
+    marked: new Set(days),
+    markedLabel: "有錄影",
+    onlyMarked: true,
+    stepper: true,
+    class: "pb-date",
+    format: (d) => dayLabel(d, matchMedia("(max-width: 760px)").matches),
+    onChange: (d) => d && void setDate(d, true),
+  });
   const renderDays = () => {
-    const short = matchMedia("(max-width: 760px)").matches;
-    dateSelect.replaceChildren(...days.map((d) => h("option", { value: d, selected: d === date }, dayLabel(d, short))));
-    const i = days.indexOf(date);
-    prevDay.disabled = i <= 0;
-    nextDay.disabled = i < 0 || i >= days.length - 1;
+    datePick.setRange((days[0] ?? null) as DayKey | null, todayString() as DayKey);
+    datePick.setMarked(new Set(days));
+    datePick.setValue(date);
   };
 
   // 最常用的是換日期與換攝影機，放在標題列；倍速與「回到最新」跟著播放器走
-  const rateSelect = h("select", { class: "pb-rate", "aria-label": "播放速度" }, RATES.map((r) => h("option", { value: String(r) }, `${r}×`)));
-  rateSelect.addEventListener("change", () => player.setRate(Number(rateSelect.value)));
+  // 五個固定的倍速：控制列放不下一排分段按鈕，用不佔位的下拉選單
+  const rateSelect = select({
+    label: "播放速度",
+    variant: "quiet",
+    class: "pb-rate",
+    entries: RATES.map((r) => ({ value: String(r), label: `${r}×`, desc: r === 1 ? "正常速度" : undefined })),
+    value: "1",
+    onChange: (v) => player.setRate(Number(v)),
+  });
   const nowBtn = h("button", { class: "pb-ctl pb-ctl-text", type: "button", "aria-label": "回到最新", onclick: () => goLive() }, icon("skip-end", 16), h("span", null, "回到最新"));
-  const toolbar = h("div", { class: "pb-toolbar" }, camPick, h("div", { class: "pb-date", role: "group", "aria-label": "日期" }, prevDay, dateSelect, nextDay));
+  const toolbar = h("div", { class: "pb-toolbar" }, camPick, datePick.el);
 
   const video = h("video", { playsinline: true, muted: true, "aria-label": `${cam.config.name} 的錄影` });
   video.muted = true;
@@ -137,7 +159,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     // 錄製中時，時間下面那行換成「錄製中」，日期已經在上面的日期選單裡
     h("div", { class: "pb-time" }, clock, h("span", { class: "pb-sub" }, clockDate, liveBadge)),
     // 換行時整組靠右，不會散成左邊一排
-    h("div", { class: "pb-actions" }, nowBtn, rateSelect, muteBtn, fsBtn),
+    h("div", { class: "pb-actions" }, nowBtn, rateSelect.el, muteBtn, fsBtn),
   );
   const playerPanel = h("section", { class: "card pb-player", "aria-label": "播放器" }, stage, controls);
 
@@ -307,17 +329,11 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     if (date !== today) {
       if (!days.includes(today)) days = (await api.days(cam.id, browserTz())).slice().sort();
       if (!days.includes(today)) return toast("今天還沒有錄影", "error");
-      await setDate(today, false);
+      await setDate(today as DayKey, false);
     }
     const w = latestWall();
     if (w !== null) seekTo(w, 1, true);
     timeline.recenter();
-  }
-
-  function stepDay(d: 1 | -1) {
-    const i = days.indexOf(date) + d;
-    const next = days[i];
-    if (next) void setDate(next, true);
   }
 
   let loadToken = 0;
@@ -334,7 +350,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
     return true;
   }
 
-  async function setDate(d: string, seek: boolean) {
+  async function setDate(d: DayKey, seek: boolean) {
     date = d;
     renderDays();
     history.replaceState(null, "", `#/recordings?camera=${encodeURIComponent(cam.id)}&date=${d}`);
@@ -410,7 +426,7 @@ export async function recordingsPage(ctx: PageCtx): Promise<Node> {
       }
       const [dayStart, dayEnd] = dayRange(date);
       if ((w >= dayEnd || w < dayStart) && player.state.kind === "playing") {
-        const d = dateOf(w);
+        const d = dateOf(w) as DayKey;
         if (!days.includes(d)) days = [...days, d].sort();
         void setDate(d, false);
       }

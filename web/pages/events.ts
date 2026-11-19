@@ -7,6 +7,9 @@ import type { PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 import { onStatus } from "../status-stream.ts";
 import { labelText } from "../timeline/model.ts";
+import { datePicker } from "../ui/date-picker.ts";
+import { dayOf, parseDayKey, type DayKey } from "../ui/date-logic.ts";
+import { select, type SelectEntry } from "../ui/select.ts";
 
 const PAGE_SIZE = 50;
 /** 離底部還有這麼遠就先載下一頁，捲動時不用等 */
@@ -14,8 +17,8 @@ const PRELOAD_PX = 900;
 
 interface Filter {
   camera: string | null;
-  /** 瀏覽器時區的 YYYY-MM-DD；null 是所有日期 */
-  date: string | null;
+  /** 瀏覽器時區的一天；null 是所有日期 */
+  date: DayKey | null;
 }
 
 /** 第一頁的狀態；之後的分頁另外記在 more */
@@ -43,41 +46,6 @@ function writeQuery(f: Filter) {
   history.replaceState(null, "", `#/events${qs ? `?${qs}` : ""}`);
 }
 
-/** 日期篩選：看起來是按鈕，點下去是原生的日期選擇器；選了之後旁邊出現清除 */
-function datePicker(initial: string | null, onChange: (date: string | null) => void) {
-  const input = h("input", { type: "date", class: "ev-date-input", "aria-label": "日期", max: dayKey(Date.now()) });
-  const text = h("span", { class: "ev-date-text" });
-  const clear = h("button", { class: "btn ghost icon-only small ev-date-clear", type: "button", "aria-label": "看所有日期" }, icon("x", 16));
-  const face = h("label", { class: "ev-date-face" }, icon("calendar", 17), text, input);
-  const el = h("div", { class: "ev-date" }, face, clear);
-  const paint = (v: string | null) => {
-    input.value = v ?? "";
-    text.textContent = v ? dayTitle(v, Date.now()) : "所有日期";
-    el.toggleAttribute("data-set", !!v);
-    clear.hidden = !v;
-  };
-  // 桌面版 Chrome 點文字區不會打開選擇器，要明講
-  face.addEventListener("click", (e) => {
-    if (e.target === input && "showPicker" in input) {
-      try {
-        input.showPicker();
-      } catch {}
-    }
-  });
-  input.addEventListener("change", () => {
-    const v = input.value || null;
-    paint(v);
-    onChange(v);
-  });
-  clear.addEventListener("click", () => {
-    paint(null);
-    onChange(null);
-    input.focus();
-  });
-  paint(initial);
-  return { el, set: paint };
-}
-
 export async function eventsPage(ctx: PageCtx): Promise<Node> {
   let cams: CameraDto[] = await api.cameras();
   const admin = state.me?.role === "admin";
@@ -100,19 +68,14 @@ export async function eventsPage(ctx: PageCtx): Promise<Node> {
   const qDate = ctx.query.get("date");
   const filter: Filter = {
     camera: qCam && cams.some((c) => c.id === qCam) ? qCam : null,
-    date: qDate && /^\d{4}-\d{2}-\d{2}$/.test(qDate) ? qDate : null,
+    date: parseDayKey(qDate),
   };
   const nameOf = (id: string) => cams.find((c) => c.id === id)?.config.name ?? "已刪除的攝影機";
 
-  const camSelect = h(
-    "select",
-    { "aria-label": "攝影機" },
-    h("option", { value: "" }, "所有攝影機"),
-    cams.map((c) => h("option", { value: c.id, selected: c.id === filter.camera }, c.config.name)),
-  );
-  camSelect.addEventListener("change", () => setFilter({ ...filter, camera: camSelect.value || null }));
-  const dates = datePicker(filter.date, (date) => setFilter({ ...filter, date }));
-  head.append(h("div", { class: "ev-filters" }, h("div", { class: "cam-pick" }, icon("camera", 18), camSelect), dates.el));
+  const camEntries = (): SelectEntry<string>[] => [{ value: "", label: "所有攝影機" }, "separator", ...cams.map((c) => ({ value: c.id, label: c.config.name }))];
+  const camSelect = select({ label: "攝影機", icon: "camera", entries: camEntries(), value: filter.camera ?? "", onChange: (v) => setFilter({ ...filter, camera: v || null }) });
+  const dates = datePicker({ label: "日期", value: filter.date, clearLabel: "所有日期", max: dayOf(Date.now()), onChange: (date) => setFilter({ ...filter, date }) });
+  head.append(h("div", { class: "ev-filters" }, camSelect.el, dates.el));
 
   let items: EventDto[] = [];
   let list: ListState = { kind: "loading" };
@@ -274,8 +237,8 @@ export async function eventsPage(ctx: PageCtx): Promise<Node> {
   function setFilter(next: Filter) {
     filter.camera = next.camera;
     filter.date = next.date;
-    camSelect.value = next.camera ?? "";
-    dates.set(next.date);
+    camSelect.setValue(next.camera ?? "");
+    dates.setValue(next.date);
     writeQuery(filter);
     void reload();
   }
@@ -304,7 +267,9 @@ export async function eventsPage(ctx: PageCtx): Promise<Node> {
   const refetching = new Set<number>();
   ctx.onCleanup(
     onStatus((s) => {
+      const renamed = s.cams.map((c) => c.config.name).join("\n") !== cams.map((c) => c.config.name).join("\n");
       cams = s.cams;
+      if (renamed) camSelect.setEntries(camEntries());
       if (list.kind !== "ready") return;
       const fresh = s.events.filter((e) => matches(e) && !items.some((x) => x.id === e.id));
       if (fresh.length) {

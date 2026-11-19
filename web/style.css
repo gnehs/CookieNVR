@@ -91,7 +91,7 @@ body {
 }
 h1, h2, h3, h4, p { margin: 0; }
 a { color: var(--accent); }
-button, input, select, textarea { font: inherit; color: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
 ::placeholder { color: var(--muted); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button, a, summary, label { touch-action: manipulation; }
@@ -402,17 +402,17 @@ button, a, summary, label { touch-action: manipulation; }
 .hint { color: var(--muted); font-size: 13px; }
 .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: start; }
 .narrow { max-width: 520px; }
-input[type="text"], input[type="password"], input[type="number"], input[type="url"], select, textarea {
+input[type="text"], input[type="password"], input[type="number"], input[type="url"], textarea {
   width: 100%; min-height: 40px; padding: 8px 12px; border-radius: 11px; border: 1px solid var(--field-border);
   background: var(--field); color: var(--text); transition: border-color 150ms ease, box-shadow 150ms ease;
 }
-@media (hover: hover) { input:hover, select:hover { border-color: var(--text-2); } }
-input:focus-visible, select:focus-visible, textarea:focus-visible {
+@media (hover: hover) { input:hover { border-color: var(--text-2); } }
+input:focus-visible, textarea:focus-visible {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, var(--surface));
 }
 input[aria-invalid="true"] { border-color: var(--bad); }
 input[type="text"], input[type="password"], input[type="number"], input[type="url"] { text-overflow: ellipsis; }
-input:disabled, select:disabled { background: var(--fill); color: var(--muted); cursor: not-allowed; }
+input:disabled { background: var(--fill); color: var(--muted); cursor: not-allowed; }
 fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .form-error { color: var(--bad-text); font-size: 14px; }
 .form-error:empty { display: none; }
@@ -582,7 +582,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 /* 單層卡片：沒有標題列也沒有固定動作列的地方用這個，不再包一層外框 */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-sm); min-width: 0; }
 .list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding: 0 4px; }
-.row-item select { width: auto; min-height: 32px; padding: 4px 10px; font-size: 13px; border-radius: 9px; }
 
 .bar { height: 8px; border-radius: 99px; background: var(--fill-2); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
@@ -613,12 +612,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 
 /* ---------- playback ---------- */
 .pb-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
-.pb-toolbar select { min-height: 38px; width: auto; max-width: 100%; }
-.cam-pick { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.cam-pick .icon { color: var(--muted); }
-.cam-pick select { width: auto; max-width: min(240px, 100%); min-width: 0; font-weight: 600; text-overflow: ellipsis; }
-.pb-date { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.pb-date select { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pb-toolbar > .sel { max-width: 240px; }
 
 .pb-grid {
   display: grid; gap: 16px; min-width: 0;
@@ -663,15 +657,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-clock { font-size: 19px; font-weight: 700; letter-spacing: 0.01em; }
 .pb-time small { color: var(--muted); font-size: 12px; }
 .pb-ctl-text { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 600; }
-/* 倍速：原生 select 保留鍵盤與螢幕閱讀器行為，外觀做成跟其他播放鈕一致 */
-select.pb-rate {
-  appearance: none; width: auto; min-height: 40px; padding: 0 12px; border: 0; border-radius: 11px; background: transparent;
-  color: var(--text-2); font-weight: 650; font-variant-numeric: tabular-nums; cursor: pointer; box-shadow: none;
-  transition: background-color 150ms ease;
-}
-@media (hover: hover) { select.pb-rate:hover { background: var(--fill); color: var(--text); } }
-select.pb-rate:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; box-shadow: none; }
-select.pb-rate option { background: var(--surface); color: var(--text); }
 /* 跳過缺片的提示浮在畫面左下角，不佔控制列的位置 */
 .pb-note { position: absolute; left: 10px; bottom: 10px; padding: 5px 11px; border-radius: 99px; background: #18181b; color: #f6c46b; font-size: 12.5px; font-weight: 600; pointer-events: none; }
 
@@ -771,11 +756,11 @@ select.pb-rate option { background: var(--surface); color: var(--text); }
   .pb-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }
   .main:has(> .pb) { padding-top: 0; }
   .pb-player > .pb-toolbar { flex-wrap: nowrap; gap: 6px; padding: calc(4px + env(safe-area-inset-top)) 0 8px; }
-  .pb-toolbar .cam-pick { flex: 1 1 0; min-width: 0; }
-  .pb-toolbar .cam-pick .icon { display: none; }
-  .pb-toolbar .cam-pick select { flex: 1; max-width: none; }
+  .pb-toolbar > .sel { flex: 1 1 0; max-width: none; }
+  .pb-toolbar .sel-trigger { flex: 1; }
+  /* 一排要放攝影機、日期與前後一天：圖示收起來，字留給名稱與日期 */
+  .pb-toolbar .sel-trigger > .icon:first-child { display: none; }
   .pb-date { flex: 1.5 1 0; gap: 2px; }
-  .pb-date select { flex: 1; min-width: 0; }
   .pb-date .btn.icon-only { width: 40px; flex: none; padding: 0; }
   .pb-ctl-text > span:not(.icon) { display: none; }
   .pb-ctl-text { padding: 0; justify-content: center; }
@@ -969,8 +954,8 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
 
 /* ---------- 手機：點擊區至少 44×44，對話框與選單改成底部面板 ---------- */
 @media (pointer: coarse), (max-width: 760px) {
-  .btn, .row-item select, select.pb-rate, .pb-toolbar select, .menu-item, .switch-row { min-height: 44px; }
-  input[type="text"], input[type="password"], input[type="number"], input[type="url"], select { min-height: 44px; }
+  .btn, .menu-item, .switch-row { min-height: 44px; }
+  input[type="text"], input[type="password"], input[type="number"], input[type="url"] { min-height: 44px; }
   .pb-ctl { width: 44px; height: 44px; }
   .swatches { gap: 0; }
   .btn.icon-only:not(.small) { width: 44px; }

@@ -87,6 +87,12 @@ const usage = new Map<string, { bytes: number; oldestMs: number }>(
 // MOCK_XSS=1：多一台名稱是 HTML 的攝影機，用來確認所有頁面都把名稱當文字顯示；給使用者看的假後端不加
 if (process.env.MOCK_XSS === "1") addCam({ name: `<img src=x onerror="window.__xss=1">車庫<script>window.__xss=1</script>`, enabled: true, connection: { type: "tapo", host: "192.168.1.70", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false } });
 
+// MOCK_MANY_CAMS=1：再多十幾台，看長清單的下拉選單與很長的名稱
+if (process.env.MOCK_MANY_CAMS === "1") {
+  const names = ["二樓走廊", "頂樓", "倉庫", "大門口左側", "大門口右側（夜視）", "地下室停車場入口", "嬰兒房", "書房", "陽台", "廚房", "Garden", "Back yard", "Front porch"];
+  for (const [i, name] of names.entries()) addCam({ name, enabled: true, connection: { type: "rtsp", mainUrl: `rtsp://192.168.1.${80 + i}/s1`, transport: "tcp" }, record: { enabled: true, audio: false, direct: false } });
+}
+
 // ---------- 假錄影與事件：依「距今第幾天」與當天分鐘數決定有沒有錄影 ----------
 const MIN = 60_000;
 const DAY = 86_400_000;
@@ -105,10 +111,13 @@ const SCHEDULE: Record<string, [number, number][]> = {
   "1:1": [[hm(8, 0), hm(20, 0)]],
   "1:2": [[hm(8, 0), hm(20, 0)]],
 };
+/** 客廳更早的錄影：零散的幾天，月曆上看得出有錄影與沒有錄影的日子，也跨到上個月 */
+const OLDER_DAYS = [3, 4, 6, 9, 10, 11, 15, 22, 23, 30, 38, 45];
 const SEG_ID_BASE = 1_000_000_000;
 
 function recorded(camIdx: number, t: number): boolean {
-  const ranges = SCHEDULE[`${camIdx}:${daysAgo(t)}`];
+  const ago = daysAgo(t);
+  const ranges = SCHEDULE[`${camIdx}:${ago}`] ?? (camIdx === 0 && OLDER_DAYS.includes(ago) ? [[hm(7, 0), hm(19, 30)]] : undefined);
   if (!ranges) return false;
   const minute = Math.floor((t - localMidnight(t)) / MIN);
   return ranges.some(([a, b]) => minute >= a && minute < b);
@@ -133,7 +142,8 @@ function recordedDays(cameraId: string, tz: string): string[] {
   const camIdx = cams.findIndex((c) => c.id === cameraId);
   if (camIdx < 0 || camIdx > 1) return [];
   const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
-  return [2, 1, 0].map((d) => fmt.format(localMidnight(now()) - d * DAY + 12 * 3600_000));
+  const ago = camIdx === 0 ? [...OLDER_DAYS, 2, 1, 0] : [2, 1, 0];
+  return ago.map((d) => fmt.format(localMidnight(now()) - d * DAY + 12 * 3600_000)).sort();
 }
 
 function rng(seed: number) {
