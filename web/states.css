@@ -191,7 +191,7 @@
 .lb-key { display: none; }
 .lb-suggest { display: flex; align-items: center; gap: 10px; margin: 0 22px 12px; padding: 10px 12px 10px 14px; border-radius: var(--r); background: var(--accent-soft); font-size: 14px; flex-wrap: wrap; }
 .lb-suggest .icon { color: var(--accent-text); }
-.lb-suggest > span { flex: 1; min-width: 12em; text-align: left; }
+.lb-suggest-text { flex: 1; min-width: 12em; }
 .lb-empty { display: grid; justify-items: center; gap: 6px; padding: 36px 22px; text-align: center; color: var(--muted); font-size: 14px; }
 .lb-empty .icon { color: var(--ok-text); }
 .lb-empty b { color: var(--text); font-weight: 650; font-size: 15px; }
@@ -242,6 +242,11 @@
   .lb-head .hint, .lb-tabs { padding-left: 16px; padding-right: 16px; }
   .lb-suggest { margin: 0 16px 12px; }
   .lb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 12px; }
+  .lb-head > .btn { margin: 0 0 12px 16px; }
+  /* 三類以上：一列一張，圖在左、類別按鈕直排在右，字才放得下 */
+  .lb-grid[data-many] { grid-template-columns: minmax(0, 1fr); }
+  .lb-grid[data-many] .lb-tile { grid-template-columns: 132px minmax(0, 1fr); align-items: center; gap: 10px; }
+  .lb-grid[data-many] .lb-classes { grid-template-columns: minmax(0, 1fr); }
   .lb-tile { padding: 5px; gap: 6px; }
   .lb-cls { min-height: 40px; padding: 0 6px; }
   .st-changes li { padding: 8px 16px; }
@@ -249,9 +254,16 @@
 }
 
 /* ─── 單台頁：畫面下方的狀態 ─── */
-.st-chips { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.st-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .st-chip { display: inline-flex; max-width: 100%; padding: 7px 14px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border); text-decoration: none; color: inherit; }
 a.st-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (hover: hover) { a.st-chip:hover { background: var(--fill); } }
 .st-chip .st-line { font-size: 14px; }
 .wiz-title:focus, .wiz-title:focus-visible { outline: none; box-shadow: none; }
+@media (min-width: 900px), (min-width: 640px) and (orientation: landscape) {
+  .live-body[data-ptz="panel"] > .st-chips { grid-column: 1; grid-row: 2; }
+  .live-body[data-ptz="panel"]:has(> .st-chips) > .ptz { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  .live-body[data-ptz="panel"]:has(> .st-chips) { grid-template-rows: auto auto 1fr; }
+}

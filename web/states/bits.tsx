@@ -15,18 +15,22 @@ export function useNow(ms = 30_000): number {
 /** 感應器目前的狀態：一個色點加一行字，例如「開 · 12 分鐘前」「確認中：關」「還沒訓練」 */
 export function StateLine({ sensor, now, withName = false }: { sensor: StateSensorDto; now: number; withName?: boolean }) {
   const v = sensorView(sensor);
+  const name = withName ? <b className="st-name">{sensor.config.name}：</b> : null;
   return (
     <span className="st-line" data-tone={viewTone(v)} data-kind={v.kind}>
       <i className="st-dot" aria-hidden="true" />
-      {withName ? <b className="st-name">{sensor.config.name}：</b> : null}
       {v.kind === "state" ? (
         <span className="st-text">
+          {name}
           <b className="st-value">{v.label}</b>
           <span className="st-since"> · {sinceText(v.since, now)}</span>
           {v.candidate ? <span className="st-candidate">，可能變成「{v.candidate}」</span> : null}
         </span>
       ) : (
-        <span className="st-text">{stateText(v, now)}</span>
+        <span className="st-text">
+          {name}
+          {stateText(v, now)}
+        </span>
       )}
     </span>
   );

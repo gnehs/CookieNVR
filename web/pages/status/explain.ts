@@ -47,9 +47,8 @@ export function explain(issue: Issue, snap: Snapshot): Explained {
   const one = issue.cameras.length === 1;
   const names = issue.cameras.map((c) => c.name).join("、");
   const sensors = issue.sensors ?? [];
-  const sensorNames = sensors.map((s) => s.name).join("、");
   const camOf = (id: string) => issue.cameras.find((c) => c.id === id)?.name ?? "";
-  const sensorWho = sensors.length === 1 ? `${camOf(sensors[0]!.cameraId)}的「${sensors[0]!.name}」` : sensorNames;
+  const sensorWho = sensors.map((s) => `${camOf(s.cameraId)}的「${s.name}」`).join("、");
   const sensorAction = (label: string): Action =>
     sensors.length === 1
       ? { label, to: "/settings/cameras/$id/states/$sensorId", params: { id: sensors[0]!.cameraId, sensorId: sensors[0]!.id } }

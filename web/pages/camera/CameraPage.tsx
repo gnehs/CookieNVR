@@ -105,7 +105,6 @@ function Live({ cam }: { cam: CameraDto }) {
         </div>
       </header>
       <LivePtzBody cam={cam} isAdmin={isAdmin} onTarget={onTarget} />
-      <StateChips cam={cam} admin={isAdmin} />
       {liveSupported() ? null : (
         <p className="live-fallback-note below">
           <Icon name="info" size={16} />
@@ -122,6 +121,7 @@ function LivePtzBody({ cam, isAdmin, onTarget }: { cam: CameraDto; isAdmin: bool
   return (
     <div className="live-body" data-ptz={mode}>
       <LiveFrame cam={cam} onTarget={onTarget} className="live-stage" />
+      <StateChips cam={cam} admin={isAdmin} />
       {cam.config.enabled ? <PtzPanel cam={cam} admin={isAdmin} onMode={setMode} /> : null}
     </div>
   );

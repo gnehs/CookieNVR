@@ -235,7 +235,7 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
       {suggested.length > 0 ? (
         <div className="lb-suggest">
           <Icon name="info" size={16} />
-          <span>{suggested.length} 張有預選的類別（虛線框），確認沒問題就一次標好。</span>
+          <span className="lb-suggest-text">{suggested.length} 張有預選的類別（虛線框），確認沒問題就一次標好。</span>
           <Button small onClick={acceptSuggestions}>
             全部照預選標記
           </Button>
@@ -261,7 +261,7 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
           )}
         </div>
       ) : (
-        <div ref={grid} className="lb-grid" role="listbox" aria-multiselectable="true" aria-label={activeView === PENDING ? "待標記的畫面" : `標記為「${activeView}」的畫面`}>
+        <div ref={grid} className="lb-grid" data-many={classes.length > 2 ? "" : undefined} role="listbox" aria-multiselectable="true" aria-label={activeView === PENDING ? "待標記的畫面" : `標記為「${activeView}」的畫面`}>
           {images.map((img, i) => {
             const isSel = selected.has(img.id);
             const guess = img.guess && classes.includes(img.guess.label) ? img.guess : null;
