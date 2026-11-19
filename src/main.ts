@@ -45,6 +45,7 @@ const supervisor = createSupervisor({ logDir });
 const restream = createRestream({
   env,
   configDir: join(env.dataDir, "mediamtx"),
+  apiPort: env.mediamtxApiPort,
   authUrl: `http://127.0.0.1:${env.port}/internal/rtsp-auth`,
 });
 const indexer = createIndexer({ db, settings: settings.get });
