@@ -130,3 +130,23 @@ describe("物件辨識 detector", () => {
     expect(h.issues).toMatchObject([{ kind: "objects", tone: "warn", short: "物件辨識停止" }]);
   });
 });
+
+describe("影像解碼退回處理器", () => {
+  const warning = "客廳改用處理器解碼：容器裡沒有 /dev/dri";
+
+  test("解碼有警告時多一筆黃色問題，帶著後端的說明", () => {
+    const h = assessHealth({ ...healthy, cams: [], decodeWarning: warning });
+    expect(h.issues).toEqual([{ kind: "decode", tone: "warn", cameras: [], title: "影像解碼改用處理器", short: "影像解碼改用處理器", detail: warning }]);
+  });
+
+  test("沒有警告或讀不到時不提醒", () => {
+    expect(assessHealth({ ...healthy, cams: [], decodeWarning: null }).issues).toEqual([]);
+    expect(assessHealth({ ...healthy, cams: [] }).issues).toEqual([]);
+  });
+
+  test("排在紅色問題後面，首頁提醒合成一句", () => {
+    const h = assessHealth({ ...healthy, cams: [cam("a", "前門", { online: false })], decodeWarning: warning });
+    expect(h.issues.map((i) => i.kind)).toEqual(["offline", "decode"]);
+    expect(alertSummary(h.issues)).toBe("1 台連不上、影像解碼改用處理器");
+  });
+});

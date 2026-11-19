@@ -40,7 +40,7 @@ export function cameraStatus(cam: Pick<CameraDto, "config" | "online" | "recordi
   return { kind, ...STATUS[kind] };
 }
 
-export type IssueKind = "restream" | "objects" | "objectsLoad" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh";
+export type IssueKind = "restream" | "objects" | "objectsLoad" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh" | "decode";
 
 export interface Issue {
   kind: IssueKind;
@@ -50,6 +50,8 @@ export interface Issue {
   title: string;
   /** 首頁提醒用的短句，例如「2 台沒在錄影」 */
   short: string;
+  /** 後端給的一句白話說明（目前只有影像解碼退回處理器），狀態頁直接顯示 */
+  detail?: string;
 }
 
 export interface HealthInput {
@@ -59,6 +61,8 @@ export interface HealthInput {
   minFreeBytes: number;
   /** 系統資源的近期走勢（`MetricsDto.history`）；沒有時不判斷資源吃緊 */
   resources?: MetricsPointDto[] | null;
+  /** `SystemDto.decode.warning`：影像解碼退回處理器的說明；沒有退回或讀不到時為 null */
+  decodeWarning?: string | null;
 }
 
 export interface Health {
@@ -88,6 +92,9 @@ export function assessHealth(input: HealthInput): Health {
   const detector = worker("detector");
   if (detector && (detector.state === "backoff" || detector.state === "stopped" || detector.unstable)) {
     issues.push({ kind: "objects", tone: "warn", cameras: [], title: "物件辨識沒有正常運作", short: "物件辨識停止" });
+  }
+  if (input.decodeWarning) {
+    issues.push({ kind: "decode", tone: "warn", cameras: [], title: "影像解碼改用處理器", short: "影像解碼改用處理器", detail: input.decodeWarning });
   }
   for (const g of CAMERA_ISSUES) {
     const cameras = input.cams.filter((c) => statuses.get(c.id)!.kind === g.kind).map((c) => ({ id: c.id, name: c.config.name }));

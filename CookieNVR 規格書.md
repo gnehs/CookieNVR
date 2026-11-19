@@ -218,7 +218,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 - 能力偵測：選了 `cpu` 以外才做。對每張卡用 CPU 產生的 640×360 短片實際試跑 H.264、H.265 的解碼與編碼（Intel 走 VAAPI 的 render node，Nvidia 走 CUDA，以 `CUDA_VISIBLE_DEVICES=<uuid>` 指定那一張），不看編譯選項。解碼一律 `-hwaccel_output_format` 加 `hwdownload`：硬體失敗時 ffmpeg 會默默改用軟體，hwdownload 收不到顯示卡的畫面就讓它失敗，所以「成功」代表真的在那張卡上解。結果在 `GET /api/video-devices`（管理員，`?refresh=1` 重跑）；編碼結果只供參考與診斷。
 - 規劃（`planDecode`，純函式）：依設定、試跑結果與這台 detect 碼流的格式（MediaMTX 回報的軌道）挑卡；選的卡不支援這個格式或試跑失敗用 CPU，選的卡不見了改用自動，都附原因。試跑完成前先用 CPU，完成後 worker 規格改變而重啟一次。CPU 時 worker 指令和以前完全一樣。
 - 執行中的退回：worker 經環境變數 `DETECT_HW_DECODE` 收到要用的卡。硬體路徑在第一張畫面前就結束或 10 秒沒有畫面時，同一次執行內改用 CPU 重開 ffmpeg，偵測與快照不中斷；等 CPU 真的解出畫面才回報原因（相機連不上時不冤枉顯示卡）。下次 worker 重啟會再試硬體。硬體路徑不帶 `-fflags nobuffer`：VideoToolbox 在 nobuffer 下對同一條串流每張都解碼失敗且 ffmpeg 不結束。
-- 狀態：`GET /api/system` 的 `decode`（每台用哪張卡、是否已確認有畫面、退回原因，以及給狀態頁的一句 `warning`）；ffmpeg 的原始訊息只放診斷資訊的「影像硬體解碼」一節。
+- 狀態：`GET /api/system` 的 `decode`（每台用哪張卡、是否已確認有畫面、退回原因，以及給狀態頁的一句 `warning`）。`warning` 有值時，狀態頁多一張黃色問題卡「影像解碼改用處理器」（內容用該句，動作連到設定 → 一般），側欄與首頁的問題數也算進去（`web/health.ts` 的 `decode`）；ffmpeg 的原始訊息只放診斷資訊的「影像硬體解碼」一節。
 - 設定畫面：「設定 → 一般」的物件辨識下方有一列「影像解碼」，選項是「自動（預設）」「處理器」加上 `GET /api/video-devices` 的每張顯示卡（名稱優先用 `GET /api/objects` 裡同 id 的型號）。H.264 與 H.265 都不能解的卡選項停用並以副標顯示原因，只有一種不行時副標寫「不支援 H.265」之類；沒有顯示卡時仍顯示，只有自動與處理器。列底下依 `decode.cameras` 寫「使用中：…」，退回處理器時用警示色顯示 `fallback.reason`，ffmpeg 訊息不上畫面。
 - macOS 開發機會列出 `apple:0`（VideoToolbox），只用來在開發機走通硬體路徑。
 - 實機檢查：容器內 `video-selftest`（`scripts/video-selftest.ts`），步驟在 `detector/README.md`。Intel 與 Nvidia 的路徑在開發機跑不到，尚未實測。

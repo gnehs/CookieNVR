@@ -25,6 +25,7 @@ export function useHealth(admin: boolean): Health | null {
       disk: sys.disk,
       minFreeBytes: settings.retention.minFreeBytes,
       resources: metrics?.history,
+      decodeWarning: sys.decode?.warning ?? null,
     });
   }, [sys, settings, metrics, cams, workers]);
 }
