@@ -69,21 +69,17 @@ function UserMenu({ active, path }: { active: Section | undefined; path: string 
             className="user-btn"
             type="button"
             data-current={here ? "" : undefined}
-            aria-label={`${me.username}，${isAdmin ? "管理員" : "一般使用者"}，帳號${isAdmin ? "與設定" : ""}選單${alert ? `，有 ${issues} 件事需要處理` : ""}`}
+            aria-label={`${me.username} ${isAdmin ? "管理員" : "一般使用者"}，帳號${isAdmin ? "與設定" : ""}選單${alert ? `，有 ${issues} 件事需要處理` : ""}`}
           >
             <span className="nav-ico">
-              <span className="avatar" aria-hidden="true">
-                {me.username.slice(0, 1)}
-              </span>
+              <span className="avatar" aria-hidden="true" data-initial={me.username.slice(0, 1)} />
               {alert ? <i className="nav-dot" aria-hidden="true" /> : null}
             </span>
             <span className="who" aria-hidden="true">
               <b>{me.username}</b>
               <small>{isAdmin ? "管理員" : "一般使用者"}</small>
             </span>
-            <span className="user-label" aria-hidden="true">
-              我的
-            </span>
+            <span className="user-label" aria-hidden="true" />
             <Icon name="selector" size={16} />
           </button>
         }

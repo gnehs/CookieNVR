@@ -25,7 +25,7 @@ function CameraTile({ cam, eventActive, register }: { cam: CameraDto; eventActiv
       data-tone={st.tone}
       data-event={eventActive ? "" : undefined}
       title={cam.config.name}
-      aria-label={[cam.config.name, st.quiet ? null : st.label, eventActive ? EVENT_ACTIVE.label : null].filter(Boolean).join("，")}
+      aria-label={[st.quiet ? null : st.label, cam.config.name, eventActive ? EVENT_ACTIVE.label : null].filter(Boolean).join(" ")}
     >
       <LiveFrame cam={cam} onTarget={onTarget}>
         <span className="cam-status" hidden={st.quiet}>

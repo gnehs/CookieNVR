@@ -144,6 +144,8 @@ button, a, summary, label { touch-action: manipulation; }
 .user-btn { --nav-bg: var(--frame); }
 .user-btn[data-current] { --nav-bg: var(--surface); }
 .user-btn .nav-dot { top: -1px; right: -1px; }
+.user-label::before { content: "我的"; }
+.avatar[data-initial]::before { content: attr(data-initial); }
 .avatar {
   width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center;
   background: var(--accent-soft); color: var(--accent-text); font-weight: 700; font-size: 14px; text-transform: uppercase;

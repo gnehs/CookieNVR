@@ -544,7 +544,7 @@ const EventList = memo(function EventList({ events, current, onJump, onExport }:
                 className="ev-item"
                 data-event={e.id}
                 aria-current={e.id === current ? "true" : undefined}
-                aria-label={`${formatClock(e.startMs)}，${labelText(e.labels)}，${e.endMs === null ? "進行中" : dur}`}
+                aria-label={`${labelText(e.labels)} ${formatClock(e.startMs)} · ${dur}${e.endMs === null ? " 進行中" : ""}`}
                 onClick={() => onJump(e)}
               >
                 <span className="ev-thumb">{e.hasThumb ? <img src={api.eventThumbUrl(e.id)} alt="" loading="lazy" decoding="async" width="96" height="54" /> : <Icon name="activity" size={18} />}</span>
