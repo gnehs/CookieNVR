@@ -1,0 +1,10 @@
+{
+  "id": "dinov2-small-int8",
+  "file": "dinov2_small_int8.onnx",
+  "name": "DINOv2-small (int8)",
+  "url": "https://huggingface.co/onnx-community/dinov2-small/resolve/8b1f705a3a7f6f062f6bdd21986c1583d3ef105d/onnx/model_int8.onnx",
+  "sha256": "dfce54a839b491f395c516350ebb4a78f947e9170a6beac0f2bc5638e0f09d61",
+  "bytes": 24446700,
+  "license": "Apache-2.0",
+  "source": "https://huggingface.co/facebook/dinov2-small"
+}
