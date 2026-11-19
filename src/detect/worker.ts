@@ -1,24 +1,26 @@
-// detect worker：`bun src/detect/worker.ts <ffmpeg> <rtsp 網址> <控制檔>`
-// 一個 ffmpeg 解碼一次，輸出兩路：每秒 5 張 320×180 灰階 raw（stdout）給差分，每秒 1 張 640 寬 JPEG（fd 3）給快照。
+// detect worker：`bun src/detect/worker.ts <ffmpeg> <rtsp 網址> <控制檔> [JPEG 每秒張數]`
+// 一個 ffmpeg 解碼一次，輸出兩路：每秒 5 張 320×180 灰階 raw（stdout）給差分，每秒 1 張（開物件辨識時依辨識頻率，最多 5 張）640 寬 JPEG（fd 3）給快照與辨識。
 // 結果與 JPEG 以 protocol.ts 的格式寫到自己的 stdout，由主程序讀取。
 import { readFileSync } from "node:fs";
 import { FRAME_BYTES, FRAME_H, FRAME_W, MotionDetector } from "./motion.ts";
 import { chunksOf, encodeMsg, IDLE_CONTROL, JpegSplitter, MsgKind, parseControl, type DetectControl, type FrameResult } from "./protocol.ts";
 
-const [ffmpegBin, url, controlPath] = process.argv.slice(2);
+const [ffmpegBin, url, controlPath, fpsArg] = process.argv.slice(2);
+// 解碼本身是每秒 5 張，JPEG 最多也是 5 張
+const jpegFps = Math.min(5, Math.max(1, Math.round(Number(fpsArg ?? 1)) || 1));
 if (!ffmpegBin || !url || !controlPath) {
   console.error("usage: worker.ts <ffmpeg> <rtsp-url> <control-file>");
   process.exit(2);
 }
 
-function detectCommand(ffmpeg: string, input: string): string[] {
+function detectCommand(ffmpeg: string, input: string, jpegFps: number): string[] {
   return [
     ffmpeg,
     ...["-hide_banner", "-nostdin", "-loglevel", "warning"],
     ...["-fflags", "nobuffer", "-probesize", "500000", "-analyzeduration", "500000"],
     ...["-rtsp_transport", "tcp", "-timeout", "10000000", "-i", input],
     "-filter_complex",
-    `[0:v:0]fps=5,scale=640:-2,split=2[a][b];[a]scale=${FRAME_W}:${FRAME_H},format=gray[g];[b]fps=1[j]`,
+    `[0:v:0]fps=5,scale=640:-2,split=2[a][b];[a]scale=${FRAME_W}:${FRAME_H},format=gray[g];[b]fps=${jpegFps}[j]`,
     ...["-map", "[g]", "-f", "rawvideo", "pipe:1"],
     ...["-map", "[j]", "-c:v", "mjpeg", "-q:v", "5", "-f", "image2pipe", "pipe:3"],
   ];
@@ -75,7 +77,7 @@ function judge(gray: Uint8Array): FrameResult {
   return { at, ...detector.process(gray, control) };
 }
 
-const proc = Bun.spawn(detectCommand(ffmpegBin, url), { stdio: ["ignore", "pipe", "inherit", "pipe"] });
+const proc = Bun.spawn(detectCommand(ffmpegBin, url, jpegFps), { stdio: ["ignore", "pipe", "inherit", "pipe"] });
 const shutdown = () => {
   alive = false;
   proc.kill("SIGTERM");

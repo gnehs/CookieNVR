@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { parseCameraConfig } from "../http/parse.ts";
+import { parseCameraConfig, parseSettingsPatch } from "../http/parse.ts";
+import { defaultSettings } from "../types.ts";
 import { detectConfigOf, DEFAULT_DETECT } from "./config.ts";
 import { encodeMsg, JpegSplitter, MsgKind, MsgReader } from "./protocol.ts";
 
@@ -38,8 +39,24 @@ test("old camera data without detect gets the defaults", () => {
 
 test("detect settings are validated", () => {
   const detect = { enabled: true, source: "both", threshold: 15, minArea: 0.01, cooldownSec: 30, masks: [{ points: [[0, 0], [1, 0], [0.5, 0.5]] }] };
-  expect(parseCameraConfig({ ...base, detect }).detect).toEqual(detect as never);
-  for (const bad of [{ source: "x" }, { threshold: 0 }, { minArea: 0.9 }, { masks: [{ points: [[0, 0], [1, 1]] }] }, { masks: [{ points: [[0, 0], [2, 0], [0, 1]] }] }]) {
+  // 沒送物件辨識欄位的舊用戶端拿到預設值
+  expect(parseCameraConfig({ ...base, detect }).detect).toEqual({ ...detect, labels: ["person"], objectMode: "annotate", objectScore: 0.5 } as never);
+  const objects = { ...detect, labels: ["dog", "person", "dog"], objectMode: "filter", objectScore: 0.7 };
+  expect(parseCameraConfig({ ...base, detect: objects }).detect).toMatchObject({ labels: ["dog", "person"], objectMode: "filter", objectScore: 0.7 });
+  for (const bad of [{ source: "x" }, { threshold: 0 }, { minArea: 0.9 }, { masks: [{ points: [[0, 0], [1, 1]] }] }, { masks: [{ points: [[0, 0], [2, 0], [0, 1]] }] }, { labels: ["Chair"] }, { labels: ["a b"] }, { labels: "person" }, { objectMode: "on" }, { objectScore: 0.1 }]) {
     expect(() => parseCameraConfig({ ...base, detect: { ...detect, ...bad } })).toThrow();
   }
+});
+
+test("object settings merge with the current ones and reject paths in model names", () => {
+  const current = defaultSettings("/data");
+  expect(parseSettingsPatch({ objects: { enabled: true } }, current).objects).toEqual({ enabled: true, model: "builtin", fps: 2 });
+  expect(parseSettingsPatch({ objects: { fps: 0.5, model: "yolov8n.onnx" } }, current).objects).toMatchObject({ fps: 0.5, model: "yolov8n.onnx" });
+  for (const bad of [{ fps: 4 }, { model: "../x.onnx" }, { model: "a/b.onnx" }, { model: "x.pt" }, { extra: 1 }]) {
+    expect(() => parseSettingsPatch({ objects: bad }, current)).toThrow();
+  }
+  for (const ok of ["auto", "cpu", "intel:GPU.1", "nvidia:GPU-8c6d1a2e-0b4f-4c55-9d1a-2b3c4d5e6f70"]) {
+    expect(parseSettingsPatch({ devices: { objects: ok } }, current).devices).toEqual({ objects: ok });
+  }
+  for (const bad of ["gpu", "nvidia:../x", "intel", ""]) expect(() => parseSettingsPatch({ devices: { objects: bad } }, current)).toThrow();
 });

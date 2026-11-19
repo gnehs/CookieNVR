@@ -12,6 +12,10 @@ export interface CameraDeps {
   rtspUrls: (id: CameraId, req: Request) => { main: string; sub: string | null };
   /** 攝影機已移除後呼叫；實際清除在背景進行，失敗由實作寫入日誌。 */
   purgeRecordings: (id: CameraId) => void;
+  /** 對外的設定（例如只放生效中的物件類別）；沒給就原樣 */
+  publicConfig?: (config: CameraConfig) => CameraConfig;
+  /** 修改時把用戶端送來的設定與原本的合併；沒給就整份取代 */
+  mergeConfig?: (incoming: CameraConfig, existing: CameraConfig) => CameraConfig;
 }
 
 const stripUrlCredentials = (url: string) => url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/?#]*@/i, "$1");
@@ -30,11 +34,11 @@ export function redactConfig(config: CameraConfig): CameraConfig {
   return { ...config, connection };
 }
 
-export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeRecordings }: CameraDeps): Route[] {
+export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeRecordings, publicConfig = (c) => c, mergeConfig = (c) => c }: CameraDeps): Route[] {
   const toDto = (camera: Camera, req: Request, admin: boolean): CameraDto => ({
     id: camera.id,
     position: camera.position,
-    config: admin ? camera.config : redactConfig(camera.config),
+    config: publicConfig(admin ? camera.config : redactConfig(camera.config)),
     ...cameraStatus(camera.id),
     rtsp: rtspUrls(camera.id, req),
   });
@@ -78,7 +82,7 @@ export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeReco
       access: "admin",
       async handler(ctx) {
         const existing = find(ctx.params.id);
-        const config = parseCameraConfig(await readJson(ctx.req));
+        const config = mergeConfig(parseCameraConfig(await readJson(ctx.req)), existing.config);
         return json(toDto(cameras.update(existing.id, config), ctx.req, true));
       },
     },

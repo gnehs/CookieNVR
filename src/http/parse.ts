@@ -1,6 +1,7 @@
-import { LIMITS } from "../detect/config.ts";
+import { DEFAULT_DETECT, LIMITS } from "../detect/config.ts";
+import { LABEL_KEY } from "../objects/labels.ts";
 import { MAX_SPEED, MIN_SPEED } from "../onvif/index.ts";
-import type { CameraConfig, CameraConnection, DetectConfig, MaskPolygon, OnvifEndpoint, PtzPrefs, Settings } from "../types.ts";
+import { OBJECT_FPS_CHOICES, type CameraConfig, type CameraConnection, type DetectConfig, type MaskPolygon, type ObjectSettings, type OnvifEndpoint, type PtzPrefs, type Settings } from "../types.ts";
 import { HttpError } from "./errors.ts";
 import { asObject, bool, int, isObject, oneOf, optStr, str, type JsonObject } from "./validate.ts";
 
@@ -84,6 +85,14 @@ function parseMask(value: unknown, path: string): MaskPolygon {
 }
 
 const DETECT_SOURCES = ["pixel", "onvif", "both"] as const;
+const OBJECT_MODES = ["off", "annotate", "filter"] as const;
+
+function parseLabels(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length > 40 || !value.every((v): v is string => typeof v === "string" && LABEL_KEY.test(v))) {
+    throw new HttpError(400, "欄位 detect.labels 必須是最多 40 個類別鍵（小寫英文、數字、底線）的陣列");
+  }
+  return [...new Set(value)];
+}
 
 function parseDetect(value: unknown): DetectConfig {
   const o = asObject(value, "detect");
@@ -96,6 +105,10 @@ function parseDetect(value: unknown): DetectConfig {
     minArea: num(o, "minArea", LIMITS.minArea.min, LIMITS.minArea.max, "detect.minArea"),
     cooldownSec: int(o, "cooldownSec", LIMITS.cooldownSec.min, LIMITS.cooldownSec.max, "detect.cooldownSec"),
     masks: masks.map((m, i) => parseMask(m, `detect.masks[${i}]`)),
+    // 物件辨識的欄位是 M4 才加的，舊的用戶端（例如 HA 整合）送來的設定可能沒有
+    labels: o.labels === undefined ? DEFAULT_DETECT.labels : parseLabels(o.labels),
+    objectMode: o.objectMode === undefined ? DEFAULT_DETECT.objectMode : oneOf(o, "objectMode", OBJECT_MODES, "detect.objectMode"),
+    objectScore: o.objectScore === undefined ? DEFAULT_DETECT.objectScore : num(o, "objectScore", LIMITS.objectScore.min, LIMITS.objectScore.max, "detect.objectScore"),
   };
 }
 
@@ -121,7 +134,11 @@ export function parseCameraConfig(value: unknown): CameraConfig {
   return config;
 }
 
-const SETTINGS_KEYS = ["siteName", "storagePath", "retention", "rtsp", "homekit"];
+const SETTINGS_KEYS = ["siteName", "storagePath", "retention", "rtsp", "homekit", "objects", "devices"];
+/** auto、cpu，或 detector 列出的識別字（intel:GPU.0、nvidia:GPU-<uuid>、nvidia:0） */
+const DEVICE_REF = /^(auto|cpu|intel:[A-Za-z0-9._-]{1,40}|nvidia:[A-Za-z0-9._-]{1,80})$/;
+/** 使用者模型是 <dataDir>/models/ 底下的檔名，不能帶路徑 */
+const MODEL_FILE = /^[\w.\- ]{1,120}\.onnx$/;
 
 function rejectUnknown(o: JsonObject, allowed: string[], base: string) {
   for (const key of Object.keys(o)) {
@@ -162,6 +179,23 @@ export function parseSettingsPatch(value: unknown, current: Settings): Partial<S
     rejectUnknown(o.homekit, ["enabled", "basePort"], "homekit");
     const merged = { ...current.homekit, ...o.homekit };
     patch.homekit = { enabled: bool(merged, "enabled", "homekit.enabled"), basePort: int(merged, "basePort", 1024, 65000, "homekit.basePort") };
+  }
+  if (o.objects !== undefined) {
+    if (!isObject(o.objects)) throw new HttpError(400, "欄位 objects 必須是物件");
+    rejectUnknown(o.objects, ["enabled", "model", "fps"], "objects");
+    const merged = { ...current.objects, ...o.objects };
+    const model = str(merged, "model", { path: "objects.model", max: 128 });
+    if (model !== "builtin" && (!MODEL_FILE.test(model) || model.startsWith("."))) throw new HttpError(400, "欄位 objects.model 必須是 builtin 或 models 資料夾裡的 .onnx 檔名");
+    if (!(OBJECT_FPS_CHOICES as readonly unknown[]).includes(merged.fps)) throw new HttpError(400, `欄位 objects.fps 必須是 ${OBJECT_FPS_CHOICES.join("、")} 之一`);
+    patch.objects = { enabled: bool(merged, "enabled", "objects.enabled"), model, fps: merged.fps as number } satisfies ObjectSettings;
+  }
+  if (o.devices !== undefined) {
+    if (!isObject(o.devices)) throw new HttpError(400, "欄位 devices 必須是物件");
+    rejectUnknown(o.devices, ["objects"], "devices");
+    const merged = { ...current.devices, ...o.devices };
+    const ref = str(merged, "objects", { path: "devices.objects", max: 100 });
+    if (!DEVICE_REF.test(ref)) throw new HttpError(400, "欄位 devices.objects 必須是 auto、cpu 或偵測到的裝置識別字");
+    patch.devices = { objects: ref };
   }
   return patch;
 }

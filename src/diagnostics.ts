@@ -1,8 +1,10 @@
 import type { ProbeResult, StreamInfo, SystemDto } from "./api-types.ts";
+import { detectConfigOf } from "./detect/config.ts";
 import type { DetectDiagnostics } from "./detect/manager.ts";
 import type { HomekitCameraDiagnostics, HomekitDiagnostics } from "./homekit/manager.ts";
 import { metricsReport } from "./metrics/report.ts";
 import type { MetricsDiagnostics } from "./metrics/sampler.ts";
+import type { ObjectsDiagnostics } from "./objects/service.ts";
 import type { PtzDiagnostics } from "./ptz/hub.ts";
 import type { Camera, CameraConnection, Settings, WorkerStatus } from "./types.ts";
 import type { RestartRecord } from "./workers/restart-log.ts";
@@ -29,6 +31,8 @@ export interface DiagnosticsInput {
   cameras: DiagnosticsCamera[];
   /** 只看某一台時傳入它的 id，報告只留這台與共用的轉發程序 */
   only: Camera["id"] | null;
+  /** 物件辨識；沒有提供時報告不列這一節 */
+  objects?: ObjectsDiagnostics;
   workers: WorkerStatus[];
   restarts: RestartRecord[];
   disk: SystemDto["disk"];
@@ -244,6 +248,45 @@ function workerBlock(w: WorkerStatus, input: DiagnosticsInput): string[] {
   return lines;
 }
 
+const MODE_TEXT = { off: "不辨識", annotate: "標註", filter: "過濾" } as const;
+
+function objectsLines(o: ObjectsDiagnostics, cameras: DiagnosticsCamera[], now: number): string[] {
+  const st = o.status;
+  if (!o.settings.enabled) return ["- 關閉（detector worker 沒有執行）"];
+  const lines = [
+    `- 設定：推論裝置 ${o.requested}，模型 ${o.settings.model}，每台每秒辨識 ${o.settings.fps} 次`,
+    `- 狀態：${st.state}${st.device ? `，實際使用 ${st.device.name}（${st.device.id}）` : ""}${st.paused ? "，測速中暫停辨識" : ""}`,
+  ];
+  if (st.fallback) lines.push(`- 沒有用指定裝置的原因：${st.fallback.reason}；細節：${st.fallback.detail || "無"}`);
+  if (st.error) lines.push(`- 模型錯誤：${st.error}${o.errorDetail ? `；細節：${o.errorDetail}` : ""}`);
+  if (o.ready) {
+    const r = o.ready;
+    lines.push(`- 模型：${r.model.file}，格式 ${r.model.format}，輸入 ${r.model.input.join("×")}；載入 ${r.loadMs} ms；providers ${r.providers.join(", ")}；CPU 執行緒 ${r.threads}`);
+    lines.push(`- 偵測到的裝置：${r.devices.map((d) => `${d.id}（${d.name}）`).join("、")}`);
+    lines.push(`- 載入嘗試：${JSON.stringify(r.attempts)}`);
+  }
+  if (st.gpu) lines.push(`- GPU 使用率 ${st.gpu.utilPercent}%，顯示記憶體 ${st.gpu.memoryUsedMb}／${st.gpu.memoryTotalMb} MB`);
+  lines.push(
+    `- 推論延遲：${st.latencyMs ? `最近 ${st.latencyMs.last} ms，平均 ${st.latencyMs.avg} ms，最慢 ${st.latencyMs.max} ms（最近 50 張，含 JPEG 解碼與前後處理）` : "還沒有推論過"}`,
+    `- 本次啟動以來推論 ${st.processed} 張，排隊超過 1 秒被丟掉 ${st.dropped} 張，目前佇列 ${o.queued} 張；最近 60 秒每秒 ${st.rateFps} 張，最近 5 分鐘丟掉比例 ${st.dropRatio === null ? "—（畫面太少）" : `${Math.round(st.dropRatio * 100)}%`}`,
+  );
+  if (st.warning) lines.push(`- 提醒：${st.warning}`);
+  const b = o.benchmark;
+  if (b) {
+    const res = b.results.map((r) => (r.ok ? `${r.name}（${r.device}）每秒 ${r.fps} 張、平均 ${r.msMean} ms、約 ${r.cameras} 台` : `${r.name}（${r.device}）失敗：${r.error}`));
+    lines.push(`- 最近一次測速：${iso(b.startedAt)}，${b.state}${b.stale ? "（已過期：換了模型或裝置）" : ""}，模型 ${b.model}，以每台每秒 ${b.perCameraFps} 次換算；${res.join("；") || "沒有結果"}${b.error ? `；錯誤：${b.error}` : ""}`);
+  }
+  if (o.probe) lines.push(`- 環境偵測：${JSON.stringify(o.probe)}`);
+  for (const c of cameras) {
+    const d = detectConfigOf(c.camera.config);
+    const last = o.recent.find((r) => r.cameraId === c.camera.id);
+    const seen = last ? `；最近一次結果（${duration(now - last.at)}前）：${last.detections.map((x) => `${x.label} ${x.score.toFixed(2)}`).join("、") || "沒有物件"}` : "";
+    lines.push(`- ${c.camera.config.name}：${d.enabled ? MODE_TEXT[d.objectMode] : "偵測關閉"}，關注 ${d.labels.join("、") || "無"}，門檻 ${d.objectScore}${seen}`);
+  }
+  return lines;
+}
+
+
 /** "record:<id>"、"live:<id>:main"、"hksv-live:<id>:<session>" → 攝影機 id */
 const workerCamera = (id: string) => id.split(":")[1] ?? null;
 
@@ -270,10 +313,12 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     `- Bun ${input.runtime.bun}，${input.runtime.platform} ${input.runtime.arch}`,
     `- 本次已執行 ${duration(input.runtime.uptimeMs)}`,
     "",
+    ...(input.objects ? ["## 物件辨識（YOLO）", ...objectsLines(input.objects, cameras, input.now), ""] : []),
     `## 攝影機（${cameras.length} 台）`,
     ...(cameras.length ? cameras.flatMap((c) => [...cameraBlock(c, input), ""]) : ["沒有攝影機。", ""]),
     `## 背景程序（${workers.length} 個）`,
     "restream 是 MediaMTX 轉發層，record:<攝影機 id> 是該攝影機的 ffmpeg 錄影程序；homekit 是 Apple 家庭（HAP-NodeJS）程序，hksv-live／hksv-record 是家庭 App 觀看與安全錄影用的 ffmpeg。",
+    "detect:<攝影機 id> 是解碼與動作偵測，detector 是物件辨識（Python＋ONNX Runtime）。",
     "",
     ...(workers.length ? workers.flatMap((w) => [...workerBlock(w, input), ""]) : ["沒有背景程序。", ""]),
     `## 最近的重啟紀錄（最多 20 筆，新的在前）`,

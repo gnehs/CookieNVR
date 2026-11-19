@@ -32,6 +32,10 @@ export interface DetectionOptions {
   sourceUrl(camera: Camera): string | null;
   /** 鏡頭移動中或剛停下 */
   isBusy(id: CameraId): boolean;
+  /** 每台每秒輸出幾張 JPEG（1 到 5）；開了物件辨識的攝影機依辨識頻率，其餘 1 張 */
+  jpegFps?: (camera: Camera) => number;
+  /** 每張新的 JPEG（快照與縮圖之外的用途，例如物件辨識） */
+  onJpeg?: (id: CameraId, jpeg: Uint8Array<ArrayBuffer>, at: number) => void;
   fetch?: typeof fetch;
   now?: () => number;
   onError?: (scope: string, e: unknown) => void;
@@ -71,6 +75,9 @@ interface CamState {
   samples: Set<(s: MotionSampleDto) => void>;
   controlText: string | null;
 }
+
+/** 每秒 1 張時不帶參數，沒開物件辨識的攝影機的 worker 指令和以前一樣，不會因升級重啟 */
+const jpegFpsArg = (fps: number) => (fps > 1 ? [String(Math.min(5, Math.round(fps)))] : []);
 
 export function createDetection(opts: DetectionOptions): Detection {
   const now = opts.now ?? Date.now;
@@ -129,6 +136,7 @@ export function createDetection(opts: DetectionOptions): Detection {
   function onJpeg(c: CamState, bytes: Uint8Array<ArrayBuffer>): void {
     c.jpeg = { bytes, at: now() };
     opts.events.offerJpeg(c.camera.id, bytes);
+    opts.onJpeg?.(c.camera.id, bytes, c.jpeg.at);
     for (const w of [...c.jpegWaiters]) w();
   }
 
@@ -195,7 +203,7 @@ export function createDetection(opts: DetectionOptions): Detection {
       specs.push({
         id: `detect:${id}`,
         kind: "detect",
-        cmd: [process.execPath, WORKER_SCRIPT, opts.env.ffmpegBin, c.url, controlPath(id)],
+        cmd: [process.execPath, WORKER_SCRIPT, opts.env.ffmpegBin, c.url, controlPath(id), ...jpegFpsArg(opts.jpegFps?.(c.camera) ?? 1)],
         stall: {
           graceMs: STALL_GRACE_MS,
           intervalMs: 5_000,

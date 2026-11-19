@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { FakeOnvif } from "../onvif/fake-onvif.ts";
 import type { Camera, CameraId } from "../types.ts";
 import { createOnvifSources, type OnvifSignal } from "./onvif-source.ts";
+import { DEFAULT_DETECT } from "./config.ts";
 
 let fake: FakeOnvif | null = null;
 afterEach(async () => {
@@ -20,7 +21,7 @@ function camera(f: FakeOnvif, source: "pixel" | "onvif" | "both"): Camera {
       enabled: true,
       connection: { type: "rtsp", mainUrl: "rtsp://127.0.0.1/x", transport: "tcp", onvif: f.endpoint },
       record: { enabled: false, audio: false, direct: false },
-      detect: { enabled: true, source, threshold: 25, minArea: 0.005, cooldownSec: 10, masks: [] },
+      detect: { ...DEFAULT_DETECT, source },
     },
   };
 }

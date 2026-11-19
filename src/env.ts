@@ -15,6 +15,8 @@ export interface Env {
   discovery: boolean;
   /** 廣播出去的網頁埠：容器對外映射成不同埠時用 `PUBLIC_PORT` 指定，預設同 `PORT` */
   publicPort: number;
+  /** 物件辨識 worker 用的 Python（要裝好 onnxruntime、numpy、Pillow） */
+  detectorPython: string;
 }
 
 export function readEnv(source: Record<string, string | undefined> = process.env): Env {
@@ -31,5 +33,6 @@ export function readEnv(source: Record<string, string | undefined> = process.env
     ffprobeBin: source.FFPROBE_BIN ?? "ffprobe",
     discovery: !/^(0|false|off|no)$/i.test(source.DISCOVERY ?? ""),
     publicPort: Number(source.PUBLIC_PORT ?? port),
+    detectorPython: source.DETECTOR_PYTHON ?? "python3",
   };
 }

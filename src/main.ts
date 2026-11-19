@@ -22,6 +22,8 @@ import { coreRoutes, createRouter, HttpError, linkRoutes, redactConfig } from ".
 import { createLive } from "./live/live.ts";
 import { metricsRoutes } from "./metrics/routes.ts";
 import { createMetrics } from "./metrics/sampler.ts";
+import { mergeCameraConfig, publicCameraConfig } from "./objects/config.ts";
+import { createObjectDetection } from "./objects/service.ts";
 import {
   createIndexer,
   createRetention,
@@ -37,7 +39,7 @@ import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore } from "./stores/index.ts";
 import { createStreamHub, type StreamClient } from "./stream/hub.ts";
-import type { Camera, CameraConnection, CameraId, WorkerSpec } from "./types.ts";
+import type { Camera, CameraConfig, CameraConnection, CameraId, WorkerSpec } from "./types.ts";
 import { createMemoryMonitor, type MemoryTarget } from "./workers/memory.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
@@ -93,7 +95,19 @@ const live = createLive({
 });
 const indexer = createIndexer({ db, settings: settings.get });
 const retention = createRetention({ db, settings: settings.get, dataDir: env.dataDir });
-const events = createEventTracker({ db, dataDir: env.dataDir, onError: (e) => log("events", e) });
+const events = createEventTracker({
+  db,
+  dataDir: env.dataDir,
+  onError: (e) => log("events", e),
+  filterWindow: (id) => objects.filterWindow(id),
+});
+const objects = createObjectDetection({
+  env,
+  settings: () => settings.get(),
+  cameras: () => cameras.list(),
+  events,
+  onError: log,
+});
 const detection = createDetection({
   env,
   controlDir: join(env.dataDir, "detect"),
@@ -104,6 +118,8 @@ const detection = createDetection({
     return restream.internalUrl(camera.id, hasSub ? "sub" : "main");
   },
   isBusy: (id) => ptz.isBusy(id),
+  jpegFps: (camera) => objects.jpegFps(camera),
+  onJpeg: (id, jpeg, at) => objects.offerJpeg(id, jpeg, at),
   onError: log,
 });
 
@@ -158,7 +174,7 @@ function purgeCameraRecordings(id: CameraId): void {
 }
 
 function desiredWorkers(): WorkerSpec[] {
-  const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs(), ...homekit.workerSpecs()];
+  const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs(), ...homekit.workerSpecs(), ...objects.workerSpecs()];
   for (const camera of cameras.list()) {
     if (!isRecording(camera)) continue;
     const input = camera.config.record.direct
@@ -225,11 +241,13 @@ function rtspUrls(id: CameraId, req: Request) {
   };
 }
 
+const publicConfig = (config: CameraConfig) => publicCameraConfig(config, settings.get().objects.enabled);
+
 function cameraDto(camera: Camera, client: StreamClient): CameraDto {
   return {
     id: camera.id,
     position: camera.position,
-    config: client.principal.role === "admin" ? camera.config : redactConfig(camera.config),
+    config: publicConfig(client.principal.role === "admin" ? camera.config : redactConfig(camera.config)),
     ...cameraStatus(camera.id),
     rtsp: rtspUrls(camera.id, client.req),
   };
@@ -284,6 +302,7 @@ async function diagnostics(only: string | null): Promise<string> {
     ),
     homekit: hk,
     only: only as CameraId | null,
+    objects: objects.diagnostics(),
     workers: sys.workers,
     restarts: readRestartLog(logDir, 50),
     disk: sys.disk,
@@ -305,6 +324,8 @@ const routes = [
     cameraStatus,
     rtspUrls,
     purgeRecordings: purgeCameraRecordings,
+    publicConfig,
+    mergeConfig: (incoming, existing) => mergeCameraConfig(incoming, existing, settings.get().objects.enabled),
     supervisor: {
       restart(id, reason) {
         if (!supervisor.status().some((w) => w.id === id)) throw new HttpError(404, "找不到這個 worker");
@@ -322,6 +343,7 @@ const routes = [
   ...exportRoutes(exportJobs),
   ...ptzRoutes({ hub: ptz }),
   ...detection.routes(),
+  ...objects.routes(),
   ...live.routes(),
   ...homekit.routes(),
   ...metricsRoutes(metrics),
@@ -379,15 +401,31 @@ supervisor.subscribe((status) => {
   if (status.kind === "record") publishCameraChanges();
   homekit.workerStatus(status);
 });
+// update 只在類別改變時推（物件辨識確認了新類別，HA 的感應器要立刻亮）；分數與縮圖的更新不推
+const pushedLabels = new Map<number, string>();
 events.subscribe(({ phase, event }) => {
-  if (phase === "update") return;
+  const labels = event.labels.join(",");
+  if (phase === "update") {
+    if (pushedLabels.get(event.id) === labels) return;
+    pushedLabels.set(event.id, labels);
+    hub.publish(() => ({ type: "event", data: { phase, event } }));
+    return;
+  }
+  if (phase === "start") pushedLabels.set(event.id, labels);
+  else pushedLabels.delete(event.id);
   hub.publish(() => ({ type: "event", data: { phase, event } }));
   hub.publish(() => ({ type: "motion", data: { cameraId: event.cameraId, active: phase === "start" } }));
 });
-settings.subscribe(() => {
+// 物件辨識開關會改變對外的 detect.labels：重送攝影機清單
+let objectsWasEnabled = settings.get().objects.enabled;
+settings.subscribe((s) => {
   homekit.sync();
   void reconcileWorkers().catch((e) => log("workers", e));
   mdns?.refresh();
+  if (s.objects.enabled === objectsWasEnabled) return;
+  objectsWasEnabled = s.objects.enabled;
+  const list = cameras.list();
+  hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
 });
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => log("restream", e));
 
@@ -459,7 +497,7 @@ async function shutdown(exitCode = 0): Promise<void> {
   metrics.stop();
   stopSync();
   void server.stop(true);
-  await Promise.all([mdns?.stop(), supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop()]);
+  await Promise.all([mdns?.stop(), supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop(), objects.stop()]);
   homekit.stop();
   db.close();
   process.exit(exitCode);

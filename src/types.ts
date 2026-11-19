@@ -36,6 +36,9 @@ export interface MaskPolygon {
   points: [number, number][];
 }
 
+/** 物件辨識：off = 這台不辨識；annotate = 事件照常建立，只加上類別；filter = 等辨識到關注的類別才建立事件 */
+export type ObjectMode = "off" | "annotate" | "filter";
+
 /** 每台攝影機的動作偵測設定；舊資料沒有這個欄位，一律經 `detectConfigOf` 取得預設值 */
 export interface DetectConfig {
   enabled: boolean;
@@ -48,6 +51,14 @@ export interface DetectConfig {
   cooldownSec: number;
   /** 只影響畫面差分 */
   masks: MaskPolygon[];
+  /**
+   * 物件辨識要關注的類別鍵（見 `src/objects/labels.ts`）。對外（API、SSE）的值是「目前實際生效的」：
+   * 系統沒開物件辨識或這台設為不辨識時一律是空陣列；HA 依這個清單為每個類別建立感應器。
+   */
+  labels: string[];
+  objectMode: ObjectMode;
+  /** 物件辨識的信心門檻，0.3 到 0.95 */
+  objectScore: number;
 }
 
 /** 加入 Apple 家庭（HKSV）；舊資料沒有這個欄位，視為關閉 */
@@ -78,6 +89,26 @@ export interface Camera {
   updatedAt: number;
 }
 
+/**
+ * 推論裝置：auto（有可用的 GPU 就用）、cpu，或 detector 列出的裝置識別字，例如 intel:GPU.0、
+ * nvidia:GPU-<uuid>。存識別字而不是清單順序，重開機或換插槽不會指到別張卡。
+ */
+export type DeviceRef = string;
+
+/** 會用到推論裝置的工作；目前只有物件辨識，之後的工作加在這裡 */
+export type DeviceTask = "objects";
+
+/** 物件辨識每秒送幾張畫面去辨識（每台攝影機、有動作時） */
+export const OBJECT_FPS_CHOICES = [0.5, 1, 2, 3, 5] as const;
+
+export interface ObjectSettings {
+  enabled: boolean;
+  /** "builtin" 或 `<dataDir>/models/` 裡的 .onnx 檔名 */
+  model: string;
+  /** 每台攝影機有動作時每秒辨識幾次，見 OBJECT_FPS_CHOICES */
+  fps: number;
+}
+
 export interface Settings {
   siteName: string;
   /** 錄影根目錄；片段位於 <storagePath>/<cameraId>/<YYYYMMDD>/<HHMMSS>.mp4（UTC） */
@@ -90,6 +121,9 @@ export interface Settings {
   rtsp: { externalEnabled: boolean };
   /** HKSV 總開關；關閉時不載入 HAP-NodeJS、不啟動 homekit worker。basePort 是第一台配件的 port */
   homekit: { enabled: boolean; basePort: number };
+  objects: ObjectSettings;
+  /** 每個工作用哪個推論裝置 */
+  devices: Record<DeviceTask, DeviceRef>;
 }
 
 export const SEGMENT_SECONDS = 60;
@@ -102,6 +136,8 @@ export function defaultSettings(dataDir: string, recordingsDir = `${dataDir}/rec
     retention: { continuousDays: 7, eventDays: 30, minFreeBytes: 5 * 1024 ** 3 },
     rtsp: { externalEnabled: true },
     homekit: { enabled: false, basePort: 51826 },
+    objects: { enabled: false, model: "builtin", fps: 2 },
+    devices: { objects: "auto" },
   };
 }
 

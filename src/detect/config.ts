@@ -7,6 +7,9 @@ export const DEFAULT_DETECT: DetectConfig = {
   minArea: 0.005,
   cooldownSec: 10,
   masks: [],
+  labels: ["person"],
+  objectMode: "annotate",
+  objectScore: 0.5,
 };
 
 /** 前端「靈敏度」的三個預設檔對應的像素門檻；其他值顯示為自訂 */
@@ -18,6 +21,7 @@ export const LIMITS = {
   cooldownSec: { min: 1, max: 300 },
   masks: 16,
   points: { min: 3, max: 32 },
+  objectScore: { min: 0.3, max: 0.95 },
 } as const;
 
 /** 舊資料沒有 detect 欄位 */

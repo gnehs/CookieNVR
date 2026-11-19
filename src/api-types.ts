@@ -1,5 +1,5 @@
 import type { OnvifErrorKind } from "./onvif/errors.ts";
-import type { CameraConfig, CameraId, PtzMode, Role, Settings, WorkerStatus } from "./types.ts";
+import type { CameraConfig, CameraId, DeviceRef, PtzMode, Role, Settings, WorkerStatus } from "./types.ts";
 
 export const API_VERSION = 1;
 
@@ -278,7 +278,11 @@ export type EventSourceKind = "pixel" | "onvif" | "both";
  * GET /api/events?camera=&start=&end=&before=&limit=
  * - 沒帶 before：與 [start, end) 重疊的事件（進行中的也算），依開始時間由舊到新。
  * - 帶 before（毫秒）：開始時間早於 before 的事件，由新到舊；事件頁用最後一筆的 startMs 往下翻頁。
- * labels：物件類別；相機事件的人形、車輛、寵物也記在這裡（person、vehicle、pet）。
+ * - label=person,car：只回含任一類別的事件。
+ * labels：類別鍵（小寫英文、數字、底線，與 `config.detect.labels`、`GET /api/objects/labels` 同一套）。
+ *   物件辨識確認過的類別（同一類別連續 2 張超過門檻），例如 person、car、dog；自備模型的類別照原名轉成鍵。
+ *   相機事件（ONVIF）的人形、車輛、寵物寫成 person、vehicle、pet：person 與物件辨識的 person 合併，
+ *   vehicle、pet 是相機自己的分類，和物件辨識的 car、dog 等各自獨立。
  */
 export interface EventDto {
   id: number;
@@ -362,13 +366,15 @@ export interface StreamSnapshotDto {
 /**
  * SSE 訊息：`event:` 是 type，`data:` 是 JSON 的 data。
  * cameras 在新增、修改、刪除、排序後送完整清單；camera 在上線或錄影狀態改變時送單台。
+ * event 的 phase：start（建立）、update（進行中的事件 labels 改變，例如物件辨識確認了新類別，立刻推送）、end（結束）。
+ * 分數創新高、換縮圖不推 update。
  */
 export type StreamMessage =
   | { type: "snapshot"; data: StreamSnapshotDto }
   | { type: "cameras"; data: CameraDto[] }
   | { type: "camera"; data: CameraDto }
   | { type: "worker"; data: WorkerStatus }
-  | { type: "event"; data: { phase: "start" | "end"; event: EventDto } }
+  | { type: "event"; data: { phase: "start" | "update" | "end"; event: EventDto } }
   | { type: "motion"; data: { cameraId: CameraId; active: boolean } };
 
 /** 主碼流是否符合 HKSV 的前提；unknown = 還沒讀到畫面（離線或檢查中斷） */
@@ -391,3 +397,133 @@ export interface HomekitDto {
 }
 
 export type HomekitActionDto = { action: "enable" | "disable" | "reset" };
+/** 推論裝置的類別 */
+export type InferenceDeviceKind = "cpu" | "intel" | "nvidia";
+
+/** detector 偵測到的一個推論裝置；id 是穩定的識別字，存進 `Settings.devices` */
+export interface InferenceDeviceDto {
+  id: string;
+  kind: InferenceDeviceKind;
+  /** 型號，例如「Intel(R) UHD Graphics 630」「NVIDIA GeForce GTX 1650」 */
+  name: string;
+}
+
+/** Nvidia 卡的使用率與顯示記憶體（每 10 秒更新）；其他裝置拿不到為 null */
+export interface GpuUsageDto {
+  utilPercent: number;
+  memoryUsedMb: number;
+  memoryTotalMb: number;
+}
+
+/**
+ * 物件辨識 worker 的狀態：
+ * - off：系統設定沒開
+ * - starting：程序剛啟動或重啟中，還沒連上
+ * - loading：載入模型中（GPU 第一次編譯可能要數十秒）
+ * - ready：可以辨識；device 是實際使用的裝置，fallback 是指定的裝置不能用或不見了、改用別的裝置的原因
+ * - error：模型不能用（找不到、不是 ONNX、輸出格式看不懂），error 是給使用者看的中文
+ */
+export interface ObjectsStatusDto {
+  state: "off" | "starting" | "loading" | "ready" | "error";
+  /** 設定的裝置（auto、cpu 或識別字） */
+  requested: DeviceRef;
+  device: InferenceDeviceDto | null;
+  fallback: { reason: string; detail: string } | null;
+  error: string | null;
+  /** 選用的模型；format 與 input 在載入後才知道 */
+  model: { id: string; name: string; format: string | null; input: [number, number] | null };
+  /** 最近 50 張的推論時間（毫秒，含 JPEG 解碼與前後處理）；還沒推論過為 null */
+  latencyMs: { last: number; avg: number; max: number } | null;
+  /** 主程序啟動以來推論的張數與排隊超過 1 秒被丟掉的張數 */
+  processed: number;
+  dropped: number;
+  /** 最近 60 秒平均每秒實際推論幾張 */
+  rateFps: number;
+  /** 最近 5 分鐘被丟掉的比例；畫面太少時為 null */
+  dropRatio: number | null;
+  /** 測速中暫停辨識（期間事件照常由動作建立，過濾模式暫時改成標註） */
+  paused: "benchmark" | null;
+  /** 負載過高的提醒（一般人看得懂的中文）；沒有問題為 null */
+  warning: string | null;
+  gpu: GpuUsageDto | null;
+}
+
+/** 一個裝置的測速結果；fps 是推論程序一張接一張做時每秒能做幾張（含解碼與前後處理），cameras 是換算結果 */
+export interface BenchmarkResultDto {
+  device: string;
+  kind: InferenceDeviceKind;
+  name: string;
+  ok: boolean;
+  error?: string;
+  loadMs?: number;
+  frames?: number;
+  fps?: number;
+  msMean?: number;
+  msP90?: number;
+  /** 同時有動作、每台每秒辨識 perCameraFps 次時，大約可以撐幾台（已扣掉餘裕，見 src/objects/capacity.ts） */
+  cameras?: number;
+}
+
+/** 測速：管理員手動啟動；結果存在 `<dataDir>/detector-benchmark.json` */
+export interface BenchmarkDto {
+  state: "running" | "done" | "cancelled" | "failed";
+  startedAt: number;
+  finishedAt: number | null;
+  /** 測速當時的模型 id 與每台每秒辨識次數 */
+  model: string;
+  perCameraFps: number;
+  progress: { device: string; index: number; total: number; fraction: number } | null;
+  results: BenchmarkResultDto[];
+  error: string | null;
+  /** 換了模型、或測過的裝置都不在了：結果可能不準 */
+  stale: boolean;
+  /** 對照目前設定（實際使用的裝置、目前的辨識頻率、開了物件辨識的攝影機數）：夠不夠用 */
+  verdict: { device: string; supported: number; cameras: number; state: "enough" | "partial" } | null;
+}
+
+/** 可選用的模型：內建一個，加上 <dataDir>/models/ 裡的 .onnx */
+export interface ObjectModelDto {
+  id: string;
+  name: string;
+  builtin: boolean;
+  sizeBytes: number | null;
+}
+
+/** GET /api/objects（管理員） */
+export interface ObjectsDto {
+  status: ObjectsStatusDto;
+  models: ObjectModelDto[];
+  /** 使用者模型要放的資料夾（容器內路徑） */
+  modelsDir: string;
+  /** 偵測到的推論裝置（含 CPU）；detector 沒在跑時會另外執行一次偵測（結果快取 5 分鐘） */
+  devices: InferenceDeviceDto[];
+  /** 某一類裝置不能用的原因（例如映像沒有 Nvidia 元件、沒掛 /dev/dri）；可用為 null */
+  unavailable: { intel: string | null; nvidia: string | null };
+  benchmark: BenchmarkDto | null;
+}
+
+/** 一個物件類別：key 是設定與事件用的鍵，zh 是中文（沒有翻譯時是原名），en 是模型裡的原名 */
+export interface ObjectLabelDto {
+  key: string;
+  zh: string;
+  en: string;
+}
+
+/**
+ * GET /api/objects/labels（一般使用者）：目前模型支援的類別。前端的勾選清單與 HA 的感應器名稱都用它。
+ * 內建模型是 COCO 80 類（沒有「包裹」）；自備模型的類別照原名轉成鍵傳遞。
+ * known = false 代表自備模型還沒載入過，清單暫時是 COCO 80 類。
+ */
+export interface ObjectLabelsDto {
+  labels: ObjectLabelDto[];
+  /** 預設列出的常用類別鍵（不在模型裡的會略過） */
+  common: string[];
+  model: string;
+  known: boolean;
+}
+
+/** POST /api/objects/benchmark（管理員）：devices 省略時測目前使用的裝置；seconds 3 到 60，預設 10 */
+export interface BenchmarkRequestDto {
+  devices?: string[];
+  seconds?: number;
+}
