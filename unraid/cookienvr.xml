@@ -21,11 +21,12 @@
   <CPUset/>
   <DonateText/>
   <DonateLink/>
-  <Requires>顯示卡為選用。Intel 內顯：在 Extra Parameters 加上 --device=/dev/dri；以 PUID 執行時會自動加入 /dev/dri 裝置的群組，不需要另外設定。Nvidia：安裝 Nvidia Driver 外掛，Repository 改成 ghcr.io/gnehs/cookienvr:edge-nvidia，Extra Parameters 加上 --runtime=nvidia，並新增變數 NVIDIA_VISIBLE_DEVICES=all 與 NVIDIA_DRIVER_CAPABILITIES=compute,utility,video（Nvidia 的裝置所有人都能用，PUID 不影響）。在設定頁把儲存路徑改到其他掛載點前，先在主機上把該目錄交給 PUID:PGID（例如 chown -R 99:100）。要讓 Home Assistant 自動發現或使用 Apple 家庭時，Network Type 改成 Host 或 br0（兩者都靠 mDNS）。</Requires>
+  <Requires>這是一般版（CPU，可選 Intel 內顯）。有 Nvidia 顯示卡請改用 cookienvr-nvidia.xml 範本。Intel 內顯：在進階設定的「Intel 內顯」欄位填 /dev/dri。在設定頁把儲存路徑改到其他掛載點前，先在主機上把該目錄交給 PUID:PGID（例如 chown -R 99:100）。要讓 Home Assistant 自動發現或使用 Apple 家庭時，Network Type 改成 Host 或 br0（兩者都靠 mDNS）。</Requires>
   <Config Name="WebUI" Target="8765" Default="8765" Mode="tcp" Description="網頁介面與 API" Type="Port" Display="always" Required="true" Mask="false">8765</Config>
   <Config Name="RTSP" Target="8554" Default="8554" Mode="tcp" Description="RTSP 轉發，給 Home Assistant 與其他軟體取得串流。主機埠必須和容器埠相同（8554），介面顯示的 RTSP 網址用的是這個埠。" Type="Port" Display="always" Required="true" Mask="false">8554</Config>
   <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/cookienvr" Mode="rw" Description="資料庫、縮圖與設定。量小但讀寫頻繁，建議放 SSD（快取池）。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/cookienvr</Config>
   <Config Name="Recordings" Target="/recordings" Default="/mnt/user/recordings/cookienvr" Mode="rw" Description="錄影檔。量大，放一般硬碟的共享資料夾即可。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/recordings/cookienvr</Config>
+  <Config Name="Intel 內顯" Target="/dev/dri" Default="/dev/dri" Mode="" Description="選用：物件辨識或影像硬體解碼要用 Intel 內顯時填 /dev/dri。主機沒有 Intel 內顯請保持空白，否則容器起不來。以 PUID 執行時會自動加入裝置的群組。" Type="Device" Display="advanced" Required="false" Mask="false"/>
   <Config Name="Host 網路的網頁 port" Target="PORT" Default="" Mode="" Description="只有 Network Type 是 Host 時才需要：主機上 8765 已被其他程式使用時，填一個沒人用的 port（例如 8766），WebUI 就改用這個 port。bridge 網路請保持空白，改上面 WebUI 欄位的主機 port 即可。" Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="RTSP port" Target="RTSP_PORT" Default="" Mode="" Description="主機上 8554 已被其他程式使用時（例如 Frigate、go2rtc），填一個沒人用的 port。Host 網路填這裡就好；bridge 網路要把上面 RTSP 欄位的主機 port 和容器 port 都改成同一個數字。" Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="以這個使用者 ID 執行。啟動時會把 /data 與錄影目錄交給它（第一次或改了數字時會整個走一遍，錄影多時要等一下）。清空則以 root 執行。" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>

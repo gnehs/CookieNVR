@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>cookienvr</Name>
+  <Repository>ghcr.io/gnehs/cookienvr:edge-nvidia</Repository>
+  <Registry>https://github.com/gnehs/CookieNVR/pkgs/container/cookienvr</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <MyMAC/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/gnehs/CookieNVR/issues</Support>
+  <Project>https://github.com/gnehs/CookieNVR</Project>
+  <ReadMe>https://github.com/gnehs/CookieNVR#readme</ReadMe>
+  <Overview>CookieNVR 是家用 NVR：24 小時錄影、動作偵測、鏡頭控制（PTZ）與 Home Assistant 連動，物件辨識為選用功能。錄影直接複製攝影機的串流，不轉碼。啟動後開啟 WebUI 建立管理員帳號並新增攝影機。這是 Nvidia 版：物件辨識與影像硬體解碼可以用 Nvidia 顯示卡。目前是開發中的 edge 版本，尚未發布正式版。</Overview>
+  <Category>Security: HomeAutomation:</Category>
+  <WebUI>http://[IP]:[PORT:8765]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/gnehs/CookieNVR/main/unraid/cookienvr-nvidia.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/gnehs/CookieNVR/main/web/assets/logo.png</Icon>
+  <ExtraParams>--runtime=nvidia</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>這是 Nvidia 版，需要先在 Apps 安裝 Nvidia Driver 外掛。只想用其中一張卡時，把 NVIDIA_VISIBLE_DEVICES 從 all 改成那張卡的 GPU UUID（Nvidia Driver 外掛頁面上可以看到）。主機同時有 Intel 內顯時，也可以在「Intel 內顯」欄位填 /dev/dri。在設定頁把儲存路徑改到其他掛載點前，先在主機上把該目錄交給 PUID:PGID（例如 chown -R 99:100）。要讓 Home Assistant 自動發現或使用 Apple 家庭時，Network Type 改成 Host 或 br0（兩者都靠 mDNS）。</Requires>
+  <Config Name="WebUI" Target="8765" Default="8765" Mode="tcp" Description="網頁介面與 API" Type="Port" Display="always" Required="true" Mask="false">8765</Config>
+  <Config Name="RTSP" Target="8554" Default="8554" Mode="tcp" Description="RTSP 轉發，給 Home Assistant 與其他軟體取得串流。主機埠必須和容器埠相同（8554），介面顯示的 RTSP 網址用的是這個埠。" Type="Port" Display="always" Required="true" Mask="false">8554</Config>
+  <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/cookienvr" Mode="rw" Description="資料庫、縮圖與設定。量小但讀寫頻繁，建議放 SSD（快取池）。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/cookienvr</Config>
+  <Config Name="Recordings" Target="/recordings" Default="/mnt/user/recordings/cookienvr" Mode="rw" Description="錄影檔。量大，放一般硬碟的共享資料夾即可。" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/recordings/cookienvr</Config>
+  <Config Name="Intel 內顯" Target="/dev/dri" Default="/dev/dri" Mode="" Description="選用：物件辨識或影像硬體解碼要用 Intel 內顯時填 /dev/dri。主機沒有 Intel 內顯請保持空白，否則容器起不來。以 PUID 執行時會自動加入裝置的群組。" Type="Device" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="NVIDIA_VISIBLE_DEVICES" Target="NVIDIA_VISIBLE_DEVICES" Default="all" Mode="" Description="要給容器用的 Nvidia 顯示卡：all 是全部，或填 GPU UUID（多張用逗號分隔）。" Type="Variable" Display="always" Required="true" Mask="false">all</Config>
+  <Config Name="NVIDIA_DRIVER_CAPABILITIES" Target="NVIDIA_DRIVER_CAPABILITIES" Default="compute,utility,video" Mode="" Description="一定要含 video，影像硬體解碼才能用；compute 給物件辨識，utility 給狀態頁讀取顯示卡用量。" Type="Variable" Display="advanced" Required="true" Mask="false">compute,utility,video</Config>
+  <Config Name="Host 網路的網頁 port" Target="PORT" Default="" Mode="" Description="只有 Network Type 是 Host 時才需要：主機上 8765 已被其他程式使用時，填一個沒人用的 port（例如 8766），WebUI 就改用這個 port。bridge 網路請保持空白，改上面 WebUI 欄位的主機 port 即可。" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="RTSP port" Target="RTSP_PORT" Default="" Mode="" Description="主機上 8554 已被其他程式使用時（例如 Frigate、go2rtc），填一個沒人用的 port。Host 網路填這裡就好；bridge 網路要把上面 RTSP 欄位的主機 port 和容器 port 都改成同一個數字。" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="以這個使用者 ID 執行。啟動時會把 /data 與錄影目錄交給它（第一次或改了數字時會整個走一遍，錄影多時要等一下）。清空則以 root 執行。" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="以這個群組 ID 執行。" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="UMASK" Target="UMASK" Default="022" Mode="" Description="新檔案的權限遮罩。002 讓同群組的使用者也能修改、刪除錄影檔。" Type="Variable" Display="advanced" Required="false" Mask="false">022</Config>
+  <TailscaleStateDir/>
+</Container>

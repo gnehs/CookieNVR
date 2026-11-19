@@ -132,7 +132,7 @@ function ptzLines(p: PtzDiagnostics, now: number): string[] {
         : `有 PTZ（${[p.caps.continuous && "持續移動", p.caps.relative && "相對移動"].filter(Boolean).join("、") || "無移動方式"}；${p.caps.zoom ? "有" : "沒有"}變焦；預置點上限 ${p.caps.maxPresets ?? "未回報"}）`;
   const lines = [
     `- ONVIF／PTZ：${p.configured ? caps : "未設定 ONVIF"}`,
-    `- PTZ 偏好：移動模式 ${p.prefs.mode}，預設速度 ${p.prefs.speed}`,
+    `- PTZ 偏好：移動模式 ${p.prefs.mode}，預設速度 ${p.prefs.speed}${p.prefs.invertPan ? "，左右反轉" : ""}${p.prefs.invertTilt ? "，上下反轉" : ""}`,
   ];
   if (p.lastError) lines.push(`- ONVIF 最近的錯誤：${p.lastError.kind}（${iso(p.lastError.at)}，${duration(now - p.lastError.at)}前）`);
   else if (p.configured) lines.push("- ONVIF 最近的錯誤：無");
