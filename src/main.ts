@@ -14,7 +14,7 @@ import { createEventTracker, eventRoutes } from "./events/index.ts";
 import { countEventsSince } from "./events/store.ts";
 import { createExports, exportRoutes } from "./export/index.ts";
 import { hostLabel, instanceLabel, loadInstanceId, startMdns, type MdnsResponder } from "./discovery/index.ts";
-import { readEnv } from "./env.ts";
+import { portInUseMessage, readEnv } from "./env.ts";
 import { defaultRecordingsDir } from "./recordings-dir.ts";
 import { createHomekit } from "./homekit/manager.ts";
 import type { CodecName } from "./hwcodec/commands.ts";
@@ -45,6 +45,7 @@ import { createStreamHub, type StreamClient } from "./stream/hub.ts";
 import type { Camera, CameraConfig, CameraConnection, CameraId, WorkerSpec, WorkerStatus } from "./types.ts";
 import { createMemoryMonitor, type MemoryTarget } from "./workers/memory.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
+import { createFailureLog, REPEAT_MS } from "./workers/failure-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
 
 const TICK_MS = 10_000;
@@ -152,8 +153,20 @@ const homekit = createHomekit({
 
 const metrics = createMetrics({ targets: () => processTargets(), gpuExtras: (gpu) => objects.gpuExtras(gpu), onError: (e) => log("metrics", e) });
 
+/** 轉發設定同步失敗多半是 MediaMTX 還沒起來（或起不來），API 連不上；說成白話，真正的原因由 worker 失敗日誌說明 */
+function logRestream(e: unknown): void {
+  const refused = (e as { code?: string }).code === "ConnectionRefused" || String((e as Error)?.message ?? e).includes("ECONNREFUSED");
+  log("restream", refused ? "連不到影像服務（MediaMTX），它啟動後會自動重試" : e);
+}
+
+// 週期性的工作（例如轉發設定同步）失敗時每幾秒就會重來一次；同樣的訊息隔一段時間才再印，免得蓋掉真正的說明
+const loggedAt = new Map<string, number>();
 function log(scope: string, error: unknown): void {
-  console.error(`[${scope}]`, error instanceof Error ? error.message : error);
+  const message = `[${scope}] ${error instanceof Error ? error.message : String(error)}`;
+  const last = loggedAt.get(message);
+  if (last !== undefined && Date.now() - last < REPEAT_MS) return;
+  loggedAt.set(message, Date.now());
+  console.error(message);
 }
 
 const purgeDeps = { db, storagePath: () => settings.get().storagePath, dataDir: env.dataDir };
@@ -385,12 +398,20 @@ const routes = [
 const web = webApp(join(import.meta.dir, "../dist/web"));
 if (!web.ready) console.warn("[web] 找不到 dist/web：網頁介面要先執行 bun run build（開發時用 bun run dev:web），API 照常運作");
 
-const server = Bun.serve({
-  port: env.port,
-  // 即時串流與 SSE 是長連線；預設 10 秒沒有資料就斷線，比 SSE 的 20 秒 ping 還短
-  idleTimeout: 60,
-  fetch: createRouter(routes, auth, { fallback: web.handle }),
-});
+const server = (() => {
+  try {
+    return Bun.serve({
+      port: env.port,
+      // 即時串流與 SSE 是長連線；預設 10 秒沒有資料就斷線，比 SSE 的 20 秒 ping 還短
+      idleTimeout: 60,
+      fetch: createRouter(routes, auth, { fallback: web.handle }),
+    });
+  } catch (e) {
+    if ((e as { code?: string }).code !== "EADDRINUSE") throw e;
+    console.error(portInUseMessage(env.port, "PORT"));
+    process.exit(1);
+  }
+})();
 
 await supervisor.ready;
 await ensureDayDirs(cameras.list(), settings.get(), Date.now());
@@ -398,7 +419,7 @@ await indexer.reconcile(Date.now());
 detection.sync(cameras.list());
 homekit.sync();
 supervisor.apply(desiredWorkers());
-void restream.sync(cameras.list()).catch((e) => log("restream", e));
+void restream.sync(cameras.list()).catch((e) => logRestream(e));
 // 選了硬體解碼才試跑；跑完 onProbed 重新對帳，detect worker 在那之前先用 CPU
 if (usesHwDecode()) void videoCodecs.probe().catch((e) => log("hwcodec", e));
 
@@ -425,9 +446,17 @@ cameras.subscribe((list) => {
   for (const c of list) sentStatus.set(c.id, JSON.stringify(cameraStatus(c.id)));
   hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
   void reconcileWorkers().catch((e) => log("workers", e));
-  void restream.sync(list).catch((e) => log("restream", e));
+  void restream.sync(list).catch((e) => logRestream(e));
+});
+// 背景服務停下來時印到容器日誌（Unraid 的 Logs 視窗只看得到這裡）；RTSP port 被佔用時直接說改法
+const logWorkerFailure = createFailureLog({
+  print: (line) => console.error(line),
+  redact: (line) => redact(line, cameras.list()),
+  explain: (status, last) =>
+    status.kind === "restream" && last.includes("address already in use") ? portInUseMessage(env.rtspPort, "RTSP_PORT") : null,
 });
 supervisor.subscribe((status) => {
+  logWorkerFailure(status);
   hub.publish((client) => (client.principal.role === "admin" ? { type: "worker", data: publicWorker(status) } : null));
   if (status.kind === "record") publishCameraChanges();
   homekit.workerStatus(status);
@@ -459,7 +488,7 @@ settings.subscribe((s) => {
   const list = cameras.list();
   hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
 });
-const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => log("restream", e));
+const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => logRestream(e));
 
 function runBackup(): void {
   try {

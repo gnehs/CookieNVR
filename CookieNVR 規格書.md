@@ -53,7 +53,8 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 | Volume | `/data` | 資料庫、縮圖、設定。量小但讀寫頻繁，建議放 SSD |
 | Volume | `/recordings` | 錄影。量大，放一般硬碟即可。掛了就自動使用；沒掛時錄影放在 `/data/recordings` |
 | `RECORDINGS_DIR` | 選用 | 明確指定錄影的預設位置，優先於上面的自動判斷 |
-| `PORT` | 選用 | 覆寫網頁 port |
+| `PORT` | 選用 | 覆寫網頁 port；host 網路下主機的 8765 被佔用時用。被佔用時主程序印出改法後結束 |
+| `RTSP_PORT` | 選用 | 覆寫 RTSP 轉發 port；被佔用時狀態頁的影像服務問題會說明是 port 被佔用 |
 | `DISCOVERY` | 選用 | `false` 時不在區域網路上廣播（預設開啟） |
 | `PUBLIC_PORT` | 選用 | mDNS 廣播的網頁埠，預設同 `PORT`；對外看到的埠不同時才需要 |
 | `PUID`／`PGID` | 選用 | 執行身分（Unraid 慣例 `99`／`100`）。都不設或 `PUID=0` 時以 root 執行；只設一個時另一個用同一個數字 |

@@ -36,3 +36,21 @@ export function readEnv(source: Record<string, string | undefined> = process.env
     detectorPython: source.DETECTOR_PYTHON || "python3",
   };
 }
+
+/**
+ * port 被佔用時給使用者看的說明。網頁在 bridge 網路下只要改主機那一側；RTSP 不行，介面顯示的 RTSP 網址
+ * 用的是容器內的埠，所以主機與容器兩側要改成同一個數字。建議的 port 避開鄰近的常見服務（go2rtc 用 8555）。
+ */
+export function portInUseMessage(port: number, variable: "PORT" | "RTSP_PORT"): string {
+  const purpose = variable === "PORT" ? "網頁" : "RTSP 轉發";
+  const example = port + 10;
+  const bridge =
+    variable === "PORT"
+      ? `只要把主機那一側的 port 改掉，容器內維持 ${port}。`
+      : `把 ${variable} 和主機、容器兩側的 port 都改成同一個數字（例如 ${variable}=${example}，對應 ${example}:${example}）。`;
+  return [
+    `[env] ${purpose}要用的 port ${port} 已經被這台主機上的其他程式使用。`,
+    `  容器用 Host 網路時：設定環境變數 ${variable} 換一個沒人用的 port（例如 ${example}）。`,
+    `  容器用 bridge 網路時：${bridge}`,
+  ].join("\n");
+}

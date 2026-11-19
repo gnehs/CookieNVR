@@ -83,6 +83,14 @@ describe("assessHealth", () => {
     expect(h.issues.map((i) => [i.kind, i.cameras.length])).toEqual([["restream", 0], ["diskLow", 0]]);
     expect(h.disk.tone).toBe("bad");
   });
+
+  test("RTSP port 被佔用時說出原因，一般的停止沒有說明", () => {
+    const taken = worker("restream", { state: "backoff", stderrTail: ["ERR: listen tcp :8554: bind: address already in use"] });
+    const h = assessHealth({ ...healthy, workers: [taken], cams: [] });
+    expect(h.issues[0]?.detail).toContain("port");
+    const plain = assessHealth({ ...healthy, workers: [worker("restream", { state: "backoff" })], cams: [] });
+    expect(plain.issues[0]?.detail).toBeUndefined();
+  });
 });
 
 describe("資源吃緊", () => {

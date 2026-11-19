@@ -45,6 +45,13 @@ export function explain(issue: Issue, snap: Snapshot): Explained {
   const names = issue.cameras.map((c) => c.name).join("、");
   switch (issue.kind) {
     case "restream":
+      if (issue.detail)
+        return {
+          who: "影像服務",
+          pill: { label: "port 被佔用", tone: "bad" },
+          next: issue.detail,
+          why: "通常是同一台主機上還跑著其他監視器軟體（例如 Frigate、go2rtc 也用 8554）。容器用 Host 網路時，設定環境變數 RTSP_PORT 換一個沒人用的 port；用 bridge 網路時，把 RTSP_PORT 和主機、容器兩側的 port 改成同一個數字。改完重新啟動容器。",
+        };
       return {
         who: "影像服務",
         pill: { label: "已停止", tone: "bad" },

@@ -50,7 +50,7 @@ export interface Issue {
   title: string;
   /** 首頁提醒用的短句，例如「2 台沒在錄影」 */
   short: string;
-  /** 後端給的一句白話說明（目前只有影像解碼退回處理器），狀態頁直接顯示 */
+  /** 一句白話說明（影像解碼退回處理器、RTSP port 被佔用），狀態頁直接顯示 */
   detail?: string;
 }
 
@@ -86,7 +86,16 @@ export function assessHealth(input: HealthInput): Health {
   const issues: Issue[] = [];
   const restream = worker("restream");
   if (restream && (restream.state === "backoff" || restream.state === "stopped" || restream.unstable)) {
-    issues.push({ kind: "restream", tone: "bad", cameras: [], title: "影像服務沒有正常運作", short: "影像服務停止" });
+    // MediaMTX 綁不到 RTSP port 時重啟也沒用，要讓使用者知道是 port 被佔用
+    const portTaken = restream.stderrTail.some((line) => line.includes("address already in use"));
+    issues.push({
+      kind: "restream",
+      tone: "bad",
+      cameras: [],
+      title: "影像服務沒有正常運作",
+      short: "影像服務停止",
+      ...(portTaken ? { detail: "RTSP 轉發要用的 port 已經被這台主機上的其他程式使用" } : {}),
+    });
   }
   // 物件辨識沒開時 detector worker 不存在；有就代表使用者開了它
   const detector = worker("detector");

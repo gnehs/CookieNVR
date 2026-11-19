@@ -14,6 +14,7 @@ services:
     # 自動發現的相關環境變數（都是選用）：
     #   DISCOVERY=false   不在區域網路上廣播
     #   PUBLIC_PORT=8765  廣播出去的網頁埠；只有對外看到的埠和 PORT 不同時（例如 br0 加埠轉址）才需要
+    # 用 host 網路而主機上 8765 或 8554 已被佔用（例如 Frigate、go2rtc）時，用 PORT、RTSP_PORT 換一個沒人用的埠。
     # 錄影檔名一律是 UTC，不受時區影響；要設時區就在 environment 加 TZ=Asia/Taipei。
     environment:
       # 執行身分（選用）。都不設時以 root 執行。設了之後，啟動時把 /data 與錄影目錄交給這個 uid:gid，
