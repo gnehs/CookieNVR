@@ -20,6 +20,7 @@ import { encodeFrame, FrameKind } from "../src/live/mux.ts";
 import { createLinkService } from "../src/auth/link.ts";
 import { HttpError } from "../src/http/errors.ts";
 import { mockMetrics, setMockMetrics } from "./dev-mock-metrics.ts";
+import { mockDecodeStatus, mockVideoDevices } from "./dev-mock-video.ts";
 import index from "./index.html";
 
 const PORT = Number(process.env.PORT ?? 48765);
@@ -63,6 +64,7 @@ const tokens: { id: number; userId: number; name: string; prefix: string; create
 let nextTokenId = 1;
 const fails = new Map<string, number>();
 
+const decodeCams = () => cams.filter((c) => c.config.enabled).map((c) => ({ id: c.id, name: c.config.name }));
 let settings: Settings = {
   siteName: "CookieNVR",
   storagePath: "/data/recordings",
@@ -70,7 +72,7 @@ let settings: Settings = {
   rtsp: { externalEnabled: true },
   homekit: { enabled: false, basePort: 51826 },
   objects: { enabled: false, model: "builtin", fps: 2 },
-  devices: { objects: "auto" },
+  devices: { objects: "auto", decode: process.env.MOCK_DECODE ?? "cpu" },
 };
 
 const cams: { id: CameraId; position: number; config: CameraConfig }[] = [];
@@ -1095,9 +1097,11 @@ async function route(req: Request, url: URL): Promise<Response> {
       disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: mockFreeBytes },
       usage: [...usage].map(([cameraId, u]) => ({ cameraId: cameraId as CameraId, ...u })),
       logs: Array.from({ length: 60 }, (_, i) => `${new Date(now() - (60 - i) * 5000).toISOString()} INFO tick ${i} worker ok`),
+      decode: mockDecodeStatus(settings.devices.decode, decodeCams()),
     };
     return json(sys);
   }
+  if (path === "/video-devices" && m === "GET") return json(mockVideoDevices(settings.devices.decode, decodeCams()));
   if (path === "/system/metrics" && m === "GET") return json(mockMetrics(
         cams.filter((c) => c.config.enabled).map((c) => c.id),
         Date.now(),
