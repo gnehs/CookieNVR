@@ -499,7 +499,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 
 ### 技術
 
-- React 19 + TanStack Router（檔案式路由，`web/routes/`，各頁自動分割）+ TanStack Query + Base UI，Vite 打包（`bun run build` 輸出 `dist/web`）。前端套件只在 devDependencies，後端仍不用 npm 套件。正式環境由主程序提供 `dist/web` 的靜態檔（帶雜湊的資產永久快取、`index.html` 不快取），其他非 `/api` 路徑都回 `index.html`。開發時 `bun run dev:web`（或搭假後端的 `bun run dev:mock`）由 Vite 把 `/api` 代理給後端。前端慣例見 `web/README.md`。
+- React 19 + TanStack Router（檔案式路由，`web/routes/`，各頁自動分割）+ TanStack Query + Base UI，Vite 打包（`bun run build` 輸出 `dist/web`）。前端套件只在 devDependencies，後端仍不用 npm 套件。正式環境由主程序提供 `dist/web` 的靜態檔（帶雜湊的資產永久快取、`index.html` 不快取），其他非 `/api` 路徑都回 `index.html`。建置時替 1 KB 以上的文字檔預先產生 `.br` 與 `.gz`，主程序依 `Accept-Encoding` 直接送出（帶 `Content-Encoding` 與 `Vary: Accept-Encoding`），不在請求時壓縮；首頁連同首屏用到的檔案從約 755 KiB 降到約 232 KiB（brotli）。登入的使用者（`useMe()`）取自 `_authed` 路由的 context，不直接讀快取，登入失效時外殼不會在離開前讀到空值。開發時 `bun run dev:web`（或搭假後端的 `bun run dev:mock`）由 Vite 把 `/api` 代理給後端。前端慣例見 `web/README.md`。
 - 一般路徑路由（`/cameras`、`/cameras/:id`…）。
 - 共用元件在 `web/ui/`：下拉選單（`Select.tsx`，Base UI Select）、日期選擇（`DatePicker.tsx`，Base UI Popover 裡的月曆，週日開始、依瀏覽器時區）、選單（`Menu.tsx`）、對話框與確認（`Dialog.tsx`）、通知（`toast.tsx`）、設定列（`SettingRow.tsx`）、可收合的表單卡片（`FormCard.tsx`）。外觀沿用同目錄的 CSS；寬度 560px 以下（下拉與日曆另含橫拿的手機）改成從底部滑出的面板。全站不使用原生的 `<select>` 與日期欄位。
 - 即時狀態（動作、上下線、事件）由 `GET /api/stream`（Server-Sent Events）推送，全站只開一條，內容寫進 Query 快取；首頁、狀態提醒與狀態頁都跟著它更新。重連時伺服器重送完整狀態；連續 3 次連不上（或瀏覽器沒有 `EventSource`）就改回每 5 秒輪詢，同時繼續嘗試 SSE。磁碟空間不推送，管理員端每分鐘與重連時重抓。
