@@ -2,6 +2,8 @@
 // 預設有兩個感應器：第一台的「鐵捲門」（關／移動中／開）已訓練、會自己循環切換；第二台的「車庫門」還沒訓練，
 // 有幾張待標記的圖，用來走標記與訓練的流程。圖片與縮圖都是即時畫的 SVG（用不到 ffmpeg）。
 import type { CameraId, CameraConfig } from "../src/types.ts";
+import { HttpError } from "../src/http/errors.ts";
+import { parseClassName, parseFrigateConfig, parseSensorConfig } from "../src/states/config.ts";
 import {
   MAX_PENDING_STATE_IMAGES,
   MIN_STATE_IMAGES_PER_CLASS,
@@ -91,42 +93,20 @@ function rng(seed: number) {
 }
 const between = (rand: () => number, lo: number, hi: number) => lo + rand() * (hi - lo);
 
-// ---------- 設定驗證 ----------
-function classNameError(c: unknown): string | null {
-  if (typeof c !== "string" || c.length < 1 || c.length > 32) return "類別名稱要 1 到 32 個字";
-  if (/[/\\]/.test(c)) return "類別名稱不可以包含 / 或 \\";
-  if (c.startsWith(".")) return "類別名稱不可以用 . 開頭";
-  return null;
-}
-
-function parseCrop(v: unknown): CropBox | null {
-  if (!Array.isArray(v) || v.length !== 4 || !v.every((n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1)) return null;
-  const [x1, y1, x2, y2] = v as number[];
-  return x1! < x2! && y1! < y2! ? [x1!, y1!, x2!, y2!] : null;
-}
-
-function parseConfig(raw: unknown, base: StateSensorConfig | null): Parsed<StateSensorConfig> {
-  if (!isRecord(raw)) return { ok: false, error: "缺少 config" };
-  const name = raw.name;
-  if (typeof name !== "string" || name.trim().length < 1 || name.length > 40) return { ok: false, error: "名稱要 1 到 40 個字" };
-  const classes = raw.classes;
-  if (!Array.isArray(classes) || classes.length < 2 || classes.length > 10) return { ok: false, error: "類別要 2 到 10 個" };
-  for (const c of classes) {
-    const bad = classNameError(c);
-    if (bad) return { ok: false, error: bad };
+// ---------- 設定驗證：和真後端共用同一份解析 ----------
+function attempt<T>(fn: () => T): Parsed<T> {
+  try {
+    return { ok: true, value: fn() };
+  } catch (e) {
+    if (e instanceof HttpError) return { ok: false, error: e.message };
+    throw e;
   }
-  if (new Set(classes).size !== classes.length) return { ok: false, error: "類別名稱不可以重複" };
-  const crop = parseCrop(raw.crop);
-  if (!crop) return { ok: false, error: "區域要是 0 到 1 的 [x1, y1, x2, y2]，而且 x1 < x2、y1 < y2" };
-  const threshold = raw.threshold ?? base?.threshold ?? 0.8;
-  if (typeof threshold !== "number" || !(threshold >= 0.5 && threshold <= 0.99)) return { ok: false, error: "信心門檻要在 0.5 到 0.99 之間" };
-  const intervalSec = raw.intervalSec ?? base?.intervalSec ?? 10;
-  if (typeof intervalSec !== "number" || !Number.isInteger(intervalSec) || intervalSec < 0 || intervalSec > 3600) return { ok: false, error: "辨識間隔要是 0 到 3600 的整數秒" };
-  const onMotion = raw.onMotion ?? base?.onMotion ?? true;
-  const enabled = raw.enabled ?? base?.enabled ?? true;
-  if (typeof onMotion !== "boolean" || typeof enabled !== "boolean") return { ok: false, error: "onMotion 與 enabled 要是布林值" };
-  return { ok: true, value: { name: name.trim(), classes: classes as string[], crop, threshold, intervalSec, onMotion, enabled } };
 }
+const parseConfig = (raw: unknown, base: StateSensorConfig | null) => attempt(() => parseSensorConfig(raw, base ?? undefined));
+const classNameError = (c: unknown) => {
+  const r = attempt(() => parseClassName(c));
+  return r.ok ? null : r.error;
+};
 
 // ---------- 圖片：即時畫的 SVG ----------
 /** look 0 = 捲門放下（關）、1 = 捲起（開）；seed 決定亮度與雜訊，讓每張不太一樣 */
@@ -182,30 +162,7 @@ function buildModel(config: StateSensorConfig, images: Img[], trainMs: number): 
 }
 
 // ---------- Frigate 設定 ----------
-function parseFrigate(yaml: string): Parsed<FrigateConfigResultDto> {
-  let root: unknown;
-  try {
-    root = Bun.YAML.parse(yaml);
-  } catch (e) {
-    return { ok: false, error: `看不懂這段 YAML：${e instanceof Error ? e.message : String(e)}` };
-  }
-  if (!isRecord(root)) return { ok: false, error: "這段 YAML 不是設定檔的格式" };
-  const classification = isRecord(root.classification) ? root.classification : root;
-  const custom = isRecord(classification.custom) ? classification.custom : classification;
-  const sensors: FrigateConfigResultDto["sensors"] = [];
-  for (const [name, entry] of Object.entries(custom)) {
-    if (!isRecord(entry) || !isRecord(entry.state_config)) continue;
-    const sc = entry.state_config;
-    const threshold = typeof entry.threshold === "number" ? Math.min(0.99, Math.max(0.5, entry.threshold)) : 0.8;
-    const cameras = isRecord(sc.cameras) ? sc.cameras : {};
-    for (const [camera, camCfg] of Object.entries(cameras)) {
-      const crop = isRecord(camCfg) ? parseCrop(camCfg.crop) : null;
-      if (!crop) continue;
-      sensors.push({ name, camera, crop, threshold, intervalSec: typeof sc.interval === "number" ? Math.max(0, Math.round(sc.interval)) : 0, onMotion: typeof sc.motion === "boolean" ? sc.motion : true });
-    }
-  }
-  return { ok: true, value: { sensors } };
-}
+const parseFrigate = (yaml: string) => attempt(() => parseFrigateConfig(yaml));
 
 // ---------- 主體 ----------
 export function createMockStates(deps: MockStatesDeps) {
@@ -547,7 +504,7 @@ export function createMockStates(deps: MockStatesDeps) {
 
     if (sub === "" && method === "GET") return json(dto(s));
     if (sub === "" && method === "PUT") {
-      const parsed = parseConfig(isRecord(body) && "config" in body ? body.config : body, s.config);
+      const parsed = parseConfig(isRecord(body) ? body.config : undefined, s.config);
       if (!parsed.ok) return err(400, parsed.error);
       const gone = s.config.classes.filter((c) => !parsed.value.classes.includes(c));
       for (const img of s.images) if (img.label && gone.includes(img.label)) img.label = null;
