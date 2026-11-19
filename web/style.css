@@ -350,8 +350,9 @@ button, a, summary, label { touch-action: manipulation; }
 .state.loading { display: flex; justify-content: center; align-items: center; gap: 10px; flex-direction: row; background: transparent; border: 0; min-height: 200px; font-size: 14px; animation: fade-in var(--dur-2) ease 250ms both; }
 @keyframes fade-in { from { opacity: 0; } }
 .loading { display: flex; align-items: center; gap: 10px; color: var(--muted); padding: 24px 4px; }
-.spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--fill-2); border-top-color: var(--accent); animation: spin 0.7s linear infinite; flex: none; }
-.btn .spin { width: 14px; height: 14px; border-color: color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; }
+.spin { display: inline-block; vertical-align: middle; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--fill-2); border-top-color: var(--accent); animation: spin 0.7s linear infinite; flex: none; }
+/* 只出現在處理中而停用的按鈕上，軌道對停用底色混出實色 */
+.btn .spin { width: 14px; height: 14px; border-color: color-mix(in srgb, currentColor 25%, var(--fill)); border-top-color: currentColor; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- buttons ---------- */
