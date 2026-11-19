@@ -1,5 +1,7 @@
 import type {
   CameraDto,
+  HomekitActionDto,
+  HomekitDto,
   CreatedTokenDto,
   EventDto,
   ExportDto,
@@ -96,6 +98,9 @@ export const api = {
     del(`/cameras/${encodeURIComponent(id)}${deleteRecordings ? "?recordings=delete" : ""}`),
   purgeOrphanedRecordings: () => request<PurgeDto>("DELETE", "/recordings/orphaned"),
   testCamera: (connection: CameraConnection) => post<ProbeResult>("/cameras/test", connection),
+  homekit: (id: string) => get<HomekitDto>(`/cameras/${encodeURIComponent(id)}/homekit`),
+  homekitAction: (id: string, action: HomekitActionDto["action"]) =>
+    post<HomekitDto>(`/cameras/${encodeURIComponent(id)}/homekit`, { action }),
   days: (id: string, tz: string) =>
     get<string[]>(`/cameras/${encodeURIComponent(id)}/days?tz=${encodeURIComponent(tz)}`),
   recordings: (id: string, start: number, end: number) =>
