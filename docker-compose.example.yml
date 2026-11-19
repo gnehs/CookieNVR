@@ -4,7 +4,8 @@ services:
     restart: unless-stopped
     # 主機上的埠要和容器內的埠一樣：App 顯示給使用者的 RTSP 網址用的是容器內的 8554。
     ports: ["8765:8765", "8554:8554"]
-    # 啟用 HKSV 時改用 host 網路（拿掉 ports）：
+    # 使用 Apple 家庭（HKSV）時改用 host 網路（拿掉 ports）：iPhone 靠 mDNS 找到攝影機，
+    # 每台攝影機佔一個 port（預設從 51826 起；主機上已有 Homebridge 時會自動跳過被佔用的 port）。
     # network_mode: host
     # 要設時區就加 environment: ["TZ=Asia/Taipei"]（和下面的 Nvidia 設定合併成同一個清單）。
     # 錄影檔名一律是 UTC，不受時區影響。

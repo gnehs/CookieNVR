@@ -50,7 +50,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 | --- | --- | --- |
 | Port | `8765` | 網頁、API、瀏覽器串流共用 |
 | Port | `8554` | RTSP 轉發，給外部裝置與 HA 接 |
-| Port | `51826` 起 | HKSV：每台攝影機一個 HomeKit 配件 port，需 host 網路或 br0 |
+| Port | `51826` 起 | HKSV：每台攝影機一個 HomeKit 配件 port（起始值可經 API 改），需 host 網路或 br0 |
 | Volume | `/data` | 資料庫、縮圖、預設錄影位置 |
 | 選用 Volume | `/recordings` | 想把錄影放在 array、資料庫放在 cache 時使用，路徑在前端指定 |
 | `PORT` | 選用 | 覆寫網頁 port |
@@ -485,6 +485,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 | 保留天數、最低剩餘空間 | 不重啟，下一次檢查生效 |
 | 物件辨識開關、推論裝置、模型 | 只重啟 detector worker |
 | 單台的物件辨識模式、類別、門檻 | 立即套用，不重啟 |
+| HKSV 總開關、單台的 Apple 家庭開關 | 只啟停 homekit worker 或更新它發布的配件 |
 
 單一例外：網頁 port 與 `/data` 位置屬於容器層級，只能在 Docker 設定。
 
@@ -540,32 +541,51 @@ NVR 本身另有一個裝置：磁碟用量、錄影總量、正常 worker 數�
 - 同網路上有家庭中樞（Apple TV、HomePod 或 iPad）。
 - iCloud 方案含 HKSV。
 - 主碼流為 H.264；H.265 攝影機不能開啟，前端直接灰掉並說明原因。
-- 關鍵幀間隔不超過 4 秒（測試連線時檢查）。
+- 關鍵幀間隔不超過 4 秒；超過時照樣能開，但前端顯示警告（安全錄影的每個 fragment 從關鍵幀開始，最長 4 秒）。
 - 容器用 host 網路或 br0 獨立 IP，讓 mDNS 廣播能被找到。
 
-### 實作
+主碼流的編碼、關鍵幀間隔與有沒有音訊由 homekit 模組自己檢查：用 ffprobe 從轉發層讀主碼流 9 秒（`src/homekit/check.ts`），結果依連線設定存在 `<dataDir>/homekit/<攝影機 ID>/check.json`。第一次打開設定頁時等這個檢查（最多 15 秒），之後直接用存下的結果；連線設定改了才重測。
 
-- 使用 HAP-NodeJS（Homebridge 底層的 HomeKit 配件伺服器）。所有 HomeKit 配件跑在一個獨立的 homekit worker，不影響主程序。
-- 每台攝影機是獨立配件（不包在 bridge 裡），port 從 51826 起遞增。
-- 配對：前端顯示 8 位數配對碼與 QR code；配對資料存在 `/data/homekit/<攝影機 ID>/`。「重設配對」按鈕會清除它。
-- 公開的服務：CameraController（串流＋錄影）、MotionSensor。
+### 開關
+
+- 系統層級：`settings.homekit = { enabled, basePort }`，預設 `{ false, 51826 }`。介面在「設定 → 一般」只放開關；`basePort` 只能經 `PUT /api/settings` 改。
+- 單台：`config.homekit = { enabled }`，舊資料沒有就是關閉。由攝影機設定裡「Apple 家庭」區塊的開關經 `POST /api/cameras/:id/homekit` 立即生效，不必按表單的儲存；表單儲存時帶回目前的值。
+- 兩者都開、攝影機啟用、檢查沒有判定不符合時才發布配件。沒有任何一台要發布時不啟動 homekit worker，主程序本身從不載入 HAP-NodeJS（只有 worker 會 import）、不開控制連線、不廣播 mDNS。
+
+### 架構
+
+- **homekit worker**（`src/homekit/worker.ts`，經 supervisor，kind `homekit`）：用 HAP-NodeJS 0.14 把每台攝影機發布成獨立配件（不包在 bridge 裡），mDNS 用 ciao。公開的服務：CameraController（即時串流 2 路＋安全錄影）、MotionSensor、Microphone（只送不收，沒有雙向語音）。
+- **執行環境：Bun，不加 Node.js。** 實測 HAP-NodeJS 在 Bun 1.4 上只有一個缺口：Bun 的 `node:crypto` 沒有 `chacha20-poly1305`，而 HAP 的配對後加密與 HDS（安全錄影的資料通道）都用它，HAP-NodeJS 載入時就會檢查並中止。worker 在載入 HAP-NodeJS 前先把一份 RFC 8439 的純 TypeScript 實作（Poly1305 用 tweetnacl 的 `lowlevel`）掛進 `node:crypto`（`src/homekit/chacha.ts`，有 RFC 測試向量）。之後配對（SRP、Ed25519、HKDF）、TCP、UDP、ciao 的 multicast 在 Bun 上都正常；實測 1 KiB 的 HAP frame 約 70 MB/s（M 系列 Mac），遠高於一路 HKSV 的 0.5 MB/s。Bun 哪天內建這個 cipher，墊片會自動不安裝。Dockerfile 不用改：`bun install --production` 會裝到 HAP-NodeJS，Debian 的 ffmpeg 有 libopus 與 srtp。
+- **配對資料**：每台一個目錄 `<dataDir>/homekit/<攝影機 ID>/`，裡面是 `identity.json`（主程序產生：device id、8 位數配對碼、setup id、port）與 HAP-NodeJS 的 `AccessoryInfo.*.json` 等檔。HAP-NodeJS 只有一個全行程共用的儲存區，worker 換成一個依 key 中的 device id 分到各台目錄的儲存（`src/homekit/hap-storage.ts`）。worker 或主程序重啟後配對仍有效；刪除攝影機時目錄一起刪。
+- **配對碼與 QR code**：主程序依 HAP 規則產生配對碼（排除 `000-00-000`、`123-45-678` 等）與 setup URI（`X-HM://` 加 9 碼 base36 與 setup id，和 HAP-NodeJS 的 `setupURI()` 同算法，有對照測試）；QR code 在前端用自寫的編碼器（`web/homekit/qr.ts`，byte mode、ECC M）畫成 SVG。「重設配對」：worker 呼叫 `Accessory.destroy()` 刪掉配對，主程序刪掉整個目錄、產生新的 device id 與配對碼，iOS 會把它當成新配件，舊配對失效。
+- **port**：每台一個，從 `basePort` 起取最小沒被其他攝影機用、而且當下綁得起來的 port，記在 `identity.json`；`basePort` 往上調時低於它的會重新分配。
+- **主程序 ↔ worker**：主程序在 `127.0.0.1` 開一個隨機 port 的 TCP 控制連線，worker 帶環境變數裡的 token 連上，雙向傳一行一個 JSON（`src/homekit/protocol.ts`，兩邊都在邊界解析）。主程序送配件設定、動作狀態、快照、重設；worker 每 2 秒（以及有變化時）回報各台狀態與它需要的串流 session，這也是心跳。worker 不拿到任何相機帳密或轉發層網址。
+- **hksv-stream worker**：即時觀看與安全錄影的 ffmpeg 都由主程序依 worker 回報的 session 宣告成 supervisor worker（`hksv-live:<攝影機>:<session>`、`hksv-record:<攝影機>`），命令列由主程序組（`src/homekit/ffmpeg.ts`）。ffmpeg 一律加 `-progress pipe:1`，supervisor 以 15 秒沒有進度判定卡死。即時觀看的 ffmpeg 一直失敗時，主程序通知 worker 結束那個 HomeKit session。
 
 ### 影像來源
 
 | 用途 | 做法 |
 | --- | --- |
-| 家庭 App 即時觀看 | 有人打開時才啟動 ffmpeg：從轉發層讀 main，影像 `-c copy`、音訊轉 Opus，用 SRTP 送出 |
-| 快照 | 用 NVR 記憶體中的最新快照 |
-| HKSV 錄影 | 開啟後常駐一個 ffmpeg：從轉發層讀 main，影像 `-c copy`、音訊轉 AAC-LC，輸出 fMP4；worker 保留最近幾秒的 fragment 當預緩衝 |
+| 家庭 App 即時觀看 | 有人打開時才啟動 hksv-live：從轉發層讀 main，影像 `-c copy`（`dump_extra` 在每個關鍵幀前補 SPS/PPS），音訊轉 Opus（libopus，取樣率與封包時間照 iPhone 要求），各自用 SRTP（AES_CM_128_HMAC_SHA1_80）送到 iPhone；收到 stop 或 30 秒沒收到 iPhone 的 RTCP 就結束 |
+| 快照 | 用 detect worker 的最新快照（`detection.latestJpeg`，640 寬）；尺寸和 HomeKit 要求的不同時，用一個短命的 ffmpeg 從 stdin 縮放並裁成要求的長寬比（5 秒逾時），同一張快照同一尺寸只算一次 |
+| HKSV 錄影 | 家庭 App 開啟錄影且中樞選定錄影設定後，常駐 hksv-record：從轉發層讀 main，影像 `-c copy`、音訊轉 AAC-LC（取樣率、碼率、聲道照中樞選定的設定；中樞關閉錄音時不帶音訊），`-movflags frag_keyframe+empty_moov+default_base_moof` 輸出 fMP4 到 worker 在 127.0.0.1 開的 TCP port。每個 fragment 從關鍵幀開始、長度等於一個 GOP（Tapo 是 2 秒）。worker 保留至少 4 秒的 fragment 當預緩衝（`src/homekit/fragments.ts`） |
+
+攝影機設定裡「錄下聲音」關閉時，HomeKit 也不送聲音。
 
 ### 觸發流程
 
-1. CookieNVR 的事件開始 → MotionSensor 設為有動作。
-2. 家庭中樞決定要錄時開啟錄影串流。worker 送出 init segment、預緩衝內容，再接上即時 fragment。
-3. 事件結束 → MotionSensor 清除；中樞收到後自行結束串流。
+1. CookieNVR 的事件開始 → MotionSensor 設為有動作（只有 start／end 會改變，update 不影響）。
+2. 家庭中樞決定要錄時開啟錄影串流。worker 送出 init segment、預緩衝內容，再接上即時 fragment；一路串流落後超過 16 MB 就切斷。
+3. 事件結束（冷卻時間過後）→ MotionSensor 清除；中樞收到後自行結束串流。
 4. 人、動物、車輛、包裹辨識由 Apple 端完成。
 
 家庭 App 裡的「串流／錄影」開關只控制 HomeKit 端，不影響 CookieNVR 自己的 24 小時錄影。雙向語音第一版不做。
+
+### 驗證程度
+
+- 用軟體 HomeKit 用戶端（Python `aiohomekit`）加真的主程序、假相機實測過：mDNS 廣播、用配對碼配對、配件資訊與服務清單、事件帶動 MotionSensor、各尺寸快照、worker 被 SIGKILL 與主程序重啟後配對仍有效、重設配對後舊配對被拒（`IncorrectPairingIdError`）、關閉後送出 mDNS goodbye；即時觀看協商到 iPhone 端該收到的 SRTP 封包（payload type、SSRC 正確），結束後 ffmpeg 停止；開啟錄影設定後 hksv-record 啟動、預緩衝累積到 4 秒。
+- 只有 ffprobe 與單元測試：錄影 fMP4 的結構（每個 fragment 從關鍵幀開始、約 2 秒、H.264＋AAC-LC 16 kHz）。
+- 沒有 Apple 裝置無法驗證：HDS 資料通道與實際送出錄影給家庭中樞、中樞是否接受 2560×1440 原樣轉送的影像（我們宣告的最大解析度是 1920×1080、level 4.0）、iPhone 是否能解 SRTP 並播出、Opus 音訊、`RecordingAudioActive`（需要 timed write，軟體用戶端不支援）。
 
 參考：[HomeKit Secure Video Open Source Compatibility Guide](https://developer.apple.com/download/files/HomeKit-Secure-Video-Open-Source-Compatibility-Guide.pdf)、[HAP-NodeJS CameraRecordingDelegate](https://developers.homebridge.io/HAP-NodeJS/interfaces/CameraRecordingDelegate.html)、[go2rtc 的 HomeKit 實作](https://github.com/AlexxIT/go2rtc/tree/master/internal/homekit)
 
@@ -652,7 +672,7 @@ cookienvr-ha/
 | GET | `/api/system` | worker 狀態、磁碟、各攝影機用量與最早錄影時間、日誌 | 管理員 |
 | GET | `/api/system/diagnostics?camera=` | 診斷資訊純文字（`text/plain`）：版本、執行環境、各 worker 狀態與重啟紀錄、輸出尾端、攝影機類型與最近一次測試的碼流資訊、上線與錄影狀態、磁碟、設定。開頭說明用途，方便貼給 AI；所有密碼、相機帳號、網址帳密、API Token 與 session 一律遮蔽。帶 `camera` 時只含該台與共用的轉發程序 | 管理員 |
 | POST | `/api/system/workers/:id/restart` | 手動重啟某個 worker | 管理員 |
-| GET / POST | `/api/cameras/:id/homekit` | 配對碼、配對狀態／重設配對 | 管理員 |
+| GET / POST | `/api/cameras/:id/homekit` | `HomekitDto`：總開關、這台開關、主碼流檢查、配對碼與 setup URI、是否已配對、發布狀態／`{action: "enable" \| "disable" \| "reset"}`（主碼流不是 H.264 或讀不到時 enable 回 409） | 管理員 |
 
 內部端點 `/internal/rtsp-auth` 只接受 127.0.0.1，供 MediaMTX 驗證 RTSP 連線。
 
@@ -692,8 +712,8 @@ SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:
 | detect | 每台 1 | ffmpeg 解碼＋ Bun 偵測程序 | 384 MB | 15 秒沒有新 frame |
 | detector | 0–1 | 物件辨識推論（開啟才跑，所有攝影機共用） | 2 GB | 心跳 10 秒無回應 |
 | live | 每台每畫質 0–1 | ffmpeg fMP4 封裝（有人看才跑） | 128 MB | 15 秒沒有新 fragment |
-| homekit | 0–1 | HAP-NodeJS（開啟 HKSV 才跑） | 256 MB | 心跳 10 秒無回應 |
-| hksv-stream | 每台 0–2 | 家庭 App 觀看與 HKSV 錄影用的 ffmpeg | 256 MB | 15 秒無輸出 |
+| homekit | 0–1 | HAP-NodeJS（開啟 HKSV 才跑；實測常駐約 80 MB） | 256 MB | 心跳 10 秒無回應 |
+| hksv-stream | 每台 0–3 | 家庭 App 觀看（最多 2 路）與 HKSV 錄影（1 路）用的 ffmpeg | 256 MB | 15 秒無進度輸出 |
 | export | 0–1 | ffmpeg concat 匯出 | 256 MB | 10 分鐘未完成 |
 
 上限是每類 worker 的固定值，第一版不提供調整；實測不合適就改預設值。detector 的上限只算主記憶體，不含顯示卡記憶體。
