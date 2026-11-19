@@ -1,4 +1,6 @@
 // 容器端到端驗證：建置映像、啟動 NVR 容器與假相機容器，經 HTTP API 走完整條流程。
+// 前半以 root 執行；從「以新容器重啟」起改設 PUID=99、PGID=100、UMASK=002（Unraid 的升級情境），
+// 確認擁有者被修正、第二次啟動不再整個走一遍、主程序與子程序都以 99:100 執行。
 // 最後開啟物件辨識（CPU），在容器內跑 detector-selftest，並確認街景假相機的事件標上 person。
 // 用法：bun scripts/docker-e2e.ts
 // 環境變數：E2E_IMAGE（預設 cookienvr:e2e）、E2E_SKIP_BUILD=1、E2E_WEB_PORT（38704）、E2E_RTSP_PORT（38504）、
@@ -175,14 +177,54 @@ async function removeResources(): Promise<void> {
   await exec(["docker", "network", "rm", NET]);
 }
 
-async function startNvr(): Promise<void> {
+const PUID = 99;
+const PGID = 100;
+const CHOWN_LOG = `擁有者改成 ${PUID}:${PGID}`;
+
+async function startNvr(asPuid = false): Promise<void> {
   await docker([
     "run", "-d", "--name", NVR, "--network", NET,
     "-p", `${WEB_PORT}:8765`, "-p", `${RTSP_PORT}:8554`,
     "-v", `${VOLUME}:/data`,
     "-e", `TZ=${TZ}`,
+    ...(asPuid ? ["-e", `PUID=${PUID}`, "-e", `PGID=${PGID}`, "-e", "UMASK=002"] : []),
     IMAGE,
   ]);
+}
+
+/**
+ * 容器內每個程序的 [cmdline, uid:gid]。略過 pid 1 的 tini（它以 root 啟動 entrypoint），
+ * 以及 docker exec 與 HEALTHCHECK 以 root 跑的程序（包括這支 sh 自己）。
+ */
+async function processIds(): Promise<[cmd: string, id: string][]> {
+  const out = await sh(`for d in /proc/[0-9]*; do [ "\${d#/proc/}" = 1 ] && continue; c=$(tr '\\0' ' ' < $d/cmdline 2>/dev/null) || continue; [ -z "$c" ] || echo "$(awk '/^Uid:/{u=$2} /^Gid:/{g=$2} END{print u":"g}' $d/status) $c"; done`);
+  return out
+    .split("\n")
+    .filter(Boolean)
+    .map((line): [string, string] => [line.slice(line.indexOf(" ") + 1), line.slice(0, line.indexOf(" "))])
+    .filter(([cmd]) => !/^(sh -c for d in|bun -e const r = await fetch)/.test(cmd));
+}
+
+async function expectRunningAsPuid(): Promise<void> {
+  const procs = await processIds();
+  const want = `${PUID}:${PGID}`;
+  for (const name of ["bun run src/main.ts", "mediamtx", "ffmpeg"]) {
+    check(procs.some(([c]) => c.startsWith(name)), `找不到 ${name} 程序：${procs.map(([c]) => c.slice(0, 60)).join(" | ")}`);
+  }
+  const wrong = procs.filter(([, id]) => id !== want);
+  check(wrong.length === 0, `有程序不是以 ${want} 執行：${JSON.stringify(wrong.map(([c, id]) => [c.slice(0, 80), id]))}`);
+}
+
+async function stopNvrCleanly(): Promise<void> {
+  const t0 = Date.now();
+  await docker(["stop", "-t", "10", NVR]);
+  const sec = (Date.now() - t0) / 1000;
+  const state = (await docker(["inspect", "-f", "{{.State.ExitCode}} {{.State.OOMKilled}}", NVR])).text.trim();
+  log(`docker stop 花了 ${sec.toFixed(1)} 秒，ExitCode/OOMKilled = ${state}`);
+  check(sec < 10, `docker stop 花了 ${sec.toFixed(1)} 秒，超過 10 秒`);
+  check(state === "0 false", `退出狀態不是乾淨結束（ExitCode/OOMKilled = ${state}），可能被 SIGKILL`);
+  const out = await nvrLogs(200);
+  check(!/Traceback|Unhandled|panic|uncaught/i.test(out), `停止期間日誌有例外：\n${out.slice(-600)}`);
 }
 
 /** 假相機跑在 NVR 映像裡：放在 /app/scripts/，場景素材才會對到映像內的 /app/detector/assets/。 */
@@ -500,24 +542,17 @@ const steps: Step[] = [
   [
     "docker stop 在 10 秒內乾淨結束",
     async () => {
-      const t0 = Date.now();
-      await docker(["stop", "-t", "10", NVR]);
-      const sec = (Date.now() - t0) / 1000;
-      const state = (await docker(["inspect", "-f", "{{.State.ExitCode}} {{.State.OOMKilled}}", NVR])).text.trim();
-      log(`docker stop 花了 ${sec.toFixed(1)} 秒，ExitCode/OOMKilled = ${state}`);
-      check(sec < 10, `docker stop 花了 ${sec.toFixed(1)} 秒，超過 10 秒`);
-      check(state === "0 false", `退出狀態不是乾淨結束（ExitCode/OOMKilled = ${state}），可能被 SIGKILL`);
-      const out = await nvrLogs(200);
-      check(!/Traceback|Unhandled|panic|uncaught/i.test(out), `停止期間日誌有例外：\n${out.slice(-600)}`);
+      check((await sh("stat -c %u:%g /data/cookienvr.db")) === "0:0", "沒設 PUID 時應以 root 執行，資料庫應歸 root");
+      await stopNvrCleanly();
     },
   ],
   [
-    "同一個 volume 以新容器重啟：資料還在並繼續錄影",
+    `同一個 volume 以新容器重啟並改設 PUID=${PUID}、PGID=${PGID}：擁有者被修正、資料還在並繼續錄影`,
     async (ctx) => {
       await docker(["rm", NVR]);
       cookie = "";
       const beforeCounts = new Map<string, number>();
-      await startNvr();
+      await startNvr(true);
       await until("HTTP /api/info", 60_000, async () => (await fetch(`${BASE}/api/info`)).ok);
       check(!(await apiJson<{ needsSetup: boolean }>("/api/info")).needsSetup, "重啟後不該回到初始設定");
       const login = await api("/api/auth/login", { json: { username: USER, password: PASS } });
@@ -538,6 +573,10 @@ const steps: Step[] = [
       await expectGrowingSegments(ctx, restartedAt, beforeCounts);
       const days = await apiJson<string[]>(`/api/cameras/${ctx.cameras[0]!.id}/days`);
       check(days.length >= 1, "days 清單是空的");
+      check((await nvrLogs(400)).includes(CHOWN_LOG), "root 產生過的資料改以 PUID 啟動時，應該印出修正擁有者的日誌");
+      const notOwned = await sh(`find /data \\( ! -user ${PUID} -o ! -group ${PGID} \\) | head -5`);
+      check(notOwned === "", `/data 底下還有不歸 ${PUID}:${PGID} 的檔案：${notOwned}`);
+      await expectRunningAsPuid();
     },
   ],
   [
@@ -546,7 +585,7 @@ const steps: Step[] = [
       await docker(["kill", NVR]);
       await docker(["rm", NVR]);
       cookie = "";
-      await startNvr();
+      await startNvr(true);
       await until("HTTP /api/info", 60_000, async () => (await fetch(`${BASE}/api/info`)).ok);
       const login = await api("/api/auth/login", { json: { username: USER, password: PASS } });
       check(login.ok, `被殺掉後重啟，原帳密登入失敗（${login.status}）`);
@@ -561,6 +600,12 @@ const steps: Step[] = [
       }
       const ws = await workers();
       check(ws.filter((w) => w.state === "running" || w.state === "starting").length === expectedWorkers(ctx).length, `worker 狀態不對：${JSON.stringify(ws.map((w) => [w.id, w.state]))}`);
+      check(!(await nvrLogs(400)).includes(CHOWN_LOG), "擁有者已經正確時，第二次啟動不該再整個走一遍");
+      // 新片段由降權後的 ffmpeg 建立：歸 99:100，UMASK=002 讓群組可寫
+      const c = ctx.cameras[0]!;
+      const newest = await sh(`ls -t /data/recordings/${c.id}/*/*.mp4 | head -1`);
+      const stat = await sh(`stat -c '%u:%g %A' ${newest}`);
+      check(stat === `${PUID}:${PGID} -rw-rw-r--`, `新片段 ${newest} 的擁有者或權限不對：${stat}`);
     },
   ],  [
     "容器內物件辨識自我檢查（detector-selftest）",
@@ -597,6 +642,14 @@ const steps: Step[] = [
       }, 2000);
       const { status } = await apiJson<{ status: { latencyMs: { avg: number } | null; processed: number } }>("/api/objects");
       log(`事件 labels=${event.labels.join(",")}；已推論 ${status.processed} 張，平均 ${status.latencyMs?.avg ?? "?"} ms`);
+      check((await processIds()).some(([c, id]) => c.includes("detector/main.py") && id === `${PUID}:${PGID}`), `detector 不是以 ${PUID}:${PGID} 執行`);
+    },
+  ],
+  [
+    `以 PUID=${PUID} 執行時 docker stop 一樣在 10 秒內乾淨結束`,
+    async () => {
+      await expectRunningAsPuid();
+      await stopNvrCleanly();
     },
   ],
 ];
