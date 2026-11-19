@@ -5,7 +5,9 @@ import { cameraStatus } from "../health.ts";
 import { liveFrame } from "../live/frame.ts";
 import { playSingle, type Quality } from "../live/transport.ts";
 import { liveSupported } from "../live/video.ts";
+import { mountPtz } from "../ptz/panel.ts";
 import type { PageCtx } from "../router.ts";
+import { state } from "../state.ts";
 import { onStatus } from "../status-stream.ts";
 
 const QUALITY_KEY = "cookienvr.liveQuality";
@@ -56,6 +58,7 @@ export async function cameraPage(ctx: PageCtx, id: string): Promise<Node> {
   });
 
   const root = h("div", { class: "live-page" });
+  const body = h("div", { class: "live-body" }, frame.el);
   const paint = (c: CameraDto) => {
     const wasEnabled = current.config.enabled;
     current = c;
@@ -88,8 +91,9 @@ export async function cameraPage(ctx: PageCtx, id: string): Promise<Node> {
       h("div", { class: "live-title" }, title, pill),
       h("div", { class: "page-actions" }, qualityPick, playback),
     ),
-    frame.el,
+    body,
   );
+  mountPtz(body, ctx, cam, state.me?.role === "admin");
   if (!liveSupported()) root.append(h("p", { class: "live-fallback-note below" }, icon("info", 16), "這個瀏覽器不支援即時影像，畫面每 3 秒更新一次。"));
   return root;
 }

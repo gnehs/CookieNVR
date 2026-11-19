@@ -359,16 +359,28 @@ function onvifProbeOf(conn: any): OnvifProbeDto {
   if (host.includes("noptz")) return { state: "available", ptz: false, zoom: false, maxPresets: null };
   return { state: "available", ptz: true, zoom: true, maxPresets: 8 };
 }
+// 開發用開關：MOCK_PTZ_DOWN=1 啟動，或 POST /api/mock/ptz?down=1&fail=1&delay=300 即時切換。
+// down：GET 能力回 503（連不上）；fail：move 回 502；delay：每個 PTZ 請求多等幾毫秒
+const ptzFault = { down: process.env.MOCK_PTZ_DOWN === "1", fail: false, delay: 0 };
 const ptzRoute = (path: string) => path.match(/^\/cameras\/([^/]+)\/ptz(\/presets)?$/);
 async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): Promise<Response | null> {
+  if (path === "/mock/ptz" && req.method === "POST") {
+    const q = new URL(req.url).searchParams;
+    if (q.has("down")) ptzFault.down = q.get("down") === "1";
+    if (q.has("fail")) ptzFault.fail = q.get("fail") === "1";
+    if (q.has("delay")) ptzFault.delay = Number(q.get("delay")) || 0;
+    return json(ptzFault);
+  }
   const mm = ptzRoute(path);
   if (!mm) return null;
   const m = req.method;
   const c = cams.find((x) => x.id === mm[1]);
   if (!c) return err(404, "找不到攝影機");
   const found = mockPtzOf(c);
+  if (ptzFault.delay) await Bun.sleep(ptzFault.delay);
   if (!mm[2]) {
     if (m === "GET") {
+      if (ptzFault.down && found.kind === "ok") return err(503, "連不上相機的控制連線，請確認相機已開機，且與本機在同一個網路");
       if (found.kind !== "ok") return json({ supported: false, reason: found.kind } satisfies PtzDto);
       const { continuous, relative, zoom, maxPresets, presets } = found.ptz;
       return json({ supported: true, continuous, relative, zoom, maxPresets, presets, prefs: { mode: c.config.ptz?.mode ?? "auto", speed: c.config.ptz?.speed ?? 0.5 } } satisfies PtzDto);
@@ -378,6 +390,7 @@ async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): 
     if (found.kind === "no-onvif") return err(409, "這台相機沒有設定 ONVIF，無法控制鏡頭");
     if (found.kind === "no-ptz") return err(409, "這台相機沒有鏡頭控制功能");
     if (b.action === "stop") return noContent();
+    if (ptzFault.fail && b.action === "move") return err(502, "相機拒絕了這個指令，請稍後再試");
     if (b.action === "preset") return found.ptz.presets.some((p) => p.token === b.token) ? noContent() : err(502, "相機拒絕了這個指令，請稍後再試");
     if (b.action !== "move") return err(400, "欄位 action 必須是 move 或 stop 或 preset");
     if (Number(b.zoom ?? 0) !== 0 && !found.ptz.zoom) return err(409, "這台相機沒有變焦功能");

@@ -4,6 +4,7 @@ import { api } from "../api.ts";
 import { badge, copyButton, emptyState, errMsg, field, formatBytes, h, icon, menuButton, openDialog, PageError, panel, panelSection, switchInput, switchRow, tiles, toast } from "../dom.ts";
 import { explainProbe, maskedField, type ProbeField } from "../camera-form-logic.ts";
 import { cameraStatus } from "../health.ts";
+import { ptzPrefsField, ptzSupportNote } from "../ptz/prefs-field.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 import { settingsLayout, settingsSubpage } from "./settings-shell.ts";
@@ -368,6 +369,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
         ),
       )
     : null;
+  const ptzPrefs = ptzPrefsField(existing);
   const advanced = h(
     "details",
     { class: "disclosure" },
@@ -376,6 +378,7 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
       "div",
       { class: "disclosure-body" },
       rtspAdvanced,
+      ptzPrefs.el,
       h("div", { class: "switch-list" }, check("recDirect", "錄影直接連到相機", "影像服務出問題時錄影不受影響，但會多佔用相機一條連線。")),
       shareUrls,
     ),
@@ -485,6 +488,8 @@ export async function cameraFormPage(ctx: PageCtx, id: string | null, mode: Came
       connection: r.conn,
       record: { enabled: s.recEnabled, audio: s.recAudio, direct: s.recDirect },
     };
+    const ptz = ptzPrefs.value();
+    if (ptz) config.ptz = ptz;
     const testing = needsTest();
     saveBtn.setAttribute("aria-busy", "true");
     saveBtn.disabled = true;
@@ -558,6 +563,7 @@ function successView(cam: CameraDto, probe: Extract<ProbeResult, { ok: true }>, 
         { class: "success-body" },
         h("h1", null, created ? `已加入「${c.name}」` : `已儲存「${c.name}」`),
         h("p", { class: "success-lead" }, icon("check-circle", 18), recording ? "已開始錄影" : "連線成功"),
+        ptzSupportNote(probe.onvif),
         h(
           "details",
           { class: "spec-details" },
