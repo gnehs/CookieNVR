@@ -101,7 +101,6 @@ button, a, summary, label { touch-action: manipulation; }
 .icon { display: inline-flex; flex: none; }
 .icon svg { display: block; }
 .muted { color: var(--muted); }
-.mono { font-family: var(--mono); font-size: 0.9em; }
 
 /* ---------- shell ---------- */
 .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100dvh; }
@@ -223,15 +222,6 @@ button, a, summary, label { touch-action: manipulation; }
   display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
   padding: 10px 8px 6px 12px;
 }
-/* 表單的動作列黏在視窗底部，長表單也隨時按得到儲存 */
-.panel.sticky-foot > .panel-foot {
-  position: sticky; bottom: 0; z-index: 4; margin: 0 -5px -5px; padding: 10px 13px 11px 17px;
-  background: var(--frame); border-radius: 0 0 var(--r-xl) var(--r-xl);
-  box-shadow: 0 -10px 20px -16px light-dark(rgb(20 20 30 / 0.25), rgb(0 0 0 / 0.8));
-}
-@media (max-width: 760px) {
-  .panel.sticky-foot > .panel-foot { position: static; box-shadow: none; }
-}
 .panel-foot .hint { margin-right: auto; }
 .panel-foot .form-error { margin-right: auto; }
 .back-btn {
@@ -245,7 +235,6 @@ button, a, summary, label { touch-action: manipulation; }
   .form-page .panel { background: transparent; border: 0; box-shadow: none; padding: 0; }
   .form-page .panel-head { padding: 0 4px 8px; min-height: 0; }
   .form-page .panel-foot { padding: 12px 0 0; }
-  .form-page .panel.sticky-foot > .panel-foot { margin: 0; padding: 12px 0 0; background: transparent; }
 }
 
 /* ---------- 攝影機首頁：畫面＋名稱 ---------- */
@@ -296,7 +285,6 @@ button, a, summary, label { touch-action: manipulation; }
 .cam-name { padding: 9px 8px 11px; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- 膠囊 ---------- */
-.badges { display: flex; gap: 6px; flex-wrap: wrap; }
 .badge {
   display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; flex: none;
   font-size: 12px; font-weight: 600; background: var(--fill); color: var(--text-2); white-space: nowrap; line-height: 1.5;
@@ -400,7 +388,6 @@ button, a, summary, label { touch-action: manipulation; }
 .field { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .field > label, .legend { font-weight: 600; font-size: 14px; color: var(--text); }
 .hint { color: var(--muted); font-size: 13px; }
-.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: start; }
 .narrow { max-width: 520px; }
 input[type="text"], input[type="password"], input[type="number"], input[type="url"], textarea {
   width: 100%; min-height: 40px; padding: 8px 12px; border-radius: 11px; border: 1px solid var(--field-border);
@@ -437,11 +424,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; min-width: 0; }
 .switch-row b { display: block; font-weight: 600; font-size: 14.5px; }
 .switch-row small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
-.switch-list { display: grid; }
-.switch-list > .switch-row { padding: 14px 0; }
-.switch-list > .switch-row + .switch-row { border-top: 1px solid var(--border); }
-.switch-list > .switch-row:first-child { padding-top: 0; }
-.switch-list > .switch-row:last-child { padding-bottom: 0; }
 
 /* 選項磚：原生 radio，視覺藏起但保留鍵盤與語意 */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
@@ -511,7 +493,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .row-text small { display: block; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .row-ico { width: 36px; height: 36px; border-radius: 11px; flex: none; display: grid; place-items: center; background: var(--fill); color: var(--text-2); }
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.user-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .truncate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-text .truncate { overflow-wrap: normal; }
 .row-link { color: inherit; text-decoration: none; border-radius: 12px; }
@@ -591,7 +572,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .disk-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .disk-big b { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .disk-nums { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); flex-wrap: wrap; gap: 4px 12px; }
-.disk-nums .mono { overflow-wrap: anywhere; }
 
 /* probe */
 .probe { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
@@ -745,7 +725,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 @media (max-width: 760px) {
   /* 標題留給螢幕閱讀器；攝影機、日期、播放器在同一個黏在頂端的容器裡，中間沒有縫 */
   .pb-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }
-  .main:has(> .pb) { padding-top: 0; }
+  .main:has(> .page-enter > .pb) { padding-top: 0; }
   .pb-player > .pb-toolbar { flex-wrap: nowrap; gap: 6px; padding: calc(4px + env(safe-area-inset-top)) 0 8px; }
   .pb-toolbar > .sel { flex: 1 1 0; max-width: none; }
   .pb-toolbar .sel-trigger { flex: 1; }
@@ -769,7 +749,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 
 /* 手機橫拿：畫面高度只有 375 左右，播放器連同控制列要能完整放進一個畫面 */
 @media (max-height: 520px) and (min-width: 761px) {
-  .main:has(> .pb) { padding-top: 10px; padding-bottom: 24px; }
+  .main:has(> .page-enter > .pb) { padding-top: 10px; padding-bottom: 24px; }
   .pb-head { margin-bottom: 8px; }
   .pb-head h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .pb-toolbar { flex-wrap: nowrap; }
@@ -930,7 +910,6 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
 .status-row + .status-row { border-top: 1px solid var(--border); }
 .status-row b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .status-row small { display: block; color: var(--muted); font-size: 13px; }
-.status-row .badges { justify-content: flex-end; }
 .status-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; color: var(--muted); font-size: 13px; padding: 2px 4px; }
 @media (max-width: 560px) {
   .health-head { padding: 16px; }
@@ -1109,5 +1088,5 @@ a.menu-item { text-decoration: none; }
 @media (pointer: coarse), (max-width: 760px) {
   .ptz-speed input[type="range"] { min-height: 44px; }
   .ptz-preset-go { min-height: 44px; }
-  .ptz-sub .btn.small, .ptz-add .btn.small, .ptz-note .btn.small { min-height: 36px; }
+  .ptz-sub .btn.small, .ptz-note .btn.small { min-height: 36px; }
 }

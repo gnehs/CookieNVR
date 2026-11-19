@@ -17,7 +17,6 @@ import { toast } from "../../ui/toast.tsx";
 import { dayLabel, dayRange, todayKey } from "./day.ts";
 import { ExportButton, ExportJobs, ExportPick, useExport } from "./export.tsx";
 import { dayEventsQuery, daysQuery, recordingsQuery, sortSegs } from "./queries.ts";
-import "./recordings.css";
 
 const route = getRouteApi("/_authed/_shell/recordings");
 
