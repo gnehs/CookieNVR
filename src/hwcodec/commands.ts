@@ -92,6 +92,8 @@ export interface HwFailure {
 /** 依 ffmpeg 的錯誤訊息猜最可能的原因；猜不到就說哪一步失敗。順序是先環境（裝置、驅動）再能力 */
 const RULES: { api?: HwApi["type"]; test: RegExp; reason: (api: HwApi, what: string) => string }[] = [
   { api: "vaapi", test: /No such file or directory|Device creation failed: -2\b/i, reason: (a) => `容器裡沒有這張顯示卡的裝置（${a.type === "vaapi" ? a.node : ""}），請在容器設定掛入 /dev/dri` },
+  // libva 只說開不了，不說是沒有節點還是沒權限；沒有節點的情況在列裝置時就擋掉了，所以多半是權限
+  { api: "vaapi", test: /No VA display found/i, reason: (a) => `無法開啟顯示卡（${a.type === "vaapi" ? a.node : ""}）：確認容器掛入了 /dev/dri，而且加入了主機的 render 群組` },
   { api: "vaapi", test: /Permission denied|Device creation failed: -13\b/i, reason: (a) => `沒有權限使用顯示卡（${a.type === "vaapi" ? a.node : ""}），請把容器加入主機的 render 群組` },
   { api: "vaapi", test: /va_openDriver\(\) returns|vaInitialize failed|Failed to initiali[sz]e VAAPI|libva: .*(not found|init failed)/i, reason: () => "找不到 Intel 的影像驅動程式（VAAPI），映像可能缺少 intel-media-va-driver" },
   { api: "cuda", test: /Cannot load libnvcuvid|Cannot load libnvidia-encode|nvcuvid|NvEncodeAPI|OpenEncodeSessionEx failed: unsupported device/i, reason: () => "容器沒有載入 Nvidia 的影像編解碼元件，容器設定的 NVIDIA_DRIVER_CAPABILITIES 需要包含 video" },

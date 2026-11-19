@@ -67,6 +67,9 @@ test("失敗原因：先認環境問題（裝置、權限、驅動元件），�
   const what = "H.265 硬體解碼";
   expect(explainHwFailure(VAAPI, what, "Failed to open the DRM device /dev/dri/renderD128: No such file or directory").reason).toContain("掛入 /dev/dri");
   expect(explainHwFailure(VAAPI, what, "/dev/dri/renderD128: Permission denied").reason).toContain("render 群組");
+  // Debian ffmpeg 7.1.5 在沒有 GPU 的容器裡實際印出的訊息
+  expect(explainHwFailure(VAAPI, what, "[AVHWDeviceContext @ 0x5] No VA display found for device /dev/dri/renderD128.\nDevice creation failed: -22.").reason).toContain("無法開啟顯示卡（/dev/dri/renderD128）");
+  expect(explainHwFailure(CUDA, what, "[AVHWDeviceContext @ 0x5] Cannot load libcuda.so.1\n[AVHWDeviceContext @ 0x5] Could not dynamically load CUDA\nDevice creation failed: -1.").reason).toContain("NVIDIA Container Toolkit");
   expect(explainHwFailure(VAAPI, what, "libva info: va_openDriver() returns -1\nFailed to initialise VAAPI connection: -1 (unknown libva error).").reason).toContain("intel-media-va-driver");
   expect(explainHwFailure(CUDA, what, "Cannot load libnvcuvid.so.1").reason).toContain("NVIDIA_DRIVER_CAPABILITIES");
   expect(explainHwFailure(CUDA, what, "Cannot load libcuda.so.1\nDevice creation failed: -1.").reason).toContain("NVIDIA Container Toolkit");
