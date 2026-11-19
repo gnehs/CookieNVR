@@ -1,6 +1,8 @@
 import type { ProbeResult, StreamInfo, SystemDto } from "./api-types.ts";
 import type { DetectDiagnostics } from "./detect/manager.ts";
 import type { HomekitCameraDiagnostics, HomekitDiagnostics } from "./homekit/manager.ts";
+import { metricsReport } from "./metrics/report.ts";
+import type { MetricsDiagnostics } from "./metrics/sampler.ts";
 import type { PtzDiagnostics } from "./ptz/hub.ts";
 import type { Camera, CameraConnection, Settings, WorkerStatus } from "./types.ts";
 import type { RestartRecord } from "./workers/restart-log.ts";
@@ -32,6 +34,8 @@ export interface DiagnosticsInput {
   disk: SystemDto["disk"];
   usage: SystemDto["usage"];
   homekit?: Pick<HomekitDiagnostics, "systemEnabled" | "workerConnected" | "lastHeartbeatAt">;
+  /** CPU、記憶體、GPU 與各程序的用量；沒有提供時報告不列這一節 */
+  metrics?: MetricsDiagnostics;
 }
 
 const MASK = "***";
@@ -285,6 +289,7 @@ export function buildDiagnostics(input: DiagnosticsInput): string {
     `- 磁碟：共 ${bytes(input.disk.totalBytes)}，已用 ${bytes(used)}，可用 ${bytes(input.disk.freeBytes)}`,
     `- 錄影合計：${bytes(input.usage.reduce((a, u) => a + u.bytes, 0))}`,
     "",
+    ...(input.metrics ? metricsReport(input.metrics) : []),
     "## 設定",
     `- 站點名稱：${s.siteName}`,
     `- 儲存路徑：${s.storagePath}`,

@@ -20,6 +20,8 @@ import { defaultRecordingsDir } from "./recordings-dir.ts";
 import { createHomekit } from "./homekit/manager.ts";
 import { coreRoutes, createRouter, HttpError, linkRoutes, redactConfig } from "./http/index.ts";
 import { createLive } from "./live/live.ts";
+import { metricsRoutes } from "./metrics/routes.ts";
+import { createMetrics } from "./metrics/sampler.ts";
 import {
   createIndexer,
   createRetention,
@@ -36,7 +38,7 @@ import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore } from "./stores/index.ts";
 import { createStreamHub, type StreamClient } from "./stream/hub.ts";
 import type { Camera, CameraConnection, CameraId, WorkerSpec } from "./types.ts";
-import { createMemoryMonitor } from "./workers/memory.ts";
+import { createMemoryMonitor, type MemoryTarget } from "./workers/memory.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
 
@@ -116,6 +118,8 @@ const homekit = createHomekit({
   onChange: () => void reconcileWorkers().catch((e) => log("workers", e)),
   onError: log,
 });
+
+const metrics = createMetrics({ targets: () => processTargets(), onError: (e) => log("metrics", e) });
 
 function log(scope: string, error: unknown): void {
   console.error(`[${scope}]`, error instanceof Error ? error.message : error);
@@ -284,6 +288,7 @@ async function diagnostics(only: string | null): Promise<string> {
     restarts: readRestartLog(logDir, 50),
     disk: sys.disk,
     usage: sys.usage,
+    metrics: await metrics.diagnostics(),
   });
 }
 
@@ -319,6 +324,7 @@ const routes = [
   ...detection.routes(),
   ...live.routes(),
   ...homekit.routes(),
+  ...metricsRoutes(metrics),
   hub.route(),
   restream.rtspAuthRoute({
     verify: async (username, secret) => (await auth.verifyCredentials(username, secret)) !== null,
@@ -394,16 +400,19 @@ function runBackup(): void {
 }
 runBackup();
 
+/** Running process trees: the memory monitor enforces limits on them, the metrics sampler reports them. */
+function processTargets(): MemoryTarget[] {
+  const targets = supervisor
+    .status()
+    .filter((w) => w.pid !== null && (w.state === "running" || w.state === "starting"))
+    .map((w) => ({ id: w.id, kind: w.kind, pid: w.pid as number }));
+  const exportPid = exportJobs.activePid();
+  if (exportPid !== null) targets.push({ id: "export", kind: "export", pid: exportPid });
+  return targets;
+}
+
 const memory = createMemoryMonitor({
-  targets: () => {
-    const targets = supervisor
-      .status()
-      .filter((w) => w.pid !== null && (w.state === "running" || w.state === "starting"))
-      .map((w) => ({ id: w.id, kind: w.kind, pid: w.pid as number }));
-    const exportPid = exportJobs.activePid();
-    if (exportPid !== null) targets.push({ id: "export", kind: "export", pid: exportPid });
-    return targets;
-  },
+  targets: processTargets,
   onExceeded(target, rss) {
     console.error(`[memory] ${target.id} 使用 ${Math.round(rss / 1048576)} MB，超過上限，重啟`);
     if (target.id === "export") exportJobs.killForMemory();
@@ -420,6 +429,7 @@ const memory = createMemoryMonitor({
   onError: (e) => log("memory", e),
 });
 memory.start();
+metrics.start();
 
 const timers = [
   setInterval(() => {
@@ -446,6 +456,7 @@ async function shutdown(exitCode = 0): Promise<void> {
   stopping = true;
   for (const t of timers) clearInterval(t);
   memory.stop();
+  metrics.stop();
   stopSync();
   void server.stop(true);
   await Promise.all([mdns?.stop(), supervisor.shutdown(), exportJobs.shutdown(), ptz.dispose(), detection.stop()]);

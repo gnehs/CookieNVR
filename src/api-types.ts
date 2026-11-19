@@ -198,6 +198,70 @@ export interface SystemDto {
   logs: string[];
 }
 
+/**
+ * 量的是哪個範圍：container = 容器設了上限（cgroup v2 的 cpu.max、cpuset 或 memory.max），用量與上限都是容器的；
+ * host = 沒有上限（或不在容器裡），用量與總量都是整台主機的。
+ */
+export type ResourceScope = "container" | "host";
+
+export type GpuVendor = "nvidia" | "intel" | "apple";
+
+export interface GpuDto {
+  /** 穩定的識別：nvidia:<PCI 位址>、intel:<PCI 位址>、apple:<序號> */
+  id: string;
+  vendor: GpuVendor;
+  /** Nvidia 是 nvidia-smi 的型號；Intel 只有「Intel 內顯」這類概稱 */
+  name: string;
+  /** 最忙的引擎的使用率，0 到 100；讀不到或還沒有第二次取樣時是 null */
+  utilPct: number | null;
+  /** 顯示記憶體；內顯與 Apple 共用系統記憶體，所以是 null */
+  memory: { usedBytes: number; totalBytes: number } | null;
+  temperatureC: number | null;
+  /** 有數值讀不到時給使用者看的一句話，例如「這張顯示卡不提供溫度」 */
+  note: string | null;
+  /** 其他模組補充的資訊（例如物件辨識的推論速率），一行一筆 */
+  extras: { label: string; value: string }[];
+}
+
+/** 沒有任何 GPU 時的原因：none = 沒有偵測到顯示卡；unreadable = 有顯示卡但讀不到（原因在診斷資訊） */
+export type GpuMissing = "none" | "unreadable";
+
+export type UsageCategory = "record" | "detect" | "detector" | "live" | "restream" | "homekit" | "export" | "system";
+
+/** cpuPct 跟 MetricsDto.cpu.pct 同一個基準（全部可用核心 = 100），各類別加總加上 other 約等於整體 */
+export interface UsageDto {
+  category: UsageCategory;
+  cpuPct: number;
+  memBytes: number;
+  /** 能分到單一攝影機的部分；影像服務、Apple 家庭總程序與系統本身是共用的，沒有這一項 */
+  cameras: { cameraId: CameraId; cpuPct: number; memBytes: number }[];
+}
+
+export interface MetricsPointDto {
+  at: number;
+  cpuPct: number | null;
+  memPct: number;
+  /** GPU id → 使用率；沒有人看狀態頁時不讀 GPU，這一筆就是空的 */
+  gpus: Record<string, number | null>;
+}
+
+/** GET /api/system/metrics（管理員）。帶 watch=1 表示狀態頁開著，後端才會讀 GPU 與各程序的用量 */
+export interface MetricsDto {
+  at: number;
+  intervalMs: number;
+  cpu: { pct: number | null; cores: number; scope: ResourceScope };
+  memory: { usedBytes: number; totalBytes: number; scope: ResourceScope };
+  gpus: GpuDto[];
+  /** gpus 是空的時候才有值；還沒讀過 GPU 時是 null */
+  gpuMissing: GpuMissing | null;
+  /** 依類別的用量，只在有人看狀態頁時計算；還沒算出來時是 null */
+  usage: UsageDto[] | null;
+  /** 不屬於 CookieNVR 程序的部分：scope 是 host 時是同一台主機上的其他程式，記憶體另含系統快取 */
+  other: { cpuPct: number; memBytes: number } | null;
+  /** 最近 10 分鐘，舊的在前 */
+  history: MetricsPointDto[];
+}
+
 /** 清除錄影的結果；bytes 是釋放的空間 */
 export interface PurgeDto {
   segments: number;
