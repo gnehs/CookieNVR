@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import type { EventDto } from "../api-types.ts";
 import type { CameraId, Unsubscribe } from "../types.ts";
-import { initialState, MAX_EVENT_MS, step, type LifecycleState, type Signal } from "./lifecycle.ts";
+import { initialState, MAX_EVENT_MS, step, wantsObjects, type LifecycleState, type Signal } from "./lifecycle.ts";
 import { activeEvents, closeDangling, deleteEventRow, getEvent, insertEvent, updateEvent } from "./store.ts";
 import { thumbPath } from "./paths.ts";
 
@@ -26,7 +26,10 @@ export interface EventFeed {
 }
 
 export interface EventTracker extends EventFeed {
-  signal(cameraId: CameraId, signal: Signal, cooldownMs: number): void;
+  /** frame：objects 訊號所屬的那張 JPEG，狀態機要拿它當縮圖時寫入 */
+  signal(cameraId: CameraId, signal: Signal, cooldownMs: number, frame?: Uint8Array): void;
+  /** 這台在等辨識（過濾模式）或有進行中的事件；只有這段時間需要送畫面去辨識 */
+  wantsObjects(cameraId: CameraId): boolean;
   /** 每張新的快照都交給它；有等縮圖的事件就寫入 */
   offerJpeg(cameraId: CameraId, jpeg: Uint8Array): void;
   /** 這台目前進行中的事件 */
@@ -44,7 +47,16 @@ interface Track {
   wantThumb: number | null;
 }
 
-export function createEventTracker(deps: { db: Database; dataDir: string; now?: () => number; onError?: (e: unknown) => void }): EventTracker {
+export interface TrackerDeps {
+  db: Database;
+  dataDir: string;
+  now?: () => number;
+  onError?: (e: unknown) => void;
+  /** 這台現在要不要先等辨識才建立事件、最多等多久（過濾模式且 detector 可用）；null 或沒給就是不等 */
+  filterWindow?: (cameraId: CameraId) => number | null;
+}
+
+export function createEventTracker(deps: TrackerDeps): EventTracker {
   const { db, dataDir } = deps;
   const now = deps.now ?? Date.now;
   const tracks = new Map<CameraId, Track>();
@@ -71,17 +83,25 @@ export function createEventTracker(deps: { db: Database; dataDir: string; now?: 
     return t;
   }
 
-  function signal(cameraId: CameraId, sig: Signal, cooldownMs: number): void {
+  function setThumb(t: Track, id: number, change: "none" | "next" | "frame", frame: Uint8Array | undefined): void {
+    if (change === "frame" && frame) {
+      if (t.wantThumb === id) t.wantThumb = null;
+      writeThumb(id, frame).catch((e) => deps.onError?.(e));
+    } else if (change !== "none") t.wantThumb = id;
+  }
+
+  function signal(cameraId: CameraId, sig: Signal, cooldownMs: number, frame?: Uint8Array): void {
     const t = track(cameraId);
-    for (const fx of step(t.state, sig, cooldownMs)) {
+    const policy = { cooldownMs, filterWindowMs: deps.filterWindow?.(cameraId) ?? null };
+    for (const fx of step(t.state, sig, policy)) {
       if (fx.type === "start") {
         const event = insertEvent(db, { cameraId, source: fx.source, startMs: fx.at, score: fx.score, labels: fx.labels });
         t.eventId = event.id;
-        t.wantThumb = event.id;
         emit("start", event);
+        setThumb(t, event.id, fx.thumb, frame);
       } else if (fx.type === "update" && t.eventId !== null) {
-        if (fx.thumb) t.wantThumb = t.eventId;
         emit("update", updateEvent(db, t.eventId, { score: fx.score, source: fx.source, labels: fx.labels }));
+        setThumb(t, t.eventId, fx.thumb, frame);
       } else if (fx.type === "end" && t.eventId !== null) {
         const id = t.eventId;
         t.eventId = null;
@@ -89,12 +109,14 @@ export function createEventTracker(deps: { db: Database; dataDir: string; now?: 
         emit("end", updateEvent(db, id, { endMs: fx.at }));
       }
     }
-    if (sig.type === "stop" && t.eventId === null) tracks.delete(cameraId);
+    if (sig.type === "stop" && t.state.event === null) tracks.delete(cameraId);
   }
 
+  let thumbSeq = 0;
   async function writeThumb(id: number, jpeg: Uint8Array): Promise<void> {
     const path = thumbPath(dataDir, id);
-    const tmp = `${path}.tmp`;
+    // 辨識換縮圖可能和快照縮圖同時寫，暫存檔不能共用
+    const tmp = `${path}.${++thumbSeq}.tmp`;
     await Bun.write(tmp, jpeg);
     await rename(tmp, path);
     // 寫入期間事件可能已被刪除
@@ -111,6 +133,10 @@ export function createEventTracker(deps: { db: Database; dataDir: string; now?: 
       const id = t.wantThumb;
       t.wantThumb = null;
       writeThumb(id, jpeg).catch((e) => deps.onError?.(e));
+    },
+    wantsObjects(cameraId) {
+      const t = tracks.get(cameraId);
+      return t !== undefined && wantsObjects(t.state);
     },
     activeFor(cameraId) {
       const id = tracks.get(cameraId)?.eventId;

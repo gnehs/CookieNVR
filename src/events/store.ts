@@ -33,8 +33,13 @@ const toDto = (r: EventRow): EventDto => ({
   hasThumb: r.has_thumb === 1,
 });
 
+/** 事件的 labels 含任一指定類別；null = 不篩選 */
+const LABEL_MATCH = `(?L IS NULL OR EXISTS (SELECT 1 FROM json_each(labels) WHERE value IN (SELECT value FROM json_each(?L))))`;
+const labelsParam = (labels: string[] | null) => (labels && labels.length ? JSON.stringify(labels) : null);
+
 export interface EventQuery {
   cameraId: CameraId | null;
+  labels: string[] | null;
   /** events overlapping [startMs, endMs); an event still in progress overlaps everything after its start */
   startMs: number;
   endMs: number;
@@ -45,23 +50,23 @@ export function queryEvents(db: Database, q: EventQuery): EventDto[] {
   const rows = db
     .query(
       `SELECT id, camera_id, source, start_ms, end_ms, score, labels, has_thumb FROM events
-       WHERE (?1 IS NULL OR camera_id = ?1) AND start_ms < ?2 AND (end_ms IS NULL OR end_ms > ?3)
+       WHERE (?1 IS NULL OR camera_id = ?1) AND start_ms < ?2 AND (end_ms IS NULL OR end_ms > ?3) AND ${LABEL_MATCH.replaceAll("?L", "?5")}
        ORDER BY start_ms, id
        LIMIT ?4`,
     )
-    .all(q.cameraId, q.endMs, q.startMs, q.limit) as EventRow[];
+    .all(q.cameraId, q.endMs, q.startMs, q.limit, labelsParam(q.labels)) as EventRow[];
   return rows.map(toDto);
 }
 
 const COLUMNS = "id, camera_id, source, start_ms, end_ms, score, labels, has_thumb";
 
 /** 開始時間早於 before 的事件，由新到舊（事件頁翻頁用） */
-export function eventsBefore(db: Database, q: { cameraId: CameraId | null; before: number; limit: number }): EventDto[] {
+export function eventsBefore(db: Database, q: { cameraId: CameraId | null; labels: string[] | null; before: number; limit: number }): EventDto[] {
   const rows = db
     .query(
-      `SELECT ${COLUMNS} FROM events WHERE (?1 IS NULL OR camera_id = ?1) AND start_ms < ?2 ORDER BY start_ms DESC, id DESC LIMIT ?3`,
+      `SELECT ${COLUMNS} FROM events WHERE (?1 IS NULL OR camera_id = ?1) AND start_ms < ?2 AND ${LABEL_MATCH.replaceAll("?L", "?4")} ORDER BY start_ms DESC, id DESC LIMIT ?3`,
     )
-    .all(q.cameraId, q.before, q.limit) as EventRow[];
+    .all(q.cameraId, q.before, q.limit, labelsParam(q.labels)) as EventRow[];
   return rows.map(toDto);
 }
 

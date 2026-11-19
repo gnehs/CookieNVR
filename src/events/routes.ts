@@ -42,11 +42,14 @@ export function eventRoutes(deps: { db: Database; dataDir: string; events: Pick<
         const camera = q.get("camera");
         const cameraId = camera ? (camera as CameraId) : null;
         const max = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT);
-        if (before !== null) return Response.json(eventsBefore(db, { cameraId, before, limit: max }));
+        // label=person,car：含任一類別
+        const labels = (q.get("label") ?? "").split(",").map((l) => l.trim()).filter((l) => l !== "" && l.length <= 40).slice(0, 20);
+        const filter = labels.length ? labels : null;
+        if (before !== null) return Response.json(eventsBefore(db, { cameraId, labels: filter, before, limit: max }));
         const startMs = start ?? 0;
         const endMs = end ?? Number.MAX_SAFE_INTEGER;
         if (endMs < startMs) return fail(400, "end must not be before start");
-        return Response.json(queryEvents(db, { cameraId, startMs, endMs, limit: max }));
+        return Response.json(queryEvents(db, { cameraId, labels: filter, startMs, endMs, limit: max }));
       },
     },
     {

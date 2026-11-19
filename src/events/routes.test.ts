@@ -47,6 +47,18 @@ test("before pages newest first across cameras", async () => {
   expect((await list("before=x")).status).toBe(400);
 });
 
+test("label filters to events that carry any of the given labels", async () => {
+  const { insert, list } = await setup();
+  insert("cam1", 1000, 1500, ["person"]);
+  insert("cam1", 2000, 2500, ["car", "dog"]);
+  insert("cam2", 3000, 3500, []);
+  insert("cam2", 4000, 4500, ["personal"]);
+  expect((await list("label=person")).body.map((e) => e.startMs)).toEqual([1000]);
+  expect((await list("label=person,dog")).body.map((e) => e.startMs)).toEqual([1000, 2000]);
+  expect((await list("before=99999&label=car")).body.map((e) => e.startMs)).toEqual([2000]);
+  expect((await list("label=")).body).toHaveLength(4);
+});
+
 test("deleting removes the event and its thumbnail, but not while it is in progress", async () => {
   const { dataDir, call, insert } = await setup();
   const done = insert("cam1", 1_000, 2_000, [], true).id;
