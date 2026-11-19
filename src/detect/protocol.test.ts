@@ -56,7 +56,7 @@ test("object settings merge with the current ones and reject paths in model name
     expect(() => parseSettingsPatch({ objects: bad }, current)).toThrow();
   }
   for (const ok of ["auto", "cpu", "intel:GPU.1", "nvidia:GPU-8c6d1a2e-0b4f-4c55-9d1a-2b3c4d5e6f70"]) {
-    expect(parseSettingsPatch({ devices: { objects: ok } }, current).devices).toEqual({ objects: ok, decode: "cpu" });
+    expect(parseSettingsPatch({ devices: { objects: ok } }, current).devices).toEqual({ objects: ok, decode: "auto" });
     expect(parseSettingsPatch({ devices: { decode: ok } }, current).devices).toEqual({ objects: "auto", decode: ok });
   }
   for (const bad of ["gpu", "nvidia:../x", "intel", ""]) {

@@ -1,7 +1,7 @@
 // 假後端的影像硬體解碼：顯示卡試跑結果與每台的解碼方式。
 // 切換：啟動時 MOCK_VIDEO=both|intel|none|broken（預設 both：Intel 內顯加一張 Nvidia）；
 //   broken：有 Intel 內顯但容器沒掛 /dev/dri，選它的攝影機會退回處理器並出現狀態頁提醒。
-// 解碼設定用 MOCK_DECODE（預設 cpu），之後在設定頁改。
+// 解碼設定用 MOCK_DECODE（預設 auto），之後在設定頁改。
 import type { CodecCheckDto, DecodeStatusDto, VideoDeviceDto, VideoDevicesDto } from "../src/api-types.ts";
 import type { CameraId, DeviceRef } from "../src/types.ts";
 

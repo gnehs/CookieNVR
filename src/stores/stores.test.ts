@@ -91,6 +91,6 @@ describe("SettingsStore", () => {
   test("舊資料的 devices 只有 objects：decode 補預設值，objects 保留原值", () => {
     const db = openDb(":memory:");
     db.query("INSERT INTO settings (key, value) VALUES ('devices', ?)").run(JSON.stringify({ objects: "intel:GPU.0" }));
-    expect(createSettingsStore(db, "/data").get().devices).toEqual({ objects: "intel:GPU.0", decode: "cpu" });
+    expect(createSettingsStore(db, "/data").get().devices).toEqual({ objects: "intel:GPU.0", decode: "auto" });
   });
 });

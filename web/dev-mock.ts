@@ -72,7 +72,7 @@ let settings: Settings = {
   rtsp: { externalEnabled: true },
   homekit: { enabled: false, basePort: 51826 },
   objects: { enabled: false, model: "builtin", fps: 2 },
-  devices: { objects: "auto", decode: process.env.MOCK_DECODE ?? "cpu" },
+  devices: { objects: "auto", decode: process.env.MOCK_DECODE ?? "auto" },
 };
 
 const cams: { id: CameraId; position: number; config: CameraConfig }[] = [];

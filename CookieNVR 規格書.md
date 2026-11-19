@@ -213,8 +213,8 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 
 ### 影像硬體解碼（`src/hwcodec/`）
 
-- 只有 detect worker 在解碼影像（錄影、即時預覽、匯出、HKSV 都是 `-c copy`；測試連線的單張畫面與 HomeKit 快照縮放是一次性的小 JPEG，開硬體的成本比省下的多）。編碼 H.264／H.265 的工作目前沒有，所以只有「解碼」一個設定 `settings.devices.decode`：`cpu`（預設）、`auto`（依序 Nvidia、Intel）或裝置識別字，和物件辨識同一套（`nvidia:GPU-<uuid>`、`intel:GPU.<n>`，Intel 比照 OpenVINO：PCI 00:02.0 的內顯是 GPU.0，其餘依 PCI 位址）。舊資料沒有這欄時是 `cpu`。
-- 值不值得：Apple M 系列實測整條 detect 指令每秒耗的 CPU（單核百分比，軟體 → VideoToolbox）：640×360 15 fps H.264 子碼流 1.3% → 0.7%；1080p 20 fps H.264 7.2% → 2.2%；1440p 15 fps H.265 12.4% → 2.2%。有子碼流時幾乎省不到，所以預設 CPU；只有主碼流、或高解析度 H.265 的攝影機才明顯有用。
+- 只有 detect worker 在解碼影像（錄影、即時預覽、匯出、HKSV 都是 `-c copy`；測試連線的單張畫面與 HomeKit 快照縮放是一次性的小 JPEG，開硬體的成本比省下的多）。編碼 H.264／H.265 的工作目前沒有，所以只有「解碼」一個設定 `settings.devices.decode`：`auto`（預設，依序 Nvidia、Intel，沒有可用的顯示卡就用處理器）、`cpu` 或裝置識別字，和物件辨識同一套（`nvidia:GPU-<uuid>`、`intel:GPU.<n>`，Intel 比照 OpenVINO：PCI 00:02.0 的內顯是 GPU.0，其餘依 PCI 位址）。舊資料沒有這欄時是 `auto`。
+- 值不值得：Apple M 系列實測整條 detect 指令每秒耗的 CPU（單核百分比，軟體 → VideoToolbox）：640×360 15 fps H.264 子碼流 1.3% → 0.7%；1080p 20 fps H.264 7.2% → 2.2%；1440p 15 fps H.265 12.4% → 2.2%。有子碼流時幾乎省不到，只有主碼流、或高解析度 H.265 的攝影機才明顯有用；預設仍是 `auto`（使用者決定），硬體失敗會自動退回處理器。
 - 能力偵測：選了 `cpu` 以外才做。對每張卡用 CPU 產生的 640×360 短片實際試跑 H.264、H.265 的解碼與編碼（Intel 走 VAAPI 的 render node，Nvidia 走 CUDA，以 `CUDA_VISIBLE_DEVICES=<uuid>` 指定那一張），不看編譯選項。解碼一律 `-hwaccel_output_format` 加 `hwdownload`：硬體失敗時 ffmpeg 會默默改用軟體，hwdownload 收不到顯示卡的畫面就讓它失敗，所以「成功」代表真的在那張卡上解。結果在 `GET /api/video-devices`（管理員，`?refresh=1` 重跑）；編碼結果只供參考與診斷。
 - 規劃（`planDecode`，純函式）：依設定、試跑結果與這台 detect 碼流的格式（MediaMTX 回報的軌道）挑卡；選的卡不支援這個格式或試跑失敗用 CPU，選的卡不見了改用自動，都附原因。試跑完成前先用 CPU，完成後 worker 規格改變而重啟一次。CPU 時 worker 指令和以前完全一樣。
 - 執行中的退回：worker 經環境變數 `DETECT_HW_DECODE` 收到要用的卡。硬體路徑在第一張畫面前就結束或 10 秒沒有畫面時，同一次執行內改用 CPU 重開 ffmpeg，偵測與快照不中斷；等 CPU 真的解出畫面才回報原因（相機連不上時不冤枉顯示卡）。下次 worker 重啟會再試硬體。硬體路徑不帶 `-fflags nobuffer`：VideoToolbox 在 nobuffer 下對同一條串流每張都解碼失敗且 ffmpeg 不結束。

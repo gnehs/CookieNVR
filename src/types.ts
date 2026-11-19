@@ -142,7 +142,7 @@ export function defaultSettings(dataDir: string, recordingsDir = `${dataDir}/rec
     homekit: { enabled: false, basePort: 51826 },
     objects: { enabled: false, model: "builtin", fps: 2 },
     // 解碼預設用 CPU：子碼流很便宜，硬體解碼要使用者自己選（見規格「影像硬體解碼」）
-    devices: { objects: "auto", decode: "cpu" },
+    devices: { objects: "auto", decode: "auto" },
   };
 }
 
