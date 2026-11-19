@@ -1,0 +1,6 @@
+.decode-note { display: block; margin-top: 2px; }
+.decode-note[data-tone="ok"] { color: var(--text-2); }
+.decode-note[data-tone="warn"] { color: var(--warn-text); font-weight: 550; }
+/* 停用的選項副標是顯示卡不能用的原因，句子長，要換行 */
+.sel-opt[data-disabled] .sel-opt-text small { white-space: normal; overflow-wrap: anywhere; }
+.sel-opt[data-disabled] .sel-opt-text { grid-template-columns: minmax(0, 1fr); }
