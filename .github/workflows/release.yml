@@ -1,8 +1,14 @@
 name: Release
 
+# main 每次 push 發 edge（與 edge-nvidia）；v* tag 發版本號與 latest。
 on:
   push:
+    branches: [main]
     tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -43,7 +49,8 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=edge,branch=main
       - uses: docker/build-push-action@v7
         with:
           context: .

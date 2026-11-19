@@ -2,6 +2,7 @@ services:
   cookienvr:
     # latest：CPU 推論，amd64 另含 Intel 內顯（linux/amd64、linux/arm64）
     # latest-nvidia：CPU 與 Nvidia 顯卡（只有 linux/amd64）。也有固定版本，例如 1.2.3 與 1.2.3-nvidia。
+    # edge、edge-nvidia：main 最新的建置，還沒發版時用這個。
     image: ghcr.io/<owner>/cookienvr:latest
     restart: unless-stopped
     # 主機上的埠要和容器內的埠一樣：App 顯示給使用者的 RTSP 網址用的是容器內的 8554。

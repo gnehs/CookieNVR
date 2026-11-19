@@ -710,7 +710,7 @@ cookienvr-ha/
 
 - NVR 的 `/api/info` 回傳 `version` 與 `apiVersion`（整數，只在破壞性變更時 +1）。
 - 整合寫死支援的 `apiVersion` 範圍；不符時在 HA 顯示「請更新 CookieNVR」或「請更新整合」的修復提示。
-- 兩個 repo 都用 semver；NVR 的 Docker tag 為 `latest`、`x`、`x.y`、`x.y.z`，Nvidia 版加上 `-nvidia` 後綴。
+- 兩個 repo 都用 semver；NVR 的 Docker tag 為 `latest`、`x`、`x.y`、`x.y.z`，Nvidia 版加上 `-nvidia` 後綴。`main` 每次 push 另外發 `edge` 與 `edge-nvidia`（尚未發版時用來試部署）。
 
 ## HTTP API
 
