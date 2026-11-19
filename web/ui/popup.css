@@ -1,7 +1,7 @@
-/* 對齊觸發按鈕的彈出層（web/ui/popup.ts）：下拉選單與日曆共用；手機上是底部面板 */
+/* 對齊觸發按鈕的彈出層（Base UI 的 Popup，定位由 Positioner 負責，見 overlays.css）：下拉選單與日曆共用；手機上是底部面板 */
 .popup {
-  position: fixed; inset: auto; margin: 0; box-sizing: border-box;
-  max-width: calc(100vw - 16px); max-height: min(420px, calc(100dvh - 16px)); overflow: auto; overscroll-behavior: contain;
+  box-sizing: border-box; outline: none;
+  max-width: calc(100vw - 16px); max-height: min(420px, var(--available-height, calc(100dvh - 16px))); overflow: auto; overscroll-behavior: contain;
   padding: 5px; border-radius: 14px; border: 1px solid var(--border-strong);
   background: var(--overlay); color: var(--text); box-shadow: var(--shadow-lg);
   transform-origin: top left;
@@ -13,33 +13,18 @@
 .popup[data-side="top"][data-align="end"] { transform-origin: bottom right; }
 /* 鍵盤打開的不播動畫：常用的操作要立刻出現 */
 .popup[data-instant] { transition: none; }
-.popup::backdrop { background: transparent; }
 .popup-title { display: none; padding: 6px 12px 8px; color: var(--muted); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/*
- * 下方放得下就放下方、左邊對齊按鈕；放不下翻到上方；靠右邊緣時改成右邊對齊。
- * --popup-room 是 JS 量的「上下較大一側的空間」：兩邊都放不下時高度限制在那裡，瀏覽器就會選那一側並在裡面捲動。
- */
-.popup[data-anchored] {
-  margin-block: 6px;
-  position-area: block-end span-inline-end;
-  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
-  min-width: anchor-size(width);
-  max-height: min(420px, var(--popup-room, 420px));
-}
-
 @media (max-width: 560px), (pointer: coarse) and (max-height: 500px) {
-  .popup, .popup[data-anchored] {
-    inset: auto 0 0 0 !important; margin: 0; position-area: none; position-try-fallbacks: none;
+  .popup {
     width: 100%; max-width: 100%; min-width: 0 !important; max-height: min(85dvh, 640px) !important;
     border-radius: var(--r-xl) var(--r-xl) 0 0; border-width: 1px 0 0; padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
     transform-origin: bottom center; transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-3) var(--ease-drawer);
     @starting-style { opacity: 1; transform: translateY(100%); }
   }
-  .popup::backdrop { background: rgb(8 8 12 / 0.45); }
   .popup-title { display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .popup, .popup[data-anchored] { @starting-style { transform: none; opacity: 0; } }
+  .popup { @starting-style { transform: none; opacity: 0; } }
 }

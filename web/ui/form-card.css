@@ -1,4 +1,4 @@
-/* 表單裡可以收合的卡片（web/ui/form-card.ts）：攝影機設定的基本、連線、錄影、偵測… */
+/* 表單裡可以收合的卡片（web/ui/FormCard.tsx）：攝影機設定的基本、連線、錄影、偵測… */
 .fcards { display: grid; gap: 12px; }
 details.disclosure.fcard {
   border: 1px solid var(--border); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-sm);

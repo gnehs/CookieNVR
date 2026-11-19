@@ -12,3 +12,5 @@ docker-compose*.yml
 detector/models
 detector/tests
 **/__pycache__
+dist
+.tanstack

@@ -255,6 +255,22 @@ const steps: Step[] = [
     },
   ],
   [
+    "網頁介面：首頁、深層路徑與打包後的資產",
+    async () => {
+      for (const path of ["/", "/cameras", "/settings/cameras/x"]) {
+        const res = await fetch(`${BASE}${path}`);
+        const html = await res.text();
+        check(res.ok && html.includes('<div id="app">'), `${path} 沒有回傳網頁介面（${res.status}）`);
+      }
+      const html = await (await fetch(`${BASE}/`)).text();
+      const script = html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
+      check(script, "index.html 裡找不到打包後的 script");
+      const asset = await fetch(`${BASE}${script}`);
+      check(asset.ok && (asset.headers.get("cache-control") ?? "").includes("immutable"), `${script} 讀不到或沒有長快取（${asset.status}）`);
+      check((await fetch(`${BASE}/api/nope`)).status === 404, "/api 底下不存在的路徑應該是 404，不是網頁");
+    },
+  ],
+  [
     "容器內工具版本",
     async () => {
       log((await sh("ffmpeg -version | head -1")));

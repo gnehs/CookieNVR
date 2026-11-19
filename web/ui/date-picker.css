@@ -1,4 +1,4 @@
-/* 日期選擇（web/ui/date-picker.ts）：觸發按鈕沿用 .sel-trigger，彈出的是月曆 */
+/* 日期選擇（web/ui/DatePicker.tsx）：觸發按鈕沿用 .sel-trigger，彈出的是月曆 */
 .dp { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
 .dp > .sel { flex: 1 1 auto; }
 .dp-step { flex: none; }
@@ -41,5 +41,5 @@
 }
 @media (pointer: coarse) and (max-height: 500px) {
   /* 橫拿的手機：高度只有三百多，格子留 44 但月曆放在面板中間 */
-  .dp-pop { max-width: 420px; margin-inline: auto !important; inset: auto 0 0 0 !important; }
+  .dp-pop { max-width: 420px; margin-inline: auto; }
 }

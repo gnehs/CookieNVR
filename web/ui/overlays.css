@@ -1,0 +1,15 @@
+/*
+ * Base UI 的浮動層：Positioner 負責定位（inline style），裡面的 Popup 套 .menu／.popup 的外觀。
+ * 桌面浮在觸發按鈕旁；手機（窄螢幕或橫拿的手機）整個 Positioner 釘在畫面底部，變成底部面板，背後加一層遮罩。
+ */
+.menu-pos, .popup-pos { z-index: 50; outline: none; }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 49; background: transparent; }
+
+@media (max-width: 560px) {
+  .menu-pos { position: fixed !important; inset: auto 0 0 0 !important; transform: none !important; width: auto !important; }
+  .sheet-backdrop[data-sheet="menu"] { background: rgb(8 8 12 / 0.45); }
+}
+@media (max-width: 560px), (pointer: coarse) and (max-height: 500px) {
+  .popup-pos { position: fixed !important; inset: auto 0 0 0 !important; transform: none !important; width: auto !important; }
+  .sheet-backdrop[data-sheet="popup"] { background: rgb(8 8 12 / 0.45); }
+}

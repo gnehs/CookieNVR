@@ -1,4 +1,4 @@
-/* 設定列（web/ui/settings-row.ts）：一組設定一張卡片，每列左邊標題與說明、右邊控制項 */
+/* 設定列（web/ui/SettingRow.tsx）：一組設定一張卡片，每列左邊標題與說明、右邊控制項 */
 .set-group { display: grid; gap: 8px; min-width: 0; }
 .set-group + .set-group { margin-top: 12px; }
 .set-group-head { padding: 0 6px; }

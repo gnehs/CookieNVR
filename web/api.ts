@@ -81,7 +81,8 @@ export const api = {
   login: (username: string, password: string) =>
     request<MeDto>("POST", "/auth/login", { username, password }, true),
   logout: () => request<void>("POST", "/auth/logout", {}, true),
-  me: () => request<MeDto>("GET", "/me"),
+  /** quiet：開站時確認登入狀態用，401 不觸發登出處理 */
+  me: (quiet = false) => request<MeDto>("GET", "/me", undefined, quiet),
   changePassword: (currentPassword: string, newPassword: string) =>
     put<void>("/me", { currentPassword, newPassword }),
   sessions: () => get<SessionDto[]>("/me/sessions"),

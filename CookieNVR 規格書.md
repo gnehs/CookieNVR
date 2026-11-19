@@ -39,7 +39,7 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 
 整套系統是一個容器、一個 port、一個 volume，在 Unraid 用 Docker Compose 或 Docker 頁面都能直接跑。
 
-- **映像內容**：`oven/bun`（Debian slim）＋ ffmpeg / ffprobe ＋ MediaMTX ＋ 物件辨識用的 Python 與 ONNX Runtime ＋ CookieNVR 原始碼。前端由 Bun 在啟動時打包，不需要另外 build 步驟。
+- **映像內容**：`oven/bun`（Debian slim）＋ ffmpeg / ffprobe ＋ MediaMTX ＋ 物件辨識用的 Python 與 ONNX Runtime ＋ CookieNVR 原始碼與建置好的網頁介面（`dist/web`）。Dockerfile 多一個建置階段跑 `vite build`，前端套件不進最終映像。
 - **映像版本**：`latest` 含 CPU 推論，amd64 另含 Intel 內顯（OpenVINO plugin EP 與 Intel OpenCL 驅動，26.40 與 24.35 legacy 並裝）；`latest-nvidia` 改含 Nvidia（CUDA 12、cuDNN 9.11，主機驅動 525 以上）。不用物件辨識時兩者沒有差別，detector 不啟動，只是映像比較大（壓縮後 arm64 約 301 MB、amd64 約 680 MB；M3 時約 217 MB；-nvidia 估計約 2 GB）。
 - **平台**：`latest` 支援 `linux/amd64` 與 `linux/arm64`；`latest-nvidia` 只有 `linux/amd64`。
 - **GPU（選用，物件辨識與影像硬體解碼用）**：Intel 內顯掛入 `/dev/dri`；Nvidia 需主機裝好 NVIDIA Container Toolkit（Unraid 用 Nvidia Driver 外掛），並以 `--gpus all` 或 `runtime: nvidia` 啟動，硬體解碼另需 `NVIDIA_DRIVER_CAPABILITIES` 含 `video`（映像預設 `compute,utility,video`）。amd64 映像都含 Intel 的 VA 驅動（`intel-media-va-driver`、`i965-va-driver`）。沒有 GPU 時用 CPU。
@@ -114,7 +114,7 @@ services:
 1. 在「設定 → 攝影機」選類型，填名稱與連線資訊。
 2. 按「測試並儲存」：後端用 ffprobe 讀兩個碼流，回傳編碼、解析度、幀率、音訊格式，並拍一張快照；Tapo 另外測 ONVIF 是否可用、有沒有 PTZ。
 3. 測試成功就直接儲存，畫面只顯示快照、「已開始錄影」與「完成」，碼流摘要收在「詳細資訊」，並立刻開始錄影；失敗則停在表單，錯誤用一般人看得懂的話掛在最相關的欄位旁（IP、帳密或網址），英文原文只在「複製錯誤內容」裡。只改名稱或開關、沒有動到連線欄位時不重測。
-4. ONVIF、傳輸方式、錄影直連與「給其他 App 的串流網址」收在預設收合的「進階」。串流網址欄位未聚焦時遮住網址中的密碼。第一次建立管理員後進到獨立置中的新增攝影機畫面（`#/welcome`），可以「稍後再說」。
+4. ONVIF、傳輸方式、錄影直連與「給其他 App 的串流網址」收在預設收合的「進階」。串流網址欄位未聚焦時遮住網址中的密碼。第一次建立管理員後進到獨立置中的新增攝影機畫面（`/welcome`），可以「稍後再說」。
 5. 刪除攝影機預設只移除設定：已錄的影片留在硬碟上，介面上無法再回放，但仍照保留天數與最低剩餘空間規則清除，在那之前繼續佔用空間（「錄影與儲存」裡顯示為「已刪除的攝影機」，旁邊有「清除」可以一次刪掉）。刪除對話框可勾選「同時刪除這台的錄影」（`DELETE /api/cameras/:id?recordings=delete`）：後端等這台的錄影程序確定停止後，在索引掃描暫停的狀態下刪除該台的片段檔案與資料庫紀錄、事件與縮圖，所以不會被索引或啟動對帳加回來；清除在回應之後於背景進行，失敗寫入日誌。
 
 ### Tapo 前置準備（寫進介面提示）
@@ -467,7 +467,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 
 ### 授權連結（免 Token 連接 App）
 
-仿 OAuth 2.0 裝置授權（RFC 8628），讓 HA 這類 App 不用使用者複製 Token（`src/auth/link.ts`、`src/http/link-routes.ts`、核准頁 `web/pages/link.ts`）：
+仿 OAuth 2.0 裝置授權（RFC 8628），讓 HA 這類 App 不用使用者複製 Token（`src/auth/link.ts`、`src/http/link-routes.ts`、核准頁 `/link/:code`）：
 
 1. App 呼叫 `POST /api/link`（`{app}`），拿到給人看的短碼 `code`（`XXXX-XXXX`，20 個子音字母，約 34.6 bits）、核准網址 `approveUrl`（`<NVR>/#/link/<code>`，以 App 連進來的網址組成）、只有 App 知道的輪詢憑證 `pollSecret`（32 bytes）、`expiresAt`（10 分鐘）與輪詢間隔。
 2. 使用者開核准網址；未登入先登入再回來。頁面顯示同一組短碼、App 名稱、請求來源 IP、允許後能做什麼（一般使用者會看到「錄影與偵測開關不會出現」），按「允許」或「拒絕」。
@@ -496,10 +496,10 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 
 ### 技術
 
-- 原生 TypeScript，不用框架；Bun 的 HTML import 在啟動時打包，沒有另外的 build 步驟。
-- Hash 路由（`#/live`、`#/playback`…），後端只需要提供 `/`。
-- 共用元件在 `web/ui/`：下拉選單（`select.ts`，WAI-ARIA select-only combobox）、日期選擇（`date-picker.ts`，月曆對話框，週日開始、依瀏覽器時區）、設定列（`settings-row.ts`）、可收合的表單卡片（`form-card.ts`）。彈出層用 Popover API 放在 top layer，位置交給 CSS anchor positioning，不支援的瀏覽器改用 JS 量位置；寬度 560px 以下或橫拿的手機改成從底部滑出的面板。全站不使用原生的 `<select>` 與日期欄位。
-- 即時狀態（動作、上下線、事件）由 `GET /api/stream`（Server-Sent Events）推送；首頁、狀態提醒與狀態頁都跟著它更新。重連時伺服器重送完整狀態；連續 3 次連不上（或瀏覽器沒有 `EventSource`）就改回每 5 秒輪詢，同時繼續嘗試 SSE。磁碟空間不推送，管理員端每分鐘與重連時重抓。
+- React 19 + TanStack Router（檔案式路由，`web/routes/`，各頁自動分割）+ TanStack Query + Base UI，Vite 打包（`bun run build` 輸出 `dist/web`）。前端套件只在 devDependencies，後端仍不用 npm 套件。正式環境由主程序提供 `dist/web` 的靜態檔（帶雜湊的資產永久快取、`index.html` 不快取），其他非 `/api` 路徑都回 `index.html`。開發時 `bun run dev:web`（或搭假後端的 `bun run dev:mock`）由 Vite 把 `/api` 代理給後端。轉換做法見 `web/MIGRATING.md`。
+- 一般路徑路由（`/cameras`、`/cameras/:id`…）；舊的 hash 網址（例如核准連結 `/#/link/<code>`）開啟時轉到對應路徑。
+- 共用元件在 `web/ui/`：下拉選單（`Select.tsx`，Base UI Select）、日期選擇（`DatePicker.tsx`，Base UI Popover 裡的月曆，週日開始、依瀏覽器時區）、選單（`Menu.tsx`）、對話框與確認（`Dialog.tsx`）、通知（`toast.tsx`）、設定列（`SettingRow.tsx`）、可收合的表單卡片（`FormCard.tsx`）。外觀沿用同目錄的 CSS；寬度 560px 以下（下拉與日曆另含橫拿的手機）改成從底部滑出的面板。全站不使用原生的 `<select>` 與日期欄位。
+- 即時狀態（動作、上下線、事件）由 `GET /api/stream`（Server-Sent Events）推送，全站只開一條，內容寫進 Query 快取；首頁、狀態提醒與狀態頁都跟著它更新。重連時伺服器重送完整狀態；連續 3 次連不上（或瀏覽器沒有 `EventSource`）就改回每 5 秒輪詢，同時繼續嘗試 SSE。磁碟空間不推送，管理員端每分鐘與重連時重抓。
 
 ### 頁面
 
@@ -507,7 +507,7 @@ PTZ 走標準 ONVIF（Tapo 在 port 2020），所以同一套程式也能控制�
 | --- | --- | --- |
 | 初始設定 | 沒有任何帳號時出現，建立管理員 | — |
 | 登入 | 帳密登入 | — |
-| 即時 | 多宮格（`#/cameras`）；點進單台（`#/cameras/:id`）：HD 切換、看回放、PTZ 控制盤與預置點（相機支援才出現）；之後加快照；管理員另有錄影／偵測開關（尚未做） | 一般使用者 |
+| 即時 | 多宮格（`/cameras`）；點進單台（`/cameras/:id`）：HD 切換、看回放、PTZ 控制盤與預置點（相機支援才出現）；之後加快照；管理員另有錄影／偵測開關（尚未做） | 一般使用者 |
 | 回放 | 時間軸、日曆、倍速、事件清單、匯出 | 一般使用者 |
 | 事件 | 跨攝影機事件列表（依天分組、捲動自動載入），可依攝影機與日期篩選（物件類別篩選等 M4），點一下開回放的那一刻（事件開始前 5 秒）；管理員可刪除已結束的事件 | 一般使用者 |
 | 設定 → 攝影機 | 新增／編輯／排序／停用；編輯頁分成基本、連線、錄影、偵測、鏡頭控制、Apple 家庭幾張可收合的卡片，預設全部收合並顯示一行摘要，有錯誤或未儲存的變更會標在卡片上，刪除放在最下面；新增時只有基本、連線（展開）與錄影；測試連線；錄影直連開關；偵測參數與即時分數曲線；遮罩編輯器；物件辨識（模式、類別、信心門檻）；PTZ 偏好（移動方式、預設速度）；HKSV 配對碼；複製 RTSP 網址 | 管理員 |
@@ -682,7 +682,7 @@ cookienvr/
 │  ├─ onvif/           ONVIF 客戶端、PTZ、事件
 │  └─ homekit/         HKSV worker
 ├─ detector/            物件辨識 worker（Python + ONNX Runtime）
-├─ web/                 前端（原生 TS）
+├─ web/                 前端（React，Vite 打包到 dist/web）
 ├─ Dockerfile
 ├─ docker-compose.example.yml
 └─ .github/workflows/   CI、多架構映像推到 ghcr.io

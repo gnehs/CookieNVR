@@ -1,4 +1,4 @@
-// 開發用假後端：bun run web/dev-mock.ts，之後開 http://localhost:48765
+// 開發用假後端（純 API）：bun run dev:mock 會同時開它與 Vite，網頁開 Vite 的網址（預設 http://localhost:48765）
 // 開發用假後端的示範登入：啟動時就建好這兩個帳號，不會進到初始設定頁（MOCK_FRESH=1 時不建，用來測初始設定）
 const DEMO_ADMIN = { username: "admin", password: "admin1234" };
 const DEMO_USER = { username: "viewer", password: "viewer1234" };
@@ -21,9 +21,10 @@ import { createLinkService } from "../src/auth/link.ts";
 import { HttpError } from "../src/http/errors.ts";
 import { mockMetrics, setMockMetrics } from "./dev-mock-metrics.ts";
 import { mockDecodeStatus, mockVideoDevices } from "./dev-mock-video.ts";
-import index from "./index.html";
 
-const PORT = Number(process.env.PORT ?? 48765);
+const PORT = Number(process.env.PORT ?? 48764);
+/** 給人開的網址（Vite）；示範核准連結用 */
+const ORIGIN = process.env.MOCK_ORIGIN ?? `http://localhost:${PORT}`;
 const cacheDir = join(tmpdir(), "cookienvr-web-mock");
 mkdirSync(cacheDir, { recursive: true });
 const snapFile = join(cacheDir, "snap640.jpg");
@@ -1144,8 +1145,6 @@ async function route(req: Request, url: URL): Promise<Response> {
 
 Bun.serve({
   port: PORT,
-  routes: { "/": index },
-  development: true,
   idleTimeout: 60,
   async fetch(req) {
     const url = new URL(req.url);
@@ -1159,8 +1158,8 @@ Bun.serve({
     return err(404, "not found");
   },
 });
-console.log(`mock NVR on http://localhost:${PORT}`);
+console.log(`mock NVR API on http://localhost:${PORT}（網頁：${ORIGIN}）`);
 if (FRESH) console.log("MOCK_FRESH=1：沒有預建帳號，開啟後會進到初始設定");
 else console.log(`示範登入：${DEMO_ADMIN.username} / ${DEMO_ADMIN.password}（管理員），${DEMO_USER.username} / ${DEMO_USER.password}（一般使用者）`);
-const demoLink = links.create({ app: "Home Assistant", ip: "192.168.1.50", origin: `http://localhost:${PORT}` });
+const demoLink = links.create({ app: "Home Assistant", ip: "192.168.1.50", origin: ORIGIN });
 console.log(`示範核准頁（10 分鐘內有效）：${demoLink.approveUrl}`);

@@ -1,4 +1,4 @@
-/* 下拉選單（web/ui/select.ts）；觸發按鈕也給日期選擇用 */
+/* 下拉選單（web/ui/Select.tsx）；觸發按鈕也給日期選擇用 */
 .sel { display: inline-flex; min-width: 0; max-width: 100%; }
 
 .sel-trigger {
@@ -25,7 +25,7 @@
 .sel-trigger.quiet[data-popup-open] { background: var(--fill); border-color: transparent; }
 .sel-trigger.quiet:focus-visible { box-shadow: none; outline: 2px solid var(--accent); outline-offset: 0; }
 
-.sel-pop { min-width: 180px; }
+.sel-pop { min-width: max(180px, var(--anchor-width, 0px)); }
 .sel-pop:focus { outline: none; }
 .sel-opt {
   display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px; border-radius: 9px;
@@ -36,11 +36,11 @@
 .sel-opt-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sel-opt-text small { color: var(--muted); font-size: 12.5px; }
 .sel-check { display: inline-flex; color: var(--accent-text); visibility: hidden; }
-.sel-opt[aria-selected="true"] { font-weight: 600; }
-.sel-opt[aria-selected="true"] .sel-check { visibility: visible; }
+.sel-opt[data-selected] { font-weight: 600; }
+.sel-opt[data-selected] .sel-check { visibility: visible; }
 .sel-opt[data-highlighted] { background: var(--fill-2); }
-.sel-opt[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; }
-.sel-opt[aria-disabled="true"] > .icon { color: var(--muted); }
+.sel-opt[data-disabled] { color: var(--muted); cursor: not-allowed; }
+.sel-opt[data-disabled] > .icon { color: var(--muted); }
 .sel-heading { padding: 8px 10px 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .sel-sep { height: 1px; margin: 4px 6px; background: var(--border); }
 

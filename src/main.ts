@@ -1,7 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { statfs } from "node:fs/promises";
 import { join } from "node:path";
-import index from "../web/index.html";
 import pkg from "../package.json";
 import { backupOnce } from "./backup/index.ts";
 import { API_VERSION, type CameraDto, type ProbeResult, type SystemDto } from "./api-types.ts";
@@ -22,6 +21,7 @@ import type { CodecName } from "./hwcodec/commands.ts";
 import { planDecode } from "./hwcodec/plan.ts";
 import { createVideoCodecs, decodeStatusDto } from "./hwcodec/service.ts";
 import { coreRoutes, createRouter, HttpError, linkRoutes, redactConfig } from "./http/index.ts";
+import { webApp } from "./http/web-app.ts";
 import { createLive } from "./live/live.ts";
 import { metricsRoutes } from "./metrics/routes.ts";
 import { createMetrics } from "./metrics/sampler.ts";
@@ -379,13 +379,14 @@ const routes = [
   }),
 ];
 
+const web = webApp(join(import.meta.dir, "../dist/web"));
+if (!web.ready) console.warn("[web] 找不到 dist/web：網頁介面要先執行 bun run build（開發時用 bun run dev:web），API 照常運作");
+
 const server = Bun.serve({
   port: env.port,
-  development: process.env.NODE_ENV !== "production",
   // 即時串流與 SSE 是長連線；預設 10 秒沒有資料就斷線，比 SSE 的 20 秒 ping 還短
   idleTimeout: 60,
-  routes: { "/": index },
-  fetch: createRouter(routes, auth),
+  fetch: createRouter(routes, auth, { fallback: web.handle }),
 });
 
 await supervisor.ready;

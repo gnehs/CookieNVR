@@ -1,5 +1,6 @@
 import type { EventDto, SegmentDto } from "../../src/api-types.ts";
-import { formatClock, formatDuration, h } from "../dom.ts";
+import { h } from "../dom.ts";
+import { formatClock, formatDuration } from "../format.ts";
 import { browserOffset, clusterEvents, labelText, recordedSpans, tickLabel, ticks, tickSteps, type Cluster, type Span } from "./model.ts";
 
 export type Orientation = "h" | "v";

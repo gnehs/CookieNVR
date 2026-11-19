@@ -53,6 +53,16 @@ RUN set -eux; \
     /opt/detector/bin/pip uninstall -y --disable-pip-version-check pip; \
     python3 /src/fetch_model.py /models
 
+# The web UI (React, built by Vite). Only dist/web reaches the final image, not the frontend packages.
+FROM oven/bun:${BUN_VERSION}-slim AS web
+WORKDIR /build
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+COPY tsconfig.json vite.config.ts ./
+COPY src ./src
+COPY web ./web
+RUN bun run build
+
 FROM oven/bun:${BUN_VERSION}-slim AS base
 ARG VARIANT
 # tini is PID 1: it forwards SIGTERM/SIGINT to the main process and reaps
@@ -120,7 +130,9 @@ RUN chmod +x scripts/detector-selftest scripts/video-selftest \
  && ln -s /app/scripts/detector-selftest /usr/local/bin/detector-selftest \
  && ln -s /app/scripts/video-selftest /usr/local/bin/video-selftest
 COPY src ./src
-COPY web ./web
+# The fMP4 parser is shared: the server imports it for live view and HomeKit.
+COPY web/playback/mp4.ts ./web/playback/mp4.ts
+COPY --from=web /build/dist/web ./dist/web
 
 # The detector only starts when object detection is enabled in settings.
 ENV NODE_ENV=production \
