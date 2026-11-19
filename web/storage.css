@@ -5,6 +5,14 @@
 .sto-free b { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
 .sto-free span { color: var(--text-2); font-weight: 600; }
 .sto-total { color: var(--muted); font-size: 13.5px; }
+.sto-where { margin: -6px 0 0; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.sto-where code { font: inherit; color: var(--text-2); font-weight: 600; }
+
+/* 容量條以外的補充：另一顆 appdata、舊位置的錄影、Unraid 快取池 */
+.sto-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sto-notes li { display: flex; align-items: flex-start; gap: 8px; color: var(--muted); font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.sto-notes .icon { color: var(--ph-icon); margin-top: 2px; flex: none; }
+.sto-notes li.warn, .sto-notes li.warn .icon { color: var(--warn-text); }
 
 /* 容量條：每段一台攝影機，剩下的底色就是可用空間 */
 .sto-bar { display: flex; gap: 2px; height: 12px; border-radius: 99px; overflow: hidden; background: var(--fill-2); }

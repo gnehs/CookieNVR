@@ -23,6 +23,7 @@ export function useHealth(admin: boolean): Health | null {
       cams,
       workers: workers ?? sys.workers,
       disk: sys.disk,
+      dataDisk: sys.dataDisk,
       minFreeBytes: settings.retention.minFreeBytes,
       resources: metrics?.history,
       decodeWarning: sys.decode?.warning ?? null,

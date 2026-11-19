@@ -207,9 +207,12 @@ function Body({ issues, snap, cams, at, onRestart }: { issues: Issue[]; snap: Sn
               <i style={{ width: `${d.usedPct.toFixed(1)}%` }} />
             </div>
             <div className="disk-nums">
-              <span className="num">{`已用 ${d.usedPct.toFixed(0)}%`}</span>
+              <span className="num">{hl.dataDisk ? `錄影硬碟已用 ${d.usedPct.toFixed(0)}%` : `已用 ${d.usedPct.toFixed(0)}%`}</span>
               <Link to="/settings/storage">管理儲存空間</Link>
             </div>
+            {hl.dataDisk ? (
+              <p className="disk-sub num" data-tone={hl.dataDisk.tone}>{`appdata 硬碟：可用 ${formatBytes(hl.dataDisk.free)}，共 ${formatBytes(hl.dataDisk.total)}`}</p>
+            ) : null}
           </div>
         </div>
       </section>

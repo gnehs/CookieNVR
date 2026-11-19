@@ -40,7 +40,7 @@ export function cameraStatus(cam: Pick<CameraDto, "config" | "online" | "recordi
   return { kind, ...STATUS[kind] };
 }
 
-export type IssueKind = "restream" | "objects" | "objectsLoad" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "cpuBusy" | "memoryHigh" | "decode";
+export type IssueKind = "restream" | "objects" | "objectsLoad" | "offline" | "notRecording" | "unstable" | "diskLow" | "diskFull" | "dataDiskLow" | "cpuBusy" | "memoryHigh" | "decode";
 
 export interface Issue {
   kind: IssueKind;
@@ -58,6 +58,8 @@ export interface HealthInput {
   cams: CameraDto[];
   workers: WorkerStatus[];
   disk: { totalBytes: number; freeBytes: number };
+  /** `SystemDto.dataDisk`：和錄影同一顆時不另外判斷（錄影那顆的提醒已經涵蓋） */
+  dataDisk?: { totalBytes: number; freeBytes: number; sameAsRecordings: boolean } | null;
   minFreeBytes: number;
   /** 系統資源的近期走勢（`MetricsDto.history`）；沒有時不判斷資源吃緊 */
   resources?: MetricsPointDto[] | null;
@@ -69,7 +71,16 @@ export interface Health {
   issues: Issue[];
   statuses: Map<CameraId, CameraStatus>;
   disk: { usedPct: number; free: number; total: number; tone: StatusTone };
+  /** appdata 那顆；和錄影同一顆時為 null */
+  dataDisk: { free: number; total: number; tone: StatusTone } | null;
 }
+
+/**
+ * appdata（/data）那顆的提醒門檻。保留規則只會在錄影那顆騰空間，這顆滿了沒有東西會自動清，
+ * 所以用絕對值而不是比例：資料庫、每天的備份與縮圖只要幾百 MB 到幾 GB，但一段 2 小時的匯出就要好幾 GB；
+ * 剩不到 5 GB 時匯出很快會失敗，剩不到 1 GB 時資料庫的備份與寫入也可能失敗。
+ */
+export const DATA_DISK = { warnBytes: 5 * 1024 ** 3, badBytes: 1024 ** 3 } as const;
 
 const CAMERA_ISSUES: { kind: Extract<IssueKind, CameraStatusKind>; tone: "bad" | "warn"; one: (n: string) => string; many: string }[] = [
   { kind: "offline", tone: "bad", one: (n) => `${n}連不上`, many: "連不上" },
@@ -115,19 +126,31 @@ export function assessHealth(input: HealthInput): Health {
   const { totalBytes: total, freeBytes: free } = input.disk;
   const usedPct = total ? ((total - free) / total) * 100 : 0;
   let diskTone: StatusTone = "ok";
+  // 有兩顆硬碟時說清楚是錄影那顆
+  const what = input.dataDisk && !input.dataDisk.sameAsRecordings ? "錄影硬碟的空間" : "儲存空間";
   if (free < input.minFreeBytes) {
     diskTone = "bad";
-    issues.push({ kind: "diskLow", tone: "bad", cameras: [], title: "儲存空間不足", short: "儲存空間不足" });
+    issues.push({ kind: "diskLow", tone: "bad", cameras: [], title: `${what}不足`, short: `${what}不足` });
   } else if (usedPct >= 90) {
     diskTone = "warn";
-    issues.push({ kind: "diskFull", tone: "warn", cameras: [], title: "儲存空間快滿了", short: "儲存空間快滿了" });
+    issues.push({ kind: "diskFull", tone: "warn", cameras: [], title: `${what}快滿了`, short: `${what}快滿了` });
+  }
+  let dataDisk: Health["dataDisk"] = null;
+  if (input.dataDisk && !input.dataDisk.sameAsRecordings) {
+    const { totalBytes, freeBytes } = input.dataDisk;
+    const tone: StatusTone = freeBytes < DATA_DISK.badBytes ? "bad" : freeBytes < DATA_DISK.warnBytes ? "warn" : "ok";
+    dataDisk = { free: freeBytes, total: totalBytes, tone };
+    if (tone !== "ok") {
+      const title = tone === "bad" ? "appdata 硬碟的空間不足" : "appdata 硬碟快滿了";
+      issues.push({ kind: "dataDiskLow", tone, cameras: [], title, short: title });
+    }
   }
   const pressure = resourcePressure(input.resources ?? []);
   if (pressure.cpu) issues.push({ kind: "cpuBusy", tone: "warn", cameras: [], title: "處理器長時間忙碌", short: "處理器長時間忙碌" });
   if (pressure.memory) issues.push({ kind: "memoryHigh", tone: "warn", cameras: [], title: "記憶體快不夠了", short: "記憶體快不夠了" });
   // 穩定排序：同色調維持上面的先後（系統 → 攝影機 → 磁碟 → 資源）
   issues.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === "bad" ? -1 : 1));
-  return { issues, statuses, disk: { usedPct, free, total, tone: diskTone } };
+  return { issues, statuses, disk: { usedPct, free, total, tone: diskTone }, dataDisk };
 }
 
 /**

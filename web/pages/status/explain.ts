@@ -130,6 +130,13 @@ export function explain(issue: Issue, snap: Snapshot): Explained {
         why: `已用 ${snap.health.disk.usedPct.toFixed(0)}%。空間用完前會自動刪除最舊的錄影，縮短保留天數可以避免重要片段被刪掉。`,
         action: { label: "調整保留", to: "/settings/storage" },
       };
+    case "dataDiskLow":
+      return {
+        who: "appdata 硬碟",
+        pill: issue.tone === "bad" ? { label: "空間不足", tone: "bad" } : { label: "快滿了", tone: "warn" },
+        next: "清出 appdata 那顆硬碟的空間",
+        why: `資料庫、事件縮圖與匯出的影片放在這顆，只剩 ${formatBytes(snap.health.dataDisk?.free ?? 0)}。這裡不會自動清理，空間用完時匯出會失敗，事件與設定也可能存不進去。刪掉同一顆上其他用不到的檔案（例如其他容器的資料），或把 /data 換到空間較大的硬碟。`,
+      };
     case "cpuBusy":
       return {
         who: "處理器",

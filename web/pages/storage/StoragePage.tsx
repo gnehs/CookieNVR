@@ -4,6 +4,7 @@ import type { SettingsDto, SystemDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { camerasQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
 import { errMsg, formatBytes } from "../../format.ts";
+import { DATA_DISK } from "../../health.ts";
 import { estimateDays } from "../../retention-estimate.ts";
 import { Button } from "../../ui/Button.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
@@ -95,6 +96,39 @@ function Estimate({ sys, draft, savedMinFreeGb }: { sys: SystemDto; draft: Draft
   );
 }
 
+const inside = (path: string, dir: string) => path === dir || path.startsWith(dir.endsWith("/") ? dir : `${dir}/`);
+
+/** 容量條以外要知道的事：appdata 在另一顆的用量、留在舊位置的錄影、另外掛了 /recordings 卻和 appdata 同一顆 */
+function DiskNotes({ sys }: { sys: SystemDto }) {
+  const data = sys.dataDisk;
+  const old = sys.elsewhere.reduce((a, e) => a + e.bytes, 0);
+  const notes: { icon: "hdd" | "info" | "alert"; tone?: "warn"; text: string }[] = [];
+  if (!data.sameAsRecordings) {
+    const tone = data.freeBytes < DATA_DISK.warnBytes ? "warn" : undefined;
+    notes.push({ icon: tone ? "alert" : "hdd", tone, text: `資料庫、縮圖與匯出放在 appdata（${data.path}）那顆硬碟：可用 ${formatBytes(data.freeBytes)}，共 ${formatBytes(data.totalBytes)}。` });
+  } else if (!inside(sys.disk.path, data.path)) {
+    notes.push({
+      icon: "info",
+      text: "錄影和 appdata 其實在同一顆硬碟上。如果另外掛載錄影資料夾是想放到別顆硬碟（例如 Unraid 的陣列），請檢查那個共享的主要儲存設定。",
+    });
+  }
+  if (old > 0) {
+    const where = sys.elsewhere.length === 1 ? `舊的位置 ${sys.elsewhere[0]!.path}` : `${sys.elsewhere.length} 個舊的位置（${sys.elsewhere.map((e) => e.path).join("、")}）`;
+    notes.push({ icon: "info", text: `另有 ${formatBytes(old)} 錄影在${where}，不算在上面的容量裡；照常可以回放，會照保留天數自動清掉。` });
+  }
+  if (!notes.length) return null;
+  return (
+    <ul className="sto-notes">
+      {notes.map((n) => (
+        <li key={n.text} className={n.tone}>
+          <Icon name={n.icon} size={16} />
+          <span>{n.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type Part = { name: string; bytes: number; kind: "cam" | "orphan" | "other"; shade?: number };
 
 /** 儲存空間總覽：容量條、各攝影機用量。估算放在這張卡裡，但依下面表單目前填的值算 */
@@ -138,12 +172,16 @@ function Overview({ sys, names, draft, savedMinFreeGb }: { sys: SystemDto; names
           </div>
           <span className="sto-total num">{`共 ${formatBytes(totalBytes)} · 錄影佔 ${formatBytes(recorded)}`}</span>
         </div>
+        <p className="sto-where">
+          錄影位置 <code>{sys.disk.path}</code> 所在的硬碟
+        </p>
         <div className="sto-bar" role="img" aria-label={`已用 ${usedPct}%，${parts.map((p) => `${p.name} ${formatBytes(p.bytes)}`).join("、")}，可用 ${formatBytes(freeBytes)}`}>
           {parts.map((p) => (
             <i key={`${p.kind}:${p.name}`} className={`sto-seg ${p.kind}`} data-shade={p.shade} style={{ width: `${Math.max(pct(p.bytes), 0.6).toFixed(2)}%` }} />
           ))}
         </div>
         <Estimate sys={sys} draft={draft} savedMinFreeGb={savedMinFreeGb} />
+        <DiskNotes sys={sys} />
       </div>
       {live.length || orphanBytes ? (
         <ul className="sto-legend">
@@ -208,7 +246,7 @@ function RetentionForm({ settings, draft, setDraft }: { settings: SettingsDto; d
       if (!ok) return;
     }
     save.mutate({
-      storagePath: d.storagePath,
+      ...(d.storagePath !== saved.storagePath ? { storagePath: d.storagePath } : {}),
       retention: { continuousDays: Math.floor(d.continuousDays), eventDays: Math.floor(d.eventDays), minFreeBytes: Math.round(d.minFreeGb * GB) },
     });
   };

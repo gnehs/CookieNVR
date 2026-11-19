@@ -158,3 +158,27 @@ describe("影像解碼退回處理器", () => {
     expect(alertSummary(h.issues)).toBe("1 台連不上、影像解碼改用處理器");
   });
 });
+
+describe("appdata 硬碟", () => {
+  const GB = 1024 ** 3;
+  const data = (freeGb: number, sameAsRecordings = false) => ({ totalBytes: 500 * GB, freeBytes: freeGb * GB, sameAsRecordings });
+
+  test("另一顆剩不到 5 GB 提醒、不到 1 GB 是紅色；錄影那顆的提醒說清楚是錄影硬碟", () => {
+    expect(assessHealth({ ...healthy, cams: [], dataDisk: data(300) }).issues).toEqual([]);
+    const warn = assessHealth({ ...healthy, cams: [], dataDisk: data(4) });
+    expect(warn.issues.map((i) => [i.kind, i.tone])).toEqual([["dataDiskLow", "warn"]]);
+    expect(warn.dataDisk).toEqual({ free: 4 * GB, total: 500 * GB, tone: "warn" });
+    const bad = assessHealth({ ...healthy, cams: [], dataDisk: data(0.5), disk: { totalBytes: 100, freeBytes: 5 }, minFreeBytes: 0 });
+    expect(bad.issues.map((i) => [i.kind, i.tone, i.title])).toEqual([
+      ["dataDiskLow", "bad", "appdata 硬碟的空間不足"],
+      ["diskFull", "warn", "錄影硬碟的空間快滿了"],
+    ]);
+  });
+
+  test("和錄影同一顆時不重複提醒", () => {
+    const h = assessHealth({ ...healthy, cams: [], dataDisk: data(0.5, true) });
+    expect(h.issues).toEqual([]);
+    expect(h.dataDisk).toBeNull();
+  });
+});
+

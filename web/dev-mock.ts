@@ -250,7 +250,36 @@ function objectsDiagnostics(): ObjectsDiagnostics {
   };
 }
 
-let mockFreeBytes = 1.6 * 1024 ** 4;
+/** 錄影那顆的可用空間；null 是各情境的預設值 */
+let mockFreeBytes: number | null = null;
+// 儲存情境（MOCK_STORAGE 或 POST /api/mock/storage?disks=）：same 是錄影放在 /data 底下（預設）；split 是 /recordings 另一顆硬碟；
+// datalow 是 split 再加上 appdata 那顆快滿；old 是 split 再加上 12 GB 錄影留在舊位置 /data/recordings；
+// pool 是另外掛了 /recordings，但和 appdata 在同一顆（Unraid 共享以快取池為主要儲存）
+type StorageScenario = "same" | "split" | "datalow" | "old" | "pool";
+const STORAGE_SCENARIOS: StorageScenario[] = ["same", "split", "datalow", "old", "pool"];
+const asScenario = (v: string | null | undefined): StorageScenario => (STORAGE_SCENARIOS.includes(v as StorageScenario) ? (v as StorageScenario) : "same");
+let storageScenario = asScenario(process.env.MOCK_STORAGE);
+const TB = 1024 ** 4;
+function mockDisks(): Pick<SystemDto, "disk" | "dataDisk" | "elsewhere"> {
+  const s = storageScenario;
+  if (s === "same") {
+    const disk = { path: settings.storagePath, totalBytes: 2 * TB, freeBytes: mockFreeBytes ?? 1.6 * TB };
+    return { disk, dataDisk: { ...disk, path: "/data", sameAsRecordings: true }, elsewhere: [] };
+  }
+  if (s === "pool") {
+    const disk = { path: settings.storagePath, totalBytes: 0.5 * TB, freeBytes: mockFreeBytes ?? 0.21 * TB };
+    return { disk, dataDisk: { ...disk, path: "/data", sameAsRecordings: true }, elsewhere: [] };
+  }
+  return {
+    disk: { path: settings.storagePath, totalBytes: 8 * TB, freeBytes: mockFreeBytes ?? 6.2 * TB },
+    dataDisk: { path: "/data", totalBytes: 0.5 * TB, freeBytes: s === "datalow" ? 1.2 * 1024 ** 3 : 0.32 * TB, sameAsRecordings: false },
+    elsewhere: s === "old" ? [{ path: "/data/recordings", bytes: 12 * 1024 ** 3 }] : [],
+  };
+}
+const applyStorageScenario = () => {
+  settings = { ...settings, storagePath: storageScenario === "same" ? "/data/recordings" : "/recordings" };
+};
+applyStorageScenario();
 // 每台攝影機佔用的錄影空間；攝影機刪掉後沒清除的錄影會留在這裡，成為「已刪除的攝影機」
 const usage = new Map<string, { bytes: number; oldestMs: number }>(
   cams.slice(0, 2).map((c, i) => [c.id, { bytes: (180 - i * 90) * 1024 ** 3, oldestMs: now() - (6 - i * 3) * 86_400_000 }]),
@@ -1084,10 +1113,14 @@ async function route(req: Request, url: URL): Promise<Response> {
     }
     return json({ segments, events: 0, bytes });
   }
-  // 儲存空間頁的各種情況：POST /api/mock/storage?free=<GB>&orphan=1（空間不夠、有已刪除攝影機的錄影）
+  // 儲存空間頁的各種情況：POST /api/mock/storage?free=<GB>&orphan=1&disks=<情境>（空間不夠、有已刪除攝影機的錄影、兩顆硬碟）
   if (path === "/mock/storage" && m === "POST") {
     const q = url.searchParams;
-    mockFreeBytes = q.has("free") ? Number(q.get("free")) * 1024 ** 3 : 1.6 * 1024 ** 4;
+    mockFreeBytes = q.has("free") ? Number(q.get("free")) * 1024 ** 3 : null;
+    if (q.has("disks")) {
+      storageScenario = asScenario(q.get("disks"));
+      applyStorageScenario();
+    }
     usage.delete("cam-gone");
     if (q.get("orphan") === "1") usage.set("cam-gone", { bytes: 42 * 1024 ** 3, oldestMs: now() - 9 * 86_400_000 });
     return json({ ok: true });
@@ -1095,7 +1128,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (path === "/system" && m === "GET") {
     const sys: SystemDto = {
       workers,
-      disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: mockFreeBytes },
+      ...mockDisks(),
       usage: [...usage].map(([cameraId, u]) => ({ cameraId: cameraId as CameraId, ...u })),
       logs: Array.from({ length: 60 }, (_, i) => `${new Date(now() - (60 - i) * 5000).toISOString()} INFO tick ${i} worker ok`),
       decode: mockDecodeStatus(settings.devices.decode, decodeCams()),
@@ -1123,7 +1156,7 @@ async function route(req: Request, url: URL): Promise<Response> {
       only: only as CameraId | null,
       workers,
       restarts: [],
-      disk: { path: settings.storagePath, totalBytes: 2 * 1024 ** 4, freeBytes: 1.6 * 1024 ** 4 },
+      ...mockDisks(),
       usage: [],
       ...(settings.objects.enabled ? { objects: objectsDiagnostics() } : {}),
     });
