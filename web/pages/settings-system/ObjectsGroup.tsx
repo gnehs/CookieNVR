@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ObjectModelDto, ObjectsDto } from "../../../src/api-types.ts";
 import type { ObjectSettings, Settings } from "../../../src/types.ts";
 import { api } from "../../api.ts";
-import { settingsQuery } from "../../data/queries.ts";
+import { objectsQuery, settingsQuery } from "../../data/queries.ts";
 import { deviceHint, deviceOptions, FPS_HINT, FPS_OPTIONS, objectsView, unavailableNotes } from "../../detect/object-model.ts";
 import { formatBytes } from "../../format.ts";
 import { Icon } from "../../ui/Icon.tsx";
@@ -11,7 +11,6 @@ import { SettingRow, SettingsGroup } from "../../ui/SettingRow.tsx";
 import { Switch } from "../../ui/controls.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { BenchmarkSection } from "./BenchmarkSection.tsx";
-import { objectsQuery } from "./queries.ts";
 
 type Patch = { objects?: Partial<ObjectSettings>; devices?: { objects: string } };
 

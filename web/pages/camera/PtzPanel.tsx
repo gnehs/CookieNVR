@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CameraDto, PtzDto } from "../../../src/api-types.ts";
-import { api } from "../../api.ts";
+import { ptzQuery } from "../../data/queries.ts";
 import { errMsg } from "../../format.ts";
 import { createPtzDriver, planMotion, type Clock, type DriverSnapshot, type PtzDriver, type Vec } from "../../ptz/driver.ts";
 import { apiTransport, stopOnUnload } from "../../ptz/transport.ts";
@@ -35,8 +35,7 @@ type Supported = Extract<PtzDto, { supported: true }>;
 export function PtzPanel({ cam, admin, onMode }: { cam: CameraDto; admin: boolean; onMode: (m: "panel" | "note" | undefined) => void }) {
   // 每次進頁面都重抓（預置點可能被別處改過）；面板開著時不因為視窗重新聚焦而重抓，免得中途換掉 driver
   const q = useQuery({
-    queryKey: ["cameras", cam.id, "ptz"],
-    queryFn: () => api.ptz(cam.id),
+    ...ptzQuery(cam.id),
     retry: false,
     staleTime: Infinity,
     gcTime: 0,

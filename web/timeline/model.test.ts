@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
 import type { EventDto, SegmentDto } from "../../src/api-types.ts";
+import type { CameraId } from "../../src/types.ts";
 import { clusterEvents, eventAt, labelText, nextEvent, playableFrom, prevEvent, recordedSpans, tickLabel, ticks, tickSteps } from "./model.ts";
 
 const T = Date.UTC(2026, 10, 18, 4, 0, 0);
-const seg = (id: number, start: number, end: number | null): SegmentDto => ({ id, cameraId: "c" as never, startMs: start, endMs: end, size: 1 });
+const seg = (id: number, start: number, end: number | null): SegmentDto => ({ id, cameraId: "c" as CameraId, startMs: start, endMs: end, size: 1 });
 const ev = (id: number, start: number, end: number | null): EventDto => ({
-  id, cameraId: "c" as never, source: "pixel", startMs: start, endMs: end, score: 0.3, labels: [], hasThumb: false,
+  id, cameraId: "c" as CameraId, source: "pixel", startMs: start, endMs: end, score: 0.3, labels: [], hasThumb: false,
 });
 
 // two segments overlapping by 0.6 s, a 1.5 s hiccup (still continuous), a real 5 min gap, then a live one

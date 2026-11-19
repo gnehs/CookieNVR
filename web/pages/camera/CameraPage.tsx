@@ -98,7 +98,7 @@ function Live({ cam }: { cam: CameraDto }) {
               }}
             />
           ) : null}
-          <ButtonLink to="/recordings" search={{ camera: id } as never} variant="primary" icon="film">
+          <ButtonLink to="/recordings" search={{ camera: id }} variant="primary" icon="film">
             看回放
           </ButtonLink>
         </div>

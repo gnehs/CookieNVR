@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { EventDto } from "../../../src/api-types.ts";
 import { labelName } from "../../../src/objects/labels.ts";
 import { api } from "../../api.ts";
-import { activeEventsQuery, camerasQuery } from "../../data/queries.ts";
+import { activeEventsQuery, camerasQuery, objectLabelsQuery } from "../../data/queries.ts";
 import { useMe } from "../../data/session.ts";
-import { dayBounds, dayKey, dayTitle, groupByDay, mergeEvents, playbackHref } from "../../detect/model.ts";
+import { dayBounds, dayKey, dayTitle, groupByDay, mergeEvents, playbackSearch } from "../../detect/model.ts";
 import { eventLabelOptions } from "../../detect/object-model.ts";
 import { errMsg, formatClock } from "../../format.ts";
 import { EVENT_ACTIVE } from "../../health.ts";
@@ -116,7 +116,7 @@ function EventsList() {
   const search: EventsSearch = useSearch({ from: "/_authed/_shell/events" });
   const cams = useQuery(camerasQuery).data ?? [];
   const active = useQuery(activeEventsQuery);
-  const catalog = useQuery({ queryKey: ["objects", "labels"], queryFn: api.objectLabels, staleTime: Infinity, retry: false }).data ?? null;
+  const catalog = useQuery({ ...objectLabelsQuery, retry: false }).data ?? null;
 
   const filter: Filter = {
     camera: search.camera && cams.some((c) => c.id === search.camera) ? search.camera : null,
@@ -325,15 +325,12 @@ function EventCard({ e, now, name, admin, onRemove }: { e: EventDto; now: number
   const live = e.endMs === null;
   const len = (e.endMs ?? now) - e.startMs;
   const labels = e.labels.length ? labelText(e.labels) : null;
-  // 回放頁的 search 由那一頁定義；參數名稱照舊版（camera、date、t），t 是毫秒數字
-  const q = new URLSearchParams(playbackHref(e).split("?")[1]);
-  const to = { camera: q.get("camera")!, date: q.get("date")!, t: Number(q.get("t")) };
   return (
     <li className="ev-card" ref={li} data-live={live ? "" : undefined}>
       <Link
         className="ev-card-link"
         to="/recordings"
-        search={to as never}
+        search={playbackSearch(e)}
         aria-label={`${name}，${dayTitle(dayKey(e.startMs), now)} ${formatClock(e.startMs)}${labels ? `，${labels}` : ""}，${live ? `${EVENT_ACTIVE.badge}，已持續 ${spoken(len)}` : `長度 ${spoken(len)}`}，播放錄影`}
       >
         <span className="ev-card-thumb">

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes }
 import type { CameraDto, ProbeResult } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { maskedField } from "../../camera-form-logic.ts";
-import { camerasQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
+import { camerasQuery, ptzQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
 import { infoQuery } from "../../data/session.ts";
 import { objectSummary, modeOf } from "../../detect/object-model.ts";
 import { errMsg } from "../../format.ts";
@@ -20,7 +20,7 @@ import { toast } from "../../ui/toast.tsx";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
 import { Disclosure, useDetailsOpen } from "./bits.tsx";
 import { putCamera } from "./CamerasListPage.tsx";
-import { DetectSection, ptzQuery } from "./DetectSection.tsx";
+import { DetectSection } from "./DetectSection.tsx";
 import {
   basicSummary,
   connAdvancedOpen,

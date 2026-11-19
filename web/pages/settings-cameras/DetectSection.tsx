@@ -1,9 +1,10 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
 import { DEFAULT_DETECT, SENSITIVITY_PRESETS } from "../../../src/detect/config.ts";
 import type { DetectConfig, DetectSource } from "../../../src/types.ts";
 import { api } from "../../api.ts";
+import { ptzQuery } from "../../data/queries.ts";
 import { maskEditor, type MaskEditor } from "../../detect/mask-editor.ts";
 import { areaToPos, formatArea, posToArea, posToThreshold, sensitivityOf, thresholdToPos, type Sensitivity } from "../../detect/model.ts";
 import { Choice, Segmented, Switch } from "../../ui/controls.tsx";
@@ -15,7 +16,6 @@ import { ScoreMeter } from "./ScoreMeter.tsx";
 
 const SNAPSHOT_MS = 2_000;
 
-export const ptzQuery = (id: string) => queryOptions({ queryKey: ["cameras", id, "ptz"], queryFn: () => api.ptz(id) });
 
 const SOURCES: { value: DetectSource; label: string; hint: string }[] = [
   { value: "pixel", label: "畫面變化", hint: "比對畫面的變化，每台攝影機都能用，也能排除不需要的區域。" },

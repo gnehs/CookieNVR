@@ -1,6 +1,7 @@
 import type { EventDto } from "../../src/api-types.ts";
 import { LIMITS, SENSITIVITY_PRESETS } from "../../src/detect/config.ts";
 import { EVENT_PREROLL_MS } from "../timeline/model.ts";
+import { type DayKey, dayOf } from "../ui/date-logic.ts";
 
 export type Sensitivity = keyof typeof SENSITIVITY_PRESETS | "custom";
 
@@ -109,7 +110,7 @@ export function groupByDay(events: readonly EventDto[]): { key: string; events: 
   return out;
 }
 
-/** 回放頁從事件開始前 5 秒播起 */
-export function playbackHref(e: Pick<EventDto, "cameraId" | "startMs">): string {
-  return `/recordings?camera=${encodeURIComponent(e.cameraId)}&date=${dayKey(e.startMs)}&t=${e.startMs - EVENT_PREROLL_MS}`;
+/** 回放頁（`/recordings`）的 search：從事件開始前 5 秒播起 */
+export function playbackSearch(e: Pick<EventDto, "cameraId" | "startMs">): { camera: string; date: DayKey; t: number } {
+  return { camera: e.cameraId, date: dayOf(e.startMs), t: e.startMs - EVENT_PREROLL_MS };
 }

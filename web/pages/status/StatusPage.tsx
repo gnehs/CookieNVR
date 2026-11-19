@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
-import { camerasQuery, metricsQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
+import { camerasQuery, metricsQuery, objectsQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
 import { useHealth } from "../../data/use-health.ts";
 import { formatBytes, formatClock } from "../../format.ts";
 import type { Issue } from "../../health.ts";
@@ -83,7 +83,7 @@ function IssueRow({ issue, snap, onRestart }: { issue: Issue; snap: Snapshot; on
 
 /** 物件辨識來不及處理的提醒（後端給的一般人看得懂的話）；辨識暫停時沿用上一次的結果 */
 function useLoadWarning(enabled: boolean): string | null {
-  const q = useQuery({ queryKey: ["objects"], queryFn: api.objects, enabled, refetchInterval: POLL_MS });
+  const q = useQuery({ ...objectsQuery(false), enabled, refetchInterval: POLL_MS });
   const [warning, setWarning] = useState<string | null>(null);
   const data = q.data;
   useEffect(() => {

@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Settings } from "../../../src/types.ts";
 import { api } from "../../api.ts";
-import { settingsQuery } from "../../data/queries.ts";
+import { objectsQuery, settingsQuery } from "../../data/queries.ts";
 import { Select } from "../../ui/Select.tsx";
 import { SettingRow, SettingsGroup } from "../../ui/SettingRow.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { DECODE_HINT, decodeNote, decodeOptions } from "./decode-model.ts";
-import { objectsQuery, videoDevicesQuery } from "./queries.ts";
+import { videoDevicesQuery } from "./queries.ts";
 import "./decode.css";
 
 /** 「設定 → 一般」的影像解碼：自動、處理器，或指定一張顯示卡的硬體解碼器。沒有顯示卡時仍顯示，只有自動與處理器 */

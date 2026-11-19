@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { EventDto } from "../../src/api-types.ts";
 import { LIMITS, SENSITIVITY_PRESETS } from "../../src/detect/config.ts";
 import type { CameraId } from "../../src/types.ts";
-import { areaToPos, dayTitle, formatArea, groupByDay, mergeEvents, meterY, playbackHref, posToArea, posToThreshold, sensitivityOf, thresholdToPos, TRIGGER_Y } from "./model.ts";
+import { areaToPos, dayTitle, formatArea, groupByDay, mergeEvents, meterY, playbackSearch, posToArea, posToThreshold, sensitivityOf, thresholdToPos, TRIGGER_Y } from "./model.ts";
 
 const ev = (id: number, startMs: number, endMs: number | null = startMs + 5_000): EventDto => ({ id, cameraId: "c1" as CameraId, source: "pixel", startMs, endMs, score: 0.1, labels: [], hasThumb: true });
 const at = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m - 1, d, h, min).getTime();
@@ -69,6 +69,6 @@ describe("事件清單", () => {
 
   test("點事件從開始前 5 秒回放，日期用瀏覽器時區", () => {
     const start = at(2026, 11, 18, 0, 0) + 2_000;
-    expect(playbackHref({ cameraId: "c 1" as CameraId, startMs: start })).toBe(`/recordings?camera=c%201&date=2026-11-18&t=${start - 5_000}`);
+    expect(playbackSearch({ cameraId: "c 1" as CameraId, startMs: start })).toEqual({ camera: "c 1", date: "2026-11-18", t: start - 5_000 });
   });
 });

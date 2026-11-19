@@ -25,6 +25,28 @@ export const workersQuery = queryOptions({
   staleTime: Infinity,
 });
 
+/** PTZ 能力與偏好；單台頁的面板與攝影機設定表單共用 */
+export const ptzQuery = (id: string) => queryOptions({ queryKey: ["cameras", id, "ptz"], queryFn: () => api.ptz(id) });
+
+const OBJECTS_POLL_MS = 3_000;
+/** 測速中進度條要跟得上 */
+const OBJECTS_POLL_BENCH_MS = 1_000;
+
+/** 物件辨識的狀態、模型與測速；watch 時每幾秒更新，測速中每秒一次（分頁在背景時自動暫停） */
+export const objectsQuery = (watch: boolean) =>
+  queryOptions({
+    queryKey: ["objects"],
+    queryFn: api.objects,
+    refetchInterval: (q) => {
+      if (!watch) return false;
+      const d = q.state.data;
+      return d?.benchmark?.state === "running" || d?.status.paused === "benchmark" ? OBJECTS_POLL_BENCH_MS : OBJECTS_POLL_MS;
+    },
+  });
+
+/** 物件類別的目錄，執行期間不會變 */
+export const objectLabelsQuery = queryOptions({ queryKey: ["objects", "labels"], queryFn: api.objectLabels, staleTime: Infinity });
+
 /** 事件最長 10 分鐘，往前抓 11 分鐘就不會漏掉還在進行的 */
 export const ACTIVE_WINDOW_MS = 11 * 60_000;
 

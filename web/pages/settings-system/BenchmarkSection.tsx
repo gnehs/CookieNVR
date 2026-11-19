@@ -8,7 +8,7 @@ import { formatDateTime } from "../../format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { SettingRow } from "../../ui/SettingRow.tsx";
-import { objectsQuery } from "./queries.ts";
+import { objectsQuery } from "../../data/queries.ts";
 
 export const isBenchmarking = (data: ObjectsDto | undefined): boolean => data?.benchmark?.state === "running" || data?.status.paused === "benchmark";
 

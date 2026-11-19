@@ -1,9 +1,9 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import type { ObjectLabelsDto } from "../../../src/api-types.ts";
 import { COMMON_LABELS, labelName } from "../../../src/objects/labels.ts";
 import type { DetectConfig } from "../../../src/types.ts";
-import { api } from "../../api.ts";
+import { objectLabelsQuery } from "../../data/queries.ts";
 import { labelGroups, labelsProblem, modeOf, OBJECT_MODES, posToScore, scoreToPos, STRICTNESS, strictnessOf } from "../../detect/object-model.ts";
 import { Segmented } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
@@ -12,7 +12,6 @@ import { Range } from "./bits.tsx";
 
 export type ObjectFields = Pick<DetectConfig, "labels" | "objectMode" | "objectScore">;
 
-export const objectLabelsQuery = queryOptions({ queryKey: ["objects", "labels"], queryFn: api.objectLabels });
 
 /** 類別目錄還沒到、或抓不到時的備用清單：只有常用類別 */
 const FALLBACK: Pick<ObjectLabelsDto, "labels" | "common"> = { labels: COMMON_LABELS.map((key) => ({ key, zh: labelName(key), en: key })), common: [...COMMON_LABELS] };
