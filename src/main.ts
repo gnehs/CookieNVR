@@ -3,6 +3,7 @@ import { statfs } from "node:fs/promises";
 import { join } from "node:path";
 import index from "../web/index.html";
 import pkg from "../package.json";
+import { backupOnce } from "./backup/index.ts";
 import type { ProbeResult, SystemDto } from "./api-types.ts";
 import { createAuth } from "./auth/index.ts";
 import { probeCamera } from "./camera/probe.ts";
@@ -10,6 +11,7 @@ import { createSnapshots } from "./camera/snapshot.ts";
 import { openDb } from "./db.ts";
 import { buildDiagnostics } from "./diagnostics.ts";
 import { eventRoutes } from "./events/index.ts";
+import { createExports, exportRoutes } from "./export/index.ts";
 import { readEnv } from "./env.ts";
 import { coreRoutes, createRouter, HttpError } from "./http/index.ts";
 import {
@@ -26,12 +28,15 @@ import {
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore } from "./stores/index.ts";
 import type { CameraConnection, CameraId, WorkerSpec } from "./types.ts";
+import { createMemoryMonitor } from "./workers/memory.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
 
 const TICK_MS = 10_000;
 const RETENTION_MS = 60_000;
 const ONLINE_POLL_MS = 5_000;
+const BACKUP_CHECK_MS = 60 * 60_000;
+const EXPORT_SWEEP_MS = 60_000;
 
 const env = readEnv();
 const logDir = join(env.dataDir, "logs");
@@ -47,6 +52,19 @@ const restream = createRestream({
   configDir: join(env.dataDir, "mediamtx"),
   apiPort: env.mediamtxApiPort,
   authUrl: `http://127.0.0.1:${env.port}/internal/rtsp-auth`,
+});
+const exportsDir = join(env.dataDir, "exports");
+mkdirSync(exportsDir, { recursive: true });
+const exportJobs = createExports({
+  db,
+  cameras,
+  env,
+  dir: exportsDir,
+  pidFile: join(logDir, "export.pid.json"),
+  freeBytes: async () => {
+    const fs = await statfs(exportsDir);
+    return fs.bavail * fs.bsize;
+  },
 });
 const indexer = createIndexer({ db, settings: settings.get });
 const retention = createRetention({ db, settings: settings.get });
@@ -206,6 +224,7 @@ const routes = [
       indexer.exclusive(() => purgeOrphans(purgeDeps, (id) => cameras.get(id) !== null || hasRecordWorker(id))),
   }),
   ...eventRoutes({ db, dataDir: env.dataDir }),
+  ...exportRoutes(exportJobs),
   createSnapshots({
     env,
     sourceUrl: (id) => {
@@ -241,6 +260,42 @@ cameras.subscribe((list) => {
 settings.subscribe(() => void reconcileWorkers().catch((e) => log("workers", e)));
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => log("restream", e));
 
+function runBackup(): void {
+  try {
+    backupOnce({ db, dir: join(env.dataDir, "backup") }, Date.now());
+  } catch (e) {
+    log("backup", e);
+  }
+}
+runBackup();
+
+const memory = createMemoryMonitor({
+  targets: () => {
+    const targets = supervisor
+      .status()
+      .filter((w) => w.pid !== null && (w.state === "running" || w.state === "starting"))
+      .map((w) => ({ id: w.id, kind: w.kind, pid: w.pid as number }));
+    const exportPid = exportJobs.activePid();
+    if (exportPid !== null) targets.push({ id: "export", kind: "export", pid: exportPid });
+    return targets;
+  },
+  onExceeded(target, rss) {
+    console.error(`[memory] ${target.id} 使用 ${Math.round(rss / 1048576)} MB，超過上限，重啟`);
+    if (target.id === "export") exportJobs.killForMemory();
+    else supervisor.restart(target.id, "memory");
+  },
+  self: {
+    limitBytes: env.mainMemoryLimitMb * 1048576,
+    rss: () => process.memoryUsage.rss(),
+    onExceeded(rss) {
+      console.error(`[memory] 主程序使用 ${Math.round(rss / 1048576)} MB，超過上限 ${env.mainMemoryLimitMb} MB，收掉所有 worker 後退出`);
+      void shutdown(1);
+    },
+  },
+  onError: (e) => log("memory", e),
+});
+memory.start();
+
 const timers = [
   setInterval(() => {
     void reconcileWorkers()
@@ -252,18 +307,21 @@ const timers = [
     pruneRestartLog(logDir);
   }, RETENTION_MS),
   setInterval(() => void refreshOnline().catch((e) => log("online", e)), ONLINE_POLL_MS),
+  setInterval(runBackup, BACKUP_CHECK_MS),
+  setInterval(() => void exportJobs.sweep().catch((e) => log("export", e)), EXPORT_SWEEP_MS),
 ];
 
 let stopping = false;
-async function shutdown(): Promise<void> {
+async function shutdown(exitCode = 0): Promise<void> {
   if (stopping) return;
   stopping = true;
   for (const t of timers) clearInterval(t);
+  memory.stop();
   stopSync();
   void server.stop(true);
-  await supervisor.shutdown();
+  await Promise.all([supervisor.shutdown(), exportJobs.shutdown()]);
   db.close();
-  process.exit(0);
+  process.exit(exitCode);
 }
 process.on("SIGTERM", () => void shutdown());
 process.on("SIGINT", () => void shutdown());

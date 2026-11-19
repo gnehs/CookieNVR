@@ -105,3 +105,39 @@ export interface EventDto {
   labels: string[];
   hasThumb: boolean;
 }
+
+export type ExportState = "queued" | "running" | "done" | "failed";
+
+export interface ExportRequestDto {
+  cameraId: CameraId;
+  startMs: number;
+  endMs: number;
+  /** IANA 時區，用來產生檔名裡的當地時間；沒帶就用 UTC */
+  tz?: string;
+}
+
+export interface ExportDto {
+  id: string;
+  cameraId: CameraId;
+  cameraName: string;
+  startMs: number;
+  /** 實際匯出的結束時間；要求的結束時間在未來時會收到現在 */
+  endMs: number;
+  /** 範圍內實際有錄影的長度，缺片不算 */
+  durationMs: number;
+  estimatedBytes: number;
+  /** 範圍包含錄製中的片段，匯出到目前已寫入的部分 */
+  includesRecording: boolean;
+  state: ExportState;
+  /** 0 到 1 */
+  progress: number;
+  /** 排隊中時，前面還有幾個；其他狀態為 null */
+  ahead: number | null;
+  sizeBytes: number | null;
+  error: string | null;
+  fileName: string;
+  createdAt: number;
+  finishedAt: number | null;
+  /** 完成後自動刪除的時間 */
+  expiresAt: number | null;
+}
