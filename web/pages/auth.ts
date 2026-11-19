@@ -1,5 +1,5 @@
 import { api } from "../api.ts";
-import { errMsg, field, h, icon } from "../dom.ts";
+import { errMsg, field, h, icon, brandMark } from "../dom.ts";
 import { navigate, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 
@@ -63,7 +63,7 @@ function authForm(opts: {
   return h(
     "main",
     { class: "auth" },
-    h("div", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 17)), h("span", null, state.siteName)),
+    h("div", { class: "brand" }, brandMark(), h("span", null, state.siteName)),
     h("section", { class: "card auth-card" }, h("header", null, h("h1", { class: "auth-title" }, opts.title), opts.intro && h("p", null, opts.intro)), form),
   );
 }

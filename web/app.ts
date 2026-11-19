@@ -1,5 +1,5 @@
 import { api, setUnauthorizedHandler } from "./api.ts";
-import { attachMenu, errMsg, errorBox, h, icon, PageError, pageErrorBox, spinner } from "./dom.ts";
+import { attachMenu, errMsg, errorBox, h, icon, PageError, pageErrorBox, spinner, brandMark } from "./dom.ts";
 import { matchRoute, navigate, parseHash, type PageCtx, type Route } from "./router.ts";
 import { state } from "./state.ts";
 import { onHealth, startHealthWatch, stopHealthWatch } from "./health-watch.ts";
@@ -138,7 +138,7 @@ function userMenu(active: string | undefined): HTMLElement | null {
 function renderNav(active?: string) {
   if (!shell) return;
   shell.nav.replaceChildren(
-    h("div", { class: "brand" }, h("span", { class: "brand-mark" }, icon("camera", 17)), h("span", null, state.siteName)),
+    h("div", { class: "brand" }, brandMark(), h("span", null, state.siteName)),
     ...NAV.map((n) => h("a", { class: "nav-link", href: n.href, "aria-current": n.section === active ? "page" : null }, h("span", { class: "nav-ico" }, icon(n.icon, 20)), n.label)),
     ...[userMenu(active)].filter((n): n is HTMLElement => n !== null),
   );

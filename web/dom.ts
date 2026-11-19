@@ -1,3 +1,4 @@
+import logoUrl from "./assets/logo.png";
 type Child = Node | string | number | null | undefined | false | Child[];
 type Props = Record<string, any>;
 
@@ -580,4 +581,9 @@ export function choice(
   });
   const el = h("div", { class: "choice" }, seg, customRow);
   return { el, input: custom, value: () => (picked === "custom" ? (custom.value.trim() === "" ? NaN : Number(custom.value)) : Number(picked)) };
+}
+
+/** 品牌圖示：由 design/CookieNVR.icon 匯出 */
+export function brandMark(): HTMLElement {
+  return h("img", { class: "brand-mark", src: logoUrl, alt: "", width: "30", height: "30" });
 }
