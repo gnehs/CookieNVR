@@ -60,7 +60,9 @@ export function SettingRow({ title, desc, control, toggle, wide, className, erro
         toggle
           ? (e) => {
               const sw = row.current?.querySelector<HTMLInputElement>('input[type="checkbox"]');
-              if (!sw || sw.disabled || (e.target as Element).closest("a, button, summary, details, input, label, select, textarea")) return;
+              // 只看列裡面的互動元素：列本身常放在可收合的卡片（details）裡
+              const hit = (e.target as Element).closest("a, button, summary, details, input, label, select, textarea");
+              if (!sw || sw.disabled || (hit && row.current?.contains(hit))) return;
               sw.click();
             }
           : undefined
