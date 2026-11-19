@@ -73,3 +73,5 @@ details.disclosure.fcard[open] > summary .fcard-chevron .icon { transform: rotat
   .danger-zone { padding: 16px; }
   .danger-zone .btn { width: 100%; }
 }
+/* 卡片用 overflow: clip 裁圓角，往外的焦點框會被裁掉；改成畫在內側 */
+details.disclosure.fcard > summary:focus-visible, details.disclosure.set-disclosure > summary:focus-visible { outline-offset: -3px; border-radius: 14px; }
