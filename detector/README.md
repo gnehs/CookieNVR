@@ -1,6 +1,6 @@
 # 物件辨識 worker（detector）
 
-主程序在「設定 → 系統」開啟物件辨識時，才以 `$DETECTOR_PYTHON detector/main.py` 啟動這個 Python 程序，經 Unix socket 收畫面、回辨識結果。推論用 ONNX Runtime，裝置有 CPU、Intel 內顯（OpenVINO plugin EP）與 Nvidia（CUDA）。沒開物件辨識時不會啟動，不佔記憶體也不佔 CPU。
+主程序在「設定 → 一般 → 物件辨識」開啟時，才以 `$DETECTOR_PYTHON detector/main.py` 啟動這個 Python 程序，經 Unix socket 收畫面、回辨識結果。推論用 ONNX Runtime，裝置有 CPU、Intel 內顯（OpenVINO plugin EP）與 Nvidia（CUDA）。沒開物件辨識時不會啟動，不佔記憶體也不佔 CPU。
 
 ## 兩個映像
 
@@ -40,7 +40,22 @@ docker run --rm --gpus all cookienvr:test-nvidia detector-selftest --expect nvid
 docker run --rm --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=all cookienvr:test-nvidia detector-selftest --expect nvidia
 ```
 
-`--expect` 列出必須成功的 GPU：沒找到或失敗就回結束碼 1。不加 `--expect` 時找不到的 GPU 只會略過。其他參數：`--runs 20`（每個裝置推論幾次）、`--model /data/models/x.onnx`（測自己的模型）。
+`--expect` 列出必須成功的 GPU：可以寫類別（`intel`、`nvidia`）或裝置識別字（例如 `nvidia:GPU-xxxx`），沒找到或失敗就回結束碼 1。不加 `--expect` 時找不到的 GPU 只會略過。其他參數：`--seconds 5`（每個裝置暖機後連續推論幾秒來測速）、`--fps 2`（換算「可同時處理幾台」時每台每秒辨識幾次）、`--model /data/models/x.onnx`（測自己的模型）。
+
+自我檢查會先列出「偵測到的推論裝置」與每個裝置的識別字，然後在**每一個**裝置上推論與測速：兩張 Nvidia 卡就各測一次，摘要裡各一行。
+
+### 多張 GPU
+
+```sh
+# 兩張 Nvidia：預設兩張都會測；只要其中一張，用 NVIDIA_VISIBLE_DEVICES 限制容器看得到的卡
+docker run --rm --gpus all cookienvr:test-nvidia detector-selftest --expect nvidia
+docker run --rm --gpus all cookienvr:test-nvidia sh -c 'nvidia-smi -L'        # 對照 UUID
+docker run --rm --gpus all cookienvr:test-nvidia detector-selftest --expect nvidia:GPU-<uuid>
+
+# 同時有 Intel 內顯與 Nvidia：用 -nvidia 映像只看得到 Nvidia；latest 映像只看得到 Intel 與 CPU
+```
+
+NVR 裡在「推論裝置」選單選特定的卡，設定存的是識別字（`nvidia:GPU-<uuid>`、`intel:GPU.0`），重開機或換插槽不會指到別張卡；那張卡不見時改用自動並在設定頁說明。設定頁的「測速」可以勾選多個裝置並排比較。
 
 容器以 root 執行，所以不需要 render 群組。用 `--user` 改成一般使用者時，再加上 `--group-add "$(stat -c %g /dev/dri/renderD128)"`。
 
@@ -56,11 +71,11 @@ docker run -d --name cookienvr -p 8765:8765 -p 8554:8554 -v /mnt/user/appdata/co
   --gpus all cookienvr:test-nvidia
 ```
 
-compose 寫法見 repo 根目錄的 `docker-compose.example.yml`（`devices: ["/dev/dri:/dev/dri"]`，或 `runtime: nvidia` 加 `NVIDIA_VISIBLE_DEVICES=all`）。開好之後到「設定 → 系統」開啟物件辨識、推論裝置選「自動」，狀態應顯示實際用的是 Intel 內顯或 Nvidia。已經在跑的容器也能直接檢查：`docker exec cookienvr detector-selftest --expect intel`。
+compose 寫法見 repo 根目錄的 `docker-compose.example.yml`（`devices: ["/dev/dri:/dev/dri"]`，或 `runtime: nvidia` 加 `NVIDIA_VISIBLE_DEVICES=all`）。開好之後到「設定 → 一般 → 物件辨識」開啟、推論裝置選「自動」，狀態應顯示「使用中：<顯示卡型號>」；再按「測速」，看「這台機器大約可以同時處理 N 台攝影機」。已經在跑的容器也能直接檢查：`docker exec cookienvr detector-selftest --expect intel`。
 
 ### 預期輸出
 
-最後一段摘要長這樣（數字因機器而異；這段是 Intel 內顯的示意，不是實測）：
+最後一段摘要長這樣（數字因機器而異；CPU 那行的格式取自 Apple M 系列的實測，Intel 那行是示意，不是實測）：
 
 ```text
 ----- 摘要（可直接貼給 AI 或開發者）-----
@@ -70,13 +85,15 @@ CookieNVR detector selftest: PASS
 - OpenVINO plugin：已安裝
 - /dev/dri：/dev/dri/renderD128（可讀寫）；Intel GPU：card0 8086:3e92 driver=i915
 - Nvidia：沒有 /dev/nvidia*；nvidia-smi：無法執行
-- 模型 yolox_tiny.onnx，20 次
-- CPU: OK 載入 70 ms 平均 15.2 ms 最慢 18.0 ms；car 0.85, person 0.83
-- Intel 內顯: OK 載入 9000 ms 平均 8.1 ms 最慢 9.5 ms；car 0.85, person 0.83，與 CPU 一致
+- 模型 yolox_tiny.onnx，每個裝置測速 5 秒，換算以每台每秒 2 次
+- Intel(R) Core(TM) i5-9400 CPU @ 2.90GHz [cpu]: OK 載入 70 ms，40.1 張/秒（平均 24.9 ms），約 10 台；car 0.85, person 0.83
+- Intel(R) UHD Graphics 630 [intel:GPU.0]: OK 載入 9000 ms，90.0 張/秒（平均 11.1 ms），約 36 台；car 0.85, person 0.83，與 CPU 一致
 - Nvidia 顯卡: 略過（這個映像沒有 Nvidia 推論元件，請改用 latest-nvidia 映像）
-- 自動模式：Intel 內顯
+- 自動模式：Intel(R) UHD Graphics 630（intel:GPU.0）
 -----
 ```
+
+「約 N 台」的換算：測得的速度是最佳情況，CPU 只算一半（還要錄影與解碼）、GPU 算八成；物件辨識只在有動作時才跑，所以 N 是「同時有動作」的攝影機數。
 
 GPU 第一次載入要編譯模型，可能要數十秒。NVR 把 OpenVINO 的編譯快取放在 `/data/detector-cache`，之後就快了；自我檢查沒有設 `OPENVINO_CACHE_DIR`，快取在容器的 `/tmp`，每個新容器都會重新編譯。
 
@@ -87,7 +104,7 @@ GPU 第一次載入要編譯模型，可能要數十秒。NVR 把 OpenVINO 的�
 1. `detector-selftest` 的完整輸出（不只摘要，上面的「→」提示也要）。
 2. 主機上的 `uname -r`、`ls -l /dev/dri`；Nvidia 再加 `nvidia-smi` 的前 15 行。
 3. 用的映像 tag 與啟動指令（docker run 或 compose 片段）。
-4. NVR 已經在跑的話，「設定 → 系統」的「複製診斷資訊」。
+4. NVR 已經在跑的話，「設定 → 狀態」的「複製診斷資訊」。
 
 ## 從原始碼執行
 
@@ -104,12 +121,14 @@ DETECTOR_PYTHON=.venv/bin/python scripts/detector-selftest
 
 內建 [YOLOX-Tiny](https://github.com/Megvii-BaseDetection/YOLOX)（Apache-2.0），檔案來自官方 `0.1.1rc0` release 的 `yolox_tiny.onnx`。官方沒有公布雜湊，`builtin-model.json` 裡的 SHA-256 是我們第一次下載後釘住的；檔案被換掉時建置會失敗。
 
-選 Tiny 是在速度與信心值之間取中間：CPU 實測（Apple M 系列、4 執行緒）每張約 12 ms；Nano 約 7 ms，但同一張圖的信心值明顯較低；S 約 34 ms。動作觸發時每台每秒只送 2 張，Tiny 在一般 NAS 的 CPU 上也跑得動多台。
+選 Tiny 是在速度與信心值之間取中間：CPU 實測（Apple M 系列、4 執行緒）每張約 12 ms；Nano 約 7 ms，但同一張圖的信心值明顯較低；S 約 34 ms。動作觸發時每台每秒預設只送 2 張，Tiny 在一般 NAS 的 CPU 上也跑得動多台。
 
-自備模型放進 `/data/models/`（`.onnx`），在「設定 → 系統」選用。支援的輸出格式：
+內建模型是 COCO 80 類，**沒有包裹**。要辨識包裹需要自備含有這個類別的模型；類別名稱是 package 或 parcel 時介面會顯示「包裹」，也會出現在勾選清單與 HA 感應器。
+
+自備模型放進 `/data/models/`（`.onnx`），在「設定 → 一般 → 物件辨識」選用。支援的輸出格式：
 
 - YOLOX：`[1, N, 85]`（官方匯出，含 objectness）
 - Ultralytics YOLOv8 / YOLO11：`[1, 84, N]`
 - 內含 NMS 的 `[1, K, 6]`（x1, y1, x2, y2, score, class）
 
-類別名稱讀模型 metadata 的 `names`，沒有就當成 COCO 80 類。Ultralytics 的模型是 AGPL-3.0，所以不內建，要用請自行匯出（`yolo export model=yolo11n.pt format=onnx`）。
+類別名稱讀模型 metadata 的 `names`，沒有就當成 COCO 80 類；名稱轉成小寫英文、數字與底線的鍵（`traffic light` → `traffic_light`），事件與設定都用這個鍵。Ultralytics 的模型是 AGPL-3.0，所以不內建，要用請自行匯出（`yolo export model=yolo11n.pt format=onnx`）。
