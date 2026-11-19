@@ -11,6 +11,7 @@ import { buildDiagnostics } from "../src/diagnostics.ts";
 import { explainFailure } from "../src/camera/probe.ts";
 import { exportFileName } from "../src/export/filename.ts";
 import { planExport } from "../src/export/plan.ts";
+import { encodeFrame, FrameKind } from "../src/live/mux.ts";
 import index from "./index.html";
 
 const PORT = Number(process.env.PORT ?? 48765);
@@ -411,7 +412,40 @@ async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): 
   return null;
 }
 
+// SSE：連上先送完整狀態，攝影機有增刪改就推完整清單（假後端沒有即時狀態變化）
+const streamClients = new Set<{ admin: boolean; send: (text: string) => void }>();
+function sse(event: string, data: unknown) {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+function broadcastCameras() {
+  for (const c of streamClients) c.send(sse("cameras", cams.map((x) => camDto(x, c.admin))));
+}
+function streamResponse(admin: boolean): Response {
+  const enc = new TextEncoder();
+  let client: { admin: boolean; send: (text: string) => void };
+  let ping: ReturnType<typeof setInterval>;
+  const body = new ReadableStream<Uint8Array>({
+    start(ctl) {
+      client = { admin, send: (text) => ctl.enqueue(enc.encode(text)) };
+      streamClients.add(client);
+      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: [] })}`);
+      ping = setInterval(() => client.send(": ping\n\n"), 20_000);
+    },
+    cancel() {
+      clearInterval(ping);
+      streamClients.delete(client);
+    },
+  });
+  return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store" } });
+}
+
 async function api(req: Request, url: URL): Promise<Response> {
+  const res = await route(req, url);
+  if (url.pathname.startsWith("/api/cameras") && req.method !== "GET" && res.ok) broadcastCameras();
+  return res;
+}
+
+async function route(req: Request, url: URL): Promise<Response> {
   const path = url.pathname.slice(4);
   const m = req.method;
   const body: any = m === "GET" || m === "DELETE" ? null : await req.json().catch(() => ({}));
@@ -484,6 +518,14 @@ async function api(req: Request, url: URL): Promise<Response> {
   }
 
   if (path === "/cameras" && m === "GET") return json(cams.map((c) => camDto(c, admin)));
+  if (path === "/stream" && m === "GET") return streamResponse(admin);
+  // 假後端沒有即時影像：每台都回「沒有串流」，介面退回快照
+  if (path === "/live" && m === "GET") {
+    const ids = (url.searchParams.get("cameras") ?? "").split(",").filter(Boolean);
+    const body = new ReadableStream<Uint8Array>({ start: (ctl) => ids.forEach((_, i) => ctl.enqueue(encodeFrame(FrameKind.gone, i))) });
+    return new Response(body, { headers: { "content-type": "application/octet-stream" } });
+  }
+  if (/^\/cameras\/[^/]+\/live\.mp4$/.test(path) && m === "GET") return err(404, "這台攝影機沒有即時畫面");
   mm = path.match(/^\/cameras\/([^/]+)\/snapshot\.jpg$/);
   if (mm && m === "GET") {
     const c = cams.find((x) => x.id === mm![1]);
@@ -642,6 +684,7 @@ Bun.serve({
   port: PORT,
   routes: { "/": index },
   development: true,
+  idleTimeout: 60,
   async fetch(req) {
     const url = new URL(req.url);
     if (url.pathname.startsWith("/api/")) {

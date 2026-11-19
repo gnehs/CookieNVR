@@ -2,6 +2,7 @@ import type { CameraDto, SettingsDto, SystemDto } from "../src/api-types.ts";
 import { api } from "./api.ts";
 import { assessHealth, type Health } from "./health.ts";
 import { state } from "./state.ts";
+import { onStatus, type LiveStatus } from "./status-stream.ts";
 
 export interface HealthSnapshot {
   sys: SystemDto;
@@ -11,42 +12,61 @@ export interface HealthSnapshot {
   at: number;
 }
 
-const POLL_MS = 5000;
+/** Disk space and settings change slowly and are not pushed, so they are fetched now and then. */
+const EXTRAS_MS = 60_000;
 const listeners = new Set<(s: HealthSnapshot) => void>();
 let latest: HealthSnapshot | null = null;
+let live: LiveStatus | null = null;
+let extras: { sys: SystemDto; settings: SettingsDto; cams: CameraDto[] } | null = null;
 let timer: ReturnType<typeof setInterval> | undefined;
+let unsubscribe: (() => void) | undefined;
 let inflight: Promise<void> | null = null;
 
-/** 只有管理員讀得到系統狀態；首頁提醒、導覽提示點與狀態頁共用這一個輪詢。失敗時 reject，背景輪詢自己吞掉 */
+function compute(): void {
+  if (!extras) return;
+  const cams = live?.cams ?? extras.cams;
+  const sys = { ...extras.sys, workers: live?.workers ?? extras.sys.workers };
+  const minFreeBytes = extras.settings.retention.minFreeBytes;
+  latest = { sys, cams, settings: extras.settings, at: Date.now(), health: assessHealth({ cams, workers: sys.workers, disk: sys.disk, minFreeBytes }) };
+  for (const fn of listeners) fn(latest);
+}
+
+/** 只有管理員讀得到系統狀態；首頁提醒、導覽提示點與狀態頁共用。失敗時 reject，背景更新自己吞掉 */
 export function refreshHealth(): Promise<void> {
   if (state.me?.role !== "admin") return Promise.resolve();
   inflight ??= Promise.all([api.system(), api.cameras(), api.settings()])
     .then(([sys, cams, settings]) => {
-      latest = { sys, cams, settings, at: Date.now(), health: assessHealth({ cams, workers: sys.workers, disk: sys.disk, minFreeBytes: settings.retention.minFreeBytes }) };
-      for (const fn of listeners) fn(latest);
+      extras = { sys, cams, settings };
+      compute();
     })
     .finally(() => (inflight = null));
   return inflight;
 }
 
+/** 攝影機與 worker 狀態跟著 SSE（`status-stream.ts`）即時更新，磁碟與設定每分鐘重抓 */
 export function startHealthWatch() {
   if (timer) return;
   refreshHealth().catch(() => {});
   timer = setInterval(() => {
     if (!document.hidden) refreshHealth().catch(() => {});
-  }, POLL_MS);
-  document.addEventListener("visibilitychange", onVisible);
+  }, EXTRAS_MS);
+  unsubscribe = onStatus((s) => {
+    const reconnected = s.full && live !== null;
+    live = s;
+    // 重新連上時順便更新磁碟，斷線期間錯過的變化一次補齊
+    if (reconnected) refreshHealth().catch(() => {});
+    else compute();
+  });
 }
 
 export function stopHealthWatch() {
   clearInterval(timer);
   timer = undefined;
+  unsubscribe?.();
+  unsubscribe = undefined;
   latest = null;
-  document.removeEventListener("visibilitychange", onVisible);
-}
-
-function onVisible() {
-  if (!document.hidden) refreshHealth().catch(() => {});
+  live = null;
+  extras = null;
 }
 
 /** 訂閱後立刻收到最近一次的結果（如果有） */

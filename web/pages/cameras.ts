@@ -3,61 +3,41 @@ import { api } from "../api.ts";
 import { emptyState, h, icon } from "../dom.ts";
 import { alertSummary, cameraStatus } from "../health.ts";
 import { onHealth } from "../health-watch.ts";
+import { liveFrame, type LiveFrame } from "../live/frame.ts";
+import { playGrid } from "../live/transport.ts";
+import { liveSupported } from "../live/video.ts";
 import type { PageCtx } from "../router.ts";
 import { state } from "../state.ts";
+import { onStatus } from "../status-stream.ts";
 
 interface Tile {
   el: HTMLAnchorElement;
+  frame: LiveFrame;
   update(cam: CameraDto): void;
-  refreshSnapshot(): void;
 }
 
 function tile(initial: CameraDto): Tile {
-  let cam = initial;
-  const img = h("img", { alt: "", decoding: "async", hidden: true });
-  const placeholder = h("span", { class: "cam-ph", "aria-hidden": "true" }, icon("camera", 22));
+  const frame = liveFrame(initial);
   const status = h("span", { class: "cam-status" }, h("i", { "aria-hidden": "true" }), h("span"));
+  frame.el.append(status);
   const name = h("span", { class: "cam-name" });
-  const el = h("a", { class: "cam-tile" }, h("span", { class: "cam-frame" }, placeholder, img, status), name);
+  const el = h("a", { class: "cam-tile" }, frame.el, name);
 
-  let loadToken = 0;
-  const showPlaceholder = () => {
-    img.hidden = true;
-    placeholder.hidden = false;
-  };
-  // 先在背景載好再換上，避免每次刷新都閃回佔位
-  const refreshSnapshot = () => {
-    if (!cam.config.enabled) return showPlaceholder();
-    const token = ++loadToken;
-    const probe = new Image();
-    probe.onload = () => {
-      if (token !== loadToken) return;
-      img.src = probe.src;
-      img.hidden = false;
-      placeholder.hidden = true;
-    };
-    probe.onerror = () => token === loadToken && showPlaceholder();
-    probe.src = api.snapshotUrl(cam.id, Date.now());
-  };
-
-  const update = (next: CameraDto) => {
-    const wasEnabled = cam.config.enabled;
-    cam = next;
+  const update = (cam: CameraDto) => {
     const st = cameraStatus(cam);
-    el.href = `#/recordings?camera=${encodeURIComponent(cam.id)}`;
+    el.href = `#/cameras/${encodeURIComponent(cam.id)}`;
     el.dataset.status = st.kind;
     el.dataset.tone = st.tone;
     el.title = cam.config.name;
-    el.setAttribute("aria-label", st.quiet ? `${cam.config.name}，查看錄影` : `${cam.config.name}，${st.label}，查看錄影`);
+    el.setAttribute("aria-label", st.quiet ? cam.config.name : `${cam.config.name}，${st.label}`);
     name.textContent = cam.config.name;
     status.hidden = st.quiet;
     status.lastElementChild!.textContent = st.label;
-    if (wasEnabled !== cam.config.enabled) refreshSnapshot();
+    frame.update(cam);
   };
 
   update(initial);
-  refreshSnapshot();
-  return { el, update, refreshSnapshot };
+  return { el, frame, update };
 }
 
 export async function camerasPage(ctx: PageCtx): Promise<Node> {
@@ -68,11 +48,29 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
   const isAdmin = state.me?.role === "admin";
   const tiles = new Map<string, Tile>();
 
-  // 每 5 秒的清單輪詢只更新既有卡片，畫面不重建、快照不重抓
+  // 多宮格的即時畫面共用一條連線；啟用中的攝影機組合變了才重開
+  let gridKey = "";
+  let stopGrid = () => {};
+  const syncGrid = (cams: CameraDto[]) => {
+    const live = cams.filter((c) => c.config.enabled);
+    const key = live.map((c) => c.id).join(",");
+    if (key === gridKey) return;
+    gridKey = key;
+    stopGrid();
+    stopGrid = playGrid(live.map((c) => c.id), "sd", live.map((c) => tiles.get(c.id)!.frame.target));
+  };
+  ctx.onCleanup(() => {
+    stopGrid();
+    for (const t of tiles.values()) t.frame.destroy();
+  });
+
+  // 狀態推送只更新既有卡片，畫面不重建
   const render = (cams: CameraDto[]) => {
     addBtn.hidden = cams.length === 0;
     if (cams.length === 0) {
+      for (const t of tiles.values()) t.frame.destroy();
       tiles.clear();
+      syncGrid([]);
       list.replaceChildren(
         emptyState(
           "還沒有攝影機",
@@ -95,14 +93,20 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
       tiles.set(c.id, created);
       return created.el;
     });
-    for (const id of [...tiles.keys()]) if (!seen.has(id)) tiles.delete(id);
-    // 順序沒變就不動 DOM，避免輪詢時把鍵盤焦點弄丟
+    for (const [id, t] of [...tiles]) {
+      if (seen.has(id)) continue;
+      t.frame.destroy();
+      tiles.delete(id);
+    }
+    // 順序沒變就不動 DOM，避免更新時把鍵盤焦點弄丟
     if (els.length !== grid.children.length || els.some((e, i) => grid.children[i] !== e)) grid.replaceChildren(...els);
     if (!list.contains(grid)) list.replaceChildren(grid);
+    syncGrid(cams);
   };
 
   const addBtn = h("a", { class: "btn", href: "#/settings/cameras/new" }, icon("plus"), "新增攝影機");
   render(await api.cameras());
+  ctx.onCleanup(onStatus((s) => ctx.isCurrent() && render(s.cams)));
   if (isAdmin) {
     ctx.onCleanup(
       onHealth(({ health }) => {
@@ -113,12 +117,6 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
       }),
     );
   }
-  ctx.every(5000, () => {
-    api.cameras().then((c) => ctx.isCurrent() && render(c), () => {});
-  });
-  ctx.every(10_000, () => {
-    for (const t of tiles.values()) t.refreshSnapshot();
-  });
 
   return h(
     "div",
@@ -130,6 +128,7 @@ export async function camerasPage(ctx: PageCtx): Promise<Node> {
       isAdmin ? h("div", { class: "page-actions" }, addBtn) : null,
     ),
     alert,
+    liveSupported() ? null : h("p", { class: "live-fallback-note" }, icon("info", 16), "這個瀏覽器不支援即時影像，畫面每 3 秒更新一次。"),
     list,
   );
 }

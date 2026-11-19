@@ -3,9 +3,11 @@ import { attachMenu, errMsg, errorBox, h, icon, PageError, pageErrorBox, spinner
 import { matchRoute, navigate, parseHash, type PageCtx, type Route } from "./router.ts";
 import { state } from "./state.ts";
 import { onHealth, startHealthWatch, stopHealthWatch } from "./health-watch.ts";
+import { startStatusStream, stopStatusStream } from "./status-stream.ts";
 import "./theme.ts";
 import { loginPage, setupPage } from "./pages/auth.ts";
 import { camerasPage } from "./pages/cameras.ts";
+import { cameraPage } from "./pages/camera.ts";
 import { recordingsPage } from "./pages/recordings.ts";
 import { cameraFormPage, settingsCamerasPage } from "./pages/settings-cameras.ts";
 import { settingsStoragePage } from "./pages/settings-storage.ts";
@@ -19,6 +21,7 @@ const routes: Route[] = [
   { pattern: "/setup", page: setupPage, access: "public" },
   { pattern: "/login", page: loginPage, access: "public" },
   { pattern: "/cameras", page: camerasPage, access: "user", section: "cameras" },
+  { pattern: "/cameras/:id", page: (c) => cameraPage(c, c.params.id!), access: "user", section: "cameras" },
   { pattern: "/recordings", page: recordingsPage, access: "user", section: "recordings" },
   { pattern: "/settings/cameras", page: settingsCamerasPage, access: "admin", section: "settings" },
   { pattern: "/welcome", page: (c) => cameraFormPage(c, null, "welcome"), access: "admin", bare: true },
@@ -171,6 +174,7 @@ async function render() {
     if (token !== renderToken) return;
   }
   if (route.access === "admin" && state.me.role !== "admin") return navigate("/cameras", true);
+  startStatusStream();
   if (state.me.role === "admin") startHealthWatch();
 
   if (route.bare) {
@@ -216,6 +220,7 @@ setUnauthorizedHandler(() => {
   state.me = null;
   shell = null;
   stopHealthWatch();
+  stopStatusStream();
   issueCount = 0;
   navigate("/login");
   setTimeout(() => (handling401 = false), 500);
