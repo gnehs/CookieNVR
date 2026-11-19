@@ -425,6 +425,8 @@ export interface StreamSnapshotDto {
   workers: WorkerStatus[] | null;
   /** 進行中的事件 */
   events: EventDto[];
+  /** 所有狀態感應器（含目前狀態） */
+  stateSensors: StateSensorDto[];
 }
 
 /**
@@ -439,7 +441,12 @@ export type StreamMessage =
   | { type: "camera"; data: CameraDto }
   | { type: "worker"; data: WorkerStatus }
   | { type: "event"; data: { phase: "start" | "update" | "end"; event: EventDto } }
-  | { type: "motion"; data: { cameraId: CameraId; active: boolean } };
+  | { type: "motion"; data: { cameraId: CameraId; active: boolean } }
+  /** 狀態感應器切換狀態（HA 的感應器靠這個即時更新）；同時也會送一筆 state-sensor */
+  | { type: "state-change"; data: StateChangeDto }
+  /** 感應器新增、設定改變、狀態或候選改變、背景工作進度（最多每秒 2 次）、圖片張數改變時送完整的感應器；單純的讀數不推 */
+  | { type: "state-sensor"; data: StateSensorDto }
+  | { type: "state-sensor-removed"; data: { id: string } };
 
 /** 主碼流是否符合 HKSV 的前提；unknown = 還沒讀到畫面（離線或檢查中斷） */
 export type HomekitCheckDto =
@@ -599,4 +606,221 @@ export interface ObjectLabelsDto {
 export interface BenchmarkRequestDto {
   devices?: string[];
   seconds?: number;
+}
+
+// ─── 狀態辨識（類似 Frigate 的 State Classification）──────────────────────────────
+//
+// 一台攝影機可以有多個「狀態感應器」，例如「鐵捲門」：關／移動中／開。每個感應器框一塊畫面區域，
+// 用 CookieNVR 內建訓練的模型判斷那塊區域目前是哪一類。
+//
+// 使用流程（前端）：
+// 1. POST /api/states 建立感應器（名稱、類別、區域）。預設會從這台的錄影平均抽樣，挑 24 張差異最大的畫面放進「待標記」
+//    （job.kind = "collect"）；也可以 POST /api/states/:id/import 上傳 Frigate 匯出的資料集 zip。
+// 2. GET /api/states/:id/images?label=pending 列出待標記的圖，POST /api/states/:id/images/label 標成某一類。
+//    每一類至少 MIN_STATE_IMAGES_PER_CLASS 張才能訓練（StateSensorDto.trainable）。
+// 3. POST /api/states/:id/train 開始訓練（幾秒到幾十秒）。進度在 StateSensorDto.job，SSE 的 state-sensor 會推送。
+// 4. 訓練完成後感應器開始辨識。state 從 null（未知）開始，連續 3 次同一類且信心達門檻才切換；每次切換寫一筆
+//    StateChangeDto，SSE 推送 state-change。辨識時也會把信心低、切換前後的畫面存進待標記（最多 MAX_PENDING_STATE_IMAGES 張），
+//    標記後重新訓練可以改善。
+//
+// 權限：讀取（列表、狀態、圖片、歷史）一般使用者即可；建立、修改、標記、訓練、匯入、刪除要管理員。
+
+/** 每一類至少要幾張已標記的圖才能訓練 */
+export const MIN_STATE_IMAGES_PER_CLASS = 2;
+/** 辨識時自動存下的待標記圖片上限；超過時刪最舊的自動存圖（從錄影抽樣與匯入的不算在內） */
+export const MAX_PENDING_STATE_IMAGES = 100;
+
+/** 0 到 1 的比例矩形 [x1, y1, x2, y2]，相對整個畫面，x1 < x2、y1 < y2 */
+export type CropBox = [number, number, number, number];
+
+/** 感應器設定。classes 的順序就是顯示順序 */
+export interface StateSensorConfig {
+  /** 例如「鐵捲門」；1 到 40 字 */
+  name: string;
+  /** 2 到 10 個類別，例如 ["關", "移動中", "開"]；每個 1 到 32 字，不可重複，不可含 / 或 \，不可以 . 開頭 */
+  classes: string[];
+  crop: CropBox;
+  /** 信心門檻 0.5 到 0.99，預設 0.8；低於門檻的讀數忽略 */
+  threshold: number;
+  /** 每隔幾秒固定辨識一次，0 到 3600，預設 10；0 = 不定時（只靠 onMotion） */
+  intervalSec: number;
+  /** 區域內畫面有變化時辨識（最多每秒一次），預設 true */
+  onMotion: boolean;
+  /** false = 暫停辨識（設定、圖片與模型保留） */
+  enabled: boolean;
+}
+
+/**
+ * POST /api/states 與 PUT /api/states/:id 的 config：name、classes、crop 必填，其他省略時用預設值（PUT 時沿用原值）。
+ * PUT 拿掉某個類別時，該類已標記的圖退回待標記；要改名請用 POST /api/states/:id/classes/rename，標記會跟著走。
+ * 類別清單和模型訓練時不同（增刪類別）就要重新訓練，在那之前停止辨識（problem.code = "stale-model"）。
+ */
+export type StateSensorConfigInput = Pick<StateSensorConfig, "name" | "classes" | "crop"> & Partial<Omit<StateSensorConfig, "name" | "classes" | "crop">>;
+
+/** POST /api/states（管理員） */
+export interface CreateStateSensorDto {
+  cameraId: CameraId;
+  config: StateSensorConfigInput;
+  /** 建立後從錄影抽樣待標記的畫面，預設 true；沒有錄影時 job 會以 failed 結束並說明 */
+  collect?: boolean;
+}
+
+/** 交叉驗證：已標記的圖分成 folds 份輪流當測試集（分層抽樣，每類比例相同），模型沒看過測試圖 */
+export interface StateValidationDto {
+  folds: number;
+  /** 0 到 1 */
+  accuracy: number;
+  /** 依 classes 順序：每類答對幾張／共幾張 */
+  perClass: { label: string; correct: number; total: number }[];
+  /** confusion[實際類別 index][判斷類別 index] = 張數，index 對應 StateModelDto.classes */
+  confusion: number[][];
+}
+
+/** 已訓練的模型 */
+export interface StateModelDto {
+  trainedAt: number;
+  /** 訓練時的類別（順序即模型輸出順序） */
+  classes: string[];
+  /** 每類用了幾張 */
+  counts: { label: string; count: number }[];
+  /** 某一類少於 2 張時無法交叉驗證，為 null */
+  validation: StateValidationDto | null;
+  /** 訓練花的時間 */
+  trainMs: number;
+  /** 影像特徵模型（骨幹），例如 "DINOv2-small (int8)" */
+  backbone: string;
+}
+
+export type StateJobKind = "collect" | "import" | "train";
+
+/**
+ * 感應器的背景工作，同一個感應器一次一個（進行中再送會回 409）。
+ * collect：從錄影抽樣待標記畫面；import：匯入資料集 zip；train：訓練。
+ * done 的 message 是給使用者看的結果摘要（例如「加入 24 張待標記的畫面」）。
+ */
+export type StateJobDto =
+  | { kind: StateJobKind; state: "queued"; startedAt: number }
+  | { kind: StateJobKind; state: "running"; startedAt: number; /** 0 到 1；不知道時為 null */ progress: number | null }
+  | { kind: StateJobKind; state: "done"; startedAt: number; finishedAt: number; message: string }
+  | { kind: StateJobKind; state: "failed"; startedAt: number; finishedAt: number; error: string };
+
+/**
+ * 感應器目前沒在辨識的原因（前端的白話提示用 message；code 給程式判斷）：
+ * - disabled：使用者暫停
+ * - untrained：還沒訓練
+ * - stale-model：類別改過，要重新訓練
+ * - camera-off：攝影機停用或離線、沒有畫面
+ * - paused：鏡頭移動中或畫面亮度突變（例如切換夜視），暫停辨識
+ * - worker：辨識程序啟動中或出錯（message 說明）
+ */
+export type StateProblemCode = "disabled" | "untrained" | "stale-model" | "camera-off" | "paused" | "worker";
+
+/** 一次辨識的結果 */
+export interface StateReadingDto {
+  at: number;
+  label: string;
+  /** 該類的機率 0 到 1 */
+  score: number;
+}
+
+/** GET /api/states、GET /api/states/:id（一般使用者） */
+export interface StateSensorDto {
+  id: string;
+  cameraId: CameraId;
+  config: StateSensorConfig;
+  /** 目前狀態（classes 之一）；null = 未知：剛啟動、還沒通過驗證，或沒在辨識 */
+  state: string | null;
+  /** 切換到目前狀態的時間；未知時為 null */
+  since: number | null;
+  /** 切換時那次讀數的信心 */
+  score: number | null;
+  /** 正在驗證的候選狀態：count 是連續幾次（到 3 次就切換） */
+  candidate: { label: string; count: number } | null;
+  lastReading: StateReadingDto | null;
+  model: StateModelDto | null;
+  /** 已標記：依 config.classes 順序，每類幾張；pending 是待標記張數 */
+  images: { pending: number; labeled: { label: string; count: number }[] };
+  /** 每一類都有至少 MIN_STATE_IMAGES_PER_CLASS 張，可以訓練 */
+  trainable: boolean;
+  /** 最近一次背景工作；從沒做過為 null */
+  job: StateJobDto | null;
+  problem: { code: StateProblemCode; message: string } | null;
+  createdAt: number;
+}
+
+/** source：recording = 建立時從錄影抽樣；live = 辨識時自動存下；import = 匯入的資料集 */
+export type StateImageSource = "recording" | "live" | "import";
+
+/** GET /api/states/:id/images?label=pending|<類別>|all（一般使用者），新的在前 */
+export interface StateImageDto {
+  id: string;
+  /** 已標記的類別；待標記為 null */
+  label: string | null;
+  source: StateImageSource;
+  createdAt: number;
+  /** 存下時模型的判斷（live 才有；匯入 Frigate 辨識紀錄時是 Frigate 當時的判斷） */
+  guess: { label: string; score: number } | null;
+  /** 圖片網址（裁切後的區域），GET /api/states/:id/images/:imageId */
+  url: string;
+}
+
+/** POST /api/states/:id/images/label（管理員）：label 為 null 代表退回待標記 */
+export interface LabelStateImagesDto {
+  ids: string[];
+  label: string | null;
+}
+
+/** POST /api/states/:id/images/delete（管理員） */
+export interface DeleteStateImagesDto {
+  ids: string[];
+}
+
+/** POST /api/states/:id/classes/rename（管理員）：已標記的圖、目前狀態與模型的類別都跟著改名，不用重新訓練 */
+export interface RenameStateClassDto {
+  from: string;
+  to: string;
+}
+
+/**
+ * POST /api/states/:id/import（管理員）：請求本體是 zip 檔本身，Content-Type: application/zip，上限 200 MB。
+ * 接受 Frigate 匯出的資料集：`<名稱>/dataset/<類別>/*.png|jpg|webp` 進已標記，`<名稱>/train/*` 進待標記
+ * （檔名若是 Frigate 的 `<…>-<類別>-<信心>.webp` 格式，guess 會帶上 Frigate 當時的判斷）。最外層的 `<名稱>/` 可有可無。
+ * 感應器沒有的類別會自動加到 config.classes 最後面。回 202 與更新後的 StateSensorDto，進度看 job。
+ */
+export type ImportStateDatasetResultDto = StateSensorDto;
+
+/** GET /api/state-changes?sensorId=&cameraId=&before=&limit=（一般使用者）：狀態切換紀錄，新的在前，limit 預設 50、最多 500 */
+export interface StateChangeDto {
+  id: number;
+  sensorId: string;
+  cameraId: CameraId;
+  at: number;
+  /** null = 從未知（啟動後第一次確認的狀態） */
+  from: string | null;
+  to: string;
+  score: number;
+  /** 切換時那塊區域的畫面，GET /api/state-changes/:id/thumb.jpg；沒有時為 null */
+  thumbUrl: string | null;
+}
+
+/**
+ * POST /api/states/frigate-config（管理員）：把 Frigate 設定檔的片段轉成 CookieNVR 的設定，供建立感應器時預填。
+ * 只讀 `classification.custom.<名稱>` 底下的 threshold 與 state_config（cameras.<攝影機>.crop、motion、interval），
+ * 也接受直接從 `custom:` 或 `<名稱>:` 開始貼的片段。不會建立任何東西。
+ */
+export interface FrigateConfigRequestDto {
+  yaml: string;
+}
+
+export interface FrigateConfigResultDto {
+  sensors: {
+    /** Frigate 的模型名稱，例如 "garage" */
+    name: string;
+    /** Frigate 的攝影機名稱 */
+    camera: string;
+    crop: CropBox;
+    threshold: number;
+    intervalSec: number;
+    onMotion: boolean;
+  }[];
 }

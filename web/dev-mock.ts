@@ -830,7 +830,7 @@ function streamResponse(admin: boolean): Response {
     start(ctl) {
       client = { admin, send: (text) => ctl.enqueue(enc.encode(text)) };
       streamClients.add(client);
-      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: activeEvents() })}`);
+      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: activeEvents(), stateSensors: [] })}`);
       ping = setInterval(() => client.send(": ping\n\n"), 20_000);
     },
     cancel() {

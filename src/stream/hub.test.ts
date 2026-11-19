@@ -31,7 +31,7 @@ function connect(hub: ReturnType<typeof createStreamHub>, principal: Principal) 
   return { res, next, close: () => reader.cancel() };
 }
 
-const snapshot = (workers: WorkerStatus[] | null): StreamSnapshotDto => ({ cameras: [], workers, events: [] });
+const snapshot = (workers: WorkerStatus[] | null): StreamSnapshotDto => ({ cameras: [], workers, events: [], stateSensors: [] });
 
 describe("formatSse", () => {
   test("names the event and puts the JSON on one data line", () => {

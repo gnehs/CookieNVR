@@ -304,6 +304,7 @@ const hub = createStreamHub({
     cameras: cameras.list().map((c) => cameraDto(c, client)),
     workers: client.principal.role === "admin" ? supervisor.status().map(publicWorker) : null,
     events: events.active(),
+    stateSensors: [],
   }),
 });
 
