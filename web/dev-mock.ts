@@ -21,6 +21,7 @@ import { createLinkService } from "../src/auth/link.ts";
 import { HttpError } from "../src/http/errors.ts";
 import { mockMetrics, setMockMetrics } from "./dev-mock-metrics.ts";
 import { mockDecodeStatus, mockVideoDevices } from "./dev-mock-video.ts";
+import { createMockStates } from "./dev-mock-state.ts";
 
 const PORT = Number(process.env.PORT ?? 48764);
 /** 給人開的網址（Vite）；示範核准連結用 */
@@ -822,6 +823,7 @@ function broadcastCameras() {
 function broadcast(event: string, data: unknown) {
   for (const c of streamClients) c.send(sse(event, data));
 }
+const states = createMockStates({ cameras: () => cams, emit: (m) => broadcast(m.type, m.data) });
 function streamResponse(admin: boolean): Response {
   const enc = new TextEncoder();
   let client: { admin: boolean; send: (text: string) => void };
@@ -830,7 +832,7 @@ function streamResponse(admin: boolean): Response {
     start(ctl) {
       client = { admin, send: (text) => ctl.enqueue(enc.encode(text)) };
       streamClients.add(client);
-      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: activeEvents(), stateSensors: [] })}`);
+      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: activeEvents(), stateSensors: states.sensors() })}`);
       ping = setInterval(() => client.send(": ping\n\n"), 20_000);
     },
     cancel() {
@@ -909,6 +911,8 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (!me) return err(401, "請先登入");
   const admin = me.role === "admin";
   const needAdmin = () => (admin ? null : err(403, "需要管理員權限"));
+  const stateRes = states.handle({ path, method: m, url, body, admin });
+  if (stateRes) return stateRes;
 
   if (path === "/me") {
     if (m === "GET") return json({ id: me.id, username: me.username, role: me.role });

@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "vite.config.ts", "web/**/*.test.ts", "web/dev-mock.ts", "web/dev-mock-metrics.ts", "web/dev-mock-video.ts"]
+  "include": ["src", "vite.config.ts", "web/**/*.test.ts", "web/dev-mock.ts", "web/dev-mock-metrics.ts", "web/dev-mock-video.ts", "web/dev-mock-state.ts"]
 }
