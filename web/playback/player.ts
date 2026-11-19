@@ -244,7 +244,8 @@ export class Player {
     // a new seek is a fresh attempt, also after an error
     this.setStatus({ kind: "loading" });
 
-    if (!this.opened || this.ms?.readyState === "closed") await this.open();
+    // a MediaSource the browser ended (for example after data it could not decode) takes no more data: start a new one
+    if (!this.opened || (this.ms !== null && this.ms.readyState !== "open")) await this.open();
     await this.opened;
     if (gen !== this.gen) return;
 
@@ -282,12 +283,20 @@ export class Player {
         // after a few quick retries show the error, but keep trying slowly so a passing hiccup recovers on its own
         if (++failures >= 4) this.setStatus({ kind: "error", message: "暫時無法載入錄影，正在重試…" });
         await sleep(failures >= 4 ? 5_000 : 1_000 * failures, signal);
+        if (gen !== this.gen) return;
         // resume where the playhead is, so a retry does not replay what was already watched
         w = this.wall() ?? w;
+        this.pending = w;
         this.map = [];
-        await this.op(gen, (sb) => {
-          if (sb.buffered.length > 0) sb.remove(0, Infinity);
-        });
+        // from the second failure on, rebuild the whole pipeline: whatever state broke, this is what a page reload does
+        if (failures >= 2 || this.ms?.readyState !== "open") {
+          await this.open();
+          if (gen !== this.gen) return;
+        } else {
+          await this.op(gen, (sb) => {
+            if (sb.buffered.length > 0) sb.remove(0, Infinity);
+          });
+        }
       }
     }
   }
@@ -490,7 +499,9 @@ export class Player {
     const run = () =>
       new Promise<void>((resolve, reject) => {
         const sb = this.sb;
-        if (gen !== this.gen || !sb || this.ms?.readyState !== "open") return resolve();
+        if (gen !== this.gen || !sb) return resolve();
+        // an ended or closed MediaSource drops data without a word; make it a failure so the caller rebuilds
+        if (this.ms?.readyState !== "open") return reject(new Error(`MediaSource ${this.ms?.readyState ?? "missing"}`));
         const done = () => {
           sb.removeEventListener("updateend", done);
           sb.removeEventListener("error", fail);
