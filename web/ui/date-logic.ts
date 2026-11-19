@@ -58,7 +58,6 @@ export function addMonths(k: DayKey, n: number): DayKey {
 export const weekday = (k: DayKey) => new Date(utc(k)).getUTCDay();
 export const weekStart = (k: DayKey) => addDays(k, -((weekday(k) - WEEK_START + 7) % 7));
 export const weekEnd = (k: DayKey) => addDays(weekStart(k), 6);
-export const compareDay = (a: DayKey, b: DayKey) => (a < b ? -1 : a > b ? 1 : 0);
 export const monthOf = (k: DayKey) => k.slice(0, 7);
 
 export function clampDay(k: DayKey, min: DayKey | null, max: DayKey | null): DayKey {

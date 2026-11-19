@@ -182,7 +182,6 @@ details.detect-more[open] > summary .icon { rotate: 90deg; }
 }
 
 /* ---------- 物件辨識：系統設定的狀態列、攝影機設定的模式與類別 ---------- */
-.obj-body { padding-top: 14px; margin-top: 14px; border-top: 1px solid var(--border); }
 .obj-status { display: flex; align-items: center; gap: 12px; min-height: 40px; }
 .obj-text { display: grid; gap: 1px; min-width: 0; }
 .obj-text b { font-weight: 650; }
@@ -199,8 +198,6 @@ details.detect-more[open] > summary .icon { rotate: 90deg; }
 .obj-folded { display: grid; gap: 6px; padding: 4px 0 2px; }
 
 /* 測速 */
-.obj-bench { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
-.obj-bench-head { display: grid; gap: 2px; }
 .obj-bench-pickhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .bench-progress { display: grid; gap: 8px; }
 .bench-progress-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -229,8 +226,6 @@ code.path { font-family: var(--mono); font-size: 12.5px; padding: 1px 6px; borde
 
 .obj-section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .obj-section > * { min-width: 0; }
-.tiles.obj-modes { max-width: 720px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 640px) { .tiles.obj-modes { grid-template-columns: minmax(0, 1fr); gap: 8px; } .tiles.obj-modes .tile-face { padding: 12px 14px; } }
 .obj-labels { display: flex; flex-wrap: wrap; gap: 8px; }
 .obj-label { position: relative; display: inline-flex; cursor: pointer; }
 .obj-label > input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }

@@ -16,5 +16,5 @@
     "noEmit": true
   },
   "include": ["."],
-  "exclude": ["legacy", "**/*.test.ts", "dev-mock.ts", "dev-mock-metrics.ts", "dev-mock-video.ts"]
+  "exclude": ["**/*.test.ts", "dev-mock.ts", "dev-mock-metrics.ts", "dev-mock-video.ts"]
 }
