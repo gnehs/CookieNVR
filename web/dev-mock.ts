@@ -1006,14 +1006,22 @@ async function route(req: Request, url: URL): Promise<Response> {
 
   if (path === "/cameras" && m === "POST") return json(camDto(addCam(body), true), 201);
   if (path === "/cameras/test" && m === "POST") {
-    await Bun.sleep(900);
     // 失敗訊息走真後端同一個 explainFailure，兩邊看到的措辭一致：
     // 主機或網址含 fail → 連線被拒絕、含 timeout → 逾時、含 404 → 找不到串流；密碼是 wrong → 帳密錯誤
+    // 連線名額滿：含 busy → 相機回 453、含 stall → 相機接受連線但不回應，13 秒後才逾時（和真後端的時限相近）
     const tapo = body.type === "tapo";
     const host = String(tapo ? body.host : body.mainUrl);
+    await Bun.sleep(host.includes("stall") ? 13_000 : 900);
     const password = tapo ? String(body.password) : (host.match(/:\/\/[^:@/]*:([^@/]*)@/)?.[1] ?? "");
-    const stderr = password === "wrong" ? "401 Unauthorized" : host.includes("fail") ? "Connection refused" : host.includes("404") ? "404 Not Found" : host.includes("weird") ? "method DESCRIBE failed: Weird Thing" : "";
-    if (stderr || host.includes("timeout")) return json({ ok: false, error: `主碼流：${explainFailure(stderr, !stderr, tapo)}` } satisfies ProbeResult);
+    const stderr =
+      password === "wrong" ? "401 Unauthorized"
+      : host.includes("fail") ? "Connection refused"
+      : host.includes("404") ? "404 Not Found"
+      : host.includes("busy") ? "[rtsp @ 0x1] method OPTIONS failed: 453 (Not Enough Bandwidth)"
+      : host.includes("stall") ? "[rtsp @ 0x1] Failed reading RTSP data: Operation timed out"
+      : host.includes("weird") ? "method DESCRIBE failed: Weird Thing"
+      : "";
+    if (stderr || host.includes("timeout")) return json({ ok: false, error: `主碼流：${explainFailure(stderr, !stderr, tapo)}`, ...(stderr ? { detail: stderr } : {}) } satisfies ProbeResult);
     return json({
       ok: true,
       main: { videoCodec: "h264", width: 2560, height: 1440, fps: 15, audioCodec: "pcm_alaw" },

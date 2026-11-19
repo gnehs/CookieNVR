@@ -88,7 +88,7 @@ export function explain(issue: Issue, snap: Snapshot): Explained {
         who: names,
         pill: { label: "連不上", tone: "bad" },
         next: "確認相機有開機並連上網路",
-        why: "收不到畫面，所以也沒辦法錄影。常見原因是相機斷電、Wi-Fi 斷線，或 IP 位址變了；如果最近換過路由器，到攝影機設定更新 IP。",
+        why: "收不到畫面，所以也沒辦法錄影。常見原因是相機斷電、Wi-Fi 斷線，或 IP 位址變了；如果最近換過路由器，到攝影機設定更新 IP。相機能同時提供的串流連線很少，Frigate 等其他軟體也在直接連這台相機時，名額可能被佔滿，請讓它們改接 CookieNVR 的串流網址。",
         action: one ? { label: "檢查設定", to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } } : { label: "檢查設定", to: "/settings/cameras" },
       };
     case "notRecording":

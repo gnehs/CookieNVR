@@ -232,7 +232,7 @@ function CameraForm({ existing, mode, onAgain }: { existing: CameraDto | null; m
       let probe: ProbeResult | null = null;
       if (testing) {
         probe = await api.testCamera(r.conn);
-        if (!probe.ok) return setError(probeFailure(r.conn, probe.error));
+        if (!probe.ok) return setError(probeFailure(r.conn, probe.error, probe.detail));
       }
       const cam = existing ? await api.updateCamera(existing.id, r.config) : await api.createCamera(r.config);
       putCamera(qc, cam);
@@ -384,10 +384,10 @@ function CameraForm({ existing, mode, onAgain }: { existing: CameraDto | null; m
         </Link>
         <button className="btn primary" type="submit" disabled={busy || !isDirty} aria-busy={busy || undefined}>
           {busy ? (
-            <span>
+            <>
               <span className="spin" aria-hidden="true" />
-              {phase.kind === "testing" ? " 正在測試連線…" : " 儲存中…"}
-            </span>
+              <span>{phase.kind === "testing" ? "正在測試連線…" : "儲存中…"}</span>
+            </>
           ) : (
             <span>{needsTest ? "測試並儲存" : "儲存變更"}</span>
           )}

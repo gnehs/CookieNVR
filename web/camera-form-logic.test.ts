@@ -8,6 +8,7 @@ describe("explainProbe", () => {
     ["403 Forbidden", false, "credentials", "credentials"],
     ["404 Not Found", false, "host", "url"],
     ["453 Not Enough Bandwidth", false, "host", "host"],
+    ["[rtsp @ 0x1] Failed reading RTSP data: Operation timed out", false, "host", "host"],
     ["Connection refused", false, "host", "url"],
     ["No route to host", false, "host", "url"],
     ["Failed to resolve hostname cam.local", false, "host", "url"],
@@ -20,7 +21,7 @@ describe("explainProbe", () => {
       for (const type of ["tapo", "rtsp"] as const) {
         const help = explainProbe(`主碼流：${explainFailure(stderr, timedOut, type === "tapo")}`, type);
         expect(help.field).toBe(type === "tapo" ? tapoField : rtspField);
-        expect(help.message.replace(/Tapo|App|RTSP|TP-Link|rtsp|IP|stream1/g, "")).not.toMatch(/[A-Za-z]{2,}/);
+        expect(help.message.replace(/Tapo|App|RTSP|TP-Link|rtsp|IP|stream1|CookieNVR|NVR|Frigate|Home Assistant/g, "")).not.toMatch(/[A-Za-z]{2,}/);
         expect(help.message).not.toContain("主碼流");
       }
     });
@@ -29,6 +30,14 @@ describe("explainProbe", () => {
   test("低畫質串流的失敗一律掛在低畫質網址欄", () => {
     const help = explainProbe(`子碼流：${explainFailure("404 Not Found", false, false)}`, "rtsp");
     expect(help).toEqual({ field: "subUrl", message: "低畫質串流：找不到這個串流，請確認網址最後的路徑（例如 /stream1）是否正確。" });
+  });
+
+  test("連線名額滿時點出其他軟體佔用與改接 CookieNVR 的做法", () => {
+    for (const stderr of ["method OPTIONS failed: 453 (Not Enough Bandwidth)", "Failed reading RTSP data: Operation timed out"]) {
+      const help = explainProbe(`主碼流：${explainFailure(stderr, false, true)}`, "tapo");
+      expect(help.message).toContain("Frigate");
+      expect(help.message).toContain("CookieNVR 的串流網址");
+    }
   });
 
   test("主機缺少 ffprobe 時沒有對應欄位", () => {

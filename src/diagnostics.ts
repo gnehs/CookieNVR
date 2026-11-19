@@ -227,6 +227,7 @@ function cameraBlock(c: DiagnosticsCamera, input: DiagnosticsInput): string[] {
         ? `- 最近一次測試連線（${when}）：成功；主碼流 ${stream(r.main)}；子碼流 ${r.sub ? stream(r.sub) : "無"}；${onvifProbeLine(r.onvif)}`
         : `- 最近一次測試連線（${when}）：失敗，${r.error}`,
     );
+    if (!r.ok && r.detail) lines.push(...r.detail.split("\n").map((l) => `    > ${l}`));
   } else lines.push("- 最近一次測試連線：本次啟動後沒有紀錄，碼流編碼與解析度未知");
   if (c.ptz) lines.push(...ptzLines(c.ptz, input.now));
   if (c.detect) lines.push(...detectLines(c.detect, input.now));

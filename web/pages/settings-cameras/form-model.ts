@@ -208,7 +208,7 @@ export function describeConn(conn: CameraConnection): string {
 }
 
 /** 測試連線失敗：錯誤掛在對應的欄位，原文只放進「複製錯誤內容」 */
-export function probeFailure(conn: CameraConnection, error: string): FormError {
+export function probeFailure(conn: CameraConnection, error: string, detail?: string): FormError {
   const tapo = conn.type === "tapo";
   const help = explainProbe(error, conn.type);
   const target: Record<NonNullable<ProbeField>, [FieldKey, FieldKey[]]> = {
@@ -221,7 +221,7 @@ export function probeFailure(conn: CameraConnection, error: string): FormError {
     summary: help.field ? "連不上這台攝影機，所以還沒儲存" : help.message,
     field: help.field ? { key: target[help.field][0], message: help.message, also: target[help.field][1] } : undefined,
     card: "conn",
-    copy: `CookieNVR 測試攝影機連線失敗\n攝影機：${describeConn(conn)}\n錯誤：${error}\n（帳號密碼已省略）`,
+    copy: `CookieNVR 測試攝影機連線失敗\n攝影機：${describeConn(conn)}\n錯誤：${error}${detail ? `\nffprobe 輸出：\n${detail}` : ""}\n（帳號密碼已省略）`,
   };
 }
 

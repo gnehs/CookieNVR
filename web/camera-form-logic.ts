@@ -11,6 +11,9 @@ export interface ProbeHelp {
  * 把後端 explainFailure 的中文訊息（前面可能有「主碼流：」「子碼流：」）換成掛在欄位旁的一句話。
  * 後端訊息的最後一種情況會附上 ffmpeg 原文，這裡一律不顯示，原文留給「複製錯誤內容」。
  */
+const BUSY =
+  "相機有回應，但沒有送出影像，通常是串流連線名額滿了（Tapo 每種畫質大約只能同時連 1 到 2 條）。請先暫停 Frigate、Home Assistant、其他 NVR 或手機 App 對這台相機的連線再試一次。加入後，其他軟體可以改接 CookieNVR 的串流網址（在攝影機的「進階設定」複製），不用再直接連相機。";
+
 export function explainProbe(error: string, type: "tapo" | "rtsp"): ProbeHelp {
   const sub = error.startsWith("子碼流：");
   const msg = error.replace(/^(主碼流|子碼流)：/, "");
@@ -23,8 +26,8 @@ export function explainProbe(error: string, type: "tapo" | "rtsp"): ProbeHelp {
   }
   if (msg.startsWith("攝影機拒絕存取")) return say("credentials", "這組帳號沒有觀看畫面的權限，請到相機的設定確認帳號權限。");
   if (msg.startsWith("找不到這個串流")) return say(tapo ? "host" : "url", tapo ? "相機說找不到影像串流，請確認這是一台 Tapo 攝影機。" : "找不到這個串流，請確認網址最後的路徑（例如 /stream1）是否正確。");
-  if (msg.startsWith("攝影機拒絕了連線")) return say("host", "相機的連線數已滿，請關掉其他正在看畫面的 App 後再試一次。");
-  if (msg.startsWith("連線被拒絕")) return say(tapo ? "host" : "url", tapo ? "相機拒絕連線，請確認 IP 位址正確，且在 Tapo App 建立了相機帳戶。" : "相機拒絕連線，請確認 IP 位址與連接埠正確，且相機的 RTSP 功能已開啟。");
+  if (msg.startsWith("攝影機拒絕了連線") || msg.startsWith("攝影機有回應")) return say("host", BUSY);
+  if (msg.startsWith("連線被拒絕")) return say(tapo ? "host" : "url", tapo ? "相機拒絕連線。請確認 IP 位址正確，且在 Tapo App 建立了相機帳戶；如果 Frigate 等其他軟體正在看這台相機，也可能是連線名額滿了。" : "相機拒絕連線，請確認 IP 位址與連接埠正確，且相機的 RTSP 功能已開啟。");
   if (msg.startsWith("無法連到這個位址")) return say(tapo ? "host" : "url", "連不到這個位址，請確認相機已開機，且和這台主機在同一個網路。");
   if (msg.startsWith("無法解析主機名稱")) return say(tapo ? "host" : "url", "找不到這個主機名稱，請檢查是否打錯字。");
   if (msg.startsWith("連線逾時")) return say(tapo ? "host" : "url", "相機沒有回應，請確認 IP 位址正確、相機已開機。");

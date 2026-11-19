@@ -45,6 +45,14 @@ function redact(text: string): string {
   return text.replace(/(\w+:\/\/)[^/@\s]*@/g, "$1***@");
 }
 
+const NO_VIDEO = "攝影機有回應，但沒有送出影像，可能是同時連線數已達上限";
+
+/** ffmpeg 原文的最後幾行（已遮住帳密），只給「複製錯誤內容」與診斷資訊用 */
+function stderrTail(stderr: string): string | undefined {
+  const tail = redact(stderr).trim().split("\n").slice(-6).join("\n");
+  return tail || undefined;
+}
+
 export function explainFailure(stderr: string, timedOut: boolean, isTapo: boolean): string {
   const text = stderr;
   // ffmpeg 只在 warning 等級才會印出 "Operation timed out" 這類真正的原因
@@ -61,6 +69,8 @@ export function explainFailure(stderr: string, timedOut: boolean, isTapo: boolea
   if (/Connection refused/i.test(text)) {
     return "連線被拒絕，請確認 IP 位址與連接埠，以及攝影機的 RTSP 功能已開啟";
   }
+  // 連上了 RTSP 埠但相機不回應或直接掛斷：最常見是其他軟體佔滿了相機的串流連線
+  if (/Failed reading RTSP data|Connection reset by peer/i.test(text)) return NO_VIDEO;
   if (/No route to host|Network is unreachable|Host is down/i.test(text)) {
     return "無法連到這個位址，請確認攝影機已開機，且與本機在同一個網路";
   }
@@ -103,7 +113,7 @@ function toStreamInfo(streams: FfprobeStream[]): StreamInfo | null {
   };
 }
 
-type Outcome<T> = { ok: true; value: T } | { ok: false; error: string };
+type Outcome<T> = { ok: true; value: T } | { ok: false; error: string; detail?: string };
 
 export async function probeCamera(
   conn: CameraConnection,
@@ -124,7 +134,8 @@ export async function probeCamera(
       timeoutMs,
     );
     if (r.missingBinary) return { ok: false, error: `找不到 ffprobe（${env.ffprobeBin}），請確認已安裝` };
-    if (r.code !== 0) return { ok: false, error: explainFailure(redact(r.stderr), r.timedOut, isTapo) };
+    const detail = stderrTail(r.stderr);
+    if (r.code !== 0) return { ok: false, error: explainFailure(redact(r.stderr), r.timedOut, isTapo), detail };
     let streams: FfprobeStream[] = [];
     try {
       streams = (JSON.parse(new TextDecoder().decode(r.stdout)) as { streams?: FfprobeStream[] }).streams ?? [];
@@ -132,20 +143,23 @@ export async function probeCamera(
       // 落到下面的「沒有影像」
     }
     const info = toStreamInfo(streams);
-    return info ? { ok: true, value: info } : { ok: false, error: "串流中沒有影像軌" };
+    if (!info) return { ok: false, error: "串流中沒有影像軌", detail };
+    // 有 SDP 但沒收到任何畫面時 ffprobe 仍會成功結束，只是寬高是 0
+    if (!info.width || !info.height) return { ok: false, error: NO_VIDEO, detail };
+    return { ok: true, value: info };
   }
 
   // ONVIF 與串流同時探測，連不上不影響串流測試的結果
   const onvif = probeOnvif(conn, opts.onvif);
   const main = await probeStream(urls.main);
-  if (!main.ok) return { ok: false, error: `主碼流：${main.error}` };
+  if (!main.ok) return { ok: false, error: `主碼流：${main.error}`, detail: main.detail };
 
   let sub: StreamInfo | null = null;
   if (urls.sub !== null) {
     const r = await probeStream(urls.sub);
     if (r.ok) sub = r.value;
     // 部分 Tapo 機型沒有 stream2，視為沒有子碼流；通用 RTSP 是使用者明確填的，失敗就要告知
-    else if (!isTapo) return { ok: false, error: `子碼流：${r.error}` };
+    else if (!isTapo) return { ok: false, error: `子碼流：${r.error}`, detail: r.detail };
   }
 
   return { ok: true, main: main.value, sub, snapshotJpegBase64: await snapshot(urls.main), onvif: await onvif };

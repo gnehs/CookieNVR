@@ -118,7 +118,7 @@ export type OnvifProbeDto =
 
 export type ProbeResult =
   | { ok: true; main: StreamInfo; sub: StreamInfo | null; snapshotJpegBase64: string | null; onvif: OnvifProbeDto }
-  | { ok: false; error: string };
+  | { ok: false; error: string; /** ffmpeg 原文的最後幾行，已遮住帳密 */ detail?: string };
 
 export interface PtzPresetDto {
   token: string;

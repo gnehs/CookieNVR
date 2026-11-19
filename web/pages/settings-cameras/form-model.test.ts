@@ -72,6 +72,12 @@ describe("probeFailure", () => {
     expect(e.summary).toBe("連不上這台攝影機，所以還沒儲存");
     expect(e.copy).not.toContain("p\n");
   });
+
+  test("ffprobe 原文只出現在複製內容裡", () => {
+    const e = probeFailure({ type: "tapo", host: "h", username: "u", password: "p" }, "主碼流：攝影機有回應，但沒有送出影像，可能是同時連線數已達上限", "Failed reading RTSP data: Operation timed out");
+    expect(e.copy).toContain("ffprobe 輸出：\nFailed reading RTSP data: Operation timed out");
+    expect(e.field?.message).not.toContain("Failed");
+  });
 });
 
 describe("detectSummary", () => {
