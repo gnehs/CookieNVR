@@ -15,6 +15,7 @@
 - 即時預覽：瀏覽器直接播放，多台同時看
 - 動作偵測：畫面差分或相機內建偵測（ONVIF），可畫遮罩
 - 物件辨識（選用）：只在看到人或車時才記錄事件
+- 狀態辨識：框一塊畫面判斷它是哪種狀態（例如鐵捲門關／開），在 NVR 裡標記與訓練，可匯入 Frigate 的訓練資料
 - 鏡頭控制：ONVIF PTZ 與預設點，Tapo 攝影機只要填 IP 與相機帳戶
 - RTSP 轉發：其他軟體從 NVR 取得串流，不必再多連一次攝影機
 - Home Assistant 整合：[CookieNVR-HA](https://github.com/gnehs/CookieNVR-HA)（自動發現、免複製 Token）

@@ -347,6 +347,36 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 
 GPU 路徑在開發機（arm64 Mac）無法執行。`detector/README.md` 是實機測試步驟：在 amd64 機器上建置兩個映像、Intel 與 Nvidia 的啟動方式、在容器內執行 `detector-selftest [--expect intel,nvidia 或裝置識別字]`。自我檢查列出每個裝置、在每個裝置上推論並測速、比對與 CPU 的結果是否一致，最後印出可直接貼給 AI 的摘要；失敗時附可能原因與下一步。
 
+## 狀態辨識（選用）
+
+對標 Frigate 的 State Classification：在畫面框一塊區域，判斷它目前是哪一種狀態，例如鐵捲門的「關／移動中／開」。一台攝影機可以有多個「狀態感應器」，各自有名稱、2 到 10 個類別、區域（0 到 1 的比例矩形）、信心門檻（預設 0.8）、觸發方式（每隔 N 秒，預設 10；區域內有變化時最多每秒一次，預設開）。和物件辨識的開關無關。API 與 SSE 見 `src/api-types.ts` 的「狀態辨識」一節，實作在 `src/states/` 與 `detector/classify.py`、`detector/statecls.py`。
+
+### 模型：凍結的影像特徵模型＋小分類器
+
+- 不帶 PyTorch／TensorFlow。骨幹是 DINOv2-small（Apache-2.0，Hugging Face `onnx-community/dinov2-small` 的 int8 ONNX，24.4 MB，建置時下載並比對 `detector/backbone-model.json` 釘住的 SHA-256）。每張裁切直接拉伸到 224×224（和 Frigate 一樣不保留長寬比），取最後一層 patch token 的平均當特徵；分類器是 numpy 寫的 softmax 回歸（L2 正規化特徵、類別權重平衡張數、300 次全批次梯度下降）。
+- 訓練時每張圖加左右翻轉、變暗、變亮、灰階四種變化（灰階是為了夜間紅外線畫面）。分層 k-fold 交叉驗證（k = min(5, 最少那類的張數)），每類準確度與混淆矩陣隨模型存檔。模型檔 `<dataDir>/states/<感應器>/model.json` 存權重、類別、骨幹識別與前處理參數；骨幹換了就要重新訓練。
+- 為什麼不用 Frigate 的做法（MobileNetV2 微調後轉 tflite）：要 TensorFlow。使用者的鐵捲門資料（141 張）上，這套做法的 5-fold 交叉驗證是 97.2% 到 100%（5 個亂數種子平均 99.0%），Frigate 匯出的模型在自己的訓練資料上是 97.2%，所以不做 tflite 匯入，也不帶 LiteRT。
+- 訓練在 Apple Silicon 上 141 張約 14 秒（特徵快取後重訓 0.1 秒），單張推論約 25 ms（CPU 2 執行緒）。
+
+### worker
+
+- `classifier`（`detector/classify.py`）和物件辨識的 detector 分開，用同一套 Python 環境，固定 CPU。有已訓練且啟用的感應器、或有進行中的背景工作時才啟動；記憶體上限 1 GB。socket 框架同 detector，另加種類 3（JSON 標頭＋二進位）傳 JPEG 與裁切圖。
+- 畫面來源是 detect worker 已有的 640 寬快照（每秒 1 張），不另開串流。鏡頭移動中、或那張畫面亮度突變（例如切換夜視）時暫停 3 秒；快照超過 30 秒沒更新算沒畫面，60 秒後狀態改回未知。
+- 觸發：每隔 intervalSec 秒固定跑；onMotion 時每張快照比較區域縮成 32×32 灰階的平均差異（超過 6／255 才推論），所以和攝影機有沒有開動作偵測無關；有候選狀態待驗證時每張新快照都跑。
+- 背景工作（一次一個，依序）：訓練、從錄影抽樣、匯入資料集，進度與結果經 SSE 推送。
+
+### 狀態規則
+
+- 沿用 Frigate 的共識：信心低於門檻的讀數忽略（不中斷計數）；讀到目前狀態就清掉候選；同一類連續 3 次才切換。快照每秒 1 張，所以驗證約需 2 到 3 秒（Frigate 在 detect 串流上每 0.5 秒補跑，約 1.5 秒）。
+- 啟動時狀態未知；第一次通過驗證的狀態若和最後一筆紀錄相同（重啟、攝影機斷線又回來），只沿用那筆的時間，不重複寫紀錄。紀錄 `state_changes`（感應器、時間、from、to、信心、縮圖），保留天數同事件。
+
+### 訓練資料
+
+- 建立感應器時從這台的錄影平均抽 100 個時間點，ffmpeg 抽 640 寬的畫面並裁切，用骨幹特徵做最遠點貪婪選出 24 張最不一樣的放進待標記（Frigate 用 HSV 直方圖，特徵比較能分出光線相同但門開一半的畫面）。
+- 辨識時把第一次、切換時、驗證中與信心低於 0.95 的裁切存進待標記（後兩者每個感應器每分鐘最多一張），自動存下的最多 100 張，超過刪最舊的。
+- 匯入 Frigate 的資料集 zip（`<名稱>/dataset/<類別>/*` 進已標記、`<名稱>/train/*` 進待標記並帶上檔名裡 Frigate 當時的判斷）。worker 用 Python 的 zipfile 解，只認這兩種路徑，檔名一律重新產生，每張用 Pillow 驗證；上傳上限 100 MB（Bun 預設請求上限 128 MB），解開後總計 1 GB、單檔 20 MB、5000 個檔案。上傳路由是唯一不收 JSON 的本體（`Route.accepts`），HTML 表單送不出 zip 的 Content-Type，所以跨站請求偽造不了。
+- 也可貼 Frigate 設定片段（`classification.custom.<名稱>`），帶入區域、門檻、interval 與 motion，供建立感應器時預填。
+
 ## 即時預覽
 
 瀏覽器用 MSE 播放 fragmented MP4 串流，影像不轉碼、不需要 WebSocket 或 WebRTC。fragment 每 200 毫秒切一次，延遲不受關鍵幀間隔限制：假相機實測端到端約 0.45–0.75 秒（headless Chrome，畫面內嵌時鐘），Tapo 估計約 0.3–1.1 秒（只能用相機畫面上的秒級時間與相機時鐘比對）。
