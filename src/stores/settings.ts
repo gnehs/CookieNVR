@@ -1,11 +1,11 @@
 import type { Database } from "bun:sqlite";
 import { defaultSettings, type Settings, type SettingsStore } from "../types.ts";
 
-export function createSettingsStore(db: Database, dataDir: string): SettingsStore {
+export function createSettingsStore(db: Database, dataDir: string, recordingsDir?: string): SettingsStore {
   const listeners = new Set<(settings: Settings) => void>();
 
   function get(): Settings {
-    const merged: Record<string, unknown> = { ...defaultSettings(dataDir) };
+    const merged: Record<string, unknown> = { ...defaultSettings(dataDir, recordingsDir) };
     for (const row of db.query("SELECT key, value FROM settings").all() as { key: string; value: string }[]) {
       if (row.key in merged) merged[row.key] = JSON.parse(row.value);
     }
@@ -16,7 +16,7 @@ export function createSettingsStore(db: Database, dataDir: string): SettingsStor
     get,
 
     update(patch) {
-      const defaults = defaultSettings(dataDir);
+      const defaults = defaultSettings(dataDir, recordingsDir);
       db.transaction(() => {
         for (const [key, value] of Object.entries(patch)) {
           if (value === undefined || !(key in defaults)) continue;

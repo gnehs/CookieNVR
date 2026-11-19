@@ -51,8 +51,9 @@ Frigate 把物件偵測模型、go2rtc、轉碼、錄影、UI 全部綁在一起
 | Port | `8765` | 網頁、API、瀏覽器串流共用 |
 | Port | `8554` | RTSP 轉發，給外部裝置與 HA 接 |
 | Port | `51826` 起 | HKSV：每台攝影機一個 HomeKit 配件 port（起始值可經 API 改），需 host 網路或 br0 |
-| Volume | `/data` | 資料庫、縮圖、預設錄影位置 |
-| 選用 Volume | `/recordings` | 想把錄影放在 array、資料庫放在 cache 時使用，路徑在前端指定 |
+| Volume | `/data` | 資料庫、縮圖、設定。量小但讀寫頻繁，建議放 SSD |
+| Volume | `/recordings` | 錄影。量大，放一般硬碟即可。掛了就自動使用；沒掛時錄影放在 `/data/recordings` |
+| `RECORDINGS_DIR` | 選用 | 明確指定錄影的預設位置，優先於上面的自動判斷 |
 | `PORT` | 選用 | 覆寫網頁 port |
 
 時區不需要設定：顯示一律用瀏覽器的時區，錄影檔名與資料庫一律存 UTC。

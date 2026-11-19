@@ -14,6 +14,7 @@ import { createEventTracker, eventRoutes } from "./events/index.ts";
 import { countEventsSince } from "./events/store.ts";
 import { createExports, exportRoutes } from "./export/index.ts";
 import { readEnv } from "./env.ts";
+import { defaultRecordingsDir } from "./recordings-dir.ts";
 import { createHomekit } from "./homekit/manager.ts";
 import { coreRoutes, createRouter, HttpError, redactConfig } from "./http/index.ts";
 import { createLive } from "./live/live.ts";
@@ -51,7 +52,7 @@ mkdirSync(logDir, { recursive: true });
 const db = openDb(join(env.dataDir, "cookienvr.db"));
 const auth = createAuth({ db });
 const cameras = createCameraStore(db);
-const settings = createSettingsStore(db, env.dataDir);
+const settings = createSettingsStore(db, env.dataDir, defaultRecordingsDir(env));
 const supervisor = createSupervisor({ logDir });
 const restream = createRestream({
   env,

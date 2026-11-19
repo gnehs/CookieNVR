@@ -47,6 +47,8 @@ ENV NODE_ENV=production \
     DATA_DIR=/data \
     PORT=8765 \
     RTSP_PORT=8554
+# /recordings is deliberately not declared as a volume: an anonymous volume would look
+# like a real mount and silently take the recordings, then vanish with the container.
 VOLUME /data
 EXPOSE 8765 8554
 

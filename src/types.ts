@@ -95,10 +95,10 @@ export interface Settings {
 export const SEGMENT_SECONDS = 60;
 export const EVENT_BUFFER_MS = 5_000;
 
-export function defaultSettings(dataDir: string): Settings {
+export function defaultSettings(dataDir: string, recordingsDir = `${dataDir}/recordings`): Settings {
   return {
     siteName: "CookieNVR",
-    storagePath: `${dataDir}/recordings`,
+    storagePath: recordingsDir,
     retention: { continuousDays: 7, eventDays: 30, minFreeBytes: 5 * 1024 ** 3 },
     rtsp: { externalEnabled: true },
     homekit: { enabled: false, basePort: 51826 },
