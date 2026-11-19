@@ -91,7 +91,7 @@ class CheckPlacementTest(unittest.TestCase):
     def test_gpu_that_runs_nothing_is_rejected_in_plain_words(self):
         with self.assertRaises(eng.NotOnDevice) as cm:
             eng.check_placement(IGPU, eng.placement_of(profile(OPENVINO_NONE)))
-        self.assertEqual(str(cm.exception), "Intel UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器）")
+        self.assertEqual(str(cm.exception), "Intel UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器）")
         self.assertEqual(cm.exception.placement, {CPU_EP: 1.0})
 
     def test_gpu_with_a_sliver_of_work_is_rejected(self):
@@ -158,7 +158,7 @@ class LoadTest(unittest.TestCase):
         with mock.patch.object(eng, "create_session", fake_sessions(sessions, created)):
             loaded = eng.load(None, "m.onnx", "intel:GPU.0", probe_with(CPU, IGPU))
         self.assertEqual(loaded.engine.device, CPU)
-        self.assertEqual(loaded.fallback.reason, "Intel UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器），已改用其他裝置")
+        self.assertEqual(loaded.fallback.reason, "Intel UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器），已改用其他裝置")
         self.assertIn("CPUExecutionProvider 100%", loaded.fallback.detail)
         self.assertEqual([a["ok"] for a in loaded.attempts], [False, True])
         self.assertTrue(all(s.ended for s in created))

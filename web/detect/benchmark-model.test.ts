@@ -58,7 +58,7 @@ describe("實際在哪裡執行", () => {
   });
 
   test("顯示卡沒有實際執行模型時是失敗，用白話說原因", () => {
-    const failed = gpu({ ok: false, fps: undefined, cameras: undefined, reason: "Intel UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器），這個裝置不適合用來辨識", error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" });
+    const failed = gpu({ ok: false, fps: undefined, cameras: undefined, reason: "Intel UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器），這個裝置不適合用來辨識", error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" });
     expect(headlineOf(bench({ results: [failed] }), "cpu")).toEqual({ tone: "bad", text: `${failed.reason}。` });
     const view = benchmarkView(bench({ results: [res({}), failed] }), opts);
     expect(view.rows[1]).toMatchObject({ text: "無法使用", tone: "bad", note: { tone: "warn", text: failed.reason } });

@@ -127,7 +127,7 @@ const bestDevice = () => DEVICES.find((d) => d.kind === "nvidia") ?? DEVICES.fin
 function resolveDevice(): { device: InferenceDeviceDto; fallback: { reason: string; detail: string } | null } {
   if (OBJECTS_SCENARIO === "fallback") return { device: DEVICE_CPU, fallback: { reason: "找不到可以使用的 Nvidia 顯卡，已改用 CPU 辨識。", detail: "CUDAExecutionProvider not in ort.get_available_providers(); /dev/nvidiactl missing" } };
   if (OBJECTS_SCENARIO === "cpu" || OBJECTS_SCENARIO === "overload") return { device: DEVICE_CPU, fallback: null };
-  if (OBJECTS_SCENARIO === "handback") return { device: DEVICE_CPU, fallback: { reason: "Intel(R) UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器），已改用其他裝置", detail: "NotOnDevice: Intel(R) UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器）；實際執行：CPUExecutionProvider 100%" } };
+  if (OBJECTS_SCENARIO === "handback") return { device: DEVICE_CPU, fallback: { reason: "Intel(R) UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器），已改用其他裝置", detail: "NotOnDevice: Intel(R) UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器）；實際執行：CPUExecutionProvider 100%" } };
   if (OBJECTS_SCENARIO === "intel") return { device: DEVICES.find((d) => d.kind === "intel") ?? DEVICE_CPU, fallback: null };
   const want = settings.devices.objects;
   if (want === "auto") return { device: bestDevice(), fallback: null };
@@ -143,7 +143,7 @@ const camerasOn = () => cams.filter((c) => c.config.enabled && detectConfigOf(c.
 function resultOf(d: InferenceDeviceDto, perCamera: number): BenchmarkResultDto {
   const sp = SPEED[d.id] ?? SPEED.cpu!;
   if (process.env.MOCK_BENCH?.startsWith("handback")) {
-    if (d.kind === "intel") return { device: d.id, kind: d.kind, name: d.name, ok: false, reason: "Intel(R) UHD Graphics 630沒有實際執行這個模型（OpenVINO把運算交回處理器），這個裝置不適合用來辨識", error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" };
+    if (d.kind === "intel") return { device: d.id, kind: d.kind, name: d.name, ok: false, reason: "Intel(R) UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器），這個裝置不適合用來辨識", error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" };
     if (d.id === DEVICE_N1.id) return { ...resultOf(DEVICE_CPU, perCamera), device: d.id, kind: d.kind, name: d.name, fps: 18, msMean: 55, cameras: camerasSupported(18, d.kind, perCamera), cpuShare: 0.62 };
   }
   return { device: d.id, kind: d.kind, name: d.name, ok: true, loadMs: d.kind === "cpu" ? 900 : 4200, frames: Math.round(sp.fps * 10), fps: sp.fps, msMean: sp.ms, msP90: Math.round(sp.ms * 1.35 * 10) / 10, cameras: camerasSupported(sp.fps, d.kind, perCamera) };

@@ -323,7 +323,7 @@ class NotOnDevice(RuntimeError):
 
     def __init__(self, device: Device, placement: dict[str, float]):
         self.placement = placement
-        super().__init__(f"{device.name}沒有實際執行這個模型（{RUNTIME_NAMES.get(device.kind, device.kind)}把運算交回處理器）")
+        super().__init__(f"{device.name} 沒有實際執行這個模型（{RUNTIME_NAMES.get(device.kind, device.kind)} 把運算交回處理器）")
 
 
 def placement_of(events: list) -> dict[str, float] | None:
