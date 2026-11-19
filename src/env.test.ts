@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { portInUseMessage, readEnv } from "./env.ts";
+import { portInUseMessage, readEnv, recordPermissionMessage } from "./env.ts";
 
 test("空字串的環境變數視為沒設（Unraid 會把沒填的欄位傳成空字串）", () => {
   const env = readEnv({ PORT: "", RTSP_PORT: "", PUBLIC_PORT: "" });
@@ -14,4 +14,11 @@ test("port 被佔用的說明點名要改的環境變數；RTSP 在 bridge 網�
   expect(rtsp).toContain("環境變數 RTSP_PORT");
   expect(rtsp).toContain("兩側");
   expect(rtsp).not.toContain("8555");
+});
+
+test("錄影權限不足的說明點出位置、原因與 PUID:PGID 的修法", () => {
+  const msg = recordPermissionMessage("record:abc", "/recordings");
+  expect(msg).toContain("/recordings");
+  expect(msg).toContain("PUID");
+  expect(msg).toContain("chown");
 });

@@ -18,7 +18,7 @@ export function createFailureLog(opts: {
   const logged = new Map<string, { message: string; at: number }>();
   return (status) => {
     if (status.state !== "backoff") return;
-    const lastLine = opts.redact(status.stderrTail.findLast((l) => l.trim() !== "" && !/\bINF\b/.test(l)) ?? status.stderrTail.at(-1) ?? "");
+    const lastLine = opts.redact(causeLine(status.stderrTail));
     const code = status.lastRestart?.exitCode;
     const message =
       opts.explain?.(status, lastLine) ??
@@ -28,4 +28,21 @@ export function createFailureLog(opts: {
     logged.set(status.id, { message, at: now() });
     opts.print(message);
   };
+}
+
+/** ffmpeg 收尾時印的籠統訊息，真正的原因在它前面 */
+const GENERIC = [/Nothing was written into output file/, /Terminating thread with return code/, /Task finished with error code/, /Conversion failed/];
+/** 一眼看得出原因的錯誤 */
+const TELLING = /Permission denied|No such file or directory|No space left|Read-only file system|Server returned|Connection refused|timed out|Invalid data|not supported/i;
+
+/** 挑最能說明原因的一行：最後一行明確的錯誤，否則最後一行不是一般訊息、也不是收尾套話的 */
+export function causeLine(tail: readonly string[]): string {
+  const lines = tail.filter((l) => l.trim() !== "" && !/\bINF\b/.test(l));
+  return (
+    lines.findLast((l) => TELLING.test(l) && !GENERIC.some((g) => g.test(l))) ??
+    lines.findLast((l) => !GENERIC.some((g) => g.test(l))) ??
+    lines.at(-1) ??
+    tail.at(-1) ??
+    ""
+  );
 }

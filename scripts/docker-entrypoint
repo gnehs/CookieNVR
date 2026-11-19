@@ -63,6 +63,11 @@ fix=
 for d in "$data_dir" ${rec_dir:+"$rec_dir"}; do
   mkdir -p "$d"
   [ "$(stat -c %u:%g "$d")" = "$puid:$pgid" ] || fix=1
+  # 頂層對了，底下的攝影機與日期資料夾仍可能是以 root 執行時建立的（例如之前沒設 PUID）；
+  # 只看前三層的資料夾，數量是攝影機數乘上保留天數，不會掃到錄影檔本身。
+  if [ -z "$fix" ] && [ -n "$(find "$d" -maxdepth 3 -type d \( ! -user "$puid" -o ! -group "$pgid" \) -print -quit 2>/dev/null)" ]; then
+    fix=1
+  fi
 done
 [ "$(cat "$owner_file" 2>/dev/null || true)" = "$want" ] || fix=1
 

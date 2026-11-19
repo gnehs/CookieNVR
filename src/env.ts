@@ -54,3 +54,12 @@ export function portInUseMessage(port: number, variable: "PORT" | "RTSP_PORT"): 
     `  容器用 bridge 網路時：${bridge}`,
   ].join("\n");
 }
+
+/** 錄影寫不進去（Permission denied）時給使用者看的說明：通常是之前以 root 執行時建立的資料夾 */
+export function recordPermissionMessage(workerId: string, storagePath: string): string {
+  return [
+    `[env] ${workerId} 沒有權限寫入錄影位置 ${storagePath}，錄影停止了。`,
+    "  多半是之前以 root 執行（沒設 PUID）時建立的資料夾，現在改用 PUID／PGID 執行就寫不進去。",
+    "  重新啟動容器通常會自動修正擁有者；仍然不行時，在主機上把錄影與 appdata 的資料夾交給 PUID:PGID（例如 chown -R 99:100 <主機上的路徑>）。",
+  ].join("\n");
+}

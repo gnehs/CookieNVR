@@ -14,7 +14,7 @@ import { createEventTracker, eventRoutes } from "./events/index.ts";
 import { countEventsSince } from "./events/store.ts";
 import { createExports, exportRoutes } from "./export/index.ts";
 import { hostLabel, instanceLabel, loadInstanceId, startMdns, type MdnsResponder } from "./discovery/index.ts";
-import { portInUseMessage, readEnv } from "./env.ts";
+import { portInUseMessage, readEnv, recordPermissionMessage } from "./env.ts";
 import { defaultRecordingsDir } from "./recordings-dir.ts";
 import { measureDisks, splitUsage } from "./storage.ts";
 import { createHomekit } from "./homekit/manager.ts";
@@ -459,8 +459,11 @@ cameras.subscribe((list) => {
 const logWorkerFailure = createFailureLog({
   print: (line) => console.error(line),
   redact: (line) => redact(line, cameras.list()),
-  explain: (status, last) =>
-    status.kind === "restream" && last.includes("address already in use") ? portInUseMessage(env.rtspPort, "RTSP_PORT") : null,
+  explain: (status, last) => {
+    if (status.kind === "restream" && last.includes("address already in use")) return portInUseMessage(env.rtspPort, "RTSP_PORT");
+    if (status.kind === "record" && last.includes("Permission denied")) return recordPermissionMessage(status.id, settings.get().storagePath);
+    return null;
+  },
 });
 supervisor.subscribe((status) => {
   logWorkerFailure(status);

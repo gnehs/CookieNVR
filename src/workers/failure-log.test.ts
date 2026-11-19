@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { WorkerStatus } from "../types.ts";
-import { createFailureLog, REPEAT_MS } from "./failure-log.ts";
+import { causeLine, createFailureLog, REPEAT_MS } from "./failure-log.ts";
 
 const status = (o: Partial<WorkerStatus>): WorkerStatus => ({
   id: "restream",
@@ -49,4 +49,17 @@ test("輸出先遮蔽再印；已知的錯誤換成白話的改法", () => {
   log(status({ id: "record:a", kind: "record", stderrTail: ["rtsp://u:secret@h failed"] }));
   log(status({ stderrTail: ["ERR listen tcp :8554: bind: address already in use"] }));
   expect(lines).toEqual(["[worker] record:a 停止了（結束碼 1），稍後自動重新啟動：rtsp://u:***@h failed", "port 被佔用"]);
+});
+
+test("ffmpeg 收尾的套話不算原因，挑前面真正的錯誤（容器內以 uid 99 寫入 root 資料夾的實際輸出）", () => {
+  const tail = [
+    "[out#0/segment @ 0xae161198f680] Could not write header (incorrect codec parameters ?): Permission denied",
+    "[vf#0:0 @ 0xae1611990e10] Error sending frames to consumers: Permission denied",
+    "[vf#0:0 @ 0xae1611990e10] Task finished with error code: -13 (Permission denied)",
+    "[vf#0:0 @ 0xae1611990e10] Terminating thread with return code -13 (Permission denied)",
+    "[out#0/segment @ 0xae161198f680] Nothing was written into output file, because at least one of its streams received no packets.",
+  ];
+  expect(causeLine(tail)).toBe(tail[1]!);
+  expect(causeLine(["Error opening input files: Server returned 400 Bad Request"])).toContain("400");
+  expect(causeLine(["INF only info"])).toBe("INF only info");
 });
