@@ -1,6 +1,6 @@
 import { api } from "../api.ts";
 import { errMsg, field, h, icon, brandMark } from "../dom.ts";
-import { navigate, type PageCtx } from "../router.ts";
+import { navigate, safeNext, type PageCtx } from "../router.ts";
 import { state } from "../state.ts";
 
 function authForm(opts: {
@@ -68,14 +68,16 @@ function authForm(opts: {
   );
 }
 
-export function loginPage(_ctx: PageCtx): Node {
+export function loginPage(ctx: PageCtx): Node {
+  const target = safeNext(ctx.query) ?? "/cameras";
   return authForm({
     title: "登入",
+    intro: target.startsWith("/link") ? "登入後就能核准連線請求。" : undefined,
     submitLabel: "登入",
     confirm: false,
     onSubmit: async (u, p) => {
       state.me = await api.login(u, p);
-      navigate("/cameras");
+      navigate(target);
     },
   });
 }

@@ -208,7 +208,7 @@ function tokensSection(): HTMLElement {
     h(
       "div",
       { class: "disclosure-body" },
-      h("p", { class: "hint" }, "幫每個 App 建立一組專用的密鑰，它就能讀取攝影機，不需要知道你的密碼。權限和你的帳號相同，不用時可以隨時撤銷。（技術上稱為 API Token）"),
+      h("p", { class: "hint" }, "Home Assistant 會自己找到 CookieNVR，在它那邊按「新增」後回到這裡按「允許」就好。其他 App 可以在這裡建立一組專用的密鑰，權限和你的帳號相同。下面列出所有連線中的 App，不用時可以隨時撤銷。（技術上稱為 API Token）"),
       created,
       form,
       h("div", { class: "card-inset" }, list),

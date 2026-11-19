@@ -56,3 +56,9 @@ export function matchRoute(routes: Route[], path: string): { route: Route; param
   }
   return null;
 }
+
+/** 登入後要回去的頁面；只接受站內路徑，避免 `next` 被拿來導到別的網站 */
+export function safeNext(query: URLSearchParams): string | null {
+  const next = query.get("next");
+  return next && /^\/[a-z]/i.test(next) ? next : null;
+}

@@ -14,6 +14,8 @@ import { explainFailure } from "../src/camera/probe.ts";
 import { exportFileName } from "../src/export/filename.ts";
 import { planExport } from "../src/export/plan.ts";
 import { encodeFrame, FrameKind } from "../src/live/mux.ts";
+import { createLinkService } from "../src/auth/link.ts";
+import { HttpError } from "../src/http/errors.ts";
 import index from "./index.html";
 
 const PORT = Number(process.env.PORT ?? 48765);
@@ -614,13 +616,40 @@ async function api(req: Request, url: URL): Promise<Response> {
   return res;
 }
 
+// 授權連結用真的狀態機；token 存進假後端的清單，「帳號 → 連接其他 App」看得到
+const links = createLinkService({
+  tokens: {
+    getUser: (id) => {
+      const u = users.find((x) => x.id === id);
+      return u ? { id: u.id, username: u.username, role: u.role, createdAt: u.createdAt, lastLoginAt: u.lastLoginAt } : null;
+    },
+    createToken: (userId, name) => {
+      const raw = `cnvr_${crypto.randomUUID().replaceAll("-", "")}`;
+      const t = { id: nextTokenId++, userId, name, prefix: raw.slice(0, 9), createdAt: now(), lastUsedAt: null };
+      tokens.push(t);
+      return { ...t, token: raw };
+    },
+  },
+});
+
+function linkCall(fn: () => unknown, status = 200): Response {
+  try {
+    return json(fn(), status);
+  } catch (e) {
+    if (e instanceof HttpError) return err(e.status, e.message);
+    throw e;
+  }
+}
+
 async function route(req: Request, url: URL): Promise<Response> {
   const path = url.pathname.slice(4);
   const m = req.method;
   const body: any = m === "GET" || m === "DELETE" ? null : await req.json().catch(() => ({}));
   await Bun.sleep(80);
 
-  if (path === "/info" && m === "GET") return json({ version: "0.1.0-mock", apiVersion: 1, needsSetup: users.length === 0, siteName: settings.siteName });
+  if (path === "/info" && m === "GET") return json({ version: "0.1.0-mock", apiVersion: 1, needsSetup: users.length === 0, siteName: settings.siteName, instanceId: "00000000-0000-4000-8000-000000000000" });
+  if (path === "/link" && m === "POST") return linkCall(() => links.create({ app: String(body.app ?? "App"), ip: "192.168.1.50", origin: url.origin }), 201);
+  if (path === "/link/poll" && m === "POST") return linkCall(() => links.poll(String(body.pollSecret ?? ""), "192.168.1.50"));
   if (path === "/auth/setup" && m === "POST") {
     if (users.length) return err(409, "已經有帳號了");
     if (!body.username || String(body.password ?? "").length < 8) return err(400, "密碼至少 8 個字元");
@@ -669,6 +698,13 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (mm && m === "DELETE") {
     sessions.delete(mm[1]!);
     return noContent();
+  }
+  const linkMatch = path.match(/^\/link\/([^/]+)$/);
+  if (linkMatch) {
+    const who = { userId: me.id, username: me.username, role: me.role, via: "session" as const };
+    const code = decodeURIComponent(linkMatch[1]!);
+    if (m === "GET") return linkCall(() => links.view(code, who));
+    if (m === "POST") return linkCall(() => links.decide(code, who, body.decision === "approve" ? "approve" : "deny"));
   }
   if (path === "/tokens") {
     if (m === "GET") return json(tokens.filter((t) => t.userId === me.id));
@@ -892,3 +928,5 @@ Bun.serve({
 console.log(`mock NVR on http://localhost:${PORT}`);
 if (FRESH) console.log("MOCK_FRESH=1：沒有預建帳號，開啟後會進到初始設定");
 else console.log(`示範登入：${DEMO_ADMIN.username} / ${DEMO_ADMIN.password}（管理員），${DEMO_USER.username} / ${DEMO_USER.password}（一般使用者）`);
+const demoLink = links.create({ app: "Home Assistant", ip: "192.168.1.50", origin: `http://localhost:${PORT}` });
+console.log(`示範核准頁（10 分鐘內有效）：${demoLink.approveUrl}`);

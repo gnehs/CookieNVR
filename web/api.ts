@@ -7,6 +7,7 @@ import type {
   ExportDto,
   ExportRequestDto,
   InfoDto,
+  LinkRequestDto,
   MeDto,
   ProbeResult,
   PtzCommandDto,
@@ -84,6 +85,9 @@ export const api = {
   tokens: () => get<TokenDto[]>("/tokens"),
   createToken: (name: string) => post<CreatedTokenDto>("/tokens", { name }),
   revokeToken: (id: number) => del(`/tokens/${id}`),
+  linkRequest: (code: string) => get<LinkRequestDto>(`/link/${encodeURIComponent(code)}`),
+  decideLink: (code: string, decision: "approve" | "deny") =>
+    post<LinkRequestDto>(`/link/${encodeURIComponent(code)}`, { decision }),
   users: () => get<UserDto[]>("/users"),
   createUser: (username: string, password: string, role: Role) =>
     post<UserDto>("/users", { username, password, role }),

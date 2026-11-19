@@ -1,6 +1,6 @@
 import { api, setUnauthorizedHandler } from "./api.ts";
 import { attachMenu, errMsg, errorBox, h, icon, PageError, pageErrorBox, spinner, brandMark } from "./dom.ts";
-import { matchRoute, navigate, parseHash, type PageCtx, type Route } from "./router.ts";
+import { matchRoute, navigate, parseHash, safeNext, type PageCtx, type Route } from "./router.ts";
 import { state } from "./state.ts";
 import { onHealth, startHealthWatch, stopHealthWatch } from "./health-watch.ts";
 import { startStatusStream, stopStatusStream } from "./status-stream.ts";
@@ -17,6 +17,7 @@ import { settingsUsersPage } from "./pages/settings-users.ts";
 import { settingsStatusPage } from "./pages/settings-status.ts";
 import { SETTINGS_TABS } from "./pages/settings-shell.ts";
 import { accountPage } from "./pages/account.ts";
+import { linkPage } from "./pages/link.ts";
 
 const routes: Route[] = [
   { pattern: "/setup", page: setupPage, access: "public" },
@@ -34,6 +35,8 @@ const routes: Route[] = [
   { pattern: "/settings/users", page: settingsUsersPage, access: "admin", section: "settings" },
   { pattern: "/settings/status", page: settingsStatusPage, access: "admin", section: "settings" },
   { pattern: "/account", page: accountPage, access: "user", section: "account" },
+  { pattern: "/link", page: linkPage, access: "user", bare: true },
+  { pattern: "/link/:code", page: linkPage, access: "user", bare: true },
 ];
 
 const app = document.getElementById("app")!;
@@ -161,7 +164,7 @@ async function render() {
 
   if (route.access === "public") {
     if (path === "/setup" && state.info && !state.info.needsSetup) return navigate("/login", true);
-    if (path === "/login" && state.me) return navigate("/cameras", true);
+    if (path === "/login" && state.me) return navigate(safeNext(query) ?? "/cameras", true);
     shell = null;
     document.title = state.siteName;
     app.replaceChildren(enter(await runPage(route, params, query, token)));
@@ -172,7 +175,7 @@ async function render() {
     try {
       state.me = await api.me();
     } catch {
-      return navigate("/login", true);
+      return navigate(`/login?next=${encodeURIComponent(path)}`, true);
     }
     if (token !== renderToken) return;
   }
