@@ -127,6 +127,7 @@ export function createDetection(opts: DetectionOptions): Detection {
       minArea: c.detect.minArea,
       masks: c.detect.masks,
       paused: c.paused,
+      preview: c.samples.size > 0,
     };
     const text = JSON.stringify(control);
     if (text === c.controlText) return;
@@ -150,7 +151,14 @@ export function createDetection(opts: DetectionOptions): Detection {
       opts.events.signal(id, { type: "pixel", at: r.at, score: r.score, motion: r.motion }, c.detect.cooldownSec * 1000);
     }
     if (c.samples.size === 0) return;
-    const sample: MotionSampleDto = { at: r.at, score: r.score, motion: r.motion, state: c.paused && r.state !== "off" ? "paused" : r.state, eventActive: opts.events.activeFor(id) !== null };
+    const sample: MotionSampleDto = {
+      at: r.at,
+      score: r.score,
+      motion: r.motion,
+      state: c.paused && r.state !== "off" ? "paused" : r.state,
+      eventActive: opts.events.activeFor(id) !== null,
+      ...(r.curve ? { curve: r.curve } : {}),
+    };
     for (const fn of c.samples) fn(sample);
   }
 
@@ -307,15 +315,21 @@ export function createDetection(opts: DetectionOptions): Detection {
       const enc = new TextEncoder();
       let listener: ((s: MotionSampleDto) => void) | null = null;
       const ping = setInterval(() => q.enqueue(enc.encode(": ping\n\n")), PING_MS);
+      // 有人看時 worker 才多算預覽分數；最後一個人離開就停
+      const refreshPreview = () => {
+        if (cams.get(c.camera.id) === c) writeControl(c);
+      };
       const q = queuedStream(256 * 1024, () => {
         clearInterval(ping);
         if (listener) c.samples.delete(listener);
+        refreshPreview();
       });
       listener = (s) => {
         q.enqueue(enc.encode(`event: sample\ndata: ${JSON.stringify(s)}\n\n`));
         if (q.backlog() > 128 * 1024) q.abort();
       };
       c.samples.add(listener);
+      refreshPreview();
       q.enqueue(enc.encode("retry: 3000\n\n"));
       return new Response(q.stream, {
         headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" },

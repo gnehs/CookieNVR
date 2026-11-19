@@ -6,7 +6,7 @@ import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { BenchmarkDto, BenchmarkResultDto, CameraDto, HomekitDto, EventDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
-import { detectConfigOf, usesPixel } from "../src/detect/config.ts";
+import { detectConfigOf, PREVIEW_THRESHOLDS, usesPixel } from "../src/detect/config.ts";
 import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import { setupUri } from "../src/homekit/identity.ts";
@@ -501,7 +501,9 @@ function motionResponse(c: (typeof cams)[number]): Response {
         else if (n <= 10) sample = { at: t, score: null, motion: false, state: "warmup", eventActive };
         else {
           const score = mockScore(live, t);
-          sample = { at: t, score, motion: score >= d.minArea, state: "ok", eventActive };
+          // 假的各門檻分數：以目前門檻的分數為準，門檻越低越大，讓設定頁拖滑桿時曲線跟著動
+          const curve = PREVIEW_THRESHOLDS.map((th) => Math.min(1, score * (d.threshold / th) ** 1.5));
+          sample = { at: t, score, motion: score >= d.minArea, state: "ok", eventActive, curve };
         }
         ctl.enqueue(enc.encode(sse("sample", sample)));
       }, 200);

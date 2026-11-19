@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { FRAME_BYTES, FRAME_H, FRAME_W, MotionDetector, rasterizeMasks, WARMUP_FRAMES, type DiffParams } from "./motion.ts";
+import { PREVIEW_THRESHOLDS } from "./config.ts";
+import { blur3x3, FRAME_BYTES, FRAME_H, FRAME_W, MotionDetector, rasterizeMasks, scoreCurve, scoreFrame, WARMUP_FRAMES, type DiffParams } from "./motion.ts";
 
 const params: DiffParams = { threshold: 25, minArea: 0.005 };
 
@@ -110,4 +111,29 @@ test("masks rasterize by pixel centre with even-odd fill", () => {
   expect([...m.slice(0, 10)]).toEqual([1, 1, 1, 1, 1, 0, 0, 0, 0, 0]);
   const tri = rasterizeMasks([{ points: [[0, 0], [1, 0], [0, 1]] }], 4, 4);
   expect(tri.reduce((a, b) => a + b, 0)).toBe(6);
+});
+
+test("每個預覽門檻下的分數都和實際判斷用的分數完全相同，含遮罩與雜訊", () => {
+  const blurred = (g: Uint8Array) => {
+    const out = new Float32Array(FRAME_BYTES);
+    blur3x3(g, out);
+    return out;
+  };
+  const bg = blurred(background());
+  const frame = blurred(noisy(withSquare(withSquare(background(), 40, 30, 50, 200), 200, 100, 24, 120), 12));
+  const mask = rasterizeMasks([{ points: [[0.6, 0], [1, 0], [1, 0.3], [0.6, 0.3]] }]);
+  for (const m of [null, mask]) {
+    const curve = scoreCurve(frame, bg, m, PREVIEW_THRESHOLDS);
+    expect(curve).toEqual(PREVIEW_THRESHOLDS.map((t) => scoreFrame(frame, bg, m, t)));
+    // 門檻越高分數不會越大，前端的內插才成立
+    for (let i = 1; i < curve.length; i++) expect(curve[i]!).toBeLessThanOrEqual(curve[i - 1]!);
+  }
+});
+
+test("只有要求預覽時才附上各門檻的分數", () => {
+  const { d, bg } = warmedUp();
+  expect(d.process(bg, params).curve).toBeUndefined();
+  const r = d.process(withSquare(bg, 100, 60, 40), params, PREVIEW_THRESHOLDS);
+  expect(r.curve).toHaveLength(PREVIEW_THRESHOLDS.length);
+  expect(r.curve![PREVIEW_THRESHOLDS.indexOf(25)]).toBe(r.score!);
 });

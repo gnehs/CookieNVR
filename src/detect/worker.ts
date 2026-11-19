@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { CODEC_LABEL, explainHwFailure, type HwFailure } from "../hwcodec/commands.ts";
 import type { HwDecode } from "../hwcodec/plan.ts";
 import { detectCommand, HW_DECODE_ENV, parseHwDecode } from "./command.ts";
+import { PREVIEW_THRESHOLDS } from "./config.ts";
 import { FRAME_BYTES, MotionDetector } from "./motion.ts";
 import { chunksOf, encodeMsg, IDLE_CONTROL, JpegSplitter, MsgKind, parseControl, type DecodeReport, type DetectControl, type FrameResult } from "./protocol.ts";
 
@@ -67,7 +68,7 @@ function judge(gray: Uint8Array): FrameResult {
     wasPaused = false;
     detector.reset();
   }
-  return { at, ...detector.process(gray, control) };
+  return { at, ...detector.process(gray, control, control.preview ? PREVIEW_THRESHOLDS : undefined) };
 }
 
 let proc: ReturnType<typeof spawnFfmpeg> | null = null;

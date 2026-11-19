@@ -414,6 +414,8 @@ export interface MotionSampleDto {
   state: DetectFrameState;
   /** 這台目前有進行中的事件 */
   eventActive: boolean;
+  /** `PREVIEW_THRESHOLDS`（src/detect/config.ts）各像素門檻下的分數，供設定頁預覽還沒儲存的靈敏度；state 不是 ok 時沒有 */
+  curve?: number[];
 }
 
 /** `GET /api/stream` 連上時的第一筆訊息，也是斷線重連後的完整狀態 */

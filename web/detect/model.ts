@@ -1,5 +1,5 @@
 import type { EventDto } from "../../src/api-types.ts";
-import { LIMITS, SENSITIVITY_PRESETS } from "../../src/detect/config.ts";
+import { LIMITS, PREVIEW_THRESHOLDS, SENSITIVITY_PRESETS } from "../../src/detect/config.ts";
 import { EVENT_PREROLL_MS } from "../timeline/model.ts";
 import { type DayKey, dayOf } from "../ui/date-logic.ts";
 
@@ -49,6 +49,24 @@ const K = 1 / TRIGGER_Y - 1;
 export function meterY(score: number, minArea: number): number {
   const r = Math.max(0, score) / minArea;
   return r / (r + K);
+}
+
+/**
+ * 從 worker 的預覽分數（`PREVIEW_THRESHOLDS` 各門檻下的分數）推算任一像素門檻下的分數：門檻剛好在表上就直接用，
+ * 落在兩個門檻之間就線性內插（分數隨門檻單調下降，內插不會超出兩端）。
+ */
+export function scoreAtThreshold(curve: readonly number[], threshold: number): number {
+  const ts = PREVIEW_THRESHOLDS;
+  if (threshold <= ts[0]) return curve[0] ?? 0;
+  for (let i = 1; i < ts.length; i++) {
+    const hi = ts[i]!;
+    if (threshold <= hi) {
+      const lo = ts[i - 1]!;
+      const f = (threshold - lo) / (hi - lo);
+      return (curve[i - 1] ?? 0) + f * ((curve[i] ?? 0) - (curve[i - 1] ?? 0));
+    }
+  }
+  return curve[ts.length - 1] ?? 0;
 }
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v));

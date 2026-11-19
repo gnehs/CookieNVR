@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { DetectFrameState, MotionSampleDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
-import { meterY, TRIGGER_Y } from "../../detect/model.ts";
+import { meterY, scoreAtThreshold, TRIGGER_Y } from "../../detect/model.ts";
 import { DETECT_FRAME_TEXT, MOTION_LEVEL_TEXT } from "../../health.ts";
 
 /** 曲線顯示最近這麼久 */
@@ -12,7 +12,12 @@ interface Point {
   /** 收到的時間（瀏覽器時鐘），不用伺服器的 at，免得兩邊時鐘不準時曲線跑出畫面 */
   t: number;
   score: number | null;
+  /** 各靈敏度下的分數；有它時依目前滑桿的值換算，還沒儲存的靈敏度也能即時預覽 */
+  curve?: number[];
 }
+
+/** 這一點在目前（可能還沒儲存）的像素門檻下的分數 */
+const scoreOf = (p: Point, threshold: number) => (p.score === null ? null : p.curve ? scoreAtThreshold(p.curve, threshold) : p.score);
 
 type Level = keyof typeof MOTION_LEVEL_TEXT;
 type FrameState = DetectFrameState | "connecting" | "lost";
@@ -22,9 +27,10 @@ type Colors = Record<(typeof PROBES)[number], string>;
 
 /**
  * 「畫面變化」：一條往左捲動的細曲線，一條固定的觸發線，越過時區塊轉成主色、右上角說「偵測到動作」。
- * 掛載時開一條 `/api/cameras/:id/motion`，卸載時關掉；pending 表示有沒儲存的靈敏度或遮罩（分數照已儲存的設定算）。
+ * 掛載時開一條 `/api/cameras/:id/motion`，卸載時關掉。靈敏度與最小面積用表單上目前的值即時換算；
+ * 排除區域要儲存後 worker 才會套用，masksPending 時提示。
  */
-export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; minArea: number; pending: boolean }) {
+export function ScoreMeter({ cameraId, minArea, threshold, thresholdPending, masksPending }: { cameraId: string; minArea: number; threshold: number; thresholdPending: boolean; masksPending: boolean }) {
   const [frame, setFrame] = useState<FrameState>("connecting");
   const [level, setLevel] = useState<Level>("calm");
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -32,6 +38,11 @@ export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; m
   const probes = useRef<HTMLSpanElement>(null);
   const minAreaRef = useRef(minArea);
   minAreaRef.current = minArea;
+  const thresholdRef = useRef(threshold);
+  thresholdRef.current = threshold;
+  /** 舊版後端不送預覽分數；那時靈敏度仍要儲存後才看得到 */
+  const [hasCurve, setHasCurve] = useState(false);
+  const last = useRef<{ point: Point; motion: boolean; eventActive: boolean } | null>(null);
   const points = useRef<Point[]>([]);
 
   useEffect(() => {
@@ -41,11 +52,14 @@ export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; m
     es.addEventListener("sample", (ev) => {
       const s = JSON.parse((ev as MessageEvent<string>).data) as MotionSampleDto;
       const list = points.current;
-      list.push({ t: performance.now(), score: s.state === "ok" ? s.score : null });
+      const point: Point = { t: performance.now(), score: s.state === "ok" ? s.score : null, ...(s.curve ? { curve: s.curve } : {}) };
+      list.push(point);
       const cut = performance.now() - WINDOW_MS - 1000;
       while (list.length && list[0]!.t < cut) list.shift();
+      if (s.curve) setHasCurve(true);
+      last.current = { point, motion: s.motion, eventActive: s.eventActive };
       setFrame(s.state);
-      setLevel(s.eventActive ? "event" : s.motion ? "motion" : "calm");
+      setLevel(levelOf(last.current, thresholdRef.current, minAreaRef.current));
     });
     es.addEventListener("open", () => setFrame((f) => (f === "lost" ? "connecting" : f)));
     es.onerror = () => setFrame("lost");
@@ -90,7 +104,8 @@ export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; m
       const now = performance.now();
       const pad = 3 * dpr;
       const xOf = (t: number) => ((t - (now - WINDOW_MS)) / WINDOW_MS) * w;
-      const yOf = (score: number) => hgt - pad - meterY(score, minAreaRef.current) * (hgt - 2 * pad);
+      const th = thresholdRef.current;
+      const yOf = (p: Point) => hgt - pad - meterY(scoreOf(p, th)!, minAreaRef.current) * (hgt - 2 * pad);
       const lineY = hgt - pad - TRIGGER_Y * (hgt - 2 * pad);
 
       // 連續有分數的一段畫成一條；暖機、鏡頭移動中等沒有分數的地方留白
@@ -106,7 +121,7 @@ export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; m
 
       for (const r of runs) {
         const path = new Path2D();
-        r.forEach((p, i) => (i ? path.lineTo(xOf(p.t), yOf(p.score!)) : path.moveTo(xOf(p.t), yOf(p.score!))));
+        r.forEach((p, i) => (i ? path.lineTo(xOf(p.t), yOf(p)) : path.moveTo(xOf(p.t), yOf(p))));
         const area = new Path2D(path);
         area.lineTo(xOf(r[r.length - 1]!.t), hgt);
         area.lineTo(xOf(r[0]!.t), hgt);
@@ -149,7 +164,19 @@ export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; m
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // 拖滑桿時不等下一張畫面，用最後一筆重新判斷「偵測到動作」
+  useEffect(() => {
+    if (last.current) setLevel(levelOf(last.current, threshold, minArea));
+  }, [threshold, minArea]);
+
   const shown: Level = frame === "lost" ? "lost" : frame === "ok" ? level : "calm";
+  const pendingText = masksPending
+    ? thresholdPending && !hasCurve
+      ? "調整後的靈敏度與排除區域，儲存後才會反映在這裡。"
+      : "調整後的排除區域，儲存後才會反映在這裡。"
+    : thresholdPending && !hasCurve
+      ? "調整後的靈敏度，儲存後才會反映在這裡。"
+      : "";
   const note = frame === "lost" ? MOTION_LEVEL_TEXT.lost : frame === "connecting" || frame === "ok" ? "" : DETECT_FRAME_TEXT[frame];
   return (
     <div className="meter" role="group" aria-label="即時畫面變化" data-level={shown}>
@@ -168,8 +195,8 @@ export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; m
           {note}
         </span>
       </div>
-      <p className="meter-pending hint" hidden={!pending}>
-        調整後的靈敏度與排除區域，儲存後才會反映在這裡。
+      <p className="meter-pending hint" hidden={!pendingText}>
+        {pendingText}
       </p>
       <span ref={probes} className="meter-probes" aria-hidden="true">
         {PROBES.map((k) => (
@@ -178,4 +205,12 @@ export function ScoreMeter({ cameraId, minArea, pending }: { cameraId: string; m
       </span>
     </div>
   );
+}
+
+/** 進行中的事件以後端為準；有預覽分數時「偵測到動作」用目前的靈敏度與最小面積判斷，沒有就用後端的判斷 */
+function levelOf(l: { point: Point; motion: boolean; eventActive: boolean }, threshold: number, minArea: number): Level {
+  if (l.eventActive) return "event";
+  const score = scoreOf(l.point, threshold);
+  const motion = l.point.curve && score !== null ? score > minArea : l.motion;
+  return motion ? "motion" : "calm";
 }

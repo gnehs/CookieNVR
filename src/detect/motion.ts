@@ -26,6 +26,8 @@ export interface Verdict {
   state: DetectFrameState;
   score: number | null;
   motion: boolean;
+  /** 只在要求預覽時：依 `previewThresholds` 各門檻算出的分數 */
+  curve?: number[];
 }
 
 /**
@@ -106,6 +108,51 @@ export function scoreFrame(frame: Float32Array, background: Float32Array, mask: 
 }
 
 /**
+ * 同一張畫面在多個像素門檻下的分數（和 `scoreFrame` 同樣的區塊規則），一次走完所有像素。
+ * thresholds 由小到大、皆為整數。差值 d 超過門檻 t 等同 ceil(d) - 1 >= t，所以先換成整數再查表。
+ */
+export function scoreCurve(frame: Float32Array, background: Float32Array, mask: Uint8Array | null, thresholds: readonly number[], w = FRAME_W, h = FRAME_H): number[] {
+  const n = thresholds.length;
+  // bucket[key] = 有幾個門檻 <= key，也就是這個像素在幾個門檻下算「變動」
+  const bucket = new Uint8Array(256);
+  for (let key = 0, k = 0; key < 256; key++) {
+    while (k < n && thresholds[k]! <= key) k++;
+    bucket[key] = k;
+  }
+  const hist = new Uint32Array(n + 1);
+  const active = new Uint32Array(n);
+  let eligible = 0;
+  for (let by = 0; by < h; by += BLOCK) {
+    const yEnd = Math.min(h, by + BLOCK);
+    for (let bx = 0; bx < w; bx += BLOCK) {
+      const xEnd = Math.min(w, bx + BLOCK);
+      hist.fill(0);
+      let pixels = 0;
+      let open = 0;
+      for (let y = by; y < yEnd; y++) {
+        for (let x = bx; x < xEnd; x++) {
+          const i = y * w + x;
+          pixels++;
+          if (mask && mask[i]) continue;
+          open++;
+          const key = Math.ceil(Math.abs(frame[i]! - background[i]!)) - 1;
+          hist[key < 0 ? 0 : bucket[key > 255 ? 255 : key]!]!++;
+        }
+      }
+      if (open < pixels * BLOCK_MIN_ELIGIBLE) continue;
+      eligible++;
+      // 門檻 k 下的變動像素 = 在超過 k 個門檻下變動的像素
+      let changed = 0;
+      for (let k = n - 1; k >= 0; k--) {
+        changed += hist[k + 1]!;
+        if (changed > open * BLOCK_ACTIVE_RATIO) active[k]!++;
+      }
+    }
+  }
+  return Array.from(active, (a) => (eligible === 0 ? 0 : a / eligible));
+}
+
+/**
  * 背景差分偵測器。狀態只有背景與暖機計數；`reset()` 用在重連與鏡頭停下之後。
  * 每張畫面 O(像素數)，不配置新記憶體。
  */
@@ -125,13 +172,15 @@ export class MotionDetector {
     this.warmup = WARMUP_FRAMES;
   }
 
-  process(gray: Uint8Array, params: DiffParams): Verdict {
+  process(gray: Uint8Array, params: DiffParams, previewThresholds?: readonly number[]): Verdict {
     blur3x3(gray, this.blurred);
     if (!this.hasBackground) {
       this.background.set(this.blurred);
       this.hasBackground = true;
     }
     const score = scoreFrame(this.blurred, this.background, this.mask, params.threshold);
+    // 和分數用同一個背景（更新背景之前）算，預覽才和實際判斷一致
+    const curve = previewThresholds ? scoreCurve(this.blurred, this.background, this.mask, previewThresholds) : undefined;
     if (score > LIGHT_CHANGE_SCORE) {
       this.background.set(this.blurred);
       return { state: "light", score: null, motion: false };
@@ -143,6 +192,6 @@ export class MotionDetector {
       this.warmup--;
       return { state: "warmup", score: null, motion: false };
     }
-    return { state: "ok", score, motion: score > params.minArea };
+    return { state: "ok", score, motion: score > params.minArea, ...(curve ? { curve } : {}) };
   }
 }

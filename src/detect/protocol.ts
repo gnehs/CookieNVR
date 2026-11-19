@@ -13,9 +13,11 @@ export interface DetectControl {
   masks: MaskPolygon[];
   /** 鏡頭移動中；從 true 變回 false 時重設背景 */
   paused: boolean;
+  /** 有人在設定頁看「畫面變化」：每張畫面多算各靈敏度下的分數 */
+  preview: boolean;
 }
 
-export const IDLE_CONTROL: DetectControl = { diff: false, threshold: 25, minArea: 0.005, masks: [], paused: false };
+export const IDLE_CONTROL: DetectControl = { diff: false, threshold: 25, minArea: 0.005, masks: [], paused: false, preview: false };
 
 export function parseControl(text: string): DetectControl | null {
   try {
@@ -27,6 +29,7 @@ export function parseControl(text: string): DetectControl | null {
       minArea: typeof v.minArea === "number" ? v.minArea : IDLE_CONTROL.minArea,
       masks: Array.isArray(v.masks) ? v.masks : [],
       paused: v.paused === true,
+      preview: v.preview === true,
     };
   } catch {
     return null;
@@ -51,6 +54,8 @@ export interface FrameResult {
   state: DetectFrameState;
   score: number | null;
   motion: boolean;
+  /** 控制檔要求預覽、而且 state 是 ok 時：`PREVIEW_THRESHOLDS` 各門檻下的分數 */
+  curve?: number[];
 }
 
 export type WorkerMsg = { kind: "frame"; result: FrameResult } | { kind: "jpeg"; at: number; bytes: Uint8Array };

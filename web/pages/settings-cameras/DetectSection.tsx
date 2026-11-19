@@ -148,7 +148,7 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
             <div className="set-block">
               {live ? (
                 <MaskPreview camera={camera} masks={d.masks} onMasks={(masks) => onChange({ masks })} live={wantLive}>
-                  <div className="detect-meter-slot">{wantLive ? <ScoreMeter cameraId={camera.id} minArea={d.minArea} pending={d.threshold !== saved.threshold || !sameMasks(d.masks, saved.masks)} /> : null}</div>
+                  <div className="detect-meter-slot">{wantLive ? <ScoreMeter cameraId={camera.id} minArea={d.minArea} threshold={d.threshold} thresholdPending={d.threshold !== saved.threshold} masksPending={!sameMasks(d.masks, saved.masks)} /> : null}</div>
                 </MaskPreview>
               ) : (
                 <div className="detect-preview-ph">

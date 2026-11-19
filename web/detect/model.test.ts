@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { EventDto } from "../../src/api-types.ts";
-import { LIMITS, SENSITIVITY_PRESETS } from "../../src/detect/config.ts";
+import { LIMITS, PREVIEW_THRESHOLDS, SENSITIVITY_PRESETS } from "../../src/detect/config.ts";
 import type { CameraId } from "../../src/types.ts";
-import { areaToPos, dayTitle, formatArea, groupByDay, mergeEvents, meterY, playbackSearch, posToArea, posToThreshold, sensitivityOf, thresholdToPos, TRIGGER_Y } from "./model.ts";
+import { areaToPos, dayTitle, formatArea, groupByDay, mergeEvents, meterY, playbackSearch, scoreAtThreshold, posToArea, posToThreshold, sensitivityOf, thresholdToPos, TRIGGER_Y } from "./model.ts";
 
 const ev = (id: number, startMs: number, endMs: number | null = startMs + 5_000): EventDto => ({ id, cameraId: "c1" as CameraId, source: "pixel", startMs, endMs, score: 0.1, labels: [], hasThumb: true });
 const at = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m - 1, d, h, min).getTime();
@@ -70,5 +70,21 @@ describe("事件清單", () => {
   test("點事件從開始前 5 秒回放，日期用瀏覽器時區", () => {
     const start = at(2026, 11, 18, 0, 0) + 2_000;
     expect(playbackSearch({ cameraId: "c 1" as CameraId, startMs: start })).toEqual({ camera: "c 1", date: "2026-11-18", t: start - 5_000 });
+  });
+});
+
+describe("scoreAtThreshold", () => {
+  const curve = PREVIEW_THRESHOLDS.map((t) => 1 / t);
+  test("門檻在表上就直接用那一點，三個預設檔都在表上", () => {
+    for (const t of Object.values(SENSITIVITY_PRESETS)) expect(scoreAtThreshold(curve, t)).toBe(1 / t);
+  });
+  test("兩點之間線性內插，超出範圍取兩端", () => {
+    expect(scoreAtThreshold(curve, 27.5)).toBeCloseTo((1 / 25 + 1 / 30) / 2);
+    expect(scoreAtThreshold(curve, 0)).toBe(1);
+    expect(scoreAtThreshold(curve, 999)).toBe(1 / 255);
+  });
+  test("滑桿能選到的範圍都在表內", () => {
+    expect(PREVIEW_THRESHOLDS[0]).toBe(LIMITS.threshold.min);
+    expect(PREVIEW_THRESHOLDS[PREVIEW_THRESHOLDS.length - 1]).toBe(LIMITS.threshold.max);
   });
 });
