@@ -1,7 +1,8 @@
 // 容器端到端驗證：建置映像、啟動 NVR 容器與假相機容器，經 HTTP API 走完整條流程。
 // 前半以 root 執行；從「以新容器重啟」起改設 PUID=99、PGID=100、UMASK=002（Unraid 的升級情境），
 // 確認擁有者被修正、第二次啟動不再整個走一遍、主程序與子程序都以 99:100 執行。
-// 最後開啟物件辨識（CPU），在容器內跑 detector-selftest，並確認街景假相機的事件標上 person。
+// 最後開啟物件辨識（CPU），在容器內跑 detector-selftest，並確認街景假相機的事件標上 person；
+// 再匯入一份產生的狀態辨識資料集、訓練，確認固定畫面得到狀態與切換紀錄。
 // 用法：bun scripts/docker-e2e.ts
 // 環境變數：E2E_IMAGE（預設 cookienvr:e2e）、E2E_SKIP_BUILD=1、E2E_WEB_PORT（38704）、E2E_RTSP_PORT（38504）、
 //          E2E_PREFIX（容器、volume、network 的名稱前綴，預設 cookienvr-e2e）、
@@ -87,14 +88,14 @@ async function until<T>(what: string, timeoutMs: number, fn: () => Promise<T | f
 
 let cookie = "";
 
-async function api(path: string, init: { method?: string; json?: unknown; headers?: Record<string, string> } = {}): Promise<Response> {
+async function api(path: string, init: { method?: string; json?: unknown; body?: Uint8Array; headers?: Record<string, string> } = {}): Promise<Response> {
   const headers: Record<string, string> = { ...init.headers };
   if (cookie) headers.cookie = cookie;
   if (init.json !== undefined) headers["content-type"] = "application/json";
   return fetch(`${BASE}${path}`, {
-    method: init.method ?? (init.json !== undefined ? "POST" : "GET"),
+    method: init.method ?? (init.json !== undefined || init.body ? "POST" : "GET"),
     headers,
-    body: init.json !== undefined ? JSON.stringify(init.json) : undefined,
+    body: init.json !== undefined ? JSON.stringify(init.json) : (init.body as Uint8Array<ArrayBuffer> | undefined),
     signal: AbortSignal.timeout(30_000),
   });
 }
@@ -643,6 +644,49 @@ const steps: Step[] = [
       const { status } = await apiJson<{ status: { latencyMs: { avg: number } | null; processed: number } }>("/api/objects");
       log(`事件 labels=${event.labels.join(",")}；已推論 ${status.processed} 張，平均 ${status.latencyMs?.avg ?? "?"} ms`);
       check((await processIds()).some(([c, id]) => c.includes("detector/main.py") && id === `${PUID}:${PGID}`), `detector 不是以 ${PUID}:${PGID} 執行`);
+    },
+  ],
+  [
+    "狀態辨識：匯入產生的資料集、訓練，固定畫面得到狀態與切換紀錄",
+    async (ctx) => {
+      // 兩類純色圖（亮／暗，帶一點變化），用容器內的 Python 產生 Frigate 格式的 zip
+      const gen = await exec(["docker", "exec", NVR, "/opt/detector/bin/python", "-c", [
+        "import io, sys, zipfile; from PIL import Image",
+        "buf = io.BytesIO(); z = zipfile.ZipFile(buf, 'w')",
+        "def png(c):\n b = io.BytesIO(); Image.new('RGB', (64, 64), c).save(b, 'PNG'); return b.getvalue()",
+        "[z.writestr(f'door/dataset/亮/{i}.png', png((230 - i * 4,) * 3)) for i in range(6)]",
+        "[z.writestr(f'door/dataset/暗/{i}.png', png((20 + i * 4,) * 3)) for i in range(6)]",
+        "z.writestr('door/train/none-none-1.0-亮-0.9.png', png((200, 200, 200))); z.close(); sys.stdout.buffer.write(buf.getvalue())",
+      ].join("\n")]);
+      check(gen.code === 0 && gen.stdout.length > 100, `產生資料集失敗：${gen.stderr}`);
+      const c = ctx.cameras[0]!;
+      type Sensor = { id: string; state: string | null; job: { state: string; message?: string; error?: string } | null; model: { validation: { accuracy: number } | null } | null };
+      const created = await apiJson<Sensor>("/api/states", { json: { cameraId: c.id, collect: false, config: { name: "測試", classes: ["亮", "暗"], crop: [0, 0, 0.14, 0.6], threshold: 0.5 } } });
+      const imported = await apiJson<Sensor>(`/api/states/${created.id}/import`, { body: gen.stdout, headers: { "content-type": "application/zip" } });
+      check(imported.job !== null, "匯入沒有開始");
+      const jobDone = (what: string) => until(what, 120_000, async () => {
+        const s = await apiJson<Sensor>(`/api/states/${created.id}`);
+        check(s.job?.state !== "failed", `${what}失敗：${s.job?.error}`);
+        return s.job?.state === "done" ? s : false;
+      });
+      log(`  ${(await jobDone("匯入")).job?.message}`);
+      await apiJson(`/api/states/${created.id}/train`, { method: "POST" });
+      const trained = await jobDone("訓練");
+      log(`  ${trained.job?.message}`);
+      check(trained.model?.validation?.accuracy === 1, `交叉驗證應全對：${JSON.stringify(trained.model?.validation)}`);
+      const s = await until("感應器得到狀態", 60_000, async () => {
+        const x = await apiJson<Sensor>(`/api/states/${created.id}`);
+        return x.state ? x : false;
+      });
+      const changes = await apiJson<{ to: string; thumbUrl: string | null }[]>(`/api/state-changes?sensorId=${created.id}`);
+      check(changes.length === 1 && changes[0]!.to === s.state, `切換紀錄不對：${JSON.stringify(changes)}`);
+      const thumb = await until("切換縮圖", 10_000, async () => {
+        const r = await api(changes[0]!.thumbUrl!);
+        return r.ok ? r : false;
+      });
+      check(thumb.headers.get("content-type") === "image/jpeg", "縮圖不是 JPEG");
+      log(`  狀態 ${s.state}`);
+      check((await processIds()).some(([cmd, id]) => cmd.includes("detector/classify.py") && id === `${PUID}:${PGID}`), `classifier 不是以 ${PUID}:${PGID} 執行`);
     },
   ],
   [
