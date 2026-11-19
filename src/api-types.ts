@@ -442,7 +442,7 @@ export type StreamMessage =
   | { type: "worker"; data: WorkerStatus }
   | { type: "event"; data: { phase: "start" | "update" | "end"; event: EventDto } }
   | { type: "motion"; data: { cameraId: CameraId; active: boolean } }
-  /** 狀態感應器切換狀態（HA 的感應器靠這個即時更新）；同時也會送一筆 state-sensor */
+  /** 狀態感應器切換狀態（HA 的感應器靠這個即時更新）；狀態改變時也一定會送 state-sensor（重啟後重新確認同一狀態時只送 state-sensor） */
   | { type: "state-change"; data: StateChangeDto }
   /** 感應器新增、設定改變、狀態或候選改變、背景工作進度（最多每秒 2 次）、圖片張數改變時送完整的感應器；單純的讀數不推 */
   | { type: "state-sensor"; data: StateSensorDto }
@@ -651,7 +651,7 @@ export interface StateSensorConfig {
 }
 
 /**
- * POST /api/states 與 PUT /api/states/:id 的 config：name、classes、crop 必填，其他省略時用預設值（PUT 時沿用原值）。
+ * POST /api/states 與 PUT /api/states/:id 的 config（PUT 的本體是 `{ config }`）：name、classes、crop 必填，其他省略時用預設值（PUT 時沿用原值）。
  * PUT 拿掉某個類別時，該類已標記的圖退回待標記；要改名請用 POST /api/states/:id/classes/rename，標記會跟著走。
  * 類別清單和模型訓練時不同（增刪類別）就要重新訓練，在那之前停止辨識（problem.code = "stale-model"）。
  */
@@ -782,7 +782,7 @@ export interface RenameStateClassDto {
 }
 
 /**
- * POST /api/states/:id/import（管理員）：請求本體是 zip 檔本身，Content-Type: application/zip，上限 200 MB。
+ * POST /api/states/:id/import（管理員）：請求本體是 zip 檔本身，Content-Type: application/zip，上限 100 MB（超過回 413）。
  * 接受 Frigate 匯出的資料集：`<名稱>/dataset/<類別>/*.png|jpg|webp` 進已標記，`<名稱>/train/*` 進待標記
  * （檔名若是 Frigate 的 `<…>-<類別>-<信心>.webp` 格式，guess 會帶上 Frigate 當時的判斷）。最外層的 `<名稱>/` 可有可無。
  * 感應器沒有的類別會自動加到 config.classes 最後面。回 202 與更新後的 StateSensorDto，進度看 job。
@@ -795,7 +795,7 @@ export interface StateChangeDto {
   sensorId: string;
   cameraId: CameraId;
   at: number;
-  /** null = 從未知（啟動後第一次確認的狀態） */
+  /** 上一筆紀錄的狀態；這個感應器的第一筆為 null。重啟後重新確認的狀態若和上一筆相同，不會再寫一筆 */
   from: string | null;
   to: string;
   score: number;
@@ -806,7 +806,8 @@ export interface StateChangeDto {
 /**
  * POST /api/states/frigate-config（管理員）：把 Frigate 設定檔的片段轉成 CookieNVR 的設定，供建立感應器時預填。
  * 只讀 `classification.custom.<名稱>` 底下的 threshold 與 state_config（cameras.<攝影機>.crop、motion、interval），
- * 也接受直接從 `custom:` 或 `<名稱>:` 開始貼的片段。不會建立任何東西。
+ * 也接受直接從 `custom:` 或 `<名稱>:` 開始貼的片段。不會建立任何東西。interval 沒寫（Frigate 預設不定時）轉成 0，
+ * motion 沒寫轉成 false（Frigate 的預設）。找不到任何感應器設定或 YAML 壞掉時回 400。
  */
 export interface FrigateConfigRequestDto {
   yaml: string;

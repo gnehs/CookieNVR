@@ -156,6 +156,8 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
   const pending = new Map<SensorId, { req: Omit<ClassifyRequest, "id">; jpeg: Uint8Array }>();
   const jobQueue: Queued[] = [];
   const jobOwners = new Map<number, SensorId>();
+  /** 已經送給 worker 的工作；worker 斷線時只有這些算中斷，還在 jobQueue 的等重連後再送 */
+  const sentJobs = new Set<number>();
   const lastJpegAt = new Map<CameraId, number>();
   const sensors = new Map<SensorId, Runtime>();
 
@@ -214,6 +216,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     while (jobQueue.length) {
       const q = jobQueue.shift()!;
       if (!sensors.has(q.sensorId)) continue;
+      sentJobs.add(q.cmd.job);
       write(encodeJob(q.cmd));
     }
     if (inFlight) return;
@@ -265,7 +268,10 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     pending.clear();
     reader = new MsgReader();
     phase = needsWorker() ? { tag: "starting" } : { tag: "off" };
-    failJobs("狀態辨識程序重新啟動，工作中斷，請再試一次");
+    for (const rt of sensors.values()) {
+      if (rt.jobId !== null && sentJobs.has(rt.jobId)) finishJob(rt, { ok: false, error: "狀態辨識程序重新啟動，工作中斷，請再試一次" });
+    }
+    sentJobs.clear();
   }
 
   function ensureListener(): void {
@@ -515,7 +521,10 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     if (!rt.job) return;
     const base = { kind: rt.job.kind, startedAt: rt.job.startedAt, finishedAt: now() };
     rt.job = result.ok ? { ...base, state: "done", message: result.message } : { ...base, state: "failed", error: result.error };
-    if (rt.jobId !== null) jobOwners.delete(rt.jobId);
+    if (rt.jobId !== null) {
+      jobOwners.delete(rt.jobId);
+      sentJobs.delete(rt.jobId);
+    }
     rt.jobId = null;
     publishSensor(rt);
     opts.onWorkersChanged();
