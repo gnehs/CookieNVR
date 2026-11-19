@@ -13,7 +13,7 @@ import {
   type PtzMoveKind,
   type PtzPreset,
 } from "../onvif/index.ts";
-import type { Camera, CameraId, CameraStore, OnvifEndpoint, PtzMode } from "../types.ts";
+import type { Camera, CameraId, CameraStore, OnvifEndpoint, PtzMode, PtzPrefs } from "../types.ts";
 import { onvifEndpointOf, orientMove, ptzPrefsOf } from "./config.ts";
 import { toHttpError } from "./errors.ts";
 import { MotionTracker } from "./motion.ts";
@@ -37,14 +37,14 @@ export type PtzInfo =
       supported: true;
       caps: Pick<PtzCapabilities, "continuous" | "relative" | "zoom" | "maxPresets">;
       presets: PtzPreset[];
-      prefs: { mode: PtzMode; speed: number };
+      prefs: PtzPrefs;
     };
 
 /** 診斷報告用。不連線就能取得的部分；caps 沒連上過時是 "unknown" */
 export interface PtzDiagnostics {
   configured: boolean;
   caps: "unknown" | "no-ptz" | PtzCapabilities;
-  prefs: { mode: PtzMode; speed: number };
+  prefs: PtzPrefs;
   lastError: { kind: OnvifErrorKind; at: number } | null;
   lastOkAt: number | null;
 }
