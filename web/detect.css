@@ -32,8 +32,16 @@
 .ev-card-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .ev-card-thumb {
   position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden;
-  border-radius: 12px; background: var(--fill); border: 1px solid var(--border);
-  transition: border-color var(--dur-2) ease, box-shadow var(--dur-2) ease;
+  border-radius: 12px; background: var(--fill);
+}
+/*
+ * 邊框畫在縮圖上面、往內畫：.ev-card 的 content-visibility 會裁掉卡片外的東西，往外的框會被切成直角。
+ * 圓角跟縮圖一樣由 border-radius: inherit 帶下來，進行中時加粗成 2px 主色。
+ */
+.ev-card-thumb::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 1px light-dark(rgb(16 16 24 / 0.1), rgb(255 255 255 / 0.07));
+  transition: box-shadow var(--dur-2) ease;
 }
 .ev-card-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--dur-3) var(--ease-out); }
 @media (hover: hover) { .ev-card-link:hover .ev-card-thumb img { transform: scale(1.03); } }
@@ -43,7 +51,7 @@
   position: absolute; right: 6px; bottom: 6px; padding: 1px 7px; border-radius: 7px;
   font-size: 12px; font-weight: 650; line-height: 1.55; background: rgb(14 14 18 / 0.74); color: #fff;
 }
-.ev-card[data-live] .ev-card-thumb { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.ev-card[data-live] .ev-card-thumb::after { box-shadow: inset 0 0 0 2px var(--accent); }
 .ev-card[data-live] .ev-chip { background: var(--accent); color: var(--accent-fg); }
 .ev-card-text { display: grid; min-width: 0; padding: 0 38px 0 2px; line-height: 1.35; }
 .ev-card-text b { font-size: 14.5px; font-weight: 650; }
@@ -51,7 +59,8 @@
 .ev-card > .menu-wrap { position: absolute; right: -2px; bottom: 0; }
 
 .ev-skel { content-visibility: visible; }
-.ev-skel .ev-card-thumb { border-color: transparent; background: var(--fill-2); }
+.ev-skel .ev-card-thumb { background: var(--fill-2); }
+.ev-skel .ev-card-thumb::after { content: none; }
 .ev-skel .ev-card-thumb, .ev-skel-line, .ev-skel-title { animation: ev-skel 1.6s ease-in-out infinite; }
 .ev-skel-line { display: block; height: 12px; width: 52%; margin: 10px 2px 0; border-radius: 6px; background: var(--fill-2); }
 .ev-skel-line.short { width: 72%; margin-top: 7px; }
