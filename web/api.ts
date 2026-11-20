@@ -141,8 +141,9 @@ export const api = {
   /** 所有攝影機在這段時間內還沒結束的事件；事件最長 10 分鐘，since 往前抓 10 分鐘以上就不會漏 */
   activeEvents: (since: number, until: number) => get<EventDto[]>(`/events?${range(since, until)}`).then((list) => list.filter((e) => e.endMs === null)),
   /** 開始時間早於 before 的事件，由新到舊；camera 為 null 時是所有攝影機 */
-  eventsBefore: (before: number, limit: number, camera: string | null, label: string | null = null) =>
-    get<EventDto[]>(`/events?before=${Math.ceil(before)}&limit=${limit}${camera ? `&camera=${encodeURIComponent(camera)}` : ""}${label ? `&label=${encodeURIComponent(label)}` : ""}`),
+  /** labels：含任一類別的事件；空陣列不篩 */
+  eventsBefore: (before: number, limit: number, camera: string | null, labels: readonly string[] = []) =>
+    get<EventDto[]>(`/events?before=${Math.ceil(before)}&limit=${limit}${camera ? `&camera=${encodeURIComponent(camera)}` : ""}${labels.length ? `&label=${encodeURIComponent(labels.join(","))}` : ""}`),
   objects: () => get<ObjectsDto>("/objects"),
   objectLabels: () => get<ObjectLabelsDto>("/objects/labels"),
   startBenchmark: (devices?: string[]) => post<BenchmarkDto>("/objects/benchmark", devices ? { devices } : {}),

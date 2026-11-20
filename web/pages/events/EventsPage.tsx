@@ -17,7 +17,7 @@ import { confirmDialog } from "../../ui/Dialog.tsx";
 import { dayOf, type DayKey } from "../../ui/date-logic.ts";
 import { Icon } from "../../ui/Icon.tsx";
 import { MenuButton } from "../../ui/Menu.tsx";
-import { Select, type SelectEntry } from "../../ui/Select.tsx";
+import { MultiSelect, Select, type SelectEntry } from "../../ui/Select.tsx";
 import { EmptyState, ErrorBox } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 
@@ -30,14 +30,15 @@ export interface EventsSearch {
   camera?: string;
   /** 瀏覽器時區的一天 */
   date?: DayKey;
-  /** 物件類別的鍵（見 src/objects/labels.ts） */
+  /** 物件類別的鍵（見 src/objects/labels.ts），多個用逗號分隔：含任一類別的事件 */
   label?: string;
 }
 
 interface Filter {
   camera: string | null;
   date: DayKey | null;
-  label: string | null;
+  /** 空陣列 = 所有類別；排序過，同一組篩選的快取鍵才會一樣 */
+  labels: string[];
 }
 
 interface Page {
@@ -58,14 +59,14 @@ function spoken(ms: number): string {
   return s < 60 ? `${s} 秒` : `${Math.floor(s / 60)} 分 ${s % 60} 秒`;
 }
 
-const listKey = (f: Filter) => ["events", "list", { camera: f.camera, label: f.label, date: f.date }] as const;
+const listKey = (f: Filter) => ["events", "list", { camera: f.camera, labels: f.labels.join(","), date: f.date }] as const;
 
 /** 抓一頁；有日期篩選時切掉前一天的，切到了就是最後一頁 */
 async function fetchPage(f: Filter, before: number | null): Promise<Page> {
   const b = f.date ? dayBounds(f.date) : null;
   // 剛開始的事件時間可能比瀏覽器時鐘晚一點點，往後多抓一分鐘
   const cursor = before ?? (b ? b[1] : Date.now() + 60_000);
-  const page = await api.eventsBefore(cursor, PAGE_SIZE, f.camera, f.label);
+  const page = await api.eventsBefore(cursor, PAGE_SIZE, f.camera, f.labels);
   const inDay = b ? page.filter((e) => e.startMs >= b[0]) : page;
   const done = page.length < PAGE_SIZE || inDay.length < page.length || inDay.length === 0;
   const next = inDay.length ? inDay[inDay.length - 1]!.startMs + 1 : null;
@@ -121,16 +122,16 @@ function EventsList() {
   const filter: Filter = {
     camera: search.camera && cams.some((c) => c.id === search.camera) ? search.camera : null,
     date: search.date ?? null,
-    label: search.label ?? null,
+    labels: search.label ? search.label.split(",") : [],
   };
   const nameOf = (id: string) => cams.find((c) => c.id === id)?.config.name ?? "已刪除的攝影機";
   const setFilter = (next: Filter) =>
     void navigate({
       to: "/events",
-      search: { camera: next.camera ?? undefined, date: next.date ?? undefined, label: next.label ?? undefined },
+      search: { camera: next.camera ?? undefined, date: next.date ?? undefined, label: next.labels.length ? [...new Set(next.labels)].sort().join(",") : undefined },
       replace: true,
     });
-  const resetFilter = () => setFilter({ camera: null, date: null, label: null });
+  const resetFilter = () => setFilter({ camera: null, date: null, labels: [] });
 
   const key = listKey(filter);
   const list = useInfiniteQuery({
@@ -148,7 +149,7 @@ function EventsList() {
   // 結束的事件再抓一次單筆拿到長度；抓回來的放這裡蓋過清單裡的舊資料
   const [patched, setPatched] = useState<ReadonlyMap<number, EventDto>>(new Map());
   const matches = (e: EventDto) =>
-    (!filter.camera || e.cameraId === filter.camera) && (!filter.date || dayKey(e.startMs) === filter.date) && (!filter.label || e.labels.includes(filter.label));
+    (!filter.camera || e.cameraId === filter.camera) && (!filter.date || dayKey(e.startMs) === filter.date) && (filter.labels.length === 0 || e.labels.some((l) => filter.labels.includes(l)));
   const activeData = active.data;
   const items = useMemo(() => {
     const fromPages = (list.data?.pages ?? []).flatMap((p) => p.events);
@@ -156,7 +157,7 @@ function EventsList() {
     const merged = mergeEvents(fromPages, live);
     return patched.size ? merged.map((e) => (e.endMs === null ? (patched.get(e.id) ?? e) : e)) : merged;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [list.data, activeData, patched, filter.camera, filter.date, filter.label]);
+  }, [list.data, activeData, patched, filter.camera, filter.date, search.label]);
 
   const hasLive = items.some((e) => e.endMs === null);
   const [now, setNow] = useState(() => Date.now());
@@ -186,19 +187,25 @@ function EventsList() {
     }
   }, [items, activeData, list.isSuccess, now]);
 
+  // 次數只在沒篩類別時更新：篩選中的清單只剩勾到的類別，拿來排序會讓選項在勾選的當下跳來跳去
+  const freq = useRef<string[]>([]);
+  if (filter.labels.length === 0) freq.current = items.flatMap((e) => e.labels);
   const labelOptions = useMemo(() => {
-    const seen = items.flatMap((e) => e.labels);
-    if (filter.label) seen.push(filter.label);
     const enabled = cams.flatMap((c) => (c.config.enabled && c.config.detect?.enabled ? c.config.detect.labels : []));
-    return eventLabelOptions(catalog, enabled, seen);
-  }, [items, catalog, cams, filter.label]);
+    // 勾著的類別一定要在清單裡，才能取消
+    return eventLabelOptions(catalog, [...enabled, ...filter.labels], freq.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, catalog, cams, search.label]);
 
   const camEntries: SelectEntry<string>[] = [{ value: "", label: "所有攝影機" }, "separator", ...cams.map((c) => ({ value: c.id, label: c.config.name }))];
   const ALL = { value: "", label: "所有類別" };
+  // 照選單的順序念，不照網址上排序過的鍵
+  const labelNames = labelOptions.filter((o) => filter.labels.includes(o.key)).map((o) => o.zh);
+  const labelSummary = labelNames.length === 0 ? ALL.label : labelNames.length <= 2 ? labelNames.join("、") : `${labelNames[0]}等 ${labelNames.length} 類`;
   const opt = (l: { key: string; zh: string }) => ({ value: l.key, label: l.zh });
   const labelEntries: SelectEntry<string>[] = [ALL, "separator", ...labelOptions.map(opt)];
   /** 還沒有任何事件帶類別（沒用物件辨識、相機也沒回報）就不佔位；篩選中一定要看得到 */
-  const showLabelPick = !!filter.label || items.some((e) => e.labels.length > 0);
+  const showLabelPick = filter.labels.length > 0 || items.some((e) => e.labels.length > 0);
 
   // 自動載下一頁：觀察底部的哨兵；畫面很高、第一頁就到不了底部時觀察器不會再觸發，所以每次載完也檢查一次
   const sentinel = useRef<HTMLDivElement>(null);
@@ -235,7 +242,7 @@ function EventsList() {
 
   const who = filter.camera ? `「${nameOf(filter.camera)}」` : "";
   const when = filter.date ? dayTitle(filter.date, Date.now()) : "";
-  const what = filter.label ? labelName(filter.label) : "";
+  const what = filter.labels.length ? labelSummary : "";
   const narrowed = [who, when, what].filter(Boolean).length;
 
   let body: React.ReactNode;
@@ -291,7 +298,17 @@ function EventsList() {
       <Header>
         <div className="ev-filters">
           <Select label="攝影機" icon="camera" entries={camEntries} value={filter.camera ?? ""} onChange={(v) => setFilter({ ...filter, camera: v || null })} />
-          {showLabelPick ? <Select label="類別" icon="tag" entries={labelEntries} value={filter.label ?? ""} onChange={(v) => setFilter({ ...filter, label: v || null })} /> : null}
+          {showLabelPick ? (
+            <MultiSelect
+              label="類別"
+              icon="tag"
+              entries={labelEntries}
+              summary={labelSummary}
+              // 沒勾任何類別時「所有類別」打勾；勾了「所有類別」就清掉其他的
+              value={filter.labels.length ? filter.labels : [""]}
+              onChange={(v) => setFilter({ ...filter, labels: v.includes("") && filter.labels.length ? [] : v.filter((l) => l !== "") })}
+            />
+          ) : null}
           <DatePicker label="日期" value={filter.date} clearLabel="所有日期" max={dayOf(Date.now())} onChange={(date) => setFilter({ ...filter, date })} />
         </div>
       </Header>

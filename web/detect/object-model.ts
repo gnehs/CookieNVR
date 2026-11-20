@@ -185,13 +185,19 @@ export function labelGroups(catalog: Pick<ObjectLabelsDto, "labels" | "common"> 
   };
 }
 
-/** 事件頁類別篩選的選項：只列攝影機有開啟的類別，加上事件裡實際出現過的；模型支援但沒人開的不列 */
+/**
+ * 事件頁類別篩選的選項：只列攝影機有開啟的類別，加上事件裡實際出現過的；模型支援但沒人開的不列。
+ * seen 每個事件的每個類別各給一次（重複即次數），依出現次數由多到少排；次數相同照目錄順序，事件裡另外出現的（相機自己回報的 vehicle、pet，或之後關掉的類別）排在同次數的最後。
+ */
 export function eventLabelOptions(catalog: Pick<ObjectLabelsDto, "labels"> | null, enabled: Iterable<string>, seen: Iterable<string>): { key: string; zh: string }[] {
   const zh = new Map((catalog?.labels ?? []).map((l) => [l.key, l.zh]));
   const on = new Set(enabled);
-  // 有開的照目錄順序；事件裡另外出現的（相機自己回報的 vehicle、pet，或之後關掉的類別）接在後面
+  const count = new Map<string, number>();
+  for (const key of seen) count.set(key, (count.get(key) ?? 0) + 1);
   const ordered = (catalog?.labels ?? []).filter((l) => on.has(l.key)).map((l) => l.key);
-  return [...new Set([...ordered, ...on, ...seen])].map((key) => ({ key, zh: zh.get(key) ?? labelName(key) }));
+  return [...new Set([...ordered, ...on, ...count.keys()])]
+    .sort((a, b) => (count.get(b) ?? 0) - (count.get(a) ?? 0))
+    .map((key) => ({ key, zh: zh.get(key) ?? labelName(key) }));
 }
 
 
