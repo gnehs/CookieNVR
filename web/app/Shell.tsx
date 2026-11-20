@@ -61,9 +61,9 @@ export function Shell() {
               label={n.label}
               disabled={!collapsed}
               trigger={
-                <Link className="nav-link" to={n.to} data-section={n.section} aria-current={n.section === active ? "page" : undefined}>
+                <Link className="nav-link" to={n.to} aria-current={n.section === active ? "page" : undefined}>
                   <span className="nav-ico">
-                    <Icon name={n.icon} size={17} />
+                    <Icon name={n.icon} size={20} />
                   </span>
                   <span className="nav-label">{n.label}</span>
                 </Link>
