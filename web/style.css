@@ -77,13 +77,14 @@
    * 只用在底色與陰影，圖示與文字一律實色。
    */
   --edge: light-dark(rgb(16 16 24 / 0.06), rgb(255 255 255 / 0.05));
-  --raise-1: 0 0 0 1px var(--mat-edge), 0 1px 2px light-dark(rgb(16 16 24 / 0.06), rgb(0 0 0 / 0.35));
+  --raise-1: 0 1px 2px light-dark(rgb(16 16 24 / 0.06), rgb(0 0 0 / 0.35));
   --raise-2: 0 1px 2px light-dark(rgb(16 16 24 / 0.04), rgb(0 0 0 / 0.3)), 0 2px 8px -2px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.35));
   --raise-3: 0 0 0 1px var(--edge), 0 4px 12px -2px light-dark(rgb(16 16 24 / 0.08), rgb(0 0 0 / 0.45)), 0 16px 32px -12px light-dark(rgb(16 16 24 / 0.14), rgb(0 0 0 / 0.55));
   /*
    * 浮起元件的共用材質：實色細框、上淡下深的底、貼地的兩層影子，
-   * 框內上緣一圈亮線由 ::before 畫出，用 mask 只留上半、往下淡掉（見材質層）。
+   * 邊框由 ::before 畫：同一圈 1px 疊兩層，底層是框色 --ring，上層是往下淡掉的亮線 --rim（見材質層）。
    */
+  --ring: var(--mat-edge);
   --rim: light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.09));
   --rim-on-color: rgb(255 255 255 / 0.32);
   --mat-edge: light-dark(rgb(16 16 24 / 0.11), rgb(255 255 255 / 0.07));
@@ -376,7 +377,7 @@ button, a, summary, label { touch-action: manipulation; }
 .cam-tile:active { transform: scale(0.985); }
 .cam-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .cam-frame {
-  position: relative; aspect-ratio: 16 / 9; border-radius: 13px; overflow: hidden; display: grid; place-items: center;
+  position: relative; aspect-ratio: 16 / 9; border-radius: calc(var(--r-lg) - 6px); overflow: hidden; display: grid; place-items: center;
   background: var(--fill); border: 1px solid var(--border);
 }
 .cam-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -400,7 +401,7 @@ button, a, summary, label { touch-action: manipulation; }
   --alert-bottom: light-dark(#f5f5f7, #1c1c1f);
   display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 14px 10px 16px; margin: -6px 0 20px;
   border-radius: var(--r); text-decoration: none; font-weight: 600; font-size: 14.5px;
-  color: var(--text); border: 1px solid var(--mat-edge);
+  color: var(--text); border: 1px solid transparent;
   background: linear-gradient(to bottom, var(--alert-top), var(--alert-bottom));
   box-shadow: var(--mat-drop);
   transition: --alert-top 150ms ease, --alert-bottom 150ms ease, transform var(--dur-1) var(--ease-out);
@@ -511,20 +512,22 @@ button, a, summary, label { touch-action: manipulation; }
  * 只用在按鈕本身（底色、陰影），圖示與文字照舊是實色。
  */
 .btn:where(:not(.ghost, :disabled, .primary, .solid)) {
-  border-color: var(--mat-edge);
+  border-color: transparent;
   background-image: linear-gradient(to bottom, light-dark(#ffffff, #26262a), light-dark(#f6f6f8, #1e1e21));
   box-shadow: var(--mat-drop);
 }
 .btn.primary:not(:disabled), .pb-controls > .pb-ctl:first-child {
   background-image: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 92%, white), var(--accent));
   --rim: var(--rim-on-color);
-  border-color: color-mix(in srgb, var(--accent) 80%, black);
+  --ring: color-mix(in srgb, var(--accent) 80%, black);
+  border-color: transparent;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 3px 8px -3px light-dark(color-mix(in srgb, var(--accent) 45%, transparent), rgb(0 0 0 / 0.5));
 }
 .btn.danger.solid:not(:disabled) {
   background-image: linear-gradient(to bottom, color-mix(in srgb, var(--bad) 92%, white), var(--bad));
   --rim: var(--rim-on-color);
-  border-color: color-mix(in srgb, var(--bad) 80%, black);
+  --ring: color-mix(in srgb, var(--bad) 80%, black);
+  border-color: transparent;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--bad) 30%, transparent), 0 3px 8px -3px light-dark(color-mix(in srgb, var(--bad) 45%, transparent), rgb(0 0 0 / 0.5));
 }
 .copy-face { display: inline-flex; align-items: center; gap: 7px; }
@@ -886,7 +889,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-legend-keys { margin-left: auto; font-size: 12.5px; }
 
 /* 匯出：選取列與工作清單，放在時間軸卡片上方 */
-.pb-timeline .panel-head .btn.active { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); }
+.pb-timeline .panel-head .btn.active { --ring: var(--accent-line); background: var(--accent-soft); color: var(--accent-text); }
 .pb-timeline .panel-head .btn.active .icon { color: var(--accent-text); }
 .ex-list { display: grid; gap: 8px; margin-top: 10px; }
 .ex-list[hidden], .ex [hidden], .ex-pick[hidden] { display: none; }
@@ -1363,15 +1366,20 @@ a.menu-item { text-decoration: none; }
 
 /* ==================== 材質層：細邊、淡亮線、小陰影 ==================== */
 
-/* 上緣亮線：框內一圈 1px，mask 挖空中間、再往下淡掉，只剩上緣的光 */
+/*
+ * 邊框與上緣亮線：::before 鋪滿外框（有 border 的元素往外推 1px 蓋住透明的 border），
+ * mask 挖空中間只留 1px 一圈；這一圈的底層是框色，上層是往下淡掉的亮線，兩者疊在同一個位置。
+ */
 .btn, .home-alert, .pb-ctl { position: relative; }
 .btn, .home-alert, .pb-ctl, .ind, .user-btn { isolation: isolate; }
 :is(.btn:not(.ghost):not(:disabled), .home-alert, .pb-controls > .pb-ctl:first-child, .nav-ind, .pill-ind, .seg-ind, .user-btn[data-current])::before {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  border-radius: inherit; padding: 1px; background: var(--rim);
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0), linear-gradient(to bottom, #000, transparent 60%);
-  mask-composite: exclude, intersect;
+  border-radius: inherit; padding: 1px;
+  background: linear-gradient(to bottom, var(--rim), transparent min(60%, 28px)), linear-gradient(var(--ring) 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
 }
+:is(.btn:not(.ghost):not(:disabled), .home-alert)::before { inset: -1px; }
 .pb-controls > .pb-ctl:first-child { --rim: var(--rim-on-color); }
 
 /* 側欄與目前項目 */
@@ -1382,17 +1390,17 @@ a.menu-item { text-decoration: none; }
 
 /* 卡片與攝影機格：浮起一層 */
 /*
- * 卡片的亮線不用偽元素：卡片裡有絕對定位的東西，加 position 會改到它們的定位基準。
- * 改用三層背景：透明的 1px 框裡露出往下淡掉的亮線，底下墊一層同樣的底色，框內再蓋上卡片底色。
+ * 卡片不用偽元素：卡片裡有絕對定位的東西，加 position 會改到它們的定位基準。
+ * 改用多層背景畫在透明的 1px border 上：亮線疊在框色上、框色疊在卡片底色上，框內再蓋上卡片底色。
  * 亮線固定在上緣 32px 內淡完，長卡片的兩側不會拖出一長條光。
  */
 .card, .cam-tile { --card-bg: var(--grad-surface); border-color: transparent; }
 .cam-tile { --card-bg: var(--grad-frame); }
 .card, .cam-tile {
-  background: var(--card-bg) padding-box, linear-gradient(to bottom, var(--rim), transparent 32px) border-box, var(--card-bg) border-box;
-  box-shadow: 0 0 0 1px var(--mat-edge), var(--raise-2);
+  background: var(--card-bg) padding-box, linear-gradient(to bottom, var(--rim), transparent 32px) border-box, linear-gradient(var(--ring) 0 0) border-box, var(--card-bg) border-box;
+  box-shadow: var(--raise-2);
 }
-@media (hover: hover) { .cam-tile:hover { border-color: transparent; box-shadow: 0 0 0 1px var(--border-strong), var(--raise-2); } }
+@media (hover: hover) { .cam-tile:hover { --ring: var(--border-strong); border-color: transparent; box-shadow: var(--raise-2); } }
 /* 畫面內緣一圈很細的線，亮的畫面邊界才不會糊進格子裡 */
 .cam-frame::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06); }
 
