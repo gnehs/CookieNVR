@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { CameraDto } from "../../src/api-types.ts";
-import { api } from "../api.ts";
 import { Icon } from "../ui/Icon.tsx";
+import { hasPoster, loadPoster, usePoster } from "./posters.ts";
 import type { LiveTarget } from "./transport.ts";
 import { liveSupported, type LiveState } from "./video.ts";
 
@@ -37,7 +37,6 @@ export interface LiveFrameProps {
 export function LiveFrame({ cam, onTarget, onState, className, children }: LiveFrameProps) {
   const video = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<LiveState>(() => (liveSupported() ? { kind: "connecting" } : { kind: "unsupported", reason: "mse", codec: null }));
-  const [snapshot, setSnapshot] = useState<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
   const onStateRef = useRef(onState);
@@ -57,35 +56,22 @@ export function LiveFrame({ cam, onTarget, onState, className, children }: LiveF
 
   const enabled = cam.config.enabled;
   const unsupported = state.kind === "unsupported";
+  const poster = usePoster(cam.id);
+  const snapshot = enabled ? poster : null;
   const started = useRef(false);
   useEffect(() => {
-    if (!enabled) {
-      setSnapshot(null);
-      return;
-    }
-    let alive = true;
+    if (!enabled) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    // 先在背景載好再換上，避免每次刷新都閃回佔位
-    const refresh = () => {
-      const url = api.snapshotUrl(cam.id, Date.now());
-      const probe = new Image();
-      probe.onload = () => alive && setSnapshot(url);
-      probe.onerror = () => alive && setSnapshot(null);
-      probe.src = url;
-    };
     const schedule = (ms: number) => {
       timer = setTimeout(() => {
-        if (stateRef.current.kind !== "playing" && !document.hidden) refresh();
+        if (stateRef.current.kind !== "playing" && !document.hidden) void loadPoster(cam.id);
         schedule(stateRef.current.kind === "unsupported" ? FALLBACK_SNAPSHOT_MS : IDLE_SNAPSHOT_MS);
       }, ms);
     };
-    // 第一次等即時影像一下；之後（重新啟用、確定不能播）立刻抓
-    schedule(unsupported || started.current ? 0 : SNAPSHOT_GRACE_MS);
+    // 背景已經預載過一張就先放著，等即時影像一下；還沒有圖、重新啟用或確定不能播就立刻抓
+    schedule(hasPoster(cam.id) && !unsupported && !started.current ? SNAPSHOT_GRACE_MS : 0);
     started.current = true;
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [cam.id, enabled, unsupported]);
 
   return (

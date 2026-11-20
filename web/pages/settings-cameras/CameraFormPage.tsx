@@ -35,7 +35,7 @@ function SuccessView({ cam, probe, onAgain }: { cam: CameraDto; probe: Probed; o
     window.scrollTo(0, 0);
   }, []);
   return (
-    <div className="success-page page-enter">
+    <div className="success-page">
       <div className="card success">
         <div className="success-shot">
           {probe.snapshotJpegBase64 ? (

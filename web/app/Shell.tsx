@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { camerasQuery } from "../data/queries.ts";
 import { infoQuery, logout, useMe } from "../data/session.ts";
+import { usePosterPreload } from "../live/posters.ts";
 import { useHealth } from "../data/use-health.ts";
 import { Icon } from "../ui/Icon.tsx";
 import type { IconName } from "../ui/icons.ts";
@@ -22,13 +24,15 @@ const NAV: { section: Section; to: "/cameras" | "/events" | "/recordings"; label
 
 const sectionOf = (path: string): Section | undefined => (["cameras", "events", "recordings", "settings", "account"] as const).find((s) => path === `/${s}` || path.startsWith(`/${s}/`));
 
-/** 外殼：桌面是左側欄，手機（≤760px）由 CSS 改成底部導覽列；頁面內容換頁時淡入 */
+/** 外殼：桌面是左側欄，手機（≤760px）由 CSS 改成底部導覽列 */
 export function Shell() {
   const path = useLocation({ select: (l) => l.pathname });
-  // 淡入的 key 跟著「已經畫出來的」頁面走：location 在新頁面的程式碼載完前就變了，拿它當 key 會讓舊頁面多掛載一次
+  // 換頁整頁重新掛載，狀態不會帶到下一頁。key 跟著「已經畫出來的」頁面走：location 在新頁面的程式碼載完前就變了，拿它當 key 會讓舊頁面多掛載一次
   const shown = useRouterState({ select: (s) => s.matches.at(-1)?.pathname });
   const active = sectionOf(path);
   const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+  const cams = useQuery(camerasQuery).data;
+  usePosterPreload(cams?.filter((c) => c.config.enabled).map((c) => c.id) ?? []);
   const [collapsed, setCollapsed] = useSidebarCollapsed();
   const toggleLabel = collapsed ? "展開側欄" : "收合側欄";
   const tabBar = useMedia(TAB_BAR);
@@ -70,7 +74,7 @@ export function Shell() {
         <UserMenu active={active} />
       </nav>
       <main className="main" id="main" tabIndex={-1}>
-        <div key={shown} className="page-enter">
+        <div key={shown} className="page">
           <Outlet />
         </div>
       </main>
