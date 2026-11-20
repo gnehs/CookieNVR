@@ -44,7 +44,13 @@
   --tl-tick: light-dark(#c7c7cf, #45454c);
 
   --accent: light-dark(#2563eb, #6aa5ff);
-  --accent-fg: light-dark(#ffffff, #08111f);
+  /*
+   * 實心底色（主要按鈕、選中的日期、標籤…）：--accent 在暗色模式要當文字色所以偏亮，配不了白字；
+   * 實心的地方改用這個較深的主色，兩種模式都配白字。
+   */
+  --accent-fill: #2563eb;
+  --accent-fg: #ffffff;
+  --bad-fill: #c62828;
   --accent-soft: color-mix(in srgb, var(--accent) 11%, var(--surface));
   --accent-line: color-mix(in srgb, var(--accent) 55%, var(--surface));
   /* 帶色底上的文字：往 --text 混一點，淡色底也能過 AA */
@@ -97,13 +103,13 @@
   --font: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
-[data-accent="blue"] { --accent: light-dark(#2563eb, #6aa5ff); --accent-fg: light-dark(#ffffff, #08111f); }
-[data-accent="indigo"] { --accent: light-dark(#4f46e5, #8f8cff); --accent-fg: light-dark(#ffffff, #0d0b26); }
-[data-accent="violet"] { --accent: light-dark(#7c3aed, #b794ff); --accent-fg: light-dark(#ffffff, #170b2b); }
-[data-accent="pink"] { --accent: light-dark(#c8236f, #ff7ab8); --accent-fg: light-dark(#ffffff, #2b0718); }
-[data-accent="orange"] { --accent: light-dark(#c2410c, #ff9a5a); --accent-fg: light-dark(#ffffff, #2a1003); }
-[data-accent="green"] { --accent: light-dark(#15803d, #4fd17f); --accent-fg: light-dark(#ffffff, #04210f); }
-[data-accent="teal"] { --accent: light-dark(#0f766e, #3fd2c3); --accent-fg: light-dark(#ffffff, #032220); }
+[data-accent="blue"] { --accent: light-dark(#2563eb, #6aa5ff); --accent-fill: #2563eb; --accent-fg: #ffffff; }
+[data-accent="indigo"] { --accent: light-dark(#4f46e5, #8f8cff); --accent-fill: #4f46e5; --accent-fg: #ffffff; }
+[data-accent="violet"] { --accent: light-dark(#7c3aed, #b794ff); --accent-fill: #7c3aed; --accent-fg: #ffffff; }
+[data-accent="pink"] { --accent: light-dark(#c8236f, #ff7ab8); --accent-fill: #c8236f; --accent-fg: #ffffff; }
+[data-accent="orange"] { --accent: light-dark(#c2410c, #ff9a5a); --accent-fill: #c2410c; --accent-fg: #ffffff; }
+[data-accent="green"] { --accent: light-dark(#15803d, #4fd17f); --accent-fill: #15803d; --accent-fg: #ffffff; }
+[data-accent="teal"] { --accent: light-dark(#0f766e, #3fd2c3); --accent-fill: #0f766e; --accent-fg: #ffffff; }
 
 /* ---------- base ---------- */
 * { box-sizing: border-box; }
@@ -517,18 +523,18 @@ button, a, summary, label { touch-action: manipulation; }
   box-shadow: var(--mat-drop);
 }
 .btn.primary:not(:disabled), .pb-controls > .pb-ctl:first-child {
-  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 92%, white), var(--accent));
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--accent-fill) 90%, white), var(--accent-fill));
   --rim: var(--rim-on-color);
-  --ring: color-mix(in srgb, var(--accent) 80%, black);
+  --ring: color-mix(in srgb, var(--accent-fill) 80%, black);
   border-color: transparent;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 3px 8px -3px light-dark(color-mix(in srgb, var(--accent) 45%, transparent), rgb(0 0 0 / 0.5));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent-fill) 30%, transparent), 0 3px 8px -3px light-dark(color-mix(in srgb, var(--accent-fill) 45%, transparent), rgb(0 0 0 / 0.5));
 }
 .btn.danger.solid:not(:disabled) {
-  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--bad) 92%, white), var(--bad));
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--bad-fill) 90%, white), var(--bad-fill));
   --rim: var(--rim-on-color);
-  --ring: color-mix(in srgb, var(--bad) 80%, black);
+  --ring: color-mix(in srgb, var(--bad-fill) 80%, black);
   border-color: transparent;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--bad) 30%, transparent), 0 3px 8px -3px light-dark(color-mix(in srgb, var(--bad) 45%, transparent), rgb(0 0 0 / 0.5));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--bad-fill) 30%, transparent), 0 3px 8px -3px light-dark(color-mix(in srgb, var(--bad-fill) 45%, transparent), rgb(0 0 0 / 0.5));
 }
 .copy-face { display: inline-flex; align-items: center; gap: 7px; }
 .copy-btn[data-state="done"], .copy-btn[data-state="done"] .icon { color: var(--ok-text); }
@@ -539,14 +545,14 @@ button, a, summary, label { touch-action: manipulation; }
 @media (hover: hover) { .btn:hover { background: var(--fill); } }
 @media (hover: hover) { .btn:where(:not(.ghost, :disabled, .primary, .solid)):hover { background-image: linear-gradient(to bottom, light-dark(#f9f9fa, #2c2c31), light-dark(#efeff2, #232327)); } }
 .btn:active:not(:disabled) { transform: scale(0.97); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--accent-fg); }
 .btn.primary .icon { color: var(--accent-fg); }
-.btn.primary, .pb-controls > .pb-ctl:first-child { --icon-bg: var(--accent); --duo: 30%; }
-.btn.danger.solid { --icon-bg: var(--bad); --duo: 30%; }
+.btn.primary, .pb-controls > .pb-ctl:first-child { --icon-bg: var(--accent-fill); --duo: 30%; }
+.btn.danger.solid { --icon-bg: var(--bad-fill); --duo: 30%; }
 .btn:disabled { --icon-bg: var(--fill); }
-@media (hover: hover) { .btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); } }
+@media (hover: hover) { .btn.primary:hover { background: color-mix(in srgb, var(--accent-fill) 88%, black); } }
 .btn.danger, .btn.danger .icon { color: var(--bad-text); }
-.btn.danger.solid { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+.btn.danger.solid { background: var(--bad-fill); border-color: var(--bad-fill); color: #fff; }
 .btn.danger.solid .icon { color: var(--surface); }
 .btn.small { min-height: 32px; padding: 0 11px; font-size: 13px; border-radius: 9px; }
 .btn.icon-only { width: 36px; padding: 0; }
@@ -644,7 +650,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 /* 色票 */
 /* 七個色票永遠排成一列：寬度平分，手機上縮小間距 */
 .swatches { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; max-width: 520px; }
-.swatch { --c: var(--accent); --c-fg: var(--accent-fg); position: relative; cursor: pointer; }
+.swatch { --c: var(--accent-fill); --c-fg: var(--accent-fg); position: relative; cursor: pointer; }
 .swatch > input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .swatch-face {
   display: grid; justify-items: center; gap: 6px; padding: 9px 2px 7px; border-radius: 12px;
@@ -845,8 +851,8 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 /* 暫停、靜音的圖示外面包了一層 span；行內的 span 會把圖示放在文字基線上而偏高 */
 .pb-ctl > span { display: grid; place-items: center; }
 .pb-ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
-.pb-controls > .pb-ctl:first-child { background: var(--accent); color: var(--accent-fg); }
-@media (hover: hover) { .pb-controls > .pb-ctl:first-child:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); color: var(--accent-fg); } }
+.pb-controls > .pb-ctl:first-child { background: var(--accent-fill); color: var(--accent-fg); }
+@media (hover: hover) { .pb-controls > .pb-ctl:first-child:hover { background: color-mix(in srgb, var(--accent-fill) 88%, black); color: var(--accent-fg); } }
 .pb-time { display: grid; line-height: 1.2; min-width: 0; flex: 1; }
 /* 日期與「錄製中」輪流出現在同一行，行高固定，切換時控制列不會跳 */
 .pb-sub { display: flex; align-items: center; height: 20px; min-width: 0; white-space: nowrap; }
@@ -1226,7 +1232,7 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
 }
 .menu-item .menu-label { flex: 1; }
 .menu-item[aria-current="page"] { color: var(--accent-text); font-weight: 600; }
-.menu-count { min-width: 20px; padding: 0 6px; border-radius: 99px; background: var(--bad); color: var(--surface); font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
+.menu-count { min-width: 20px; padding: 0 6px; border-radius: 99px; background: var(--bad-fill); color: #fff; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
 a.menu-item { text-decoration: none; }
 .menu-title { display: none; padding: 6px 12px 8px; color: var(--muted); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

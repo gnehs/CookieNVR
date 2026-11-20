@@ -52,7 +52,7 @@
   font-size: 12px; font-weight: 650; line-height: 1.55; background: rgb(14 14 18 / 0.74); color: #fff;
 }
 .ev-card[data-live] .ev-card-thumb::after { box-shadow: inset 0 0 0 2px var(--accent); }
-.ev-card[data-live] .ev-chip { background: var(--accent); color: var(--accent-fg); }
+.ev-card[data-live] .ev-chip { background: var(--accent-fill); color: var(--accent-fg); }
 .ev-card-text { display: grid; min-width: 0; padding: 0 38px 0 2px; line-height: 1.35; }
 .ev-card-text b { font-size: 14.5px; font-weight: 650; }
 .ev-card-sub { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

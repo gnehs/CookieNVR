@@ -20,7 +20,7 @@
 /* 不能選的日子：比次要文字再淡一階（停用的內容不受對比要求），不用 opacity */
 .dp-day[aria-disabled] { color: color-mix(in srgb, var(--muted) 55%, var(--overlay)); cursor: default; }
 .dp-day[aria-current="date"] .dp-num { color: var(--accent-text); font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--accent-line); }
-.dp-day[aria-selected="true"] .dp-num { background: var(--accent); color: var(--accent-fg); font-weight: 700; box-shadow: none; }
+.dp-day[aria-selected="true"] .dp-num { background: var(--accent-fill); color: var(--accent-fg); font-weight: 700; box-shadow: none; }
 /* 有資料的日子：數字下方一個小點 */
 .dp-day[data-marked] .dp-num::after {
   content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent);
