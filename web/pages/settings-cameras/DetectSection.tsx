@@ -5,7 +5,8 @@ import { DEFAULT_DETECT, SENSITIVITY_PRESETS } from "../../../src/detect/config.
 import type { DetectConfig, DetectSource } from "../../../src/types.ts";
 import { api } from "../../api.ts";
 import { ptzQuery } from "../../data/queries.ts";
-import { maskEditor, type MaskEditor } from "../../detect/mask-editor.ts";
+import { maskEditor, type MaskCopy, type MaskEditor } from "../../detect/mask-editor.ts";
+import { modeOf } from "../../detect/object-model.ts";
 import { areaToPos, formatArea, posToArea, posToThreshold, sensitivityOf, thresholdToPos, type Sensitivity } from "../../detect/model.ts";
 import { Choice, Segmented, Switch } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
@@ -16,6 +17,13 @@ import { ScoreMeter } from "./ScoreMeter.tsx";
 
 const SNAPSHOT_MS = 2_000;
 
+
+const OBJECT_MASK_COPY: MaskCopy = {
+  tag: "不辨識",
+  empty: "畫出不需要辨識物件的範圍，例如停車格。裡面照樣偵測動作，只是停在裡面的東西不會被標上類別。",
+  some: (n) => `${n} 個不辨識的區域，物件中心落在裡面就不算。點一下區域可以調整或刪除。`,
+  add: "新增不辨識的區域",
+};
 
 const SOURCES: { value: DetectSource; label: string; hint: string }[] = [
   { value: "pixel", label: "畫面變化", hint: "比對畫面的變化，每台攝影機都能用，也能排除不需要的區域。" },
@@ -48,7 +56,7 @@ function sensitivityWord(threshold: number): string {
 const sameMasks = (a: DetectConfig["masks"], b: DetectConfig["masks"]) => JSON.stringify(a) === JSON.stringify(b);
 
 /** 排除區域編輯器加上每 2 秒換一次的快照：編輯器在 effect 建立、cleanup 拆掉；快照只在 live 為真時抓 */
-function MaskPreview({ camera, masks, onMasks, live, children }: { camera: CameraDto; masks: DetectConfig["masks"]; onMasks: (m: DetectConfig["masks"]) => void; live: boolean; children: React.ReactNode }) {
+function MaskPreview({ camera, masks, onMasks, live, copy, children }: { camera: CameraDto; masks: DetectConfig["masks"]; onMasks: (m: DetectConfig["masks"]) => void; live: boolean; copy?: MaskCopy; children?: React.ReactNode }) {
   const shot = useRef<HTMLDivElement>(null);
   const after = useRef<HTMLParagraphElement>(null);
   const editor = useRef<MaskEditor | null>(null);
@@ -58,7 +66,7 @@ function MaskPreview({ camera, masks, onMasks, live, children }: { camera: Camer
   const onvifGuess = camera.config.connection.type === "tapo" || !!camera.config.connection.onvif;
 
   useEffect(() => {
-    const ed = maskEditor(latest.current.masks, (m) => latest.current.onMasks(m));
+    const ed = maskEditor(latest.current.masks, (m) => latest.current.onMasks(m), copy);
     editor.current = ed;
     shot.current!.prepend(ed.stage);
     after.current!.before(ed.toolbar);
@@ -226,7 +234,13 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
       {objects && d.enabled ? (
         // 物件辨識緊接在動作偵測之後、同一個對話框裡
         <div className="detect-extra" data-slot="object-detection">
-          <ObjectSection value={d} onChange={onChange} />
+          <ObjectSection
+            value={d}
+            onChange={onChange}
+            zones={
+              live ? <MaskPreview camera={camera} masks={d.objectMasks} onMasks={(objectMasks) => onChange({ objectMasks })} live={active && modeOf(d.objectMode) !== "off"} copy={OBJECT_MASK_COPY} /> : null
+            }
+          />
         </div>
       ) : null}
     </>

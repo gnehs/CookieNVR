@@ -19,7 +19,7 @@ const FALLBACK: Pick<ObjectLabelsDto, "labels" | "common"> = { labels: COMMON_LA
 const moreTitle = (n: number) => (n > 0 ? `更多類別（已選 ${n}）` : "更多類別");
 
 /** 偵測設定裡的「物件辨識」：模式、關注的類別、嚴格程度。只有系統設定開了物件辨識、而且這台開了動作偵測才畫出來 */
-export function ObjectSection({ value, onChange }: { value: ObjectFields; onChange: (patch: Partial<ObjectFields>) => void }) {
+export function ObjectSection({ value, onChange, zones }: { value: ObjectFields; onChange: (patch: Partial<ObjectFields>) => void; zones?: React.ReactNode }) {
   const catalog = useQuery(objectLabelsQuery).data ?? null;
   const mode = modeOf(value.objectMode);
   const g = labelGroups(catalog ?? FALLBACK, value.labels);
@@ -106,6 +106,10 @@ export function ObjectSection({ value, onChange }: { value: ObjectFields; onChan
           </div>
           <small className="hint">{strict.hint}</small>
         </div>
+      </div>
+      <div className="set-block obj-block" hidden={mode === "off" || !zones}>
+        <span className="set-row-title">不辨識的區域</span>
+        {zones}
       </div>
     </div>
   );

@@ -40,10 +40,12 @@ test("old camera data without detect gets the defaults", () => {
 test("detect settings are validated", () => {
   const detect = { enabled: true, source: "both", threshold: 15, minArea: 0.01, cooldownSec: 30, masks: [{ points: [[0, 0], [1, 0], [0.5, 0.5]] }] };
   // 沒送物件辨識欄位的舊用戶端拿到預設值
-  expect(parseCameraConfig({ ...base, detect }).detect).toEqual({ ...detect, labels: ["person"], objectMode: "annotate", objectScore: 0.5 } as never);
+  expect(parseCameraConfig({ ...base, detect }).detect).toEqual({ ...detect, objectMasks: [], labels: ["person"], objectMode: "annotate", objectScore: 0.5 } as never);
+  const zone = { points: [[0, 0.5], [0.4, 0.5], [0.4, 1]] };
+  expect(parseCameraConfig({ ...base, detect: { ...detect, objectMasks: [zone] } }).detect?.objectMasks).toEqual([zone] as never);
   const objects = { ...detect, labels: ["dog", "person", "dog"], objectMode: "filter", objectScore: 0.7 };
   expect(parseCameraConfig({ ...base, detect: objects }).detect).toMatchObject({ labels: ["dog", "person"], objectMode: "filter", objectScore: 0.7 });
-  for (const bad of [{ source: "x" }, { threshold: 0 }, { minArea: 0.9 }, { masks: [{ points: [[0, 0], [1, 1]] }] }, { masks: [{ points: [[0, 0], [2, 0], [0, 1]] }] }, { labels: ["Chair"] }, { labels: ["a b"] }, { labels: "person" }, { objectMode: "on" }, { objectScore: 0.1 }]) {
+  for (const bad of [{ source: "x" }, { threshold: 0 }, { minArea: 0.9 }, { masks: [{ points: [[0, 0], [1, 1]] }] }, { masks: [{ points: [[0, 0], [2, 0], [0, 1]] }] }, { labels: ["Chair"] }, { labels: ["a b"] }, { labels: "person" }, { objectMode: "on" }, { objectScore: 0.1 }, { objectMasks: "x" }, { objectMasks: [{ points: [[0, 0], [1, 1]] }] }]) {
     expect(() => parseCameraConfig({ ...base, detect: { ...detect, ...bad } })).toThrow();
   }
 });

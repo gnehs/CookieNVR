@@ -7,6 +7,7 @@ export const DEFAULT_DETECT: DetectConfig = {
   minArea: 0.005,
   cooldownSec: 10,
   masks: [],
+  objectMasks: [],
   labels: ["person"],
   objectMode: "annotate",
   objectScore: 0.5,

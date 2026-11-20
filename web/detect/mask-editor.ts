@@ -23,6 +23,24 @@ export interface MaskEditor {
   destroy(): void;
 }
 
+/** 編輯器上的文字：動作偵測的排除區域和物件辨識的排除區域共用同一個編輯器 */
+export interface MaskCopy {
+  /** 畫面上每個區域的小標籤 */
+  tag: string;
+  /** 還沒有區域時的說明 */
+  empty: string;
+  /** 已有 n 個區域時的說明 */
+  some: (n: number) => string;
+  add: string;
+}
+
+export const MOTION_MASK_COPY: MaskCopy = {
+  tag: "不偵測",
+  empty: "畫出不需要偵測的範圍，例如馬路、搖動的樹或時間浮水印。",
+  some: (n) => `${n} 個排除區域，裡面的變化不會觸發事件。點一下區域可以調整或刪除。`,
+  add: "新增排除區域",
+};
+
 const SVG = "http://www.w3.org/2000/svg";
 const svg = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => {
   const el = document.createElementNS(SVG, tag);
@@ -34,7 +52,7 @@ const svg = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
 const TAP_SLOP = 10;
 let patternSeq = 0;
 
-export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon[]) => void): MaskEditor {
+export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon[]) => void, copy: MaskCopy = MOTION_MASK_COPY): MaskEditor {
   const masks: Pt[][] = initial.map((m) => m.points.map(([x, y]) => [x, y] as Pt));
   let mode: Mode = { kind: "idle", selected: null };
   // 座標系跟著快照的實際長寬，斜線與線寬才不會被拉歪
@@ -118,7 +136,7 @@ export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon
       draft = { line, rubber, fill };
     }
 
-    labelEls = masks.map(() => h("span", { class: "mask-label" }, "不偵測"));
+    labelEls = masks.map(() => h("span", { class: "mask-label" }, copy.tag));
     labels.replaceChildren(...labelEls);
 
     handleEls = [];
@@ -248,10 +266,8 @@ export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon
       );
       return;
     }
-    hint.textContent = masks.length
-      ? `${masks.length} 個排除區域，裡面的變化不會觸發事件。點一下區域可以調整或刪除。`
-      : "畫出不需要偵測的範圍，例如馬路、搖動的樹或時間浮水印。";
-    const add = btn("新增排除區域", "plus", () => setMode({ kind: "drawing", points: [], hover: null }));
+    hint.textContent = masks.length ? copy.some(masks.length) : copy.empty;
+    const add = btn(copy.add, "plus", () => setMode({ kind: "drawing", points: [], hover: null }));
     add.disabled = !canAddMask(masks);
     if (add.disabled) hint.textContent = `最多 ${LIMITS.masks} 個排除區域。`;
     buttons.replaceChildren(add);

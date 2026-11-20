@@ -21,17 +21,18 @@ export function insidePolygon(x: number, y: number, poly: MaskPolygon): boolean 
 }
 
 /**
- * 一張辨識結果 → 交給事件狀態機的物件：只留關注的類別、超過門檻、框中心不在遮罩內的；
+ * 一張辨識結果 → 交給事件狀態機的物件：只留關注的類別、超過門檻、框中心不在排除區域（含物件專用的）內的；
  * 同一類別只留信心最高的一個。
  */
-export function toHits(detections: readonly Detection[], detect: Pick<DetectConfig, "labels" | "objectScore" | "masks">): ObjectHit[] {
+export function toHits(detections: readonly Detection[], detect: Pick<DetectConfig, "labels" | "objectScore" | "masks" | "objectMasks">): ObjectHit[] {
   const watched = new Set(detect.labels);
+  const zones = [...detect.masks, ...detect.objectMasks];
   const best = new Map<string, number>();
   for (const d of detections) {
     if (!watched.has(d.label) || d.score < detect.objectScore) continue;
     const cx = (d.box[0] + d.box[2]) / 2;
     const cy = (d.box[1] + d.box[3]) / 2;
-    if (detect.masks.some((m) => insidePolygon(cx, cy, m))) continue;
+    if (zones.some((m) => insidePolygon(cx, cy, m))) continue;
     if (d.score > (best.get(d.label) ?? 0)) best.set(d.label, d.score);
   }
   return [...best].map(([label, score]) => ({ label, score }));

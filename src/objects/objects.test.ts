@@ -14,7 +14,7 @@ import { createObjectDetection } from "./service.ts";
 const det = (label: string, score: number, box: [number, number, number, number] = [0.4, 0.4, 0.6, 0.6]): Detection => ({ label, score, box });
 
 test("hits keep watched labels above the threshold, best one per label, and skip boxes centred in a mask", () => {
-  const detect = { labels: ["person", "car"], objectScore: 0.5, masks: [{ points: [[0, 0], [0.3, 0], [0.3, 0.3], [0, 0.3]] as [number, number][] }] };
+  const detect = { labels: ["person", "car"], objectScore: 0.5, masks: [{ points: [[0, 0], [0.3, 0], [0.3, 0.3], [0, 0.3]] as [number, number][] }], objectMasks: [] };
   const hits = toHits(
     [det("person", 0.6), det("person", 0.9), det("dog", 0.99), det("car", 0.4), det("car", 0.95, [0.05, 0.05, 0.2, 0.2]), det("car", 0.7, [0.1, 0.1, 0.9, 0.9])],
     detect,
@@ -23,6 +23,13 @@ test("hits keep watched labels above the threshold, best one per label, and skip
     { label: "person", score: 0.9 },
     { label: "car", score: 0.7 },
   ]);
+});
+
+test("object-only zones drop objects centred inside them, like the motion masks do", () => {
+  const parkingBay = { points: [[0, 0.5], [0.4, 0.5], [0.4, 1], [0, 1]] as [number, number][] };
+  const detect = { labels: ["person", "car"], objectScore: 0.5, masks: [], objectMasks: [parkingBay] };
+  const hits = toHits([det("car", 0.9, [0.05, 0.6, 0.35, 0.9]), det("car", 0.8, [0.6, 0.6, 0.9, 0.9]), det("person", 0.7, [0.1, 0.55, 0.2, 0.95])], detect);
+  expect(hits).toEqual([{ label: "car", score: 0.8 }]);
 });
 
 test("a car parked in the same spot stops counting, while one that moves or a new arrival still counts", () => {

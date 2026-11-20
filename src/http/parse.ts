@@ -104,6 +104,8 @@ function parseDetect(value: unknown): DetectConfig {
   const o = asObject(value, "detect");
   const masks = o.masks;
   if (!Array.isArray(masks) || masks.length > LIMITS.masks) throw new HttpError(400, `欄位 detect.masks 必須是最多 ${LIMITS.masks} 個多邊形的陣列`);
+  const objectMasks = o.objectMasks ?? [];
+  if (!Array.isArray(objectMasks) || objectMasks.length > LIMITS.masks) throw new HttpError(400, `欄位 detect.objectMasks 必須是最多 ${LIMITS.masks} 個多邊形的陣列`);
   return {
     enabled: bool(o, "enabled", "detect.enabled"),
     source: oneOf(o, "source", DETECT_SOURCES, "detect.source"),
@@ -111,6 +113,8 @@ function parseDetect(value: unknown): DetectConfig {
     minArea: num(o, "minArea", LIMITS.minArea.min, LIMITS.minArea.max, "detect.minArea"),
     cooldownSec: int(o, "cooldownSec", LIMITS.cooldownSec.min, LIMITS.cooldownSec.max, "detect.cooldownSec"),
     masks: masks.map((m, i) => parseMask(m, `detect.masks[${i}]`)),
+    // 物件專用的排除區域是後來才加的，舊的用戶端送來的設定沒有
+    objectMasks: objectMasks.map((m, i) => parseMask(m, `detect.objectMasks[${i}]`)),
     // 物件辨識的欄位是 M4 才加的，舊的用戶端（例如 HA 整合）送來的設定可能沒有
     labels: o.labels === undefined ? DEFAULT_DETECT.labels : parseLabels(o.labels),
     objectMode: o.objectMode === undefined ? DEFAULT_DETECT.objectMode : oneOf(o, "objectMode", OBJECT_MODES, "detect.objectMode"),

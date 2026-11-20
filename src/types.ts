@@ -56,8 +56,10 @@ export interface DetectConfig {
   minArea: number;
   /** 連續這麼多秒沒有動作，事件才結束 */
   cooldownSec: number;
-  /** 只影響畫面差分 */
+  /** 排除區域：畫面差分不看這些範圍，框中心落在裡面的物件也不算 */
   masks: MaskPolygon[];
+  /** 只排除物件辨識的區域（例如停車格）：裡面照樣偵測動作，只是框中心落在裡面的物件不算；舊資料沒有這個欄位，視為空 */
+  objectMasks: MaskPolygon[];
   /**
    * 物件辨識要關注的類別鍵（見 `src/objects/labels.ts`）。對外（API、SSE）的值是「目前實際生效的」：
    * 系統沒開物件辨識或這台設為不辨識時一律是空陣列；HA 依這個清單為每個類別建立感應器。
