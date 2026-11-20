@@ -81,7 +81,7 @@ function DeviceNotes({ data, device }: { data: ObjectsDto | undefined; device: s
   );
 }
 
-/** 「設定 → 物件辨識」：系統層級的開關、推論裝置、辨識頻率、模型與測速。變更立刻生效，狀態每幾秒更新 */
+/** 「設定 → 物件辨識」：開關與狀態，打開後再分成裝置、模型、效能（辨識頻率與測速）三段。變更立刻生效，狀態每幾秒更新 */
 export function ObjectsGroup({ settings }: { settings: Settings }) {
   const qc = useQueryClient();
   const objects = useQuery(objectsQuery(settings.objects.enabled));
@@ -106,43 +106,53 @@ export function ObjectsGroup({ settings }: { settings: Settings }) {
   if (!models.some((o) => o.value === cur.model)) models.push({ value: cur.model, label: `${cur.model}（找不到檔案）` });
 
   return (
-    <SettingsGroup className="obj-group">
-      <SettingRow
-        title="辨識畫面裡的人、車與動物"
-        desc="開啟後，每台攝影機可以選擇只在看到人或車時才記錄事件。會多用一些電腦資源。"
-        toggle
-        control={(a) => <Switch {...a} checked={cur.enabled} disabled={busy} onChange={(v) => apply.mutate({ objects: { enabled: v } })} />}
-      />
-      <div className="set-rows" hidden={!cur.enabled}>
-        <Status data={data} />
+    <div className="stack">
+      <SettingsGroup className="obj-group">
         <SettingRow
-          title="推論裝置"
-          desc={deviceHint(device, data?.devices ?? [], data?.status.device ?? null)}
-          wide
-          className="obj-row"
-          control={(a) => <Select {...a} label="推論裝置" name="objectDevice" entries={deviceOptions(data?.devices ?? [], device)} value={device} disabled={busy} onChange={(v) => apply.mutate({ devices: { objects: v } })} />}
+          title="辨識畫面裡的人、車與動物"
+          desc="開啟後，每台攝影機可以選擇只在看到人或車時才記錄事件。會多用一些電腦資源。"
+          toggle
+          control={(a) => <Switch {...a} checked={cur.enabled} disabled={busy} onChange={(v) => apply.mutate({ objects: { enabled: v } })} />}
         />
-        <DeviceNotes data={data} device={device} />
-        <SettingRow
-          title="每秒辨識幾次"
-          desc={FPS_HINT}
-          control={(a) => (
-            <Select {...a} label="每秒辨識幾次" name="objectFps" entries={FPS_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))} value={String(cur.fps)} disabled={busy} onChange={(v) => apply.mutate({ objects: { fps: Number(v) } })} />
-          )}
-        />
-        <SettingRow
-          title="辨識模型"
-          desc={
-            <>
-              想用自己的模型，把 .onnx 檔放到 <code className="path">{data?.modelsDir ?? "models"}</code> 資料夾，過幾秒就會出現在上面的選單。
-            </>
-          }
-          wide
-          className="obj-row"
-          control={(a) => <Select {...a} label="辨識模型" name="objectModel" entries={models} value={cur.model} disabled={busy} onChange={(v) => apply.mutate({ objects: { model: v } })} />}
-        />
-        <BenchmarkSection data={data} />
-      </div>
-    </SettingsGroup>
+        {cur.enabled ? <Status data={data} /> : null}
+      </SettingsGroup>
+      {cur.enabled ? (
+        <>
+          <SettingsGroup title="裝置" className="obj-group">
+            <SettingRow
+              title="推論裝置"
+              desc={deviceHint(device, data?.devices ?? [], data?.status.device ?? null)}
+              wide
+              className="obj-row"
+              control={(a) => <Select {...a} label="推論裝置" name="objectDevice" entries={deviceOptions(data?.devices ?? [], device)} value={device} disabled={busy} onChange={(v) => apply.mutate({ devices: { objects: v } })} />}
+            />
+            <DeviceNotes data={data} device={device} />
+          </SettingsGroup>
+          <SettingsGroup title="模型" className="obj-group">
+            <SettingRow
+              title="辨識模型"
+              desc={
+                <>
+                  想用自己的模型，把 .onnx 檔放到 <code className="path">{data?.modelsDir ?? "models"}</code> 資料夾，過幾秒就會出現在選單裡。
+                </>
+              }
+              wide
+              className="obj-row"
+              control={(a) => <Select {...a} label="辨識模型" name="objectModel" entries={models} value={cur.model} disabled={busy} onChange={(v) => apply.mutate({ objects: { model: v } })} />}
+            />
+          </SettingsGroup>
+          <SettingsGroup title="效能" className="obj-group">
+            <SettingRow
+              title="每秒辨識幾次"
+              desc={FPS_HINT}
+              control={(a) => (
+                <Select {...a} label="每秒辨識幾次" name="objectFps" entries={FPS_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))} value={String(cur.fps)} disabled={busy} onChange={(v) => apply.mutate({ objects: { fps: Number(v) } })} />
+              )}
+            />
+            <BenchmarkSection data={data} />
+          </SettingsGroup>
+        </>
+      ) : null}
+    </div>
   );
 }
