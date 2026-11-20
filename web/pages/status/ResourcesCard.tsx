@@ -27,7 +27,8 @@ interface TileData {
   label: string;
   /** 大數字，例如「23%」；讀不到時是「—」 */
   value: string;
-  sub: string;
+  /** 小字說明，每段各自不斷行 */
+  sub: string[];
   pct: number | null;
   series: Series;
   now: number;
@@ -72,25 +73,27 @@ function Tile({ d }: { d: TileData }) {
   const path = sparkPath(d.series, d.now);
   return (
     <div className="res-tile" role="group" aria-label={d.label} data-tone={d.pct !== null && d.pct >= HIGH_PCT ? "warn" : ""}>
-      <div className="res-head">
-        <span className="res-label" title={d.label}>
-          {d.label}
-        </span>
-        <b className="res-value num">{d.value}</b>
-      </div>
-      <div className="res-bar" role="meter" aria-valuemin={0} aria-valuemax={100} aria-label={`${d.label}使用率`} aria-valuenow={Math.round(p)} aria-valuetext={d.value} hidden={d.pct === null}>
-        <i style={{ transform: `scaleX(${p / 100})` }} />
-      </div>
-      <svg className="res-spark" viewBox="0 0 100 28" preserveAspectRatio="none" role="img" aria-label={trendText(d.label, d.series)}>
-        <path className="res-spark-area" d={path.area} />
-        <path className="res-spark-line" d={path.line} vectorEffect="non-scaling-stroke" />
-      </svg>
-      <span className="res-sub num">{d.sub}</span>
+      <span className="res-label" title={d.label}>
+        {d.label}
+      </span>
+      <b className="res-value num" role="meter" aria-valuemin={0} aria-valuemax={100} aria-label={`${d.label}使用率`} aria-valuenow={Math.round(p)} aria-valuetext={d.value}>
+        {d.value}
+      </b>
+      <span className="res-sub num">
+        {d.sub.map((t) => (
+          <span key={t}>{t}</span>
+        ))}
+      </span>
       <ul className="res-extras" hidden={!d.extras?.length}>
         {d.extras?.map((t) => (
           <li key={t}>{t}</li>
         ))}
       </ul>
+      <svg className="res-spark" viewBox="0 0 100 28" preserveAspectRatio="none" role="img" aria-label={trendText(d.label, d.series)}>
+        <line className="res-spark-base" x1="0" y1="27.5" x2="100" y2="27.5" vectorEffect="non-scaling-stroke" />
+        <path className="res-spark-area" d={path.area} />
+        <path className="res-spark-line" d={path.line} vectorEffect="non-scaling-stroke" />
+      </svg>
     </div>
   );
 }
@@ -121,7 +124,7 @@ function gpuTile(g: GpuDto, history: MetricsPointDto[], now: number): TileData {
     label: g.name.replace(/^NVIDIA\s+(?=\S)/, ""),
     value: pctText(g.utilPct),
     pct: g.utilPct,
-    sub: parts.join("・"),
+    sub: parts,
     series: history.map((p) => ({ at: p.at, v: g.id in p.gpus ? (p.gpus[g.id] ?? null) : null })),
     now,
     extras: g.extras.map((e) => `${e.label}：${e.value}`),
@@ -139,7 +142,7 @@ function tilesOf(m: MetricsDto): TileData[] {
       label: "處理器",
       value: pctText(m.cpu.pct),
       pct: m.cpu.pct,
-      sub: limited(m.cpu.scope) ? `上限 ${cpuCores} 核心` : `共 ${cpuCores} 核心`,
+      sub: [limited(m.cpu.scope) ? `上限 ${cpuCores} 核心` : `共 ${cpuCores} 核心`],
       series: m.history.map((p) => ({ at: p.at, v: p.cpuPct })),
       now,
     },
@@ -148,7 +151,7 @@ function tilesOf(m: MetricsDto): TileData[] {
       label: "記憶體",
       value: pctText(memPct),
       pct: memPct,
-      sub: `${formatBytes(m.memory.usedBytes)} / ${limited(m.memory.scope) ? "上限 " : ""}${formatBytes(m.memory.totalBytes)}`,
+      sub: [`${formatBytes(m.memory.usedBytes)} / ${limited(m.memory.scope) ? "上限 " : ""}${formatBytes(m.memory.totalBytes)}`],
       series: m.history.map((p) => ({ at: p.at, v: p.memPct })),
       now,
     },
