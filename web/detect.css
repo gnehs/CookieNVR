@@ -260,3 +260,34 @@ code.path { font-family: var(--mono); font-size: 12.5px; padding: 1px 6px; borde
   .ev-filters .sel-trigger { padding: 0 10px; gap: 4px; font-size: 14.5px; }
   .ev-filters .sel-trigger > .icon, .ev-filters .sel-chevron, .ev-filters .dp-trigger > .icon { display: none; }
 }
+
+/* 物件辨識還沒開的 empty state（settings-system/ObjectsEmpty.tsx）：插圖＋標題＋說明＋開啟按鈕 */
+.obj-empty { display: grid; justify-items: center; text-align: center; padding: 32px 24px 28px; }
+.obj-empty > * + * { border-top: 0; }
+.obj-empty h2 { margin-top: 22px; font-size: 17px; font-weight: 650; text-wrap: balance; }
+.obj-empty p { max-width: 42ch; margin-top: 6px; color: var(--muted); font-size: 14px; text-wrap: pretty; }
+.obj-empty .btn { margin-top: 18px; }
+.obj-empty-art {
+  display: block; width: min(100%, 320px); height: auto;
+  --ill-sky-1: light-dark(#e6eefb, #18202e);
+  --ill-sky-2: light-dark(#f4f7fc, #1d222b);
+  --ill-sun: light-dark(#fbe3a6, #565d74);
+  --ill-hill: light-dark(#dce4ef, #222833);
+  --ill-ground: light-dark(#e7eaf0, #25282e);
+  --ill-tree: light-dark(#cad8cc, #2b3a32);
+  --ill-trunk: light-dark(#bcb3a7, #463f39);
+  --ill-wind: light-dark(#b6bfcc, #48505e);
+  --ill-ink: light-dark(#a3acbb, #59606e);
+  --ill-glass: light-dark(#e3e9f2, #2c323d);
+  --ill-wheel: light-dark(#6f7786, #33373f);
+  filter: drop-shadow(0 6px 14px light-dark(rgb(16 16 24 / 0.08), rgb(0 0 0 / 0.4)));
+}
+.obj-empty-art-edge { stroke: var(--border); stroke-width: 1; }
+.obj-empty-box-frame { fill: color-mix(in srgb, var(--accent) 10%, transparent); stroke: var(--accent); stroke-width: 1.6; }
+.obj-empty-box-tag { fill: var(--accent-fill); }
+.obj-empty-box-text { fill: #fff; font: 700 8.5px/1 var(--font); font-variant-numeric: tabular-nums; }
+/* 框一個接一個跳出來，像辨識逐一找到東西 */
+.obj-empty-box { transform-box: fill-box; transform-origin: center; animation: obj-box-in 420ms var(--ease-out) both; animation-delay: calc(240ms + var(--i) * 140ms); }
+@keyframes obj-box-in { from { opacity: 0; transform: scale(0.9); } }
+@media (prefers-reduced-motion: reduce) { .obj-empty-box { animation: none; } }
+@media (max-width: 560px) { .obj-empty { padding: 24px 16px 20px; } }
