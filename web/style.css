@@ -357,9 +357,9 @@ button, a, summary, label { touch-action: manipulation; }
 .cam-ph { color: var(--ph-icon); }
 .cam-tile[data-status="disabled"] .cam-frame { background: repeating-linear-gradient(135deg, var(--fill) 0 8px, var(--frame) 8px 16px); }
 .cam-status {
-  position: absolute; top: 8px; left: 8px; display: inline-flex; align-items: center; gap: 6px;
-  padding: 3px 9px 3px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; line-height: 1.5;
-  background: var(--surface); color: var(--text-2); box-shadow: var(--shadow-sm);
+  margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 9px 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; line-height: 1.5;
+  background: var(--fill); color: var(--text-2); box-shadow: inset 0 0 0 1px var(--edge);
 }
 .cam-status > i { width: 7px; height: 7px; border-radius: 50%; background-color: var(--muted); background-image: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.45), transparent 50%); box-shadow: none; }
 .cam-tile[data-status="recording"] .cam-status > i { background-color: var(--lamp-ok); }

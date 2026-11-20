@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CameraDto } from "../../src/api-types.ts";
 import { Icon } from "../ui/Icon.tsx";
 import { hasPoster, loadPoster, usePoster } from "./posters.ts";
@@ -26,15 +26,13 @@ export interface LiveFrameProps {
   onState?: (s: LiveState) => void;
   /** 加在 `.cam-frame` 上的 class（單台頁的 `live-stage`） */
   className?: string;
-  /** 疊在畫面上的東西（狀態標籤之類） */
-  children?: ReactNode;
 }
 
 /**
  * 一台攝影機的畫面（`.cam-frame`）：能播之後是即時 `<video>`，之前或不能播時是快照，兩者都沒有時是佔位圖示。
  * 這個元件只管畫面；連線由呼叫端用 `live/transport.ts` 開在 effect 裡，cleanup 時關掉。
  */
-export function LiveFrame({ cam, onTarget, onState, className, children }: LiveFrameProps) {
+export function LiveFrame({ cam, onTarget, onState, className }: LiveFrameProps) {
   const video = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<LiveState>(() => (liveSupported() ? { kind: "connecting" } : { kind: "unsupported", reason: "mse", codec: null }));
   const stateRef = useRef(state);
@@ -84,7 +82,6 @@ export function LiveFrame({ cam, onTarget, onState, className, children }: LiveF
       <span className="cam-note" hidden={state.kind !== "unsupported" || state.reason !== "codec"}>
         {state.kind === "unsupported" ? codecHint(state.codec) : null}
       </span>
-      {children}
     </span>
   );
 }

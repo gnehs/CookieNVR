@@ -28,15 +28,15 @@ function CameraTile({ cam, eventActive, register }: { cam: CameraDto; eventActiv
       title={cam.config.name}
       aria-label={[st.quiet ? null : st.label, cam.config.name, eventActive ? EVENT_ACTIVE.label : null].filter(Boolean).join(" ")}
     >
-      <LiveFrame cam={cam} onTarget={onTarget}>
+      <LiveFrame cam={cam} onTarget={onTarget} />
+      {/* 狀態放在名稱這一列的右邊，不蓋到畫面 */}
+      <span className="cam-name">
+        <i className="cam-event-dot" aria-hidden="true" title={EVENT_ACTIVE.label} />
+        <span className="cam-name-text">{cam.config.name}</span>
         <span className="cam-status" hidden={st.quiet}>
           <i aria-hidden="true" />
           <span>{st.label}</span>
         </span>
-      </LiveFrame>
-      <span className="cam-name">
-        <i className="cam-event-dot" aria-hidden="true" title={EVENT_ACTIVE.label} />
-        <span className="cam-name-text">{cam.config.name}</span>
       </span>
     </Link>
   );
