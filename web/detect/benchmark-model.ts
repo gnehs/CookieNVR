@@ -1,7 +1,8 @@
+import { joinClauses } from "../format.ts";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg, plural, t } from "@lingui/core/macro";
 import type { BenchmarkDto, BenchmarkResultDto, InferenceDeviceDto, ObjectModelDto } from "../../src/api-types.ts";
-import { cpuShareNote, listSeparator, rateClause, rateText, tidyName } from "./object-model.ts";
+import { cpuShareNote, rateClause, rateText, tidyName } from "./object-model.ts";
 
 /** 換算的假設，一句話；數字對應 src/objects/capacity.ts 的 HEADROOM */
 export const BENCHMARK_ASSUMPTION: MessageDescriptor = msg`Detection only runs when there is motion, and the estimate already leaves headroom for recording and decoding (half the CPU, 20% of a graphics card).`;
@@ -60,7 +61,7 @@ function detailOf(r: BenchmarkResultDto): string | null {
     const seconds = (r.loadMs / 1000).toFixed(1);
     parts.push(t`${seconds} s to load`);
   }
-  return parts.length ? parts.join(listSeparator()) : null;
+  return parts.length ? joinClauses(parts) : null;
 }
 
 /** 結論一句話：以目前使用的裝置為準；沒測到它就用最快的 */

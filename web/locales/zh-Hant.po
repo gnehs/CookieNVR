@@ -7,29 +7,1663 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: zh-Hant\n"
 
+#: web/format.ts
+#: web/pages/events/EventsPage.tsx
+msgctxt "clause separator"
+msgid ", "
+msgstr "，"
+
+#: web/format.ts
+msgctxt "list separator"
+msgid ", "
+msgstr "、"
+
+#: web/states/bits.tsx
+msgid ", may change to “{candidate}”"
+msgstr "，可能變成「{candidate}」"
+
+#: web/pages/storage/StoragePage.tsx
+msgid ". There's no day limit; when space runs low, the oldest recordings are deleted first."
+msgstr "的錄影。沒有天數上限，空間不夠時從最舊的開始刪除。"
+
+#: web/health.ts
+msgid "“{name}” can't see the picture"
+msgstr "「{name}」看不到畫面"
+
+#: web/states/model.ts
+msgid "“{name}” is used twice"
+msgstr "「{name}」重複了"
+
+#: web/health.ts
+msgid "“{name}” isn't trained yet"
+msgstr "「{name}」還沒訓練"
+
+#: web/health.ts
+msgid "“{name}” needs retraining"
+msgstr "「{name}」要重新訓練"
+
+#: web/pages/status/explain.ts
+msgid "“{sensor}” on {camera}"
+msgstr "{camera}的「{sensor}」"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "“{sensorName}” was created, but the import failed: {reason}"
+msgstr "已建立「{sensorName}」，但匯入失敗：{reason}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "\"{username}\" is now {role}"
+msgstr "「{username}」現在是{role}"
+
+#: web/detect/object-model.ts
+#: web/pages/settings-system/decode-model.ts
+msgid "(not found right now, choosing automatically)"
+msgstr "（目前找不到，暫時自動選擇）"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "(Username and password omitted)"
+msgstr "（帳號密碼已省略）"
+
+#. placeholder {0}: l.count
+#: web/pages/states/SensorPage.tsx
+msgid "{0, plural, one {# image} other {# images}}"
+msgstr "{0, plural, other {# 張}}"
+
+#: web/pages/status/StatusPage.tsx
+msgid "{active, plural, one {# camera is connected.} other {All # cameras are connected.}}"
+msgstr "{active, plural, other {# 台攝影機都已連線。}}"
+
+#: web/pages/status/StatusPage.tsx
+msgid "{active, plural, one {# camera is recording.} other {All # cameras are recording.}}"
+msgstr "{active, plural, other {# 台攝影機都在錄影。}}"
+
+#: web/pages/link/LinkPage.tsx
+msgid "{app} is already connected. There's nothing more to do."
+msgstr "{app} 已經連線了，不需要再做什麼。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "{app} won't connect to CookieNVR."
+msgstr "{app} 不會連線到 CookieNVR。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "{area} of the picture"
+msgstr "畫面的 {area}"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{badge}, running for {duration}"
+msgstr "{badge}，已持續 {duration}"
+
+#: web/pages/recordings/day.ts
+msgid "{base} ({rel})"
+msgstr "{base}（{rel}）"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "{br} on {os}"
+msgstr "{os} 上的 {br}"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "{cameraCount}, {groupCount}"
+msgstr "{cameraCount}，{groupCount}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {# camera has object detection on, but when it has motion only {supported} can be handled and the rest of its frames are skipped. Try lowering the detection rate or switching to a faster device.} other {# cameras have object detection on, but when they all have motion at once only {supported} can be handled and the rest of their frames are skipped. Try lowering the detection rate or switching to a faster device.}}"
+msgstr "{cameras, plural, other {目前有 # 台攝影機開了物件辨識，同時都有動作時最多處理 {supported} 台，其餘的畫面會被略過。可以降低辨識頻率，或換更快的裝置。}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {About # camera} other {About # cameras}}"
+msgstr "{cameras, plural, other {約 # 台}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {The # camera with object detection on can keep up even when it has motion.} other {The # cameras with object detection on can all keep up even when they all have motion at once.}}"
+msgstr "{cameras, plural, other {目前開啟物件辨識的 # 台攝影機，同時都有動作也來得及。}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {This machine can handle about # camera at the same time (each {clause})} other {This machine can handle about # cameras at the same time (each {clause})}}"
+msgstr "{cameras, plural, other {這台機器大約可以同時處理 # 台攝影機（每台{clause}）}}"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{camName}, {day} {clock}. The event and its thumbnail are deleted permanently. The recording is cleared later under the normal retention period."
+msgstr "{camName}，{day} {clock}。事件與縮圖會永久刪除，錄影之後照一般的保留天數清除。"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{chosenCount} selected"
+msgstr "已選 {chosenCount} 張"
+
+#: web/timeline/timeline.ts
+msgid "{clock} · {elapsed}"
+msgstr "{clock} · {elapsed}"
+
+#: web/timeline/timeline.ts
+msgid "{clock} · In progress"
+msgstr "{clock} · 進行中"
+
+#: web/states/CropEditor.tsx
+msgid "{corner}, resize with the arrow keys"
+msgstr "{corner}，用方向鍵調整大小"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "{count, plural, one {# area where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it.} other {# areas where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it.}}"
+msgstr "{count, plural, other {# 個不辨識的區域，物件中心落在裡面就不算。點一下區域可以調整或刪除。}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# camera not recording} other {# cameras not recording}}"
+msgstr "{count, plural, other {# 台沒在錄影}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# camera offline} other {# cameras offline}}"
+msgstr "{count, plural, other {# 台連不上}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# camera with unstable recording} other {# cameras with unstable recording}}"
+msgstr "{count, plural, other {# 台錄影不穩定}}"
+
+#: web/timeline/timeline.ts
+msgid "{count, plural, one {# event · {kinds}} other {# events · {kinds}}}"
+msgstr "{count, plural, other {# 個事件 · {kinds}}}"
+
+#: web/pages/recordings/Playback.tsx
+#: web/timeline/timeline.ts
+msgid "{count, plural, one {# event} other {# events}}"
+msgstr "{count, plural, other {# 個事件}}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{count, plural, one {# image of “{actual}” was read as “{predicted}”} other {# images of “{actual}” were read as “{predicted}”}}"
+msgstr "{count, plural, other {# 張「{actual}」被看成「{predicted}」}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# state sensor can't see the picture} other {# state sensors can't see the picture}}"
+msgstr "{count, plural, other {# 個狀態感應器看不到畫面}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# state sensor isn't trained yet} other {# state sensors aren't trained yet}}"
+msgstr "{count, plural, other {# 個狀態感應器還沒訓練}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# state sensor needs retraining} other {# state sensors need retraining}}"
+msgstr "{count, plural, other {# 個狀態感應器要重新訓練}}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "{count, plural, one {# user} other {# users}}"
+msgstr "{count, plural, other {共 # 位}}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{count, plural, one {Delete # picture?} other {Delete # pictures?}}"
+msgstr "{count, plural, other {刪除 # 張畫面？}}"
+
+#: web/pages/status/explain.ts
+msgid "{count, plural, one {Restart recording for # camera?} other {Restart recording for # cameras?}}"
+msgstr "{count, plural, other {重新開始 # 台的錄影？}}"
+
+#: web/health.ts
+msgid "{count} cameras not recording: {names}"
+msgstr "{count} 台沒在錄影：{names}"
+
+#: web/health.ts
+msgid "{count} cameras offline: {names}"
+msgstr "{count} 台連不上：{names}"
+
+#: web/health.ts
+msgid "{count} cameras with unstable recording: {names}"
+msgstr "{count} 台錄影不穩定：{names}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{cpuCores, plural, one {# core total} other {# cores total}}"
+msgstr "{cpuCores, plural, other {共 # 核心}}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{cpuCores, plural, one {Limit # core} other {Limit # cores}}"
+msgstr "{cpuCores, plural, other {上限 # 核心}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{d, plural, one {# day} other {# days}}"
+msgstr "{d, plural, other {# 天}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{d, plural, one {About # day fits} other {About # days fit}}"
+msgstr "{d, plural, other {大約可存 # 天}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{d, plural, one {Space only fits about # day} other {Space only fits about # days}}"
+msgstr "{d, plural, other {空間只夠存約 # 天}}"
+
+#: web/format.ts
+msgid "{days, plural, one {# day} other {# days}}"
+msgstr "{days, plural, other {# 天}}"
+
+#: web/pages/recordings/export.tsx
+msgid "{duration} · about {size}"
+msgstr "{duration} · 約 {size}"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{first} and {others} more"
+msgstr "{first}與其他 {others} 類"
+
+#: web/detect/object-model.ts
+msgid "{first} and {second}"
+msgstr "{first}與{second}"
+
+#: web/detect/object-model.ts
+msgid "{first}, {second} and {third}"
+msgstr "{first}、{second}與{third}"
+
+#: web/detect/object-model.ts
+msgid "{first}, {second}, etc. ({total} categories)"
+msgstr "{first}、{second}等 {total} 類"
+
+#: web/detect/benchmark-model.ts
+msgid "{fps} frames per second"
+msgstr "每秒約 {fps} 張"
+
+#: web/format.ts
+#: web/states/model.ts
+msgid "{hours, plural, one {# hour ago} other {# hours ago}}"
+msgstr "{hours, plural, other {# 小時前}}"
+
+#: web/format.ts
+msgid "{hours, plural, one {# hour} other {# hours}}"
+msgstr "{hours, plural, other {# 小時}}"
+
+#: web/app/Shell.tsx
+msgid "{issues, plural, one {# issue needs attention} other {# issues need attention}}"
+msgstr "{issues, plural, other {# 件事需要處理}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{keep, plural, one {, fewer than the # day you set, so the oldest recordings will be deleted early.} other {, fewer than the # days you set, so the oldest recordings will be deleted early.}}"
+msgstr "{keep, plural, other {，比設定的 # 天少，最舊的錄影會提早刪除。}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{keep, plural, one {. You keep recordings for # day, so there's enough space.} other {. You keep recordings for # days, so there's enough space.}}"
+msgstr "{keep, plural, other {的錄影。設定保留 # 天，空間足夠。}}"
+
+#: web/ui/controls.tsx
+#: web/ui/SettingRow.tsx
+msgid "{label} (custom, unit: {unit})"
+msgstr "{label}（自訂，單位 {unit}）"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label} over the last 10 minutes: average {avg}%, peak {peak}%"
+msgstr "{label}最近 10 分鐘：平均 {avg}%，最高 {peak}%"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label} recent trend: still collecting data"
+msgstr "{label}的近期走勢：還在收集"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label} usage"
+msgstr "{label}使用率"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label}: {value}"
+msgstr "{label}：{value}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{lost, plural, one {# labeled image of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.} other {# labeled images of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.}}"
+msgstr "{lost, plural, other {已標記成這些類別的 # 張畫面會退回待標記，之後要重新訓練才會繼續辨識。}}"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "{masks, plural, one {# excluded area} other {# excluded areas}}"
+msgstr "{masks, plural, other {# 個排除區域}}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{memUsed} / {memTotal}"
+msgstr "{memUsed} / {memTotal}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{memUsed} / limit {memTotal}"
+msgstr "{memUsed} / 上限 {memTotal}"
+
+#: web/format.ts
+#: web/states/model.ts
+msgid "{minutes, plural, one {# minute ago} other {# minutes ago}}"
+msgstr "{minutes, plural, other {# 分鐘前}}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{minutes, plural, one {Checks every # minute} other {Checks every # minutes}}"
+msgstr "{minutes, plural, other {每 # 分鐘看一次}}"
+
+#: web/pages/link/LinkPage.tsx
+msgid "{minutes, plural, one {Valid for # minute} other {Valid for # minutes}}"
+msgstr "{minutes, plural, other {# 分鐘內有效}}"
+
+#: web/format.ts
+msgid "{minutes} min"
+msgstr "{minutes} 分"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{minutes} min {seconds} sec"
+msgstr "{minutes} 分 {seconds} 秒"
+
+#: web/states/model.ts
+msgid "{missing} more as “{label}”"
+msgstr "「{label}」{missing} 張"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "{model} (file not found)"
+msgstr "{model}（找不到檔案）"
+
+#: web/detect/mask-editor.ts
+msgid "{more, plural, one {Add at least # more point to close it.} other {Add at least # more points to close it.}}"
+msgstr "{more, plural, other {再點 # 個點以上就能收合。}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{ms} ms for the slowest 10%"
+msgstr "最慢的一成約 {ms} 毫秒"
+
+#: web/detect/benchmark-model.ts
+msgid "{ms} ms per frame on average"
+msgstr "平均每張 {ms} 毫秒"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "{n, plural, one {# day} other {# days}}"
+msgstr "{n, plural, other {# 天}}"
+
+#: web/detect/mask-editor.ts
+msgid "{n, plural, one {# excluded area. Changes inside it won't trigger events. Tap an area to adjust or delete it.} other {# excluded areas. Changes inside them won't trigger events. Tap an area to adjust or delete one.}}"
+msgstr "{n, plural, other {#}} 個排除區域，裡面的變化不會觸發事件。點一下區域可以調整或刪除。"
+
+#: web/states/ClassesEditor.tsx
+msgid "{n, plural, one {# image} other {# images}}"
+msgstr "{n, plural, other {# 張}}"
+
+#: web/pages/status/StatusPage.tsx
+msgid "{n, plural, one {# thing needs attention} other {# things need attention}}"
+msgstr "{n, plural, other {有 # 件事需要處理}}"
+
+#: web/detect/object-model.ts
+msgid "{name} ({index})"
+msgstr "{name}（{index}）"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "{name} ({size})"
+msgstr "{name}（{size}）"
+
+#: web/health.ts
+msgid "{name} is not recording"
+msgstr "{name}沒在錄影"
+
+#: web/health.ts
+msgid "{name} is offline"
+msgstr "{name}連不上"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "{name}: {state}"
+msgstr "{name}：{state}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{oldCount} old locations ({oldList})"
+msgstr "{oldCount} 個舊的位置（{oldList}）"
+
+#: web/ui/controls.tsx
+msgid "{optLabel}, {optDesc}"
+msgstr "{optLabel}，{optDesc}"
+
+#: web/detect/object-model.ts
+msgid "{pct}% of the work runs on the CPU"
+msgstr "約 {pct}% 的運算在處理器上執行"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "{pending} to label"
+msgstr "{pending} 張待標記"
+
+#: web/detect/object-model.ts
+msgid "{perSecond, plural, one {# time per second} other {# times per second}}"
+msgstr "{perSecond, plural, other {每秒 # 次}}"
+
+#: web/detect/object-model.ts
+msgid "{perSecond, plural, one {detecting # time per second} other {detecting # times per second}}"
+msgstr "{perSecond, plural, other {每秒辨識 # 次}}"
+
+#: web/detect/object-model.ts
+msgid "{rounded} ms per frame on average"
+msgstr "每張約 {rounded} 毫秒"
+
+#: web/pages/link/LinkPage.tsx
+msgid "{s, plural, one {Valid for # second} other {Valid for # seconds}}"
+msgstr "{s, plural, other {# 秒內有效}}"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{scope}: no {what} events"
+msgstr "{scope}沒有看到{what}的事件"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{scope}: no events"
+msgstr "{scope}沒有事件"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{scope}: no events yet"
+msgstr "{scope}還沒有事件"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{seconds, plural, one {Checks every # second} other {Checks every # seconds}}"
+msgstr "{seconds, plural, other {每 # 秒看一次}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{seconds} s to load"
+msgstr "載入花了 {seconds} 秒"
+
+#: web/format.ts
+#: web/pages/events/EventsPage.tsx
+msgid "{seconds} sec"
+msgstr "{seconds} 秒"
+
+#: web/pages/recordings/export.tsx
+msgid "{selected}, up to 2 hours per export"
+msgstr "{selected}，一次最多匯出 2 小時"
+
+#: web/states/bits.tsx
+msgid "{sensorName}:"
+msgstr "{sensorName}："
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{source}: {label}"
+msgstr "{source}：{label}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{source}: {label} ({percent}%)"
+msgstr "{source}：{label}（{percent}%）"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
+msgstr "{suggestedCount, plural, other {# 張有預選的類別（虛線框），確認沒問題就一次標好。}}"
+
+#: web/detect/benchmark-model.ts
+#: web/detect/object-model.ts
+msgid "{text}."
+msgstr "{text}。"
+
+#: web/detect/benchmark-model.ts
+msgid "{text}. {device}: {shareText}"
+msgstr "{text}，不過{device}{shareText}"
+
+#: web/states/model.ts
+msgid "{total, plural, one {Checked against your # labeled image: {correct} correct} other {Checked against your # labeled images: {correct} correct}}"
+msgstr "{total, plural, other {用你標記的 # 張驗證，答對 {correct} 張}}"
+
+#: web/states/model.ts
+msgid "{total, plural, one {Checked against your # labeled image: correct} other {Checked against your # labeled images: all correct}}"
+msgstr "{total, plural, other {用你標記的 # 張驗證，全部答對}}"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "{totalCameras, plural, one {# camera} other {# cameras}}"
+msgstr "{totalCameras, plural, other {共 # 台}}"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "{totalGroups, plural, one {# group} other {# groups}}"
+msgstr "{totalGroups, plural, other {# 個分區}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{totalText} total · {recordedText} recorded"
+msgstr "共 {totalText} · 錄影佔 {recordedText}"
+
+#: web/states/model.ts
+msgid "{used, plural, one {Trained on # labeled image} other {Trained on # labeled images}}"
+msgstr "{used, plural, other {用 # 張標記好的畫面訓練完成}}"
+
+#: web/pages/status/explain.ts
+msgid "{used}% is used. The oldest recordings are deleted automatically before space runs out, and a shorter retention period keeps important clips from being deleted."
+msgstr "已用 {used}%。空間用完前會自動刪除最舊的錄影，縮短保留天數可以避免重要片段被刪掉。"
+
+#: web/pages/status/StatusPage.tsx
+msgid "{usedPct}% used"
+msgstr "已用 {usedPct}%"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{usedPct}% used, {partsText}, {freeText} free"
+msgstr "已用 {usedPct}%，{partsText}，可用 {freeText}"
+
+#: web/app/Shell.tsx
+msgid "{username} {role}, {menuName} menu"
+msgstr "{username} {role}，{menuName}選單"
+
+#: web/app/Shell.tsx
+msgid "{username} {role}, {menuName} menu, {issueText}"
+msgstr "{username} {role}，{menuName}選單，有 {issueText}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "{v} sec"
+msgstr "{v} 秒"
+
+#: web/pages/recordings/Playback.tsx
+msgid "{what} {clock} · {dur}"
+msgstr "{what} {clock} · {dur}"
+
+#: web/pages/recordings/Playback.tsx
+msgid "{what} {clock} · {dur} · In progress"
+msgstr "{what} {clock} · {dur} 進行中"
+
+#: web/detect/benchmark-model.ts
+msgid "{where}: {device}"
+msgstr "{where}：{device}"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Added to Home.</0> You can watch video in the Home app and get motion notifications."
+msgstr "<0>已加入家庭</0>可以在家庭 App 裡看畫面，也會收到動作通知。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Home hub:</0> You need an Apple TV, HomePod, or iPad at home acting as a home hub to get notified when motion is detected and to watch away from home."
+msgstr "<0>家庭中樞：</0>家裡要有一台當作家庭中樞的 Apple TV、HomePod 或 iPad，才會在偵測到動作時通知你、在外面也能看。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>iCloud+:</0> To have Apple store motion clips (Secure Video), you need an iCloud+ plan that includes it. Live video works without a subscription."
+msgstr "<0>iCloud+：</0>想讓 Apple 幫你保存動作片段（安全錄影），要訂閱含這項服務的 iCloud+ 方案。不訂閱也能看即時畫面。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Network setup:</0> Your iPhone finds the camera on your home network, so the CookieNVR container needs host networking (or its own LAN IP)."
+msgstr "<0>網路設定：</0>iPhone 是在家裡的網路上「找」到攝影機的，所以 CookieNVR 的容器要用 host 網路（或給它自己的區網 IP）。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Waiting to be added.</0> Scan the QR code below with your iPhone."
+msgstr "<0>等待加入</0>用 iPhone 掃描下面的 QR code。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "1 hour"
+msgstr "1 小時"
+
+#: web/pages/states/SensorPage.tsx
+msgid "1 min"
+msgstr "1 分鐘"
+
+#: web/pages/recordings/Playback.tsx
+msgid "10 minutes"
+msgstr "10 分鐘"
+
+#: web/pages/states/SensorPage.tsx
+msgid "10 sec"
+msgstr "10 秒"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "100% is all the CPU available to it"
+msgstr "以可用的處理器為 100%"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "100% is the CPU of the whole machine"
+msgstr "以整台機器的處理器為 100%"
+
+#: web/pages/recordings/Playback.tsx
+msgid "24 hours"
+msgstr "24 小時"
+
+#: web/detect/object-model.ts
+msgid "3 times per second"
+msgstr "每秒 3 次"
+
+#: web/pages/states/SensorPage.tsx
+msgid "5 sec"
+msgstr "5 秒"
+
+#: web/detect/object-model.ts
+msgid "5 times per second"
+msgstr "每秒 5 次"
+
+#: web/pages/recordings/Playback.tsx
+msgid "6 hours"
+msgstr "6 小時"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "A GPU is present, but its usage can't be read right now. The reason is in “Copy diagnostics”."
+msgstr "有顯示卡，但目前讀不到它的使用情況；原因寫在「複製診斷資訊」裡。"
+
+#: web/detect/object-model.ts
+msgid "A graphics card is faster at detecting objects and puts little load on the CPU."
+msgstr "顯卡辨識得比較快，也不太佔用處理器。"
+
+#: web/pages/status/explain.ts
+msgid "A state sensor has to see each look first (for example, a door open and a door closed) before it can tell them apart. Once you have labeled the pictures, training takes only a few seconds to a few dozen seconds. If you no longer need it, you can also just delete it."
+msgstr "狀態感應器要先看過每一種樣子（例如門開著、關著的畫面）才會判斷。標記好之後訓練只要幾秒到幾十秒。不需要了也可以直接刪除它。"
+
+#: web/states/ClassesEditor.tsx
+msgid "A transition between open and closed (for example “Moving”) can be its own class, or you can leave it out."
+msgstr "開關之間的過渡（例如「移動中」）可以另外加一類，不加也可以。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "A zip exported from Frigate; its labels come along"
+msgstr "Frigate 匯出的 zip，標記會一起帶進來"
+
 #: web/pages/account/Appearance.tsx
 msgid "Accent color"
 msgstr "主色"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Accept suggestion"
+msgstr "採用預選"
+
+#: web/app/Shell.tsx
+msgid "Account"
+msgstr "帳號"
+
+#: web/app/Shell.tsx
+msgid "Account and settings"
+msgstr "帳號與設定"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Add"
+msgstr "新增"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Add a class?"
+msgstr "新增類別？"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Add an area to ignore"
+msgstr "新增不辨識的區域"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Add another"
+msgstr "再加一個"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Add another camera"
+msgstr "再加一台"
+
+#: web/states/model.ts
+msgid "Add at least 2 classes"
+msgstr "至少要有 2 個類別"
+
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings-cameras/CamerasListPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Add camera"
+msgstr "新增攝影機"
+
+#: web/states/ClassesEditor.tsx
+msgid "Add class"
+msgstr "新增類別"
+
+#: web/detect/mask-editor.ts
+msgid "Add excluded area"
+msgstr "新增排除區域"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Add group"
+msgstr "新增分區"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+#: web/pages/states/NewSensorPage.tsx
+msgid "Add state sensor"
+msgstr "新增狀態感應器"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Add to Apple Home"
+msgstr "加入 Apple 家庭"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Add user"
+msgstr "新增使用者"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Add your first camera"
+msgstr "加入第一台攝影機"
+
+#: web/pages/cameras/CamerasPage.tsx
+msgid "Add your first camera and it starts recording right away."
+msgstr "加入第一台攝影機，馬上就會開始錄影。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Added"
+msgstr "已加入"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Added \"{name}\""
+msgstr "已加入「{name}」"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Added \"{username}\""
+msgstr "已新增「{username}」"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Added group \"{groupName}\". Drag cameras into it."
+msgstr "已新增分區「{groupName}」，把攝影機拖進去吧"
+
+#: web/pages/recordings/export.tsx
+msgid "Added to exports. You can download it below the timeline when it's done."
+msgstr "已加入匯出，完成後可以在時間軸下方下載"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Adjust area"
+msgstr "調整區域"
+
+#: web/pages/status/explain.ts
+msgid "Adjust retention"
+msgstr "調整保留"
+
+#: web/pages/status/explain.ts
+msgid "Adjust settings"
+msgstr "調整設定"
+
+#: web/app/Shell.tsx
+#: web/pages/account/AccountPage.tsx
+msgid "Admin"
+msgstr "管理員"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Admin account required"
+msgstr "需要管理員帳號"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Administrator"
+msgstr "管理員"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Advanced"
+msgstr "進階"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Advanced settings"
+msgstr "進階設定"
+
+#: web/pages/states/SensorPage.tsx
+msgid "After adding a class, label pictures for it and retrain. Detection stays paused until then."
+msgstr "新增類別後要標記這一類的畫面並重新訓練，在那之前會暫停辨識。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "After deleting classes, retrain to resume detection."
+msgstr "刪除類別後要重新訓練才會繼續辨識。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "After moving the area, the labeled pictures still show the old area. It’s best to pick new pictures and retrain."
+msgstr "移動區域後，原本標記的畫面仍然是舊區域的樣子，最好重新挑選畫面再訓練。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "After turning on \"Let other apps read camera video\" under Settings → General, VLC or Home Assistant can use this URL to watch this camera."
+msgstr "在「設定 → 一般」開啟「讓其他 App 讀取攝影機畫面」後，VLC 或 Home Assistant 可以用這個網址看這台攝影機。"
+
+#: web/pages/status/explain.ts
+msgid "After you add or delete a class, what was learned before no longer matches the new classes, so recognition is paused. Label a few pictures for each new class, then press “Retrain”."
+msgstr "新增或刪除類別後，之前學到的已經對不上新的類別，所以暫停判斷。新增的類別要先標記幾張畫面，再按「重新訓練」。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Airplane"
+msgstr "飛機"
+
+#: web/pages/events/EventsPage.tsx
+msgid "All cameras"
+msgstr "所有攝影機"
+
+#: web/pages/events/EventsPage.tsx
+msgid "All categories"
+msgstr "所有類別"
+
+#: web/pages/events/EventsPage.tsx
+msgid "All dates"
+msgstr "所有日期"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "All labeled"
+msgstr "都標記好了"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Allow"
+msgstr "允許"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Allow {app} to connect?"
+msgstr "允許「{app}」連線？"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Allowed"
+msgstr "已允許"
+
+#: web/pages/status/explain.ts
+msgid "Almost full"
+msgstr "快滿了"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Also delete this camera's recordings"
+msgstr "同時刪除這台的錄影"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Animal"
+msgstr "動物"
+
+#: web/detect/object-model.ts
+msgid "Annotate"
+msgstr "標註"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Another {oldSize} of recordings are in {where}. They aren't counted in the capacity above; they still play back and are cleared automatically by the retention days."
+msgstr "另有 {oldSize} 錄影在{where}，不算在上面的容量裡；照常可以回放，會照保留天數自動清掉。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Any camera that supports RTSP"
+msgstr "任何支援 RTSP 的攝影機"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "App name"
+msgstr "App 名稱"
+
+#: web/pages/status/explain.ts
+msgid "appdata disk"
+msgstr "appdata 硬碟"
+
+#: web/health.ts
+msgid "appdata disk is almost full"
+msgstr "appdata 硬碟快滿了"
+
+#: web/health.ts
+msgid "appdata disk space is low"
+msgstr "appdata 硬碟的空間不足"
+
+#: web/pages/status/StatusPage.tsx
+msgid "appdata disk: {dataFree} free, {dataTotal} total"
+msgstr "appdata 硬碟：可用 {dataFree}，共 {dataTotal}"
 
 #: web/pages/account/Appearance.tsx
 msgid "Appearance"
 msgstr "外觀"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Apple"
+msgstr "蘋果"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/status/ResourcesCard.tsx
+msgid "Apple Home"
+msgstr "Apple 家庭"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Apple Home (experimental)"
+msgstr "Apple 家庭（實驗性）"
+
 #: web/pages/account/Appearance.tsx
 msgid "Applies to this browser only"
 msgstr "只套用在這個瀏覽器"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Apps connected with this key lose access immediately."
+msgstr "用這組密鑰連線的 App 會立刻無法存取。"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "Areas to ignore"
+msgstr "不辨識的區域"
+
+#: web/pages/cameras/CamerasPage.tsx
+msgid "Ask an admin to add a camera."
+msgstr "請管理員加入攝影機。"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Ask an admin to add a camera. Detected motion will show up here."
+msgstr "請管理員加入攝影機，偵測到的動作會出現在這裡。"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Ask an admin to add a camera. The footage will show up here."
+msgstr "請管理員加入攝影機，錄好的影片會出現在這裡。"
+
+#: web/pages/auth/AuthPage.tsx
+#: web/pages/settings-users/UsersPage.tsx
+msgid "At least 8 characters"
+msgstr "至少 8 個字元"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "At least 8 characters. Other devices will need to sign in again after you change it."
+msgstr "至少 8 個字元。變更後，其他裝置需要重新登入。"
+
+#: web/states/model.ts
+msgid "At most {max} classes"
+msgstr "最多 {max} 個類別"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Auto"
+msgstr "自動"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Auto (default)"
+msgstr "自動（預設）"
+
+#: web/detect/object-model.ts
+msgid "Auto (recommended)"
+msgstr "自動（建議）"
+
+#: web/pages/status/StatusPage.tsx
+msgid "available, {total} total"
+msgstr "可用，共 {total}"
+
+#: web/pages/settings/SettingsLayout.tsx
+#: web/ui/Panel.tsx
+msgid "Back"
+msgstr "返回"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Back / forward 10 seconds"
+msgstr "前後 10 秒"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Back to camera settings"
+msgstr "回到攝影機設定"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/NewSensorPage.tsx
+msgid "Back to cameras"
+msgstr "回到攝影機列表"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Back to latest"
+msgstr "回到最新"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Back to playhead"
+msgstr "回到播放位置"
+
+#: web/detect/mask-editor.ts
+msgid "Back to the first point to finish this area"
+msgstr "回到第一點，完成這個區域"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Backpack"
+msgstr "背包"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Banana"
+msgstr "香蕉"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Baseball bat"
+msgstr "球棒"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Baseball glove"
+msgstr "棒球手套"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Basic"
+msgstr "基本"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bear"
+msgstr "熊"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bed"
+msgstr "床"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Before you use it"
+msgstr "使用前要知道"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bench"
+msgstr "長椅"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Benchmark"
+msgstr "測速"
+
+#: web/detect/benchmark-model.ts
+msgid "Benchmark cancelled."
+msgstr "測速已取消。"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Benchmark progress"
+msgstr "測速進度"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Benchmark results per device"
+msgstr "各裝置的測速結果"
+
+#: web/detect/object-model.ts
+msgid "Benchmarking, detection paused"
+msgstr "測速中，暫停辨識"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bicycle"
+msgstr "腳踏車"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bird"
+msgstr "鳥"
 
 #: web/theme.ts
 msgid "Blue"
 msgstr "藍"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Boat"
+msgstr "船"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Book"
+msgstr "書"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Both"
+msgstr "兩者都用"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bottle"
+msgstr "瓶子"
+
+#: web/states/CropEditor.tsx
+msgid "Bottom left corner"
+msgstr "左下角"
+
+#: web/states/CropEditor.tsx
+msgid "Bottom right corner"
+msgstr "右下角"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bowl"
+msgstr "碗"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Box the area"
+msgstr "框出區域"
+
+#: web/states/CropEditor.tsx
+msgid "Box the thing to check (for example the whole door) and leave a little margin. Drag on an empty spot to redraw."
+msgstr "框住要判斷的東西（例如整扇門），四周留一點邊。在畫面空白處拖曳可以重畫。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Broccoli"
+msgstr "花椰菜"
+
+#: web/detect/benchmark-model.ts
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Built-in model"
+msgstr "內建模型"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bus"
+msgstr "公車"
+
+#: web/pages/status/explain.ts
+msgid "Busy for a long time"
+msgstr "長時間忙碌"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cake"
+msgstr "蛋糕"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Calculating…"
+msgstr "正在計算…"
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Camera"
+msgstr "攝影機"
+
+#: web/pages/camera/PtzPanel.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Camera control"
+msgstr "鏡頭控制"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Camera control is unavailable right now"
+msgstr "暫時無法控制鏡頭"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Camera detection"
+msgstr "相機偵測"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Camera direction"
+msgstr "鏡頭方向"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera IP address"
+msgstr "相機 IP 位址"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/NewSensorPage.tsx
+msgid "Camera not found"
+msgstr "找不到這台攝影機"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera password"
+msgstr "相機密碼"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera type"
+msgstr "攝影機類型"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera username"
+msgstr "相機帳號"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Camera: {camera}"
+msgstr "攝影機：{camera}"
+
+#: web/app/Shell.tsx
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings/SettingsLayout.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Cameras"
+msgstr "攝影機"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Cameras with a sub-stream gain very little. The CPU savings only show when decoding the main stream directly or high-resolution H.265."
+msgstr "有子碼流的攝影機效益很小，直接解主碼流或高解析度 H.265 時才明顯省處理器。"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Cameras without a group appear first on the home page"
+msgstr "沒有分區的攝影機會排在首頁最前面"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Can also change all settings"
+msgstr "還可以變更所有設定"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Can view live video and recordings"
+msgstr "可以看畫面與錄影"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Can't add: video format not supported"
+msgstr "無法加入：畫面格式不支援"
+
+#: web/detect/benchmark-model.ts
+msgid "Can't be benchmarked"
+msgstr "無法測速"
+
+#: web/pages/status/explain.ts
+msgid "Can't connect"
+msgstr "連不上"
+
+#: web/camera-form-logic.ts
+msgid "Can't find this hostname. Check it for typos."
+msgstr "找不到這個主機名稱，請檢查是否打錯字。"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Can't find your graphics card?"
+msgstr "找不到你的顯示卡？"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Can't get the picture right now"
+msgstr "目前拿不到畫面"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Can't get the picture right now. The camera may be unreachable."
+msgstr "目前拿不到畫面，相機可能連不上"
+
+#: web/states/CropEditor.tsx
+msgid "Can’t get this camera’s picture. Draw a rough box for now and adjust it later."
+msgstr "拿不到這台的畫面，可以先框個大概，之後再調整。"
+
+#: web/pages/status/explain.ts
+msgid "Can't keep up"
+msgstr "跟不上"
+
+#: web/playback/player.ts
+msgid "Can't load the recording right now. Retrying…"
+msgstr "暫時無法載入錄影，正在重試…"
+
+#: web/pages/link/LinkPage.tsx
+#: web/ui/states.tsx
+msgid "Can't open this right now"
+msgstr "這裡暫時打不開"
+
+#: web/camera-form-logic.ts
+msgid "Can't reach this address. Check that the camera is on and on the same network as this host."
+msgstr "連不到這個位址，請確認相機已開機，且和這台主機在同一個網路。"
+
+#: web/camera-form-logic.ts
+msgid "Can't read any video. Check that the IP address is correct and the camera is on."
+msgstr "讀不到影像，請確認 IP 位址正確、相機已開機。"
+
+#: web/camera-form-logic.ts
+msgid "Can't read any video. Check that the stream URL is correct and the camera's RTSP feature is turned on."
+msgstr "讀不到影像，請確認串流網址正確、相機的 RTSP 功能已開啟。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Can't read this camera's video right now. Turn this on after it connects."
+msgstr "目前讀不到這台的畫面，等它連上後再開啟。"
+
+#: web/pages/status/explain.ts
+msgid "Can't see the picture"
+msgstr "看不到畫面"
+
+#: web/detect/mask-editor.ts
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/recordings/export.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+#: web/pages/settings-system/BenchmarkSection.tsx
+#: web/pages/settings-users/UsersPage.tsx
+#: web/pages/states/LabelBoard.tsx
+#: web/ui/Dialog.tsx
+msgid "Cancel"
+msgstr "取消"
+
+#: web/pages/recordings/export.tsx
+msgid "Cancel export {title}"
+msgstr "取消匯出 {title}"
+
+#: web/pages/recordings/export.tsx
+msgid "Cancel selection"
+msgstr "取消選取"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Car"
+msgstr "汽車"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Car 91%"
+msgstr "車 91%"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Carrot"
+msgstr "紅蘿蔔"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cat"
+msgstr "貓"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Cat 88%"
+msgstr "貓 88%"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Category"
+msgstr "類別"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Caught up to live, back to 1× speed"
+msgstr "已追到最新，改回 1 倍速"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cell phone"
+msgstr "手機"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Chair"
+msgstr "椅子"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Change and save"
+msgstr "更改並儲存"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Change area {area}"
+msgstr "變化範圍 {area}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Change area larger than"
+msgstr "變化範圍超過"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Change password"
+msgstr "變更密碼"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Change the storage location?"
+msgstr "更改儲存位置？"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Changes to excluded areas show up here after you save."
+msgstr "調整後的排除區域，儲存後才會反映在這裡。"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Changes to sensitivity and excluded areas show up here after you save."
+msgstr "調整後的靈敏度與排除區域，儲存後才會反映在這裡。"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Changes to sensitivity show up here after you save."
+msgstr "調整後的靈敏度，儲存後才會反映在這裡。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Check right away on change"
+msgstr "畫面有變化時馬上看"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Check roughly how many cameras this machine can handle at the same time."
+msgstr "測一下這台機器大約可以同時處理幾台攝影機。"
+
+#: web/pages/status/explain.ts
+msgid "Check settings"
+msgstr "檢查設定"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Checking this camera…"
+msgstr "正在檢查這台攝影機…"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Checking…"
+msgstr "正在檢查…"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Checks immediately when something moves in the area, so it switches faster."
+msgstr "區域裡有動靜時立刻判斷一次，切換得更快。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Checks on change only"
+msgstr "有變化時才看"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Choose a zip file"
+msgstr "選擇 zip 檔"
+
 #: web/pages/account/Appearance.tsx
 msgid "Choose light or dark, or follow your system automatically."
 msgstr "選擇淺色或深色，或跟著系統自動切換。"
 
+#: web/pages/states/NewSensorPage.tsx
+msgid "Choose the zip file exported from Frigate"
+msgstr "請選擇 Frigate 匯出的 zip 檔"
+
+#: web/detect/object-model.ts
+msgid "Chosen automatically: currently using {name}. Uses a graphics card if one is available, otherwise the CPU."
+msgstr "自動選擇：目前用的是 {name}。有可用的顯卡就用顯卡，沒有就用處理器。"
+
+#: web/states/ClassesEditor.tsx
+msgid "class {num}"
+msgstr "第 {num} 類"
+
+#: web/states/model.ts
+msgid "Class names can be at most {max} characters"
+msgstr "類別名稱最多 {max} 個字"
+
+#: web/states/model.ts
+msgid "Class names can't be empty"
+msgstr "類別名稱不能空白"
+
+#: web/states/model.ts
+msgid "Class names can't contain a slash or backslash"
+msgstr "類別名稱不能有 / 或 \\"
+
+#: web/states/model.ts
+msgid "Class names can't start with a dot"
+msgstr "類別名稱不能以 . 開頭"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Classes"
+msgstr "類別"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Classes changed. Detection resumes after retraining."
+msgstr "類別改過了，重新訓練後才會繼續辨識。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear"
+msgstr "清除"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Clear filters"
+msgstr "清除篩選"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear recordings"
+msgstr "清除錄影"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear recordings of deleted cameras"
+msgstr "清除已刪除攝影機的錄影"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear recordings of deleted cameras?"
+msgstr "清除已刪除攝影機的錄影？"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Cleared, freed {freed}"
+msgstr "已清除，釋放 {freed}"
+
+#: web/timeline/timeline.ts
+msgid "Click to zoom into this stretch"
+msgstr "點一下放大這一段"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Click which class each picture belongs to. The more you label, and under more kinds of light, the more accurate detection gets."
+msgstr "每張畫面點一下它是哪一類。標得越多、越多種光線，判斷越準。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clips recorded when motion is detected. They can usually be kept longer than continuous recording."
+msgstr "偵測到動靜時的片段，通常可以留得比連續錄影久。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Clock"
+msgstr "時鐘"
+
+#: web/states/model.ts
+msgid "Closed"
+msgstr "關"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Code {spelledCode}"
+msgstr "代碼 {spelledCode}"
+
+#: web/app/Shell.tsx
+msgid "Collapse sidebar"
+msgstr "收合側欄"
+
 #: web/pages/account/Appearance.tsx
 msgid "Color mode"
 msgstr "色彩模式"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Compares changes in the picture. Works with every camera and can exclude areas you don't need."
+msgstr "比對畫面的變化，每台攝影機都能用，也能排除不需要的區域。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Confidence must be between 50% and 99%"
+msgstr "把握程度要在 50% 到 99% 之間"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Confirm new password"
+msgstr "再次輸入新密碼"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Confirm password"
+msgstr "再次輸入密碼"
+
+#: web/states/model.ts
+msgid "Confirming: {candidate}"
+msgstr "確認中：{candidate}"
+
+#: web/states/model.ts
+msgid "Confirming…"
+msgstr "確認中…"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Connect other apps"
+msgstr "連接其他 App"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Connected"
+msgstr "連線成功"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Connected and saved"
+msgstr "連線成功，已儲存"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Connection"
+msgstr "連線"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Connection code"
+msgstr "連線代碼"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Conservative"
+msgstr "保守"
+
+#: web/pages/link/LinkPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Continue"
+msgstr "繼續"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Continuous recording"
+msgstr "連續錄影"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Continuous recording is off for this camera."
+msgstr "這台攝影機沒有開啟全天候錄影。"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "CookieNVR camera connection test failed"
+msgstr "CookieNVR 測試攝影機連線失敗"
+
+#: web/pages/status/explain.ts
+msgid "CookieNVR runs as the user set by PUID/PGID, but the recording folder contains folders it can't write to, usually created earlier when it ran as root (PUID not set). Restarting the container hands the folders to this user automatically. If it still doesn't work, give the recording and appdata folders to PUID:PGID on the host (for example chown -R 99:100 <path on the host>), then restart the container."
+msgstr "CookieNVR 以 PUID／PGID 設定的使用者執行，錄影資料夾裡卻有它不能寫的資料夾，多半是之前以 root 執行（沒設 PUID）時建立的。重新啟動容器時會自動把資料夾交給這個使用者；仍然不行時，在主機上把錄影與 appdata 的資料夾交給 PUID:PGID（例如 chown -R 99:100 <主機上的路徑>），再重新啟動容器。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "CookieNVR's own 24/7 recording is unaffected. Recording settings in the Home app only apply on Apple's side."
+msgstr "CookieNVR 自己的全天候錄影不受影響，家庭 App 裡的錄影設定只管 Apple 那邊。"
+
+#: web/ui/Button.tsx
+msgid "Copied"
+msgstr "已複製"
+
+#: web/ui/Button.tsx
+msgid "Copied {label}"
+msgstr "已複製{label}"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Copy"
+msgstr "複製"
+
+#: web/pages/states/SensorPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Copy diagnostics"
+msgstr "複製診斷資訊"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Copy error"
+msgstr "複製錯誤內容"
+
+#: web/ui/Button.tsx
+msgid "Copy failed"
+msgstr "複製失敗"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Copy it now and paste it into that app's settings. You won't be able to see the full key after leaving this page."
+msgstr "現在複製起來，貼到那個 App 的設定裡。離開這頁後就看不到完整內容了。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Copy low-quality URL"
+msgstr "複製低畫質網址"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Copy stream URL"
+msgstr "複製串流網址"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Couch"
+msgstr "沙發"
+
+#: web/ui/Button.tsx
+msgid "Couldn't copy. Select the text manually."
+msgstr "無法複製，請手動選取"
+
+#: web/ui/Button.tsx
+msgid "Couldn't copy. Try again."
+msgstr "無法複製，請再試一次"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Couldn't load earlier events"
+msgstr "更早的事件沒有載入成功"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Couldn't reach this camera, so nothing was saved"
+msgstr "連不上這台攝影機，所以還沒儲存"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Couldn't start, reset pairing"
+msgstr "無法啟動，請重設配對"
+
+#: web/detect/object-model.ts
+msgid "Counts detections it isn't very sure about. Fewer misses, but more false alarms."
+msgstr "不太確定的也算，比較不會漏掉，但可能多一些誤判。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Counts when either one detects something, so fewer things are missed."
+msgstr "任一個偵測到就算，比較不會漏掉。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cow"
+msgstr "牛"
+
+#: web/detect/object-model.ts
+#: web/pages/settings-system/decode-model.ts
+#: web/pages/status/explain.ts
+#: web/pages/status/ResourcesCard.tsx
+msgid "CPU"
+msgstr "處理器"
+
+#: web/detect/object-model.ts
+msgid "CPU: {name}"
+msgstr "處理器：{name}"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Create account"
+msgstr "建立帳號"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Create and start labeling"
+msgstr "建立並開始標記"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Create connection key"
+msgstr "建立連線密鑰"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Create the username and password in the Tapo app under \"Advanced settings → Camera account\". It is <0>not</0> your TP-Link cloud account."
+msgstr "帳號密碼請在 Tapo App 的「進階設定 → 相機帳戶」建立，<0>不是</0> TP-Link 雲端帳號。"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Created {ago}, never used"
+msgstr "{ago}建立，還沒用過"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Creates an event whenever something moves, so you can find it quickly on the Events page."
+msgstr "有動靜時建立事件，之後可以在「事件」頁快速找到。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Creating…"
+msgstr "建立中…"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cup"
+msgstr "杯子"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Current password"
+msgstr "目前密碼"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Current state"
+msgstr "目前狀態"
 
 #: web/pages/account/Appearance.tsx
 msgid "Currently dark"
@@ -39,25 +1673,1253 @@ msgstr "目前為深色"
 msgid "Currently light"
 msgstr "目前為淺色"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+#: web/ui/controls.tsx
+#: web/ui/SettingRow.tsx
+msgid "Custom"
+msgstr "自訂"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Custom sensitivity"
+msgstr "自訂靈敏度"
+
+#: web/ui/SettingRow.tsx
+msgid "Custom…"
+msgstr "自訂…"
+
 #: web/pages/account/Appearance.tsx
 msgid "Dark"
 msgstr "深色"
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+msgid "Date"
+msgstr "日期"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "days"
+msgstr "天"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Default speed"
+msgstr "預設速度"
+
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings-users/UsersPage.tsx
+#: web/pages/states/LabelBoard.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Delete"
+msgstr "刪除"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Delete \"{askName}\"?"
+msgstr "刪除「{askName}」？"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Delete “{name}”"
+msgstr "刪除「{name}」"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Delete “{name}”? The preset will be removed from the camera."
+msgstr "要刪除「{name}」嗎？這個預置點會從相機上移除。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete “{removedList}”?"
+msgstr "刪除「{removedList}」？"
+
+#: web/states/ClassesEditor.tsx
+msgid "Delete “{rowName}”"
+msgstr "刪除「{rowName}」"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete “{sensorName}”?"
+msgstr "刪除「{sensorName}」？"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Delete \"{username}\"?"
+msgstr "刪除「{username}」？"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete and save"
+msgstr "刪除並儲存"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Delete camera"
+msgstr "刪除攝影機"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Delete camera and recordings"
+msgstr "刪除攝影機與錄影"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Delete event"
+msgstr "刪除事件"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Delete group"
+msgstr "刪除分區"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Delete preset"
+msgstr "刪除預置點"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete sensor"
+msgstr "刪除感應器"
+
+#: web/detect/mask-editor.ts
+msgid "Delete this area"
+msgstr "刪除這個區域"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Delete this camera"
+msgstr "刪除這台攝影機"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Delete this event?"
+msgstr "刪除這筆事件？"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete this sensor"
+msgstr "刪除這個感應器"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Deleted \"{name}\""
+msgstr "已刪除「{name}」"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Deleted “{name}”"
+msgstr "已刪除「{name}」"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Deleted “{sensorName}”"
+msgstr "已刪除「{sensorName}」"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Deleted \"{username}\""
+msgstr "已刪除「{username}」"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Deleted camera"
+msgstr "已刪除的攝影機"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Deleted cameras"
+msgstr "已刪除的攝影機"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Deleted group \"{name}\". Its cameras were moved to Ungrouped."
+msgstr "已刪除分區「{name}」，裡面的攝影機移到未分區"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Deleted pictures won’t be used for training. This can’t be undone."
+msgstr "刪除後就不會用來訓練，無法復原。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Denied"
+msgstr "已拒絕"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Deny"
+msgstr "拒絕"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Detailed numbers"
+msgstr "詳細數字"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Details"
+msgstr "詳細資訊"
+
+#: web/detect/object-model.ts
+msgid "Detect {list}"
+msgstr "辨識{list}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Detect motion"
+msgstr "偵測動作"
+
+#: web/detect/object-model.ts
+msgid "Detect objects"
+msgstr "辨識物件"
+
+#: web/pages/settings-system/DecodeRow.tsx
+msgid "Detecting graphics cards…"
+msgstr "正在偵測顯示卡…"
+
+#: web/detect/object-model.ts
+msgid "detecting once every {seconds} seconds"
+msgstr "每 {seconds} 秒辨識 1 次"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Detection"
+msgstr "偵測"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Detection accuracy"
+msgstr "辨識的準確度"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Detection area"
+msgstr "辨識區域"
+
+#: web/states/CropEditor.tsx
+msgid "Detection area. Move it with the arrow keys; hold Shift to move further."
+msgstr "辨識區域。用方向鍵移動，按住 Shift 一次移動多一點"
+
+#: web/states/model.ts
+msgid "Detection isn't running"
+msgstr "辨識程序沒有運作"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Detection method"
+msgstr "偵測方式"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Detection model"
+msgstr "辨識模型"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Detection only looks inside the box. Fit it snugly around “{trimmedName}” for the best results."
+msgstr "只看框裡的畫面來判斷。框得剛好包住「{trimmedName}」，判斷會最準。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Detection only looks inside the box. Fit it snugly around the thing to check for the best results."
+msgstr "只看框裡的畫面來判斷。框得剛好包住要判斷的東西，判斷會最準。"
+
+#: web/detect/benchmark-model.ts
+msgid "Detection only runs when there is motion, and the estimate already leaves headroom for recording and decoding (half the CPU, 20% of a graphics card)."
+msgstr "只在有動作時才辨識，換算時已替錄影與解碼保留餘裕（處理器留一半、顯卡留兩成）。"
+
+#: web/states/model.ts
+msgid "Detection paused"
+msgstr "已暫停辨識"
+
+#: web/detect/benchmark-model.ts
+msgid "Detection pauses during the test while events keep being recorded (cameras set to \"Filter\" temporarily switch to labeling). Each device takes about ten-odd seconds, and the first run on a graphics card may take longer."
+msgstr "測速期間辨識會暫停，事件照常記錄（設為「過濾」的攝影機暫時改成標註）。每個裝置約需十幾秒，第一次使用顯卡可能更久。"
+
+#: web/pages/status/explain.ts
+msgid "Detection will be interrupted for a few seconds. Recording is not affected."
+msgstr "辨識會中斷幾秒鐘，錄影不受影響。"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Detections per second"
+msgstr "每秒辨識幾次"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Device"
+msgstr "裝置"
+
+#: web/detect/benchmark-model.ts
+msgid "Device {current} of {total}"
+msgstr "第 {current} 個裝置，共 {total} 個"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Devices to test"
+msgstr "要測哪些裝置"
+
+#: web/pages/states/SensorPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Diagnostics copied. You can paste them to an AI or a technician."
+msgstr "已複製診斷資訊，可以貼給 AI 或技術人員"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Dining table"
+msgstr "餐桌"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Disable"
+msgstr "停用"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Disabled"
+msgstr "已停用"
+
+#: web/health.ts
+msgctxt "camera status"
+msgid "Disabled"
+msgstr "已停用"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Disabled \"{name}\""
+msgstr "已停用「{name}」"
+
+#: web/ui/Dialog.tsx
+msgid "Discard changes"
+msgstr "放棄變更"
+
+#: web/ui/Dialog.tsx
+msgid "Discard these changes?"
+msgstr "要放棄這些變更嗎？"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Dog"
+msgstr "狗"
+
+#: web/detect/object-model.ts
+msgid "Don't detect"
+msgstr "不辨識"
+
+#: web/detect/mask-editor.ts
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Done"
+msgstr "完成"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Donut"
+msgstr "甜甜圈"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Down"
+msgstr "向下"
+
+#: web/pages/recordings/export.tsx
+msgid "Download"
+msgstr "下載"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Drag cameras here"
+msgstr "把攝影機拖到這裡"
+
+#: web/pages/recordings/export.tsx
+msgid "Drag on the timeline to select a range, or play to the spot you want and press “Set start”."
+msgstr "在時間軸上拖曳選取範圍，或播放到想要的位置再按「設為開始」。"
+
+#: web/detect/mask-editor.ts
+msgid "Drag the dots to adjust the shape."
+msgstr "拖曳圓點調整形狀。"
+
+#: web/detect/mask-editor.ts
+msgid "Draw the areas that don't need detection, such as a road, swaying trees or a timestamp watermark."
+msgstr "畫出不需要偵測的範圍，例如馬路、搖動的樹或時間浮水印。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Draw the areas where objects don't need to be recognized, such as a parking spot. Motion is still detected inside, but things there won't get a category label."
+msgstr "畫出不需要辨識物件的範圍，例如停車格。裡面照樣偵測動作，只是停在裡面的東西不會被標上類別。"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Dropped \"{name}\""
+msgstr "已放下「{name}」"
+
+#: web/states/ClassesEditor.tsx
+msgid "e.g. Closed"
+msgstr "例如：關"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "e.g. Front door"
+msgstr "例如：大門"
+
+#: web/states/ClassesEditor.tsx
+msgid "e.g. Moving"
+msgstr "例如：移動中"
+
+#: web/states/ClassesEditor.tsx
+msgid "e.g. Open"
+msgstr "例如：開"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "e.g. Roller shutter, garage door, window"
+msgstr "例如：鐵捲門、車庫門、窗戶"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Each camera's stream URL can be copied under \"Cameras → Edit → Advanced\". When an app such as VLC, Home Assistant or another NVR connects, use your username and password, or create a key (API token) for it under \"Settings → General → Connect other apps\"."
+msgstr "每台攝影機的串流網址在「攝影機 → 編輯 → 進階設定」裡可以複製。像 VLC、Home Assistant 或另一套 NVR 這類 App 連線時，用你的帳號密碼，或在「設定 → 一般 → 連接其他 App」為它建立一組密鑰（API Token）。"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Each tap turns a small step"
+msgstr "每按一下轉一小步"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Edit"
+msgstr "編輯"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Edit \"{cameraName}\""
+msgstr "編輯「{cameraName}」"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Elephant"
+msgstr "大象"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Enable"
+msgstr "啟用"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Enable this camera"
+msgstr "啟用這台攝影機"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enabled"
+msgstr "已啟用"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Enabled \"{name}\""
+msgstr "已啟用「{name}」"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Enter 0 or a larger number for days and space"
+msgstr "天數與空間請填 0 或更大的數字"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Enter a name for the app you want to connect"
+msgstr "請寫下要連接的 App 名稱"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Enter a site name"
+msgstr "請填寫站點名稱"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Enter a storage location"
+msgstr "請填寫儲存位置"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter a stream URL starting with rtsp://"
+msgstr "請填寫以 rtsp:// 開頭的串流網址"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Enter a username"
+msgstr "請填寫帳號"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Enter a username and password"
+msgstr "請輸入帳號與密碼"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the camera password"
+msgstr "請填寫相機密碼"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the camera username"
+msgstr "請填寫相機帳號"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the camera's IP address"
+msgstr "請填寫相機的 IP 位址"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Enter the connection code"
+msgstr "輸入連線代碼"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the ONVIF host"
+msgstr "請填寫 ONVIF 主機"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Enter your current password"
+msgstr "請輸入目前密碼"
+
+#: web/api.ts
+msgid "Error {status}"
+msgstr "錯誤 {status}"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Error copied. You can paste it to an AI or a technician."
+msgstr "已複製錯誤內容，可以貼給 AI 或技術人員"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Error: {error}"
+msgstr "錯誤：{error}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Even subtle changes are detected. Good for indoors or when you don't want to miss anything."
+msgstr "細微的變化也會偵測到，適合室內或想要不漏接。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Event"
+msgstr "事件"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Event clips"
+msgstr "事件片段"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Event deleted"
+msgstr "已刪除事件"
+
+#: web/health.ts
+msgid "Event in progress"
+msgstr "事件進行中"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Event list"
+msgstr "事件清單"
+
+#: web/app/Shell.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+msgid "Events"
+msgstr "事件"
+
+#: web/detect/object-model.ts
+msgid "Events are recorded as usual and labeled with what was seen, such as \"Person\" or \"Car\"."
+msgstr "事件照常記錄，並標上看到了什麼，例如「人」或「汽車」。"
+
+#: web/detect/object-model.ts
+msgid "Events are still recorded and detection resumes when the test finishes."
+msgstr "事件照常記錄，測完會自動恢復。"
+
+#: web/detect/object-model.ts
+msgid "Every 2 seconds"
+msgstr "每 2 秒 1 次"
+
+#: web/pages/status/explain.ts
+msgid "Every camera's picture goes through this service, so when it stops, the picture and recording are interrupted. A restart interrupts them for a few seconds."
+msgstr "所有攝影機的畫面都會經過這個服務，它停下來時畫面與錄影都會中斷。重新啟動期間會中斷幾秒。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Every class has pictures. Press “Start training”."
+msgstr "每一類都有畫面了，按「開始訓練」。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Every class has pictures. Training takes a few seconds to a few dozen, and detection starts right after."
+msgstr "每一類都有畫面了。訓練只要幾秒到幾十秒，完成後馬上開始辨識。"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Everything is fine"
+msgstr "一切正常"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Excluded areas are drawn at fixed positions in the picture. If the camera turns another way they no longer line up, and they match again when it returns. If you change the angle for good, redraw them."
+msgstr "排除區域是照畫面位置畫的。鏡頭轉到別的方向後會對不上，轉回原位就恢復；如果要長期換角度，記得重畫。"
+
+#: web/app/Shell.tsx
+msgid "Expand sidebar"
+msgstr "展開側欄"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Experimental"
+msgstr "實驗性"
+
+#: web/pages/recordings/export.tsx
+msgid "Export"
+msgstr "匯出"
+
+#: web/pages/recordings/export.tsx
+msgid "Export failed"
+msgstr "匯出失敗"
+
+#: web/pages/recordings/export.tsx
+msgid "Export finished: {title}"
+msgstr "匯出完成：{title}"
+
+#: web/pages/recordings/export.tsx
+msgid "Export jobs"
+msgstr "匯出工作"
+
+#: web/pages/recordings/export.tsx
+msgid "Export progress"
+msgstr "匯出進度"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Export the event video from {clock}"
+msgstr "匯出 {clock} 的事件影片"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Export video (includes 5 seconds before and after)"
+msgstr "匯出影片（含前後 5 秒）"
+
+#: web/pages/recordings/export.tsx
+msgid "Exported videos"
+msgstr "匯出的影片"
+
+#: web/pages/recordings/export.tsx
+msgid "Exporting {pct}%"
+msgstr "匯出中 {pct}%"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Face"
+msgstr "人臉"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Fairly conservative"
+msgstr "偏保守"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Fairly sensitive"
+msgstr "偏靈敏"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Fastest"
+msgstr "最快"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "ffprobe output:"
+msgstr "ffprobe 輸出："
+
+#: web/api.ts
+msgid "File too large (limit 100 MB)"
+msgstr "檔案太大，上限 100 MB"
+
+#: web/detect/object-model.ts
+msgid "Filter"
+msgstr "過濾"
+
+#: web/pages/recordings/export.tsx
+msgid "Finished videos are kept for 24 hours."
+msgstr "完成的影片會保留 24 小時。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Fire hydrant"
+msgstr "消防栓"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "First time here? Create an admin account, then you can add cameras."
+msgstr "第一次使用，先建立管理員帳號，接著就能加入攝影機。"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Fix the highlighted fields"
+msgstr "請修正標示的欄位"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "For example \"Downstairs\" or \"Outdoors\". The home page shows cameras in sections by group."
+msgstr "例如「一樓」「戶外」。首頁會照分區分段顯示。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "For example 192.168.1.50"
+msgstr "例如 192.168.1.50"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "For example, Home Assistant"
+msgstr "例如 Home Assistant"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "For example: Home Assistant"
+msgstr "例如：Home Assistant"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "For example: Living room, Front door"
+msgstr "例如：客廳、前門"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "For example: Outdoors"
+msgstr "例如：戶外"
+
+#: web/pages/link/LinkPage.tsx
+msgid "For security, connection requests can only be approved in CookieNVR's own tab."
+msgstr "為了安全，連線請求只能在 CookieNVR 自己的分頁裡核准。"
+
+#: web/pages/status/explain.ts
+msgid "For the past 5 minutes memory has been above 90% almost the whole time. When it runs out, the system force-quits programs and recording may be interrupted. {topMem} If CookieNVR runs in Docker with a memory limit, you can raise the limit."
+msgstr "過去 5 分鐘記憶體幾乎一直用到 90% 以上；用完時系統會強制結束程式，錄影可能中斷。{topMem}如果 CookieNVR 跑在 Docker 裡並設了記憶體上限，可以把上限調高。"
+
+#: web/pages/status/explain.ts
+msgid "For the past 5 minutes the CPU has been above 90% almost the whole time, so video may lag and recording may drop frames. {topCpu} You can turn off motion detection you don't need, open fewer live views, or have cameras detect on a lower-resolution substream."
+msgstr "過去 5 分鐘處理器幾乎一直在 90% 以上，畫面可能延遲、錄影可能掉格。{topCpu}可以關掉不需要的動作偵測、少開幾個即時畫面，或讓攝影機改用解析度較低的子碼流偵測。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Fork"
+msgstr "叉子"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Free"
+msgstr "可用"
+
+#: web/pages/status/explain.ts
+msgid "Free up space on the appdata disk"
+msgstr "清出 appdata 那顆硬碟的空間"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Frees {freed}"
+msgstr "會釋放 {freed}"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Frigate settings"
+msgstr "Frigate 設定"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Frigate’s guess"
+msgstr "Frigate 的判斷"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Frisbee"
+msgstr "飛盤"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "From {ip}"
+msgstr "來自 {ip}"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Full screen"
+msgstr "全螢幕"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Gap"
+msgstr "缺片"
+
+#: web/pages/recordings/export.tsx
+msgid "gaps are skipped"
+msgstr "缺片會略過"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "General"
+msgstr "一般"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "General settings saved"
+msgstr "已儲存一般設定"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Get notified when something moves"
+msgstr "在有動靜時收到通知"
+
+#: web/health.ts
+msgid "Getting familiar with the picture, starting in a few seconds"
+msgstr "正在熟悉畫面，幾秒後開始"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Getting ready to use: {names}"
+msgstr "準備使用：{names}"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Getting ready. You can add it in a few seconds…"
+msgstr "正在準備，幾秒後就能加入…"
+
+#: web/states/CropEditor.tsx
+msgid "Getting the picture…"
+msgstr "正在取得畫面…"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Giraffe"
+msgstr "長頸鹿"
+
+#: web/states/model.ts
+msgid "Give it a name, for example “Roller shutter”"
+msgstr "請取個名字，例如「鐵捲門」"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Give this camera a name"
+msgstr "請幫這台攝影機取個名稱"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Give this group a name"
+msgstr "請幫這個分區取個名稱"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Give this position a name"
+msgstr "請幫這個位置取個名稱"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Go back to {app} and it will finish setting up on its own. You can revoke access at any time in Settings → General → Connect other apps."
+msgstr "回到 {app}，它會自動完成設定。之後可以在「設定 → 一般 → 連接其他 App」隨時撤銷。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Go back to {app} and start again to get a new code."
+msgstr "回到 {app} 重新開始，會拿到一組新的代碼。"
+
+#: web/pages/status/explain.ts
+msgid "Go label"
+msgstr "去標記"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Go to CookieNVR"
+msgstr "前往 CookieNVR"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Going to “{name}”"
+msgstr "前往「{name}」"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "GPU memory {used} / {total}"
+msgstr "顯示記憶體 {used} / {total}"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Graphics card"
+msgstr "顯示卡"
+
+#: web/pages/settings-system/DecodeRow.tsx
+msgid "Graphics card information isn't available right now."
+msgstr "暫時看不到顯示卡的資訊。"
 
 #: web/theme.ts
 msgid "Green"
 msgstr "綠"
 
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Group name"
+msgstr "分區名稱"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "H.264 not supported"
+msgstr "不支援 H.264"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "H.265 not supported"
+msgstr "不支援 H.265"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Hair drier"
+msgstr "吹風機"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Handbag"
+msgstr "手提包"
+
+#: web/ui/FormCard.tsx
+msgid "Has errors"
+msgstr "有錯誤"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "has low-quality stream"
+msgstr "有低畫質串流"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "has ONVIF"
+msgstr "有 ONVIF"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Has recordings"
+msgstr "有錄影"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Has sound"
+msgstr "有聲音"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "High"
+msgstr "高"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "High quality"
+msgstr "高畫質"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Hold to keep turning, tap to nudge."
+msgstr "按住持續轉動，點一下微調。"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Hold to turn"
+msgstr "按住轉動"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Hold to turn if the camera supports it"
+msgstr "相機支援就按住轉動"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Home Assistant finds CookieNVR on its own: press \"Add\" there, then come back here and press \"Allow\". For other apps, you can create a dedicated key here with the same permissions as your account. All connected apps are listed below, and you can revoke one at any time. (Technically this is called an API token.)"
+msgstr "Home Assistant 會自己找到 CookieNVR，在它那邊按「增加」後回到這裡按「允許」就好。其他 App 可以在這裡建立一組專用的密鑰，權限和你的帳號相同。下面列出所有連線中的 App，不用時可以隨時撤銷。（技術上稱為 API Token）"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Horse"
+msgstr "馬"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Hot dog"
+msgstr "熱狗"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "How do I use it?"
+msgstr "怎麼使用？"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "How long to wait after motion stops before ending the event"
+msgstr "動作停止後，再等多久結束事件"
+
+#: web/pages/states/SensorPage.tsx
+msgid "How often to check"
+msgstr "多久看一次"
+
+#: web/pages/states/SensorPage.tsx
+msgid "How sure it must be"
+msgstr "要多有把握才算數"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "I've saved it"
+msgstr "我已經存好了"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "If \"Uncertified Accessory\" appears, choose \"Add Anyway\"."
+msgstr "出現「未認證的配件」時選「仍要加入」。"
+
+#: web/pages/status/StatusPage.tsx
+msgid "If something goes wrong, copy the diagnostics and paste them to an AI or a technician. Passwords and similar data are masked automatically."
+msgstr "遇到問題時，可以複製診斷資訊貼給 AI 或技術人員，密碼等資料會自動遮蔽。"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "If the camera is mounted upside down or flipped in its app, up and down are usually reversed too."
+msgstr "鏡頭倒裝或在相機 App 開了畫面翻轉時，上下通常也會相反。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "If you allow it, {app} will act as {username} and can:"
+msgstr "允許後，{app} 會以「{username}」的身分："
+
+#: web/pages/link/LinkPage.tsx
+msgid "If you didn't just start this in {app}, choose Deny."
+msgstr "如果不是你剛剛在 {app} 裡按的，請按拒絕。"
+
+#: web/detect/mask-editor.ts
+msgid "Ignored"
+msgstr "不偵測"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Image recognition"
+msgstr "影像辨識"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Images labeled per class"
+msgstr "每一類標記了幾張"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Import"
+msgstr "帶入"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Import Frigate training data"
+msgstr "匯入 Frigate 訓練資料"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Import from Frigate settings"
+msgstr "從 Frigate 的設定帶入"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Imported"
+msgstr "已帶入"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Imported the area and settings from Frigate “{frigateName}”"
+msgstr "已帶入 Frigate「{frigateName}」的區域與設定"
+
+#: web/states/bits.tsx
+msgid "Importing training data, waiting for other sensors to finish…"
+msgstr "正在匯入訓練資料，等其他感應器完成…"
+
+#: web/states/bits.tsx
+msgid "Importing training data…"
+msgstr "正在匯入訓練資料…"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "In \"{name}\""
+msgstr "在「{name}」裡"
+
+#: web/health.ts
+#: web/pages/recordings/Playback.tsx
+#: web/timeline/timeline.ts
+msgid "In progress"
+msgstr "進行中"
+
+#: web/pages/status/explain.ts
+msgid "In the last 10 minutes recording was interrupted and recovered on its own many times. A common cause is an unstable network signal."
+msgstr "最近 10 分鐘內錄影中斷又自動恢復了很多次，常見原因是網路訊號不穩。"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "In use"
+msgstr "使用中"
+
+#: web/detect/object-model.ts
+msgid "In use: {deviceName}"
+msgstr "使用中：{deviceName}"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "In use: {names}"
+msgstr "使用中：{names}"
+
 #: web/theme.ts
 msgid "Indigo"
 msgstr "靛"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Inference device"
+msgstr "推論裝置"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "iPhone finds cameras on your home network, so the CookieNVR container needs host networking (or its own LAN IP). To get motion notifications and watch away from home, you need an Apple TV, HomePod or iPad acting as a home hub; to have Apple store motion clips, you also need an iCloud+ plan with HomeKit Secure Video. This is an experimental feature, so video quality and whether recording works depend on real-world use."
+msgstr "iPhone 是在家裡的網路上找到攝影機的，所以 CookieNVR 的容器要用 host 網路（或給它自己的區網 IP）。要收到動作通知、在外面看畫面，家裡要有當作家庭中樞的 Apple TV、HomePod 或 iPad；想讓 Apple 保存動作片段，還要有含安全錄影的 iCloud+ 方案。這是實驗性功能，畫質與錄影是否成功以實際使用為準。"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/NewSensorPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "It may have been deleted."
+msgstr "它可能已經被刪除了。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "It needs to see every state first. Pick a way to get pictures, then label which class each one is."
+msgstr "要先讓它看過每一種樣子。選一個方式取得畫面，接著由你標記每張是哪一類。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "It settles once it sees the same state several times in a row, usually within a few dozen seconds."
+msgstr "連續幾次看到同一個樣子就會確定，通常幾十秒內。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "It will resume once the picture settles."
+msgstr "等畫面穩定下來就會繼續。"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "It will try again automatically in a moment."
+msgstr "稍後會自動再試。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Just enter the IP and camera account"
+msgstr "只要填 IP 與相機帳號"
+
+#: web/format.ts
+#: web/states/model.ts
+msgid "Just now"
+msgstr "剛剛"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Keep {keepFree} free · {pathText}"
+msgstr "保留 {keepFree} 空間 · {pathText}"
+
+#: web/ui/Dialog.tsx
+msgid "Keep editing"
+msgstr "繼續編輯"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Key copied"
+msgstr "已複製密鑰"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Keyboard"
+msgstr "鍵盤"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Kite"
+msgstr "風箏"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Knife"
+msgstr "刀子"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Label"
+msgstr "標記"
+
+#: web/states/model.ts
+msgid "Label {list} before training"
+msgstr "還需要標記{list}才能訓練"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Label all as suggested"
+msgstr "全部照預選標記"
+
+#: web/pages/status/explain.ts
+msgid "Label each class of picture, then press “Start training”"
+msgstr "標記每一類的畫面後按「開始訓練」"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Label pictures"
+msgstr "標記畫面"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Label pictures below. Once every class has some, you can train."
+msgstr "在下面標記畫面，每一類都有了就能訓練。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Labeled pictures and training results will be deleted too."
+msgstr "標記的畫面與訓練結果會一起刪除。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Labeled pictures, training results and the change history will all be deleted. This can’t be undone."
+msgstr "標記的畫面、訓練結果與變化紀錄都會一起刪除，無法復原。"
 
 #: web/pages/account/Appearance.tsx
 msgid "Language"
 msgstr "語言"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Laptop"
+msgstr "筆電"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Large"
+msgstr "大"
+
+#: web/detect/benchmark-model.ts
+msgid "Last benchmark: {time}"
+msgstr "上次測速：{time}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Last guess"
+msgstr "上次的判斷"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Last signed in {ago}"
+msgstr "上次登入 {ago}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Last switched: {since}"
+msgstr "{since}切換"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Last switched: {since}, now checking whether it became “{candidate}”"
+msgstr "{since}切換・正在確認是不是變成「{candidate}」"
+
+#: web/pages/account/SessionsPanel.tsx
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Last used {ago}"
+msgstr "上次使用 {ago}"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Leave"
+msgstr "離開"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Leave this page?"
+msgstr "要離開這一頁嗎？"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Left"
+msgstr "向左"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Length {duration}"
+msgstr "長度 {duration}"
+
+#: web/timeline/timeline.ts
+msgid "Length {length}"
+msgstr "長度 {length}"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+#: web/states/model.ts
+msgid "Lenient"
+msgstr "寬鬆"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Let other apps read camera video"
+msgstr "讓其他 App 讀取攝影機畫面"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Lets cameras join the Home app on iPhone. After turning it on, add each camera in its own settings."
+msgstr "讓攝影機加入 iPhone 的「家庭」App。開啟後，到每台攝影機的設定裡加入。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Lets you steer the camera and receive events the camera detects itself."
+msgstr "可以控制鏡頭轉向，並接收相機自己偵測到的事件。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "License plate"
+msgstr "車牌"
+
 #: web/pages/account/Appearance.tsx
 msgid "Light"
 msgstr "淺色"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Limit reached ({max}). Delete one first."
+msgstr "已達上限（{max} 個），請先刪除一個。"
+
+#: web/health.ts
+msgid "Live changes unavailable"
+msgstr "暫時看不到即時變化"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Live motion in the picture"
+msgstr "即時畫面變化"
+
+#: web/health.ts
+msgid "Live view only"
+msgstr "不錄影"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Live viewing"
+msgstr "即時觀看"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Loading earlier events…"
+msgstr "載入更早的事件…"
+
+#: web/detect/object-model.ts
+msgid "Loading model…"
+msgstr "載入模型中…"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Loading pictures…"
+msgstr "正在讀取畫面…"
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+#: web/pages/settings-cameras/StatesSection.tsx
+#: web/pages/states/SensorPage.tsx
+#: web/ui/states.tsx
+msgid "Loading…"
+msgstr "載入中…"
+
+#: web/detect/object-model.ts
+msgid "Loose"
+msgstr "寬鬆"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Low"
+msgstr "低"
+
+#: web/pages/status/explain.ts
+msgid "Low on space"
+msgstr "空間不足"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Low quality"
+msgstr "低畫質"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Low-quality stream URL"
+msgstr "低畫質串流網址"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Low-quality stream URL copied"
+msgstr "已複製低畫質串流網址"
+
+#: web/camera-form-logic.ts
+msgid "Low-quality stream: {message}"
+msgstr "低畫質串流：{message}"
+
+#: web/app/Shell.tsx
+msgid "Main menu"
+msgstr "主選單"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Make administrator"
+msgstr "改成管理員"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Make regular user"
+msgstr "改成一般使用者"
+
+#: web/pages/status/explain.ts
+msgid "Make sure the camera is on and connected to the network"
+msgstr "確認相機有開機並連上網路"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Make sure this matches the code on the {app} screen"
+msgstr "確認和 {app} 畫面上的代碼一樣"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Manage storage"
+msgstr "管理儲存空間"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Mark as"
+msgstr "標成"
 
 #: web/pages/account/Appearance.tsx
 msgid "Match browser"
@@ -67,26 +2929,2505 @@ msgstr "跟隨瀏覽器"
 msgid "Match system"
 msgstr "跟隨系統"
 
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Maybe later"
+msgstr "稍後再說"
+
+#: web/app/Shell.tsx
+msgctxt "phone tab bar"
+msgid "Me"
+msgstr "我的"
+
+#: web/detect/benchmark-model.ts
+msgid "Measuring"
+msgstr "測量中"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Medium"
+msgstr "中"
+
+#: web/pages/status/explain.ts
+#: web/pages/status/ResourcesCard.tsx
+msgid "Memory"
+msgstr "記憶體"
+
+#: web/health.ts
+msgid "Memory is running low"
+msgstr "記憶體快不夠了"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Memory used by each task"
+msgstr "各項工作占用的記憶體"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Microwave"
+msgstr "微波爐"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Minimum free space"
+msgstr "最低剩餘空間"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Model"
+msgstr "模型"
+
+#: web/detect/object-model.ts
+msgid "Model unavailable"
+msgstr "模型無法使用"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "More actions for \"{name}\""
+msgstr "「{name}」的更多動作"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "More actions for \"{username}\""
+msgstr "「{username}」的更多動作"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "More actions for group \"{name}\""
+msgstr "分區「{name}」的更多動作"
+
+#: web/pages/events/EventsPage.tsx
+msgid "More actions for this event"
+msgstr "這筆事件的更多動作"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "More categories"
+msgstr "更多類別"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "More categories ({moreSelected} selected)"
+msgstr "更多類別（已選 {moreSelected}）"
+
+#: web/detect/object-model.ts
+msgid "More checks per second confirm what's in the picture sooner, but use more computer resources. The recommended value is fine for most setups."
+msgstr "次數越多，越快確認畫面裡是什麼，但也越吃電腦資源。大多數情況維持建議值就好。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "More options"
+msgstr "更多選項"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Most setups need no changes"
+msgstr "大多數情況不需要調整"
+
+#: web/detect/object-model.ts
+msgid "Mostly runs on the CPU in practice (about {pct}% of the work), so the graphics card helps little"
+msgstr "實際上大多在處理器上執行（約 {pct}% 的運算），顯示卡幫助不大"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Motion"
+msgstr "畫面變化"
+
+#: web/timeline/model.ts
+msgctxt "event without objects"
+msgid "Motion"
+msgstr "動作"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Motion + camera detection"
+msgstr "畫面變化＋相機偵測"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Motion counts only when an area this large changes. Raise it to ignore small animals and falling leaves. The live motion curve follows."
+msgstr "畫面裡有這麼大的範圍在變化，才算有動作。調大可以忽略小動物和落葉；即時畫面變化的曲線會跟著改。"
+
+#: web/health.ts
+msgid "Motion detected"
+msgstr "偵測到動作"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Motion detection"
+msgstr "動作偵測"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Motion during the wait counts toward the same event."
+msgstr "等待期間又有動作，會算在同一筆事件裡。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Motorcycle"
+msgstr "機車"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Mouse"
+msgstr "滑鼠"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Move"
+msgstr "移動"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move \"{name}\""
+msgstr "移動「{name}」"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Move back to unlabeled"
+msgstr "移回待標記"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Move cameras that can pan and tilt"
+msgstr "轉動可以轉的鏡頭"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move cancelled"
+msgstr "已取消移動"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move cancelled, position unchanged"
+msgstr "已取消移動，位置不變"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move group \"{name}\""
+msgstr "移動分區「{name}」"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move out of group"
+msgstr "移出分區"
+
+#: web/pages/status/explain.ts
+msgid "Move the camera closer to the router or use a wired connection"
+msgstr "把相機移近路由器或改用有線"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move to \"{name}\""
+msgstr "移到「{name}」"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Moved \"{name}\" to \"{to}\""
+msgstr "已把「{name}」移到「{to}」"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Moved to group number {position}"
+msgstr "移到第 {position} 個分區"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Movement"
+msgstr "移動方式"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Moving"
+msgstr "移動中"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Mute"
+msgstr "靜音"
+
+#: web/pages/settings-cameras/fields.tsx
+#: web/pages/states/NewSensorPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Name"
+msgstr "名稱"
+
+#: web/states/ClassesEditor.tsx
+msgid "Name of class {num}"
+msgstr "第 {num} 類的名稱"
+
+#: web/states/model.ts
+msgid "Names can be at most {max} characters"
+msgstr "名稱最多 {max} 個字"
+
+#: web/detect/object-model.ts
+msgid "Needs an almost perfectly clear view. Distant or partly hidden objects are often missed."
+msgstr "幾乎要看得一清二楚才算，常常會漏掉遠處或被擋住的。"
+
+#: web/pages/status/explain.ts
+#: web/states/model.ts
+msgid "Needs retraining"
+msgstr "要重新訓練"
+
+#: web/format.ts
+msgid "Never"
+msgstr "從未"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Never signed in"
+msgstr "還沒登入過"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "New password"
+msgstr "新密碼"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "New recordings will be saved to \"{newPath}\". Old recordings stay where they are and can still be played back, but they won't be moved."
+msgstr "新的錄影會存到「{newPath}」。舊的錄影留在原處，仍然可以回放，但不會搬過去。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Next"
+msgstr "下一步"
+
+#: web/ui/DatePicker.tsx
+msgid "Next day"
+msgstr "後一天"
+
+#: web/ui/DatePicker.tsx
+msgid "Next month"
+msgstr "下個月"
+
+#: web/pages/events/EventsPage.tsx
+msgid "No {what} events"
+msgstr "沒有看到{what}的事件"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "No address yet"
+msgstr "還沒填位址"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "No apps are connected yet."
+msgstr "還沒有連接任何 App。"
+
+#: web/pages/status/StatusPage.tsx
+msgid "No cameras are enabled yet."
+msgstr "還沒有啟用中的攝影機。"
+
+#: web/detect/benchmark-model.ts
+msgid "No cameras have object detection turned on right now."
+msgstr "目前沒有攝影機開啟物件辨識。"
+
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/settings-cameras/CamerasListPage.tsx
+msgid "No cameras yet"
+msgstr "還沒有攝影機"
+
+#: web/pages/status/StatusPage.tsx
+msgid "No cameras yet."
+msgstr "還沒有攝影機。"
+
+#: web/detect/object-model.ts
+msgid "No categories are checked, so events won't be labeled with what was seen."
+msgstr "還沒有勾選任何類別，事件不會標上看到的東西。"
+
+#: web/detect/object-model.ts
+msgid "No categories are checked, so this camera won't record any events."
+msgstr "還沒有勾選任何類別，這台不會記錄任何事件。"
+
+#: web/detect/object-model.ts
+msgid "No categories selected, no events recorded"
+msgstr "未選類別，不記錄事件"
+
+#: web/pages/states/SensorPage.tsx
+msgid "No changes yet. State changes will be logged here."
+msgstr "還沒有變化過。狀態改變時會記在這裡。"
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+msgid "No earlier events"
+msgstr "前面沒有事件了"
+
+#: web/pages/events/EventsPage.tsx
+msgid "No earlier events on this day"
+msgstr "這天沒有更早的事件了"
+
+#: web/pages/recordings/Playback.tsx
+msgid "No events on this day"
+msgstr "這一天沒有事件"
+
+#: web/pages/events/EventsPage.tsx
+msgid "No events yet"
+msgstr "還沒有事件"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "No GPU detected."
+msgstr "沒有偵測到顯示卡。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "No later events"
+msgstr "後面沒有事件了"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "No location set"
+msgstr "未設定位置"
+
+#: web/health.ts
+msgid "No motion"
+msgstr "沒有動作"
+
+#: web/health.ts
+msgid "No permission to write to the recording location"
+msgstr "沒有權限寫入錄影位置"
+
+#: web/states/model.ts
+msgid "No picture"
+msgstr "沒有畫面"
+
+#: web/pages/status/explain.ts
+msgid "No picture is coming in, so nothing can be recorded either. Common causes are the camera losing power, Wi-Fi dropping, or the IP address changing. If you changed routers recently, update the IP in the camera settings. A camera can only serve a few stream connections at once. If other software such as Frigate also connects to this camera directly, the slots can run out, so point them at CookieNVR's stream URL instead."
+msgstr "收不到畫面，所以也沒辦法錄影。常見原因是相機斷電、Wi-Fi 斷線，或 IP 位址變了；如果最近換過路由器，到攝影機設定更新 IP。相機能同時提供的串流連線很少，Frigate 等其他軟體也在直接連這台相機時，名額可能被佔滿，請讓它們改接 CookieNVR 的串流網址。"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "No pictures labeled “{activeView}” yet."
+msgstr "還沒有標記成「{activeView}」的畫面。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "No pictures were misread during checking."
+msgstr "驗證時沒有看錯的畫面。"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "No presets yet. Turn the camera to the position you want, then press “Save current position”."
+msgstr "還沒有預置點。把鏡頭轉到想要的位置，再按「儲存目前位置」。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "No recordings today yet"
+msgstr "今天還沒有錄影"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "No recordings yet."
+msgstr "還沒有錄影。"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "No sound"
+msgstr "無聲音"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "No usable graphics card was detected, so the CPU is decoding."
+msgstr "沒有偵測到可用的顯示卡，用處理器解碼。"
+
+#: web/pages/status/explain.ts
+msgid "No write permission"
+msgstr "沒有寫入權限"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "None. Previews use the high-quality stream, scaled down."
+msgstr "沒有，預覽會改用高畫質縮小"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Normal speed"
+msgstr "正常速度"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Not detected"
+msgstr "不辨識"
+
+#: web/health.ts
+#: web/pages/status/explain.ts
+msgid "Not recording"
+msgstr "沒在錄影"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Not set up"
+msgstr "未設定"
+
+#: web/pages/status/explain.ts
+#: web/states/model.ts
+msgid "Not trained yet"
+msgstr "還沒訓練"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+#: web/pages/settings/SettingsLayout.tsx
+#: web/pages/status/explain.ts
+msgid "Object detection"
+msgstr "物件辨識"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Object detection can't keep up"
+msgstr "物件辨識跟不上"
+
+#: web/health.ts
+msgid "Object detection isn't working properly"
+msgstr "物件辨識沒有正常運作"
+
+#: web/pages/status/explain.ts
+msgid "Object detection restarted"
+msgstr "已重新啟動物件辨識"
+
+#: web/health.ts
+msgid "Object detection stopped"
+msgstr "物件辨識停止"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Object detection turned off"
+msgstr "已關閉物件辨識"
+
+#: web/pages/settings-cameras/form-model.ts
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Off"
+msgstr "未開啟"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Off (turn it on first under Settings → General)"
+msgstr "未開啟（要先在「設定 → 一般」開啟）"
+
+#: web/health.ts
+msgctxt "camera status"
+msgid "Offline"
+msgstr "連不上"
+
+#: web/ui/Dialog.tsx
+msgid "OK"
+msgstr "確定"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "On"
+msgstr "已開啟"
+
+#: web/pages/states/SensorPage.tsx
+msgid "On change only"
+msgstr "不定時"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android."
+msgstr "iPhone 請更新到 iOS 17.1 以上；也可以改用電腦或 Android 上的 Chrome、Edge、Firefox 或 Safari。"
+
+#: web/detect/object-model.ts
+msgid "once every {seconds} seconds"
+msgstr "每 {seconds} 秒 1 次"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Once motion detection is on, detected events show up here."
+msgstr "開啟動作偵測後，偵測到的事件會出現在這裡。"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Once on, each camera can choose to record events only when it sees a person or vehicle. It uses some extra computer resources."
+msgstr "開啟後，每台攝影機可以選擇只在看到人或車時才記錄事件。會多用一些電腦資源。"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Once on, each camera can choose to record events only when it sees a person, vehicle or animal, so wind in the leaves and changing light no longer fill up the event list. It uses some extra computer resources."
+msgstr "開啟後，每台攝影機可以選擇只在看到人、車或動物時才記錄事件，風吹樹葉、光影變化就不會塞滿事件列表。會多用一些電腦資源。"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Once on, media and smart home apps on other devices at home can also see the live picture. Recording is not affected."
+msgstr "開啟後，家裡其他裝置上的影音或智慧家庭 App 也能看到即時畫面。不影響錄影。"
+
+#: web/detect/object-model.ts
+msgid "Once per second"
+msgstr "每秒 1 次"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Once recording starts, you can play it back here within a few minutes."
+msgstr "錄影開始後，幾分鐘內就能在這裡回放。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Once there are some recordings, this will estimate how many days fit."
+msgstr "錄影一段時間後，這裡會估算大約可以存幾天。"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Once you add a camera it starts recording, and the footage shows up here."
+msgstr "加入攝影機後就會開始錄影，錄好的影片會出現在這裡。"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Once you add a camera, detected motion shows up here."
+msgstr "加入攝影機後，偵測到的動作會出現在這裡。"
+
+#: web/pages/status/explain.ts
+msgid "Only {free} is left, below the minimum free space you set, and the system is deleting the oldest recordings to free up space."
+msgstr "剩下 {free}，低於設定的最低剩餘空間，系統正在刪除最舊的錄影來騰出空間。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Only admins can allow {app} to connect. Sign in with an admin account, then open this page again."
+msgstr "只有管理員可以允許 {app} 連線，請改用管理員帳號登入後再開啟這個頁面。"
+
+#: web/detect/object-model.ts
+msgid "Only counts what it is quite sure about. Fewer false alarms, but unclear objects may be missed."
+msgstr "要很確定才算，誤判比較少，但看不清楚的可能會漏掉。"
+
+#: web/detect/object-model.ts
+msgid "Only detects whether there is motion, without working out what is in the picture."
+msgstr "只偵測有沒有動作，不判斷畫面裡是什麼。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Only obvious motion counts. Good for places with many trees, cars, or changing light."
+msgstr "只有明顯的動作才算，適合樹多、車多或光線常變的地方。"
+
+#: web/detect/object-model.ts
+msgid "Only record {list}"
+msgstr "只記錄{list}"
+
+#: web/detect/object-model.ts
+msgid "Only records events and sends notifications when a checked object is seen, so shadows, light changes and bugs won't bother you."
+msgstr "只在看到勾選的東西時才記錄事件與通知，樹影、光線和小蟲都不會吵你。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "ONVIF host"
+msgstr "ONVIF 主機"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "ONVIF isn't set up for this camera, so it can't receive the camera's detections. Turn on \"Use ONVIF\" under Connection → Advanced, or switch to motion detection."
+msgstr "這台沒有設定 ONVIF，收不到相機的偵測。請到「連線」的「進階」開啟「使用 ONVIF」，或改用畫面變化。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "ONVIF isn't set up for this camera, so only motion detection is used for now. To use camera detection too, turn on \"Use ONVIF\" under Connection → Advanced."
+msgstr "這台沒有設定 ONVIF，目前只會用畫面變化偵測。要一起用相機偵測，請到「連線」的「進階」開啟「使用 ONVIF」。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "ONVIF password"
+msgstr "ONVIF 密碼"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "ONVIF username"
+msgstr "ONVIF 帳號"
+
+#: web/states/model.ts
+msgid "Open"
+msgstr "開"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Open in a new tab"
+msgstr "在新分頁開啟"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Open the Home app, tap + in the top right, and choose \"Add Accessory\"."
+msgstr "打開「家庭」App，點右上角的 ＋，選「加入配件」。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Open this page directly"
+msgstr "請直接開啟這個頁面"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Optional. If provided, home page previews and motion detection use fewer resources."
+msgstr "選填。有的話，首頁預覽與動作偵測會更省資源。"
+
 #: web/theme.ts
 msgid "Orange"
 msgstr "橘"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Orange"
+msgstr "柳橙"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Other"
+msgstr "其他"
+
+#: web/pages/settings-cameras/fields.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Other camera"
+msgstr "其他攝影機"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Other cameras"
+msgstr "其他攝影機"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Other files"
+msgstr "其他檔案"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Other programs"
+msgstr "其他程式"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Other programs and cache"
+msgstr "其他程式與快取"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Oven"
+msgstr "烤箱"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Overall status"
+msgstr "整體狀態"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Overwrite"
+msgstr "覆寫"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Overwrite preset"
+msgstr "覆寫預置點"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Package"
+msgstr "包裹"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Pairing code"
+msgstr "配對碼"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Pairing code {spokenCode}"
+msgstr "配對碼 {spokenCode}"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Pairing reset. Add it again with the new pairing code."
+msgstr "已重設配對，請用新的配對碼重新加入"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Pan reversed"
+msgstr "左右反轉"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Parking meter"
+msgstr "停車計時器"
+
+#: web/pages/auth/AuthPage.tsx
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Password"
+msgstr "密碼"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Password changed"
+msgstr "已變更密碼"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Password must be at least 8 characters"
+msgstr "密碼至少 8 個字元"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Paste the classification section of your Frigate config to import the box and detection settings."
+msgstr "貼上 Frigate 設定檔裡 classification 那一段，會帶入框選的區域與判斷設定。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Pause"
+msgstr "暫停"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Paused"
+msgstr "已暫停"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Performance"
+msgstr "效能"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Person"
+msgstr "人"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Person 96%"
+msgstr "人 96%"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Pet"
+msgstr "寵物"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Pick from recordings automatically"
+msgstr "從錄影自動挑選"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pick more from recordings"
+msgstr "從錄影再挑一些"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Picked up \"{name}\""
+msgstr "已拿起「{name}」"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Picked up group \"{name}\""
+msgstr "已拿起分區「{name}」"
+
+#: web/states/bits.tsx
+msgid "Picking frames from recordings, waiting for other sensors to finish…"
+msgstr "正在從錄影挑選畫面，等其他感應器完成…"
+
+#: web/states/bits.tsx
+msgid "Picking frames from recordings…"
+msgstr "正在從錄影挑選畫面…"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Picks 24 different frames from this camera’s recordings"
+msgstr "從這台的錄影挑出 24 張不同的畫面"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture {n}"
+msgstr "第 {n} 張"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture {n}, {label}"
+msgstr "第 {n} 張，{label}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture {n}, suggested “{guess}”"
+msgstr "第 {n} 張，預選「{guess}」"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture categories"
+msgstr "畫面分類"
+
+#: web/health.ts
+msgid "Picture changes will be compared after you save"
+msgstr "儲存後開始比對畫面變化"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Picture from {name}"
+msgstr "{name} 的畫面"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pictures detection isn’t sure about are added here automatically."
+msgstr "辨識時遇到沒把握的畫面，也會自動放進這裡。"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pictures labeled “{activeView}”"
+msgstr "標記為「{activeView}」的畫面"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pictures will show up here when they’re ready"
+msgstr "畫面準備好就會出現在這裡"
 
 #: web/theme.ts
 msgid "Pink"
 msgstr "粉"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Pizza"
+msgstr "披薩"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Play"
+msgstr "播放"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Play / pause"
+msgstr "播放／暫停"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Play recording"
+msgstr "播放錄影"
+
+#: web/pages/recordings/export.tsx
+msgid "Play the video or click the timeline first, then set the start and end"
+msgstr "先播放或點一下時間軸，再設定開始與結束"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Playback speed"
+msgstr "播放速度"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Player"
+msgstr "播放器"
+
+#: web/detect/mask-editor.ts
+msgid "Point {n}"
+msgstr "第 {n} 點"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Port"
+msgstr "連接埠"
+
+#: web/pages/status/explain.ts
+msgid "Port in use"
+msgstr "port 被佔用"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Possible causes"
+msgstr "可能的原因"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Potted plant"
+msgstr "盆栽"
+
+#: web/pages/recordings/export.tsx
+msgid "Preparing"
+msgstr "準備中"
+
+#: web/detect/benchmark-model.ts
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Preparing…"
+msgstr "準備中…"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Preset name"
+msgstr "預置點名稱"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Presets"
+msgstr "預置點"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Press Space or Enter to pick up, use the arrow keys to move, and press again to drop. Press Esc to cancel."
+msgstr "按空白鍵或 Enter 拿起，用方向鍵移動，再按一次放下；按 Esc 取消。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Previous"
+msgstr "上一步"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Previous / next event"
+msgstr "上／下一個事件"
+
+#: web/ui/DatePicker.tsx
+msgid "Previous day"
+msgstr "前一天"
+
+#: web/ui/DatePicker.tsx
+msgid "Previous month"
+msgstr "上個月"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "QR code for adding to Apple Home"
+msgstr "加入 Apple 家庭用的 QR code"
+
+#: web/pages/camera/CameraPage.tsx
+msgid "Quality"
+msgstr "畫質"
+
+#: web/pages/recordings/export.tsx
+msgid "Queued, {ahead} ahead"
+msgstr "排隊中，前面還有 {ahead} 個"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Recent changes"
+msgstr "最近的變化"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Recognition"
+msgstr "辨識"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Recognize people, vehicles and animals in the picture"
+msgstr "辨識畫面裡的人、車與動物"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Record 24/7"
+msgstr "全天候錄影"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Record sound"
+msgstr "錄下聲音"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Record straight from the camera"
+msgstr "錄影直接連到相機"
+
+#: web/pages/recordings/Playback.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Recording"
+msgstr "錄影"
+
+#: web/health.ts
+msgctxt "camera status"
+msgid "Recording"
+msgstr "錄影中"
+
+#: web/pages/status/ResourcesCard.tsx
+msgctxt "resource usage"
+msgid "Recording"
+msgstr "錄影"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Recording 24/7 · with sound"
+msgstr "全天候錄影 · 錄下聲音"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Recording 24/7 · without sound"
+msgstr "全天候錄影 · 不錄聲音"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Recording and storage"
+msgstr "錄影與儲存"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Recording and storage settings saved"
+msgstr "已儲存錄影與儲存設定"
+
+#: web/pages/status/explain.ts
+msgid "Recording can't be written to storage. Restarting the container usually fixes it"
+msgstr "錄影寫不進儲存位置，重新啟動容器通常會自動修正"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Recording disk {usedPct}% used"
+msgstr "錄影硬碟已用 {usedPct}%"
+
+#: web/health.ts
+msgid "Recording disk space is almost full"
+msgstr "錄影硬碟的空間快滿了"
+
+#: web/health.ts
+msgid "Recording disk space is low"
+msgstr "錄影硬碟的空間不足"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Recording is off for this camera, so there’s nothing to pick from"
+msgstr "這台沒有開錄影，挑不到畫面"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Recording keeps working if the video service has problems, but it uses one more connection on the camera."
+msgstr "影像服務出問題時錄影不受影響，但會多佔用相機一條連線。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Recording now"
+msgstr "錄製中"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Recording of {camName}"
+msgstr "{camName} 的錄影"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Recording off"
+msgstr "不錄影"
+
+#: web/health.ts
+msgid "Recording on {name} is unstable"
+msgstr "{name}的錄影不穩定"
+
+#: web/pages/status/explain.ts
+msgid "Recording restarted"
+msgstr "已重新開始錄影"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Recording started"
+msgstr "已開始錄影"
+
+#: web/health.ts
+#: web/pages/status/explain.ts
+msgid "Recording unstable"
+msgstr "錄影不穩定"
+
+#: web/pages/status/explain.ts
+msgid "Recording will be interrupted for a few seconds."
+msgstr "錄影會中斷幾秒鐘。"
+
+#: web/app/Shell.tsx
+#: web/pages/recordings/Playback.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Recordings"
+msgstr "錄影"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Recordings and appdata are actually on the same disk. If you mounted the recordings folder separately to put it on another disk (for example an Unraid array), check that share's primary storage setting."
+msgstr "錄影和 appdata 其實在同一顆硬碟上。如果另外掛載錄影資料夾是想放到別顆硬碟（例如 Unraid 的陣列），請檢查那個共享的主要儲存設定。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Recordings older than this are deleted automatically. When space runs low, the oldest recordings go first, whatever the days say."
+msgstr "超過就自動刪除；空間不夠時，不論天數都會先刪最舊的錄影。"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Records straight from the camera"
+msgstr "錄影直接連到相機"
+
+#: web/pages/status/explain.ts
+msgid "Reduce the work running at once, or move to a more powerful machine"
+msgstr "減少同時進行的工作，或換效能更好的主機"
+
+#: web/pages/status/explain.ts
+msgid "Reduce what the cameras are doing, or add memory"
+msgstr "減少攝影機的工作，或增加記憶體"
+
+#: web/states/CropEditor.tsx
+msgid "Refresh picture"
+msgstr "更新畫面"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Refreshes every 5 seconds · last at {updatedAt}"
+msgstr "每 5 秒自動更新・上次 {updatedAt}"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Refrigerator"
+msgstr "冰箱"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Regular user"
+msgstr "一般使用者"
+
+#: web/pages/link/LinkPage.tsx
+#: web/ui/states.tsx
+msgid "Reload"
+msgstr "重新載入"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Remote"
+msgstr "遙控器"
+
+#: web/pages/recordings/export.tsx
+msgid "Remove this export"
+msgstr "移除這筆匯出"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Rename"
+msgstr "重新命名"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Rename group"
+msgstr "重新命名分區"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Renaming doesn’t need retraining; adding or deleting a class does."
+msgstr "改名不用重新訓練；新增或刪除類別後要重新訓練。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Request from <0>{ip}</0>"
+msgstr "請求來自 <0>{ip}</0>"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Reset pairing"
+msgstr "重設配對"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Reset pairing?"
+msgstr "重設配對？"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Reset password"
+msgstr "重設密碼"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Reset password for \"{username}\""
+msgstr "重設「{username}」的密碼"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Reset the password for \"{username}\""
+msgstr "已重設「{username}」的密碼"
+
+#: web/pages/status/explain.ts
+msgid "Restart"
+msgstr "重新啟動"
+
+#: web/pages/status/explain.ts
+msgid "Restart it and detection usually recovers"
+msgstr "重新啟動，通常就會恢復辨識"
+
+#: web/pages/status/explain.ts
+msgid "Restart it and it usually recovers"
+msgstr "重新啟動，通常就會恢復"
+
+#: web/pages/status/explain.ts
+msgid "Restart it to bring back the picture and recording"
+msgstr "重新啟動就會恢復畫面與錄影"
+
+#: web/pages/status/explain.ts
+msgid "Restart object detection?"
+msgstr "重新啟動物件辨識？"
+
+#: web/pages/status/explain.ts
+msgid "Restart recording for “{cameraName}”?"
+msgstr "重新開始「{cameraName}」的錄影？"
+
+#: web/pages/status/explain.ts
+msgid "Restart state recognition?"
+msgstr "重新啟動狀態辨識？"
+
+#: web/pages/status/explain.ts
+msgid "Restart the video service?"
+msgstr "重新啟動影像服務？"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Retention"
+msgstr "保留期限"
+
+#: web/pages/states/SensorPage.tsx
+#: web/pages/status/explain.ts
+msgid "Retrain"
+msgstr "重新訓練"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Retry"
+msgstr "重試"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Reverse left and right"
+msgstr "左右反轉"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Reverse up and down"
+msgstr "上下反轉"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Revert"
+msgstr "還原"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Revoke"
+msgstr "撤銷"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Revoke \"{name}\"?"
+msgstr "撤銷「{name}」？"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Revoked \"{name}\""
+msgstr "已撤銷「{name}」"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Right"
+msgstr "向右"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Role"
+msgstr "角色"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "RTSP, host {host}, transport {transport}"
+msgstr "RTSP，主機 {host}，傳輸 {transport}"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "rtsp://username:password@192.168.1.60:554/stream1"
+msgstr "rtsp://帳號:密碼@192.168.1.60:554/stream1"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Run benchmark"
+msgstr "測速"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Running for {elapsed}"
+msgstr "已持續 {elapsed}"
+
+#: web/timeline/timeline.ts
+msgid "Running for {running}"
+msgstr "已持續 {running}"
+
+#: web/pages/status/explain.ts
+msgid "Running low"
+msgstr "快不夠了"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sandwich"
+msgstr "三明治"
+
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Save"
+msgstr "儲存"
+
+#: web/pages/settings-system/SystemPage.tsx
+#: web/pages/storage/StoragePage.tsx
+msgid "Save changes"
+msgstr "儲存變更"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Save current position"
+msgstr "儲存目前位置"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Saved"
+msgstr "已儲存"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Saved “{name}”"
+msgstr "已儲存「{name}」"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Saving…"
+msgstr "儲存中…"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Scan this QR code. If you opened this page on the same phone, choose \"More Options\", tap this camera, and enter the pairing code."
+msgstr "掃描這個 QR code。用同一支手機開這一頁時，改選「更多選項」，點這台攝影機，再輸入配對碼。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Scissors"
+msgstr "剪刀"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "sec"
+msgstr "秒"
+
+#: web/pages/link/LinkPage.tsx
+msgid "See the picture and recordings of every camera"
+msgstr "看到所有攝影機的畫面和錄影"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Select"
+msgstr "選取"
+
+#: web/ui/DatePicker.tsx
+msgid "Select {pickerLabel}"
+msgstr "選擇{pickerLabel}"
+
+#: web/ui/DatePicker.tsx
+msgid "Select a date"
+msgstr "選擇日期"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Select at least one device."
+msgstr "請至少選一個裝置。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Sensitive"
+msgstr "靈敏"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Sensitivity"
+msgstr "靈敏度"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Sensitivity: {level}"
+msgstr "靈敏度{level}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Sensor not found"
+msgstr "找不到這個感應器"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Set “{name}” to the current position"
+msgstr "把「{name}」覆寫成目前位置"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Set “{name}” to where the camera is pointing now? The old position will be replaced."
+msgstr "要把「{name}」改成鏡頭現在的位置嗎？原本的位置會被取代。"
+
+#: web/pages/recordings/export.tsx
+msgid "Set end"
+msgstr "設為結束"
+
+#: web/pages/recordings/export.tsx
+msgid "Set start"
+msgstr "設為開始"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Set to current position"
+msgstr "覆寫成目前位置"
+
+#: web/app/Shell.tsx
+#: web/pages/settings/SettingsLayout.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Settings"
+msgstr "設定"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Settings tabs"
+msgstr "設定分頁"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Shares memory with the system"
+msgstr "與系統共用記憶體"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sheep"
+msgstr "羊"
+
+#: web/pages/status/explain.ts
+msgid "Shorten the retention period or get a bigger disk"
+msgstr "縮短保留天數或換更大的硬碟"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Show all cameras"
+msgstr "看所有攝影機"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Show all categories"
+msgstr "看所有類別"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Show all dates"
+msgstr "看所有日期"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Show more"
+msgstr "顯示更多"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Shown on the home page and the recordings page."
+msgstr "會顯示在首頁與錄影頁。"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Shown on the sign-in page, in the sidebar and in the browser tab title."
+msgstr "顯示在登入頁、側欄與瀏覽器分頁標題。"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Sign in"
+msgstr "登入"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Sign in to approve the connection request."
+msgstr "登入後就能核准連線請求。"
+
+#: web/app/Shell.tsx
+#: web/pages/account/SessionsPanel.tsx
+msgid "Sign out"
+msgstr "登出"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Sign out “{name}”?"
+msgstr "登出「{name}」？"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Signed out that device"
+msgstr "已登出那台裝置"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Signed-in devices"
+msgstr "登入中的裝置"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sink"
+msgstr "水槽"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Site name"
+msgstr "站點名稱"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Skateboard"
+msgstr "滑板"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Skipped a {gap} gap"
+msgstr "跳過 {gap} 缺片"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Skis"
+msgstr "滑雪板"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Small"
+msgstr "小"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Snowboard"
+msgstr "單板滑雪板"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Sort the unlabeled pictures below into classes."
+msgstr "在下面把待標記的畫面分好類。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Space"
+msgstr "空白鍵"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Speed"
+msgstr "速度"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Speed {speed}"
+msgstr "速度 {speed}"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Spoon"
+msgstr "湯匙"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sports ball"
+msgstr "球"
+
+#: web/detect/object-model.ts
+#: web/pages/camera/CameraPage.tsx
+#: web/states/model.ts
+msgid "Standard"
+msgstr "標準"
+
+#: web/app/Shell.tsx
+#: web/pages/account/AccountPage.tsx
+msgid "Standard user"
+msgstr "一般使用者"
+
+#: web/pages/status/explain.ts
+msgid "Start again"
+msgstr "重新開始"
+
+#: web/pages/status/explain.ts
+msgid "Start recording again and it usually recovers"
+msgstr "重新開始錄影，通常就會恢復"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Start training"
+msgstr "開始訓練"
+
+#: web/detect/object-model.ts
+msgid "Starting…"
+msgstr "啟動中…"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Starts with rtsp://, usually found in the camera's manual or app. You can put the username and password in the URL."
+msgstr "以 rtsp:// 開頭，通常寫在相機的說明書或 App 裡。帳號密碼可以直接寫在網址中。"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/status/explain.ts
+msgid "State recognition"
+msgstr "狀態辨識"
+
+#: web/health.ts
+msgid "State recognition isn't working properly"
+msgstr "狀態辨識沒有正常運作"
+
+#: web/pages/status/explain.ts
+msgid "State recognition restarted"
+msgstr "已重新啟動狀態辨識"
+
+#: web/health.ts
+msgid "State recognition stopped"
+msgstr "狀態辨識停止"
+
+#: web/pages/status/explain.ts
+msgid "State recognition uses the same picture as motion detection. When this camera's detection picture is interrupted, it can't tell the state. Check that “Detection” is turned on in the camera settings. If it still doesn't work, use “Copy diagnostics” at the bottom of the page to find the cause."
+msgstr "狀態辨識跟動作偵測用同一份畫面；這台的偵測畫面中斷時就沒辦法判斷。到攝影機設定確認「偵測」有開啟，仍然不行時，用頁面下方的「複製診斷資訊」找原因。"
+
+#: web/pages/status/explain.ts
+msgid "States will become unknown first and be checked again after a few seconds. Recording is not affected."
+msgstr "狀態會先變成未知，幾秒後重新確認。錄影不受影響。"
+
+#: web/pages/camera/StateChips.tsx
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Status"
+msgstr "狀態"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Status isn't available right now"
+msgstr "暫時看不到狀態"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Steps"
+msgstr "步驟"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Stop"
+msgstr "停止"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Stop sign"
+msgstr "停車標誌"
+
+#: web/pages/status/explain.ts
+msgid "Stopped"
+msgstr "已停止"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Stops recording and removes its settings. You can choose whether to delete the recorded video too."
+msgstr "停止錄影並移除設定；可以選擇是否一起刪除已錄的影片。"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Stops when you let go"
+msgstr "放開就停止"
+
+#: web/pages/status/explain.ts
+#: web/pages/status/StatusPage.tsx
+#: web/pages/storage/StoragePage.tsx
+msgid "Storage"
+msgstr "儲存空間"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Storage location"
+msgstr "儲存位置"
+
+#: web/health.ts
+msgid "Storage space is almost full"
+msgstr "儲存空間快滿了"
+
+#: web/health.ts
+msgid "Storage space is low"
+msgstr "儲存空間不足"
+
+#: web/camera-form-logic.ts
+msgid "Stream not found. Check that the path at the end of the URL (for example /stream1) is correct."
+msgstr "找不到這個串流，請確認網址最後的路徑（例如 /stream1）是否正確。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Stream URL"
+msgstr "串流網址"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Stream URL copied"
+msgstr "已複製串流網址"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Stream URL for other apps"
+msgstr "給其他 App 的串流網址"
+
+#: web/detect/object-model.ts
+#: web/pages/settings-cameras/ObjectSection.tsx
+#: web/states/model.ts
+msgid "Strict"
+msgstr "嚴格"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Stricter means fewer false detections, but it may take longer to settle in poor light."
+msgstr "越嚴格越不會誤判，但光線不好時可能比較慢才確定。"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "Strictness"
+msgstr "嚴格程度"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Suitcase"
+msgstr "行李箱"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Surfboard"
+msgstr "衝浪板"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "System resources"
+msgstr "系統資源"
+
+#: web/detect/mask-editor.ts
+msgid "Tap the first point again or press \"Done\" to close the area."
+msgstr "點回第一點，或按「完成」收合。"
+
+#: web/detect/mask-editor.ts
+msgid "Tap the screen to mark the area to exclude, one corner per tap."
+msgstr "在畫面上點出要排除的範圍，一點一個角。"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Tap to move one step."
+msgstr "點一下移動一步。"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Tap to step"
+msgstr "點一下一步"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Tapo, host {host}"
+msgstr "Tapo，主機 {host}"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "TCP is stable and doesn't drop frames, so it's recommended. UDP has lower latency but can show glitches on an unstable network."
+msgstr "TCP 穩定不掉畫面，建議使用；UDP 延遲較低，網路不穩時容易花屏。"
+
 #: web/theme.ts
 msgid "Teal"
 msgstr "青"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Teddy bear"
+msgstr "泰迪熊"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Tell what something in the picture looks like right now, such as whether a roller door is open or closed. Draw the area and label a few frames, and it learns on its own."
+msgstr "判斷畫面上某個東西目前的樣子，例如鐵捲門是開還是關。框出區域、標記幾張畫面，就會自己學會。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Tennis racket"
+msgstr "網球拍"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Test all"
+msgstr "全部都測"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Test and save"
+msgstr "測試並儲存"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Test only the one in use"
+msgstr "只測目前使用的"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Testing connection…"
+msgstr "正在測試連線…"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "The arrangement wasn't saved: {reason}"
+msgstr "排列沒有存起來：{reason}"
+
+#: web/detect/benchmark-model.ts
+msgid "The benchmark didn't finish. Please try again later."
+msgstr "測速沒有完成，請稍後再試。"
+
+#: web/pages/status/explain.ts
+msgid "The biggest user right now is “{category}”. "
+msgstr "目前用最多的是「{category}」。"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "The built-in model doesn't include packages. To detect packages, add a custom model that has this category."
+msgstr "內建模型不含包裹；要辨識包裹需要放入含有這個類別的自訂模型。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "The camera has no picture. Detection resumes once it connects."
+msgstr "攝影機沒有畫面，等它連上就會繼續。"
+
+#: web/pages/status/explain.ts
+msgid "The camera is connected, but state recognition isn't receiving any picture"
+msgstr "攝影機有連上，但狀態辨識收不到畫面"
+
+#: web/health.ts
+msgid "The camera is moving, detection paused"
+msgstr "鏡頭轉動中，暫停偵測"
+
+#: web/camera-form-logic.ts
+msgid "The camera isn't responding. Check that the IP address is correct and the camera is on."
+msgstr "相機沒有回應，請確認 IP 位址正確、相機已開機。"
+
+#: web/camera-form-logic.ts
+msgid "The camera refused the connection. Check that the IP address and port are correct and that the camera's RTSP feature is turned on."
+msgstr "相機拒絕連線，請確認 IP 位址與連接埠正確，且相機的 RTSP 功能已開啟。"
+
+#: web/camera-form-logic.ts
+msgid "The camera refused the connection. Check that the IP address is correct and that you created a camera account in the Tapo app. If Frigate or other software is watching this camera, its connections may also be full."
+msgstr "相機拒絕連線。請確認 IP 位址正確，且在 Tapo App 建立了相機帳戶；如果 Frigate 等其他軟體正在看這台相機，也可能是連線名額滿了。"
+
+#: web/camera-form-logic.ts
+msgid "The camera responded but isn't sending video, usually because its stream connections are full (a Tapo allows only about 1 to 2 per quality). Pause Frigate, Home Assistant, other NVRs, or phone apps that connect to this camera directly, then try again. After adding it, other software can use CookieNVR's stream URL instead (copy it from the camera's \"Advanced\" settings), so it no longer needs to connect to the camera directly."
+msgstr "相機有回應，但沒有送出影像，通常是串流連線名額滿了（Tapo 每種畫質大約只能同時連 1 到 2 條）。請先暫停 Frigate、Home Assistant、其他 NVR 或手機 App 對這台相機的連線再試一次。加入後，其他軟體可以改接 CookieNVR 的串流網址（在攝影機的「進階設定」複製），不用再直接連相機。"
+
+#: web/camera-form-logic.ts
+msgid "The camera says it can't find a video stream. Make sure this is a Tapo camera."
+msgstr "相機說找不到影像串流，請確認這是一台 Tapo 攝影機。"
+
+#: web/playback/player.ts
+msgid "The camera's codec changed, and this browser can't keep playing."
+msgstr "攝影機的編碼改變了，這個瀏覽器無法接續播放。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "The checking pictures weren’t used for learning, so detection saw them for the first time, just like in real use. Trained {trainedAt} on {trainedCount} images. Mistakes are mostly from different lighting or in-between frames; label a few more like them and retrain to improve."
+msgstr "驗證的畫面都沒有拿來學，跟實際使用時一樣是第一次看到。{trainedAt} 訓練，用了 {trainedCount} 張。看錯的多半是光線不同或過渡中的畫面，多標幾張類似的再重新訓練就會改善。"
+
+#: web/pages/status/explain.ts
+msgid "The classes changed. It will keep recognizing after you retrain it"
+msgstr "類別改過了，重新訓練後才會繼續辨識"
+
+#: web/pages/link/LinkPage.tsx
+msgid "The code is 8 letters"
+msgstr "代碼是 8 個英文字母"
+
+#: web/pages/link/LinkPage.tsx
+msgid "The code is shown on the screen of the app you want to connect, such as Home Assistant."
+msgstr "代碼顯示在要連線的 App（例如 Home Assistant）畫面上。"
+
+#: web/health.ts
+msgid "The CPU has been busy for a long time"
+msgstr "處理器長時間忙碌"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "The current model has no package category."
+msgstr "目前的模型沒有包裹這個類別。"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "The custom model hasn't been loaded yet, so the category list is the built-in model's for now. It updates once loaded."
+msgstr "自訂模型還沒載入過，類別清單暫時是內建模型的，載入後會更新。"
+
+#: web/pages/status/explain.ts
+msgid "The database, event thumbnails and exported videos live on this disk, and only {free} is left. Nothing here is cleaned up automatically. When the space runs out, exports fail and events and settings may not be saved. Delete other files on the same disk that you don't need (for example data from other containers), or move /data to a larger disk."
+msgstr "資料庫、事件縮圖與匯出的影片放在這顆，只剩 {free}。這裡不會自動清理，空間用完時匯出會失敗，事件與設定也可能存不進去。刪掉同一顆上其他用不到的檔案（例如其他容器的資料），或把 /data 換到空間較大的硬碟。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "The database, thumbnails and exports live on the appdata disk ({dataPath}): {dataFree} free of {dataTotal}."
+msgstr "資料庫、縮圖與匯出放在 appdata（{dataPath}）那顆硬碟：可用 {dataFree}，共 {dataTotal}。"
+
+#: web/detect/benchmark-model.ts
+msgid "The device currently in use wasn't tested this time. Run a test on it to find out whether it is enough."
+msgstr "這次沒有測目前使用的裝置，想知道夠不夠用，請測一次目前使用的裝置。"
+
+#: web/detect/object-model.ts
+msgid "The device you picked earlier can't be detected right now, so the system is choosing automatically. It switches back once the device returns."
+msgstr "之前選的裝置現在偵測不到，暫時由系統自動選擇。裝置回來後會自動改回去。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "The disk holding the recording location <0>{recordPath}</0>"
+msgstr "錄影位置 <0>{recordPath}</0> 所在的硬碟"
+
+#: web/pages/recordings/export.tsx
+msgid "The event is longer than 2 hours. Only the first 2 hours are exported."
+msgstr "事件超過 2 小時，只匯出前 2 小時"
+
+#: web/pages/events/EventsPage.tsx
+msgid "The event is still in progress. You can delete it once it ends."
+msgstr "事件還在進行中，結束後才能刪除"
+
+#: web/detect/object-model.ts
+msgid "The first time a graphics card is used, this can take about a minute."
+msgstr "第一次使用顯卡時，可能需要等一分鐘左右。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "The folder where recordings are stored. After you change it, new recordings go to the new location and old ones can still be played back."
+msgstr "錄影存放的資料夾。改了之後新的錄影存到新位置，舊的仍然可以回放。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "The further right, the more sensitive."
+msgstr "往右越靈敏。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "The Home app couldn't find this camera. Go to Settings → Status and press \"Copy diagnostics\" to see why."
+msgstr "沒辦法讓家庭 App 找到這台攝影機。到「設定 → 狀態」按「複製診斷資訊」，可以看到原因。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "The interval must be a whole number from 0 to 3600 seconds"
+msgstr "間隔要是 0 到 3600 秒的整數"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "The key for \"{name}\" is shown only once"
+msgstr "「{name}」的密鑰只會顯示這一次"
+
+#: web/pages/states/SensorPage.tsx
+msgid "The labels differ from the last training. Retrain to use the new labels."
+msgstr "標記跟上次訓練時不一樣了，重新訓練就會用上新的標記。"
 
 #: web/pages/account/Appearance.tsx
 msgid "The language of the interface."
 msgstr "介面使用的語言。"
 
+#: web/health.ts
+msgid "The light changed suddenly, adjusting again"
+msgstr "光線突然改變，重新適應中"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "The low-quality stream URL must start with rtsp://"
+msgstr "低畫質串流網址需以 rtsp:// 開頭"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "The main stream has no video, so it can't be added."
+msgstr "讀到的主畫面沒有影像，無法加入。"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "The new password must be at least 8 characters"
+msgstr "新密碼至少要 8 個字元"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "the old location {oldList}"
+msgstr "舊的位置 {oldList}"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "The ONVIF port must be a number from 1 to 65535"
+msgstr "ONVIF 連接埠需為 1 到 65535 的數字"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "The password must be at least 8 characters"
+msgstr "密碼至少要 8 個字元"
+
+#: web/pages/status/explain.ts
+msgid "The picture and recording of every camera will be interrupted for a few seconds."
+msgstr "所有攝影機的畫面與錄影會中斷幾秒鐘。"
+
+#: web/pages/status/explain.ts
+msgid "The picture is fine, but recording won't start. Common causes are low storage space or being unable to write to the storage location. If it still isn't recording after starting again, use “Copy diagnostics” at the bottom of the page to find the cause."
+msgstr "畫面正常，但錄影一直無法開始，常見原因是儲存空間不足或寫不進儲存位置。重新開始後仍然沒有錄影，請用頁面下方的「複製診斷資訊」找原因。"
+
+#: web/health.ts
+msgid "The port used for RTSP restreaming is already in use by another program on this host"
+msgstr "RTSP 轉發要用的 port 已經被這台主機上的其他程式使用"
+
+#: web/pages/status/explain.ts
+msgid "The process that judges the state of the picture isn't running, so every state sensor stays at “Unknown”. Recording and motion detection are not affected. Right after boot it takes a moment to start. If it doesn't recover, restart it. If that still doesn't help, use “Copy diagnostics” at the bottom of the page to find the cause."
+msgstr "負責判斷畫面狀態的程序沒有在運作，所有狀態感應器都會停在「未知」。錄影與動作偵測不受影響。剛開機時會先啟動一下子；一直沒有恢復時重新啟動它，仍然不行請用頁面下方的「複製診斷資訊」找原因。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "The recommended setting for most situations."
+msgstr "大多數情況的建議值。"
+
+#: web/detect/object-model.ts
+msgid "The recommended value for most setups."
+msgstr "大多數情況的建議值。"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "The result may be out of date (the model or device changed). Running the benchmark again is recommended."
+msgstr "結果可能已過期（換了模型或裝置），建議重新測速。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "The settings contain {foundCount} entries; pick the one to use:"
+msgstr "設定裡有 {foundCount} 個，選要用的那個："
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "The system itself"
+msgstr "系統本身"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "The two new passwords don't match"
+msgstr "兩次輸入的新密碼不一致"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "The two passwords don't match"
+msgstr "兩次輸入的密碼不一致"
+
+#: web/playback/player.ts
+msgid "The video can't be decoded. Reload the page and try again."
+msgstr "影片無法解碼，請重新整理頁面再試一次。"
+
+#: web/health.ts
+msgid "The video service isn't working properly"
+msgstr "影像服務沒有正常運作"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "The video service, Apple Home and the system itself are shared by all cameras and are not counted under individual cameras."
+msgstr "影像服務、Apple 家庭與系統本身由所有攝影機共用，沒有算在個別攝影機裡。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "There are several in the settings; pick one"
+msgstr "設定裡有好幾個，選一個"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "These cameras no longer exist. Their recordings will be permanently deleted right away, which can't be undone, freeing {freed}. Recordings of other cameras aren't affected."
+msgstr "這些攝影機已經不在了，錄影會立刻永久刪除，無法復原，並釋放 {freed}。其他攝影機的錄影不受影響。"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone."
+msgstr "這個帳號會立刻無法登入，它建立的 API Token 也會失效。無法復原。"
+
+#: web/camera-form-logic.ts
+msgid "This account isn't allowed to view the video. Check the account's permissions in the camera's settings."
+msgstr "這組帳號沒有觀看畫面的權限，請到相機的設定確認帳號權限。"
+
+#: web/live/LiveFrame.tsx
+msgid "This browser can't play H.265 live video"
+msgstr "這個瀏覽器無法播放 H.265 即時畫面"
+
+#: web/live/LiveFrame.tsx
+msgid "This browser can't play live video from this camera"
+msgstr "這個瀏覽器無法播放這台的即時畫面"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "This browser can't play recordings"
+msgstr "這個瀏覽器無法播放錄影"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/cameras/CamerasPage.tsx
+msgid "This browser doesn't support live video. The picture refreshes every 3 seconds."
+msgstr "這個瀏覽器不支援即時影像，畫面每 3 秒更新一次。"
+
+#: web/playback/player.ts
+msgid "This browser doesn't support this codec ({codecs}), so it can't play this recording."
+msgstr "瀏覽器不支援這個編碼（{codecs}），無法播放這段錄影。"
+
+#: web/playback/player.ts
+msgid "This browser doesn't support this codec, so it can't play this recording."
+msgstr "瀏覽器不支援這個編碼，無法播放這段錄影。"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "This camera can pan and tilt. Control it from the live view."
+msgstr "這台可以轉動鏡頭，到即時畫面就能操作。"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "This camera can pan, tilt, and zoom. Control it from the live view."
+msgstr "這台可以轉動鏡頭與變焦，到即時畫面就能操作。"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "This camera has no recordings yet"
+msgstr "這台攝影機還沒有錄影"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "This camera is disabled"
+msgstr "這台攝影機已停用"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "This camera is disabled."
+msgstr "這台攝影機已停用。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "This camera is disabled. Enable it and save to see the picture here and draw areas that shouldn't be detected."
+msgstr "這台攝影機已停用。啟用並儲存後，才能在這裡看到畫面、畫出不需要偵測的區域。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera sends a full frame (keyframe) only every {keyframeSec} seconds, longer than the 4 seconds Apple requires, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
+msgstr "這台每 {keyframeSec} 秒才有一張完整畫面（關鍵幀），超過 Apple 要求的 4 秒，安全錄影可能失敗。建議在攝影機設定裡把關鍵幀間隔（I-frame）調到 4 秒以內。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera will stop working in the Home app. Remove it in the Home app first, then add it again with the new pairing code. Video already recorded in CookieNVR is not affected."
+msgstr "家庭 App 裡的這台攝影機會失效，請先在家庭 App 移除它，再用新的配對碼重新加入。已錄在 CookieNVR 的影片不受影響。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera's full-frame (keyframe) interval is longer than 4 seconds, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
+msgstr "這台的完整畫面（關鍵幀）間隔超過 4 秒，安全錄影可能失敗。建議在攝影機設定裡把關鍵幀間隔（I-frame）調到 4 秒以內。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera's main stream is {codec}, but the Home app only supports H.264. Change the main stream to H.264 in the camera's app, then you can turn this on."
+msgstr "這台攝影機的主畫面是 {codec}，家庭 App 只支援 H.264。在攝影機的 App 裡把主畫面改成 H.264 後，就可以開啟。"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "This device"
+msgstr "這台裝置"
+
+#: web/detect/benchmark-model.ts
+msgid "This device is too slow to keep up with even 1 camera detecting {rate}. Try lowering the detection rate or switching to a faster device."
+msgstr "這個裝置太慢，撐不住 1 台攝影機{rate}的辨識。建議降低辨識頻率，或換更快的裝置。"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "This device will need to sign in again next time it opens."
+msgstr "這台裝置下次開啟時需要重新登入。"
+
+#: web/camera-form-logic.ts
+msgid "This host is missing the program used to test connections, so it can't test. Copy the error and send it to a technician."
+msgstr "這台主機少了測試用的程式，無法測試連線。請複製錯誤內容給技術人員。"
+
+#: web/pages/recordings/export.tsx
+msgid "This position is too close to the edge. Try another one."
+msgstr "這個位置太靠近邊界，換一個位置試試"
+
+#: web/pages/link/LinkPage.tsx
+msgid "This request didn't come from your home network. Unless you're sure about it, choose Deny."
+msgstr "這個請求不是從你家裡的網路送出的。除非你很確定，否則請按拒絕。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "This request has expired"
+msgstr "這個請求已經過期"
+
+#: web/pages/link/LinkPage.tsx
+msgid "This request is already done"
+msgstr "這個請求已經完成"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. All of its recordings are also deleted right away and can't be recovered."
+msgstr "會停止錄影並移除這台攝影機，這台所有的錄影也會立刻永久刪除，無法復原。"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back, and retention is set to unlimited, so the oldest are deleted only when space runs low. Until then they keep using space."
+msgstr "會停止錄影並移除這台攝影機。已錄的影片會留在硬碟上，但之後無法再回放，而且保留天數設為不限，只有空間不夠時才會從最舊的開始刪除。在那之前會一直佔用空間。"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period (continuous {continuous}, events {events}) and are then deleted automatically."
+msgstr "會停止錄影並移除這台攝影機。已錄的影片會留在硬碟上，但之後無法再回放，會繼續佔用空間，直到超過保留天數（連續錄影 {continuous}、事件片段 {events}）才自動刪除。"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period and are then deleted automatically."
+msgstr "會停止錄影並移除這台攝影機。已錄的影片會留在硬碟上，但之後無法再回放，會繼續佔用空間，直到超過保留天數才自動刪除。"
+
+#: web/camera-form-logic.ts
+msgid "This stream has no video. Use the URL of a video stream instead."
+msgstr "這個串流沒有影像，請改用影像串流的網址。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Tie"
+msgstr "領帶"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Tilt reversed"
+msgstr "上下反轉"
+
+#: web/timeline/timeline.ts
+msgid "timeline"
+msgstr "時間軸"
+
+#: web/pages/recordings/Playback.tsx
+#: web/timeline/timeline.ts
+msgid "Timeline"
+msgstr "時間軸"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Timeline range"
+msgstr "時間軸範圍"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "To use your own model, put the .onnx file in the <0>{modelsDir}</0> folder and it will show up in the menu within a few seconds."
+msgstr "想用自己的模型，把 .onnx 檔放到 <0>{modelsDir}</0> 資料夾，過幾秒就會出現在選單裡。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Toaster"
+msgstr "烤麵包機"
+
+#: web/detect/model.ts
+#: web/pages/recordings/day.ts
+#: web/ui/date-logic.ts
+#: web/ui/DatePicker.tsx
+msgid "Today"
+msgstr "今天"
+
+#: web/states/model.ts
+msgid "Today {clock}"
+msgstr "今天 {clock}"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Toilet"
+msgstr "馬桶"
+
+#: web/detect/benchmark-model.ts
+msgid "Too slow to handle even 1 camera"
+msgstr "太慢，連 1 台也撐不住"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Toothbrush"
+msgstr "牙刷"
+
+#: web/states/CropEditor.tsx
+msgid "Top left corner"
+msgstr "左上角"
+
+#: web/states/CropEditor.tsx
+msgid "Top right corner"
+msgstr "右上角"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Traffic light"
+msgstr "紅綠燈"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Train"
+msgstr "火車"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Training"
+msgstr "訓練"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Training data exported from Frigate, up to 100 MB"
+msgstr "Frigate 匯出的訓練資料，最大 100 MB"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Training failed: {failedError}"
+msgstr "訓練失敗：{failedError}"
+
+#: web/states/bits.tsx
+msgid "Training, waiting for other sensors to finish…"
+msgstr "正在訓練，等其他感應器完成…"
+
+#: web/states/bits.tsx
+msgid "Training…"
+msgstr "正在訓練…"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Transport"
+msgstr "傳輸方式"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Trigger line"
+msgstr "觸發線"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Truck"
+msgstr "卡車"
+
+#: web/detect/object-model.ts
+msgid "Try a different model."
+msgstr "請換一個模型試試。"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Try again"
+msgstr "再試一次"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Try another category or date, or clear the filters."
+msgstr "換個類別或日期看看，或清除篩選。"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Try another day, or clear the filters."
+msgstr "換一天看看，或清除篩選。"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Turn camera"
+msgstr "轉動鏡頭"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Turn on \"Apple Home\" in <0>Settings → General</0> first to use it here."
+msgstr "要先到 <0>設定 → 一般</0> 開啟「Apple 家庭」，這裡才能使用。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Turn on “Detection” in the settings below to resume."
+msgstr "到下面的設定打開「辨識」就會繼續。"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Turn on in camera settings"
+msgstr "到攝影機設定開啟"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Turn on object detection"
+msgstr "開啟物件辨識"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Turn recording and detection on or off, and change every setting (the same as your admin account)"
+msgstr "開關錄影與偵測，也能變更所有設定（和你的管理員帳號一樣）"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Turn this on if pressing \"Left\" turns the camera right."
+msgstr "按「左」時鏡頭往右轉，就打開這個。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Turning this on shows a QR code for pairing."
+msgstr "開啟後會顯示配對用的 QR code。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "TV"
+msgstr "電視"
+
+#: web/detect/object-model.ts
+msgid "Twice per second (recommended)"
+msgstr "每秒 2 次（建議）"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Umbrella"
+msgstr "雨傘"
+
+#: web/api.ts
+msgid "Unable to connect to the server"
+msgstr "無法連線到伺服器"
+
+#: web/detect/benchmark-model.ts
+msgid "Unavailable"
+msgstr "無法使用"
+
+#: web/detect/object-model.ts
+msgid "Under 1 ms per frame on average"
+msgstr "每張不到 1 毫秒"
+
+#: web/detect/mask-editor.ts
+msgid "Undo"
+msgstr "復原"
+
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Ungrouped"
+msgstr "未分區"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Unknown browser"
+msgstr "不明的瀏覽器"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Unlabeled"
+msgstr "待標記"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Unlabeled pictures"
+msgstr "待標記的畫面"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "unlimited"
+msgstr "不限"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Unlimited"
+msgstr "不限"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Unmute"
+msgstr "開啟聲音"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Unnamed"
+msgstr "還沒取名"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Unsaved"
+msgstr "未儲存"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Unsaved changes will be lost."
+msgstr "還沒儲存的變更會不見。"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Unsupported format"
+msgstr "不支援的格式"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Up"
+msgstr "向上"
+
+#: web/detect/mask-editor.ts
+msgid "Up to {max} excluded areas."
+msgstr "最多 {max} 個排除區域。"
+
+#: web/pages/recordings/export.tsx
+msgid "up to now"
+msgstr "到現在為止"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Update password"
+msgstr "更新密碼"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Updated “{name}” to the current position"
+msgstr "已把「{name}」更新為目前位置"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Uploading {uploadPct}%"
+msgstr "上傳中 {uploadPct}%"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Usage"
+msgstr "使用率"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Usage by"
+msgstr "用量依"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Usage unavailable"
+msgstr "使用率無法取得"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Use ONVIF"
+msgstr "使用 ONVIF"
+
 #: web/pages/account/Appearance.tsx
 msgid "Used for buttons, selections, and navigation."
 msgstr "用在按鈕、選取狀態與導覽列。"
 
+#: web/pages/auth/AuthPage.tsx
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Username"
+msgstr "帳號"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Users"
+msgstr "使用者"
+
+#: web/detect/object-model.ts
+msgid "Uses a graphics card if one is available, otherwise the CPU. This is fine for most setups."
+msgstr "有可用的顯卡就用顯卡，沒有就用處理器。大多數情況選這個就好。"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Uses ONVIF"
+msgstr "使用 ONVIF"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Uses the camera's built-in detection. It doesn't use this computer's resources, but can't exclude areas."
+msgstr "用相機內建的偵測，不佔用這台電腦的資源，但不能排除區域。"
+
+#: web/pages/status/explain.ts
+msgid "Using the CPU"
+msgstr "改用處理器"
+
+#: web/pages/status/explain.ts
+msgid "Usually another surveillance program is running on the same host (for example Frigate or go2rtc, which also use 8554). When the container uses Host networking, set the environment variable RTSP_PORT to a port nobody uses. With bridge networking, set RTSP_PORT and the host-side and container-side ports to the same number. Restart the container afterwards."
+msgstr "通常是同一台主機上還跑著其他監視器軟體（例如 Frigate、go2rtc 也用 8554）。容器用 Host 網路時，設定環境變數 RTSP_PORT 換一個沒人用的 port；用 bridge 網路時，把 RTSP_PORT 和主機、容器兩側的 port 改成同一個數字。改完重新啟動容器。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Vase"
+msgstr "花瓶"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Vehicle"
+msgstr "車輛"
+
+#: web/detect/mask-editor.ts
+msgid "Vertex {n}, move with the arrow keys"
+msgstr "第 {n} 個頂點，用方向鍵移動"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Very conservative"
+msgstr "很保守"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Very sensitive"
+msgstr "很靈敏"
+
+#: web/detect/object-model.ts
+msgid "Very strict"
+msgstr "非常嚴格"
+
+#: web/pages/settings-system/DecodeRow.tsx
+#: web/pages/status/explain.ts
+msgid "Video decoding"
+msgstr "影像解碼"
+
+#: web/health.ts
+msgid "Video decoding fell back to the CPU"
+msgstr "影像解碼改用處理器"
+
+#: web/pages/settings-system/DecodeRow.tsx
+msgid "Video decoding settings saved"
+msgstr "已儲存影像解碼設定"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Video export"
+msgstr "匯出影片"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Video recorded around the clock."
+msgstr "全天候錄下的影片。"
+
+#: web/pages/status/explain.ts
+#: web/pages/status/ResourcesCard.tsx
+msgid "Video service"
+msgstr "影像服務"
+
+#: web/pages/status/explain.ts
+msgid "Video service restarted"
+msgstr "已重新啟動影像服務"
+
+#: web/health.ts
+msgid "Video service stopped"
+msgstr "影像服務停止"
+
+#: web/pages/cameras/CamerasPage.tsx
+msgid "View"
+msgstr "查看"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "View by camera"
+msgstr "依攝影機查看"
+
 #: web/theme.ts
 msgid "Violet"
 msgstr "紫"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Wait before ending the event"
+msgstr "事件結束前等待"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Waiting to be added in the Home app"
+msgstr "等待在「家庭」App 加入"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Waits {cooldown} sec before ending"
+msgstr "結束前等待 {cooldown} 秒"
+
+#: web/pages/camera/CameraPage.tsx
+msgid "Watch playback"
+msgstr "看回放"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Watch this camera in the Home app on iPhone, iPad, or Mac, and get notified when there is motion."
+msgstr "在 iPhone、iPad 或 Mac 的「家庭」App 裡看這台攝影機，有動作時收到通知。"
+
+#: web/pages/link/LinkPage.tsx
+msgid "We couldn't find that code. It may have been mistyped or expired."
+msgstr "找不到這組代碼，可能打錯了或已經過期"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "We recommend reserving this address in your router."
+msgstr "建議在路由器把這個位址固定下來。"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Welcome"
+msgstr "歡迎"
+
+#: web/states/CropEditor.tsx
+msgid "What detection sees"
+msgstr "辨識時看到的畫面"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "What do I need?"
+msgstr "需要準備什麼？"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "What states it can be in"
+msgstr "它會有哪些樣子"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "What to detect"
+msgstr "要判斷什麼"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "What to watch for"
+msgstr "要注意的東西"
+
+#: web/pages/events/EventsPage.tsx
+msgid "When a camera detects motion, the event shows up here."
+msgstr "攝影機偵測到動作時，事件會出現在這裡。"
+
+#: web/pages/status/explain.ts
+msgid "When detection can't keep up, the extra frames are skipped. Recording and motion detection are not affected, but events may miss what was seen. Lowering the detection rate, using a faster device, or running the speed test in settings to see what this machine can do will all help."
+msgstr "辨識跟不上時，多出來的畫面會被略過。錄影與動作偵測不受影響，但事件可能漏標上看到的東西。降低辨識頻率、改用更快的裝置，或到設定裡測速看看這台機器的能力，都能改善。"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "When disabled, it neither shows video nor records, but its settings are kept."
+msgstr "停用後不看畫面也不錄影，但保留設定。"
+
+#: web/pages/states/SensorPage.tsx
+msgid "When off, labels and training results are kept; detection just pauses."
+msgstr "關掉時保留標記與訓練結果，只是暫停判斷。"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "When the disk has less free space than this, the oldest recordings are deleted first."
+msgstr "硬碟剩下的空間少於這個值時，先刪除最舊的錄影。"
+
+#: web/pages/status/explain.ts
+msgid "When the graphics card can't decode, video is decoded by the CPU instead. Recording and motion detection still work, but the CPU does some extra work. You can pick another graphics card or switch back to automatic in “Settings → General”. The reason is written in “Copy diagnostics”."
+msgstr "顯示卡無法解碼時，影像會改由處理器解碼，錄影與動作偵測仍然正常，只是會多吃一些處理器。可以到「設定 → 一般」換一張顯示卡，或改回自動；原因寫在「複製診斷資訊」裡。"
+
+#: web/pages/events/EventsPage.tsx
+msgid "When this camera detects motion, the event shows up here."
+msgstr "這台偵測到動作時，事件會出現在這裡。"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "When you're done, press \"Test and save\". If the connection works, it's saved and starts recording right away."
+msgstr "填好後按「測試並儲存」，連線成功就會直接儲存，並馬上開始錄影。"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Where pictures come from"
+msgstr "畫面從哪裡來"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Where resources go"
+msgstr "資源花在哪裡"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Where the camera is pointing now is stored on the camera."
+msgstr "鏡頭現在對著的位置會存到相機裡。"
+
+#: web/pages/status/explain.ts
+msgid "While object detection is stopped, recording and motion detection are not affected, but events won't be tagged with what was seen. Cameras set to “Filter” create events from ordinary motion instead. If it is still stopped after a restart, use “Copy diagnostics” at the bottom of the page to find the cause, or go to “Settings → Object detection” to switch the model or inference device."
+msgstr "物件辨識停下來時，錄影與動作偵測不受影響，只是事件不會標上看到的東西；設成「過濾」的攝影機會改成照一般動作建立事件。重新啟動後仍然停止，請用頁面下方的「複製診斷資訊」找原因，也可以到「設定 → 物件辨識」換一個辨識模型或推論裝置。"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Wine glass"
+msgstr "酒杯"
+
+#: web/pages/states/SensorPage.tsx
+msgid "With “On change only”, it checks only when the picture inside the area changes."
+msgstr "選「不定時」時只在區域內畫面有變化時看。"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Working"
+msgstr "處理中"
+
+#: web/detect/object-model.ts
+msgid "Works on every computer, but struggles when detecting objects on several cameras at once."
+msgstr "每台電腦都能用，但同時辨識多台攝影機時會比較吃力。"
+
+#: web/pages/settings-cameras/CamerasListPage.tsx
+msgid "Works with Tapo and any camera that supports RTSP. Once added, it starts recording automatically."
+msgstr "支援 Tapo 與任何有 RTSP 的攝影機，加入後就會自動開始錄影。"
+
+#: web/camera-form-logic.ts
+msgid "Wrong username or password. Check the credentials after rtsp:// in the URL."
+msgstr "帳號或密碼不對，請檢查網址中 rtsp:// 後面的帳號與密碼。"
+
+#: web/camera-form-logic.ts
+msgid "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account."
+msgstr "帳號或密碼不對。請用 Tapo App「進階設定 → 相機帳戶」建立的帳密，不是 TP-Link 雲端帳號。"
+
+#: web/detect/model.ts
+#: web/pages/recordings/day.ts
+#: web/ui/date-logic.ts
+msgid "Yesterday"
+msgstr "昨天"
+
+#: web/states/model.ts
+msgid "Yesterday {clock}"
+msgstr "昨天 {clock}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "You"
+msgstr "你"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "You can run the benchmark once object detection is ready."
+msgstr "物件辨識準備好之後才能測速。"
+
+#: web/pages/status/explain.ts
+msgid "You can shorten the retention period first"
+msgstr "可以先縮短保留天數"
+
+#: web/ui/Dialog.tsx
+msgid "You haven't saved your recent edits. Closing will discard them."
+msgstr "剛才改的設定還沒儲存，關掉就不會保留。"
+
+#: web/pages/recordings/Playback.tsx
+msgid "You've reached the latest recording"
+msgstr "已經播到最新的錄影"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Zebra"
+msgstr "斑馬"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Zoom"
+msgstr "變焦"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Zoom in"
+msgstr "放大"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Zoom out"
+msgstr "縮小"

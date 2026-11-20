@@ -54,8 +54,13 @@ export function formatAgo(ms: number | null): string {
 }
 
 /** 名稱清單的分隔：英文「, 」，中日文「、」 */
-export function joinList(items: string[]): string {
+export function joinList(items: readonly string[]): string {
   return items.join(t({ message: ", ", context: "list separator" }));
+}
+
+/** 句子片段的分隔：英文「, 」，中文「，」，日文「、」 */
+export function joinClauses(items: readonly string[]): string {
+  return items.join(t({ message: ", ", context: "clause separator" }));
 }
 
 export function errMsg(e: unknown): string {

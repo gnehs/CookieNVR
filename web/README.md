@@ -26,6 +26,19 @@ canvas 時間軸、MSE 播放器、即時影像在 effect 裡建立、在 cleanu
 
 驗證方法：來回切換頁面，`/api/live`、`/api/stream` 同時只會有一條。
 
+## 多國語言
+
+Lingui，原始語言是英文，另有繁體中文（`zh-Hant`）與日文（`ja`）。語言預設跟瀏覽器，帳號頁可以改，存在這個瀏覽器（`web/i18n.ts`）。
+
+- 程式裡的介面文字一律寫英文。元件裡用 `useLingui()` 的 ``t`…` `` 或 `<Trans>`（`@lingui/react/macro`）；模組外層的表格、選項清單用 `msg`（`@lingui/core/macro`），用的地方再 `i18n._()`；一般函式在函式內呼叫 `@lingui/core/macro` 的 `t`，不要放在模組最外層（那時語言還沒載入）。
+- 英文需要單複數時用 `plural` / `<Plural>`。同一個英文在不同地方意思不同（例如事件的「動作」與偵測方式的「畫面變化」都是 Motion）時加 `context`。
+- 名稱清單用 `format.ts` 的 `joinList`（英文「, 」、中日文「、」），句子片段用 `joinClauses`。日期與數字用 `Intl` 並帶 `i18n.locale`。
+- 物件類別名稱在 `detect/label-names.ts`，自備模型的類別表裡沒有時顯示模型原名。
+- 改完文字跑 `bun run i18n:extract` 更新 `web/locales/*.po`，再補上繁中與日文的 `msgstr`。可以寫成 `{ "英文": "譯文" }` 的 JSON，用 `bun scripts/i18n-fill.ts <locale> <檔案>` 填空白的項目。`.po` 由 Vite 外掛直接載入，不用另外編譯。
+- 換語言時整個路由樹重掛，所以命令式物件（時間軸、遮罩編輯器）的文字也會跟著換。
+- 伺服器 API 回的錯誤訊息還是中文，還沒翻。
+- `bun test` 會先展開 macro 並啟用英文（`scripts/lingui-test-preload.ts`），測試斷言寫英文。
+
 ## 開發
 
 - `bun run dev:mock`：假後端（`web/dev-mock.ts`）加 Vite。`WEB_PORT`、`MOCK_API_PORT` 換埠，`MOCK_FRESH=1` 從初始設定開始。

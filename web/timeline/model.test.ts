@@ -114,6 +114,6 @@ test("the event under the playhead, an in-progress one included", () => {
 
 test("事件類別用全站同一份名稱，沒有類別時是動作，重複的合併", () => {
   expect(labelText([])).toBe("Motion");
-  expect(labelText(["person", "car"])).toBe("人, 汽車");
-  expect(labelText(["vehicle", "pet", "person", "person"])).toBe("車輛, 寵物, 人");
+  expect(labelText(["person", "car"])).toBe("Person, Car");
+  expect(labelText(["vehicle", "pet", "person", "person"])).toBe("Vehicle, Pet, Person");
 });

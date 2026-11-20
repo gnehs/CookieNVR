@@ -221,7 +221,7 @@ function Wizard({ cam }: { cam: CameraDto }) {
             </p>
             {step > 0 ? (
               <Button disabled={busy} onClick={() => (setError(null), setStep((step - 1) as Step))}>
-                <Trans>Back</Trans>
+                <Trans>Previous</Trans>
               </Button>
             ) : null}
             <button className="btn primary" type="submit" disabled={busy} aria-busy={busy || undefined}>

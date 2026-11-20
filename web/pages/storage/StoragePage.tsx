@@ -376,7 +376,7 @@ function RetentionForm({ settings, draft, setDraft }: { settings: SettingsDto; d
           desc={t`Clips recorded when motion is detected. They can usually be kept longer than continuous recording.`}
           control={(a) => <PresetPicker {...a} label={t`Event clips`} presets={days([7, 30, 90])} initial={saved.eventDays} unit={t`days`} onChange={set("eventDays")} />}
         />
-        <SettingsDisclosure title={t`Advanced`} summary={t`Keep ${keepFree} free · ${pathText}`}>
+        <SettingsDisclosure title={t`Advanced settings`} summary={t`Keep ${keepFree} free · ${pathText}`}>
           <SettingRow
             title={t`Minimum free space`}
             desc={t`When the disk has less free space than this, the oldest recordings are deleted first.`}

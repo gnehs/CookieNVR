@@ -260,7 +260,7 @@ export const connAdvancedSummary = (d: Draft) =>
 /** 連線的進階設定有不是預設值的東西時，一打開就展開 */
 export const connAdvancedOpen = (d: Draft) => (d.type === "rtsp" && (d.transport !== "tcp" || d.onvifOn)) || d.recDirect;
 
-export const recSummary = (d: Draft) => (!d.recEnabled ? t`Not recording` : d.recAudio ? t`Recording 24/7 · with sound` : t`Recording 24/7 · without sound`);
+export const recSummary = (d: Draft) => (!d.recEnabled ? t`Recording off` : d.recAudio ? t`Recording 24/7 · with sound` : t`Recording 24/7 · without sound`);
 
 /** objects 是物件辨識的一句話（系統沒開物件辨識時是 null） */
 export function detectSummary(d: DetectConfig, objects: string | null): string {

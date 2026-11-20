@@ -93,7 +93,7 @@ function Live({ cam }: { cam: CameraDto }) {
               label={t`Quality`}
               options={[
                 { value: "sd", label: t`Standard` },
-                { value: "hd", label: t`High` },
+                { value: "hd", label: t`High quality` },
               ]}
               value={quality}
               onChange={(q) => {

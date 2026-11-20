@@ -1,7 +1,8 @@
+import { joinClauses } from "../../format.ts";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg, t } from "@lingui/core/macro";
 import type { CameraDecodeDto, DecodeStatusDto, InferenceDeviceDto, VideoDeviceDto } from "../../../src/api-types.ts";
-import { indexedName, listSeparator, tidyName } from "../../detect/object-model.ts";
+import { indexedName, tidyName } from "../../detect/object-model.ts";
 
 export interface DecodeOption {
   value: string;
@@ -71,11 +72,11 @@ export function decodeNote(status: DecodeStatusDto | null, devices: readonly Vid
   const used = [...new Set(cams.filter((c) => c.device === null || c.confirmed).map((c) => label(c.device)))];
   const waiting = [...new Set(cams.filter((c) => !c.confirmed && c.device !== null).map((c) => label(c.device)))];
   if (used.length) {
-    const names = used.join(listSeparator());
+    const names = joinClauses(used);
     return { tone: "ok", text: t`In use: ${names}` };
   }
   if (waiting.length) {
-    const names = waiting.join(listSeparator());
+    const names = joinClauses(waiting);
     return { tone: "muted", text: t`Getting ready to use: ${names}` };
   }
   return null;

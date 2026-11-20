@@ -4,7 +4,7 @@ import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { EventDto } from "../../../src/api-types.ts";
-import { labelName } from "../../../src/objects/labels.ts";
+import { labelName } from "../../detect/label-names.ts";
 import { api } from "../../api.ts";
 import { activeEventsQuery, camerasQuery, objectLabelsQuery } from "../../data/queries.ts";
 import { useMe } from "../../data/session.ts";
@@ -12,7 +12,8 @@ import { dayBounds, dayKey, dayTitle, groupByDay, mergeEvents, playbackSearch } 
 import { eventLabelOptions } from "../../detect/object-model.ts";
 import { errMsg, formatClock } from "../../format.ts";
 import { EVENT_ACTIVE } from "../../health.ts";
-import { joinList, labelText } from "../../timeline/model.ts";
+import { joinList } from "../../format.ts";
+import { labelText } from "../../timeline/model.ts";
 import { Button, ButtonLink } from "../../ui/Button.tsx";
 import { DatePicker } from "../../ui/DatePicker.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
@@ -207,12 +208,12 @@ function EventsList() {
   const camEntries: SelectEntry<string>[] = [{ value: "", label: t`All cameras` }, "separator", ...cams.map((c) => ({ value: c.id, label: c.config.name }))];
   const ALL = { value: "", label: t`All categories` };
   // 照選單的順序念，不照網址上排序過的鍵
-  const labelNames = labelOptions.filter((o) => filter.labels.includes(o.key)).map((o) => o.zh);
+  const labelNames = labelOptions.filter((o) => filter.labels.includes(o.key)).map((o) => o.name);
   const first = labelNames[0];
   const others = labelNames.length - 1;
   const labelSummary =
     labelNames.length === 0 ? ALL.label : labelNames.length <= 2 ? joinList(labelNames) : t`${first} and ${others} more`;
-  const opt = (l: { key: string; zh: string }) => ({ value: l.key, label: l.zh });
+  const opt = (l: { key: string; name: string }) => ({ value: l.key, label: l.name });
   const labelEntries: SelectEntry<string>[] = [ALL, "separator", ...labelOptions.map(opt)];
   /** 還沒有任何事件帶類別（沒用物件辨識、相機也沒回報）就不佔位；篩選中一定要看得到 */
   const showLabelPick = filter.labels.length > 0 || items.some((e) => e.labels.length > 0);

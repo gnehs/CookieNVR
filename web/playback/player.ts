@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import type { SegmentDto } from "../../src/api-types.ts";
-import { joinList } from "../timeline/model.ts";
+import { joinList } from "../format.ts";
 import { mimeType, Mp4Splitter, type InitInfo, type Unit } from "./mp4.ts";
 import { bufToWall, offsetFor, trimBefore, wallToBuf, type Placement } from "./timemap.ts";
 

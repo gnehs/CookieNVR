@@ -30,12 +30,12 @@ export function ObjectSection({ value, onChange, zones }: { value: ObjectFields;
   }, [g.moreHasSelected]);
 
   const toggle = (key: string, on: boolean) => onChange({ labels: on ? [...value.labels, key] : value.labels.filter((k) => k !== key) });
-  const box = (key: string, zh: string) => (
+  const box = (key: string, name: string) => (
     <label className="obj-label" key={key}>
       <input type="checkbox" value={key} checked={value.labels.includes(key)} onChange={(e) => toggle(key, e.currentTarget.checked)} />
       <span>
         <Icon name="check" size={15} />
-        {zh}
+        {name}
       </span>
     </label>
   );
@@ -74,7 +74,7 @@ export function ObjectSection({ value, onChange, zones }: { value: ObjectFields;
       <div className="set-block obj-block" hidden={mode === "off"}>
         <span className="set-row-title">{t`What to watch for`}</span>
         <div className="obj-labels" role="group" aria-label={t`What to watch for`}>
-          {g.common.map((l) => box(l.key, l.zh))}
+          {g.common.map((l) => box(l.key, l.name))}
         </div>
         <details ref={more} className="detect-more obj-more" hidden={g.more.length === 0} onToggle={() => (touched.current = true)}>
           <summary>
@@ -83,7 +83,7 @@ export function ObjectSection({ value, onChange, zones }: { value: ObjectFields;
           </summary>
           <div className="detect-more-body">
             <div className="obj-labels" role="group" aria-label={t`More categories`}>
-              {g.more.map((l) => box(l.key, l.zh))}
+              {g.more.map((l) => box(l.key, l.name))}
             </div>
           </div>
         </details>

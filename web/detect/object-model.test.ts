@@ -174,7 +174,7 @@ describe("類別清單", () => {
   test("事件篩選：只列有開啟的類別與事件裡出現過的（含相機自己的 vehicle），不重複", () => {
     const o = eventLabelOptions(catalog, ["dog", "person"], ["vehicle", "person"]);
     expect(o.map((l) => l.key).sort()).toEqual(["dog", "person", "vehicle"]);
-    expect(o.find((l) => l.key === "vehicle")?.zh).toBe("車輛");
+    expect(o.find((l) => l.key === "vehicle")?.name).toBe("Vehicle");
   });
 
   test("事件篩選依出現次數由多到少排，沒出現過的有開類別照目錄順序墊底", () => {
@@ -196,10 +196,10 @@ describe("卡片摘要", () => {
     expect(objectSummary("off", ["person"])).toBeNull();
   });
   test("標註與過濾的說法不同，類別多時收成「等 N 類」", () => {
-    expect(objectSummary("annotate", ["person", "car"])).toBe("Detect 人 and 汽車");
-    expect(objectSummary("filter", ["person"])).toBe("Only record 人");
-    expect(objectSummary("filter", ["person", "car", "dog"])).toBe("Only record 人, 汽車 and 狗");
-    expect(objectSummary("annotate", ["person", "car", "dog", "cat"])).toBe("Detect 人, 汽車, etc. (4 categories)");
+    expect(objectSummary("annotate", ["person", "car"])).toBe("Detect Person and Car");
+    expect(objectSummary("filter", ["person"])).toBe("Only record Person");
+    expect(objectSummary("filter", ["person", "car", "dog"])).toBe("Only record Person, Car and Dog");
+    expect(objectSummary("annotate", ["person", "car", "dog", "cat"])).toBe("Detect Person, Car, etc. (4 categories)");
   });
   test("過濾模式沒勾類別會提醒不會記錄事件", () => {
     expect(objectSummary("filter", [])).toBe("No categories selected, no events recorded");

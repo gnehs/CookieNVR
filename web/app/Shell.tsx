@@ -154,7 +154,9 @@ function UserMenu({ active }: { active: Section | undefined }) {
               <b>{me.username}</b>
               <small>{role}</small>
             </span>
-            <span className="user-label" aria-hidden="true" />
+            <span className="user-label" aria-hidden="true">
+              {t({ message: "Me", context: "phone tab bar" })}
+            </span>
             <Icon name="selector" size={16} />
           </button>
         }

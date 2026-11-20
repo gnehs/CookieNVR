@@ -1,3 +1,5 @@
+import { t as msgT } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api.ts";
 import type { SessionDto } from "../../../src/api-types.ts";
@@ -14,15 +16,17 @@ export const sessionsQuery = queryOptions({ queryKey: ["me", "sessions"], queryF
 function describeUa(ua: string): string {
   const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
   const br = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "";
-  return [os, br].filter(Boolean).join(" 上的 ") || "不明的瀏覽器";
+  if (os && br) return msgT`${br} on ${os}`;
+  return os || br || msgT`Unknown browser`;
 }
 
 function List({ sessions }: { sessions: SessionDto[] }) {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const revoke = useMutation({
     mutationFn: (id: string) => api.revokeSession(id),
     onSuccess: () => {
-      toast("已登出那台裝置");
+      toast(t`Signed out that device`);
       return qc.invalidateQueries({ queryKey: sessionsQuery.queryKey });
     },
     onError: (e) => toast(e instanceof Error ? e.message : String(e), "error"),
@@ -31,6 +35,11 @@ function List({ sessions }: { sessions: SessionDto[] }) {
   const list = sessions.slice().sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeenAt - a.lastSeenAt);
   const names = list.map((s) => describeUa(s.userAgent));
   const dup = (n: string) => names.filter((x) => x === n).length > 1;
+  const lastUsed = (at: number) => {
+    const ago = formatAgo(at);
+    return t`Last used ${ago}`;
+  };
+  const from = (ip: string) => t`From ${ip}`;
   return (
     <div className="row-list">
       {list.map((s, i) => (
@@ -40,8 +49,8 @@ function List({ sessions }: { sessions: SessionDto[] }) {
               <Icon name="monitor" size={18} />
             </span>
             <div className="row-text">
-              <b className="truncate">{s.current ? "這台裝置" : names[i]}</b>
-              <small className="truncate">{s.current ? names[i] : [`上次使用 ${formatAgo(s.lastSeenAt)}`, dup(names[i]!) ? `來自 ${s.ip}` : null].filter(Boolean).join("・")}</small>
+              <b className="truncate">{s.current ? t`This device` : names[i]}</b>
+              <small className="truncate">{s.current ? names[i] : [lastUsed(s.lastSeenAt), dup(names[i]!) ? from(s.ip) : null].filter(Boolean).join(" · ")}</small>
             </div>
           </div>
           {s.current ? null : (
@@ -50,11 +59,12 @@ function List({ sessions }: { sessions: SessionDto[] }) {
               icon="logout"
               iconSize={15}
               onClick={async () => {
-                if (!(await confirmDialog(`登出「${names[i]}」？`, "這台裝置下次開啟時需要重新登入。", { confirmLabel: "登出", danger: true }))) return;
+                const name = names[i];
+                if (!(await confirmDialog(t`Sign out “${name}”?`, t`This device will need to sign in again next time it opens.`, { confirmLabel: t`Sign out`, danger: true }))) return;
                 revoke.mutate(s.id);
               }}
             >
-              登出
+              <Trans>Sign out</Trans>
             </Button>
           )}
         </div>
@@ -64,9 +74,10 @@ function List({ sessions }: { sessions: SessionDto[] }) {
 }
 
 export function SessionsPanel() {
+  const { t } = useLingui();
   const q = useQuery(sessionsQuery);
   return (
-    <Panel title="登入中的裝置">
+    <Panel title={t`Signed-in devices`}>
       {q.isPending ? <Spinner /> : q.isError ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : <List sessions={q.data} />}
     </Panel>
   );

@@ -1,6 +1,7 @@
+import { joinList } from "../format.ts";
 import { t } from "@lingui/core/macro";
 import type { EventDto, SegmentDto } from "../../src/api-types.ts";
-import { labelName } from "../../src/objects/labels.ts";
+import { labelName } from "../detect/label-names.ts";
 import { GAP_MS } from "../playback/timemap.ts";
 
 /** Playback starts this long before an event, matching the backend's event buffer. */
@@ -161,7 +162,6 @@ export function eventAt(events: readonly EventDto[], w: number, now: number): Ev
 }
 
 /** 清單項目之間的分隔：英文「, 」，中日文「、」 */
-export const joinList = (items: readonly string[]) => items.join(t({ message: ", ", context: "list separator" }));
 
 /** 事件的標題：看到了什麼；沒有類別就是「動作」 */
-export const labelText = (labels: readonly string[]) => (labels.length ? joinList([...new Set(labels.map(labelName))]) : t`Motion`);
+export const labelText = (labels: readonly string[]) => (labels.length ? joinList([...new Set(labels.map((l) => labelName(l)))]) : t({ message: "Motion", context: "event without objects" }));

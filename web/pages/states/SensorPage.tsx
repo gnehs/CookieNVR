@@ -383,7 +383,7 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
         </span>
       </summary>
       <div className="fcard-body">
-        <SettingRow title={t`Detection`} desc={t`When off, labels and training results are kept; detection just pauses.`} toggle control={(a) => <Switch {...a} checked={draft.enabled} onChange={(enabled) => set({ enabled })} />} />
+        <SettingRow title={t`Recognition`} desc={t`When off, labels and training results are kept; detection just pauses.`} toggle control={(a) => <Switch {...a} checked={draft.enabled} onChange={(enabled) => set({ enabled })} />} />
         <SettingRow title={t`Name`} wide control={(a) => <input {...a} type="text" autoComplete="off" spellCheck={false} maxLength={MAX_NAME} value={draft.name} onChange={(e) => set({ name: e.currentTarget.value })} />} />
         <div className="set-block">
           <p className="set-row-title">{t`Classes`}</p>

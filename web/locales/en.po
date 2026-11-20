@@ -7,29 +7,1663 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: en\n"
 
+#: web/format.ts
+#: web/pages/events/EventsPage.tsx
+msgctxt "clause separator"
+msgid ", "
+msgstr ", "
+
+#: web/format.ts
+msgctxt "list separator"
+msgid ", "
+msgstr ", "
+
+#: web/states/bits.tsx
+msgid ", may change to “{candidate}”"
+msgstr ", may change to “{candidate}”"
+
+#: web/pages/storage/StoragePage.tsx
+msgid ". There's no day limit; when space runs low, the oldest recordings are deleted first."
+msgstr ". There's no day limit; when space runs low, the oldest recordings are deleted first."
+
+#: web/health.ts
+msgid "“{name}” can't see the picture"
+msgstr "“{name}” can't see the picture"
+
+#: web/states/model.ts
+msgid "“{name}” is used twice"
+msgstr "“{name}” is used twice"
+
+#: web/health.ts
+msgid "“{name}” isn't trained yet"
+msgstr "“{name}” isn't trained yet"
+
+#: web/health.ts
+msgid "“{name}” needs retraining"
+msgstr "“{name}” needs retraining"
+
+#: web/pages/status/explain.ts
+msgid "“{sensor}” on {camera}"
+msgstr "“{sensor}” on {camera}"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "“{sensorName}” was created, but the import failed: {reason}"
+msgstr "“{sensorName}” was created, but the import failed: {reason}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "\"{username}\" is now {role}"
+msgstr "\"{username}\" is now {role}"
+
+#: web/detect/object-model.ts
+#: web/pages/settings-system/decode-model.ts
+msgid "(not found right now, choosing automatically)"
+msgstr "(not found right now, choosing automatically)"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "(Username and password omitted)"
+msgstr "(Username and password omitted)"
+
+#. placeholder {0}: l.count
+#: web/pages/states/SensorPage.tsx
+msgid "{0, plural, one {# image} other {# images}}"
+msgstr "{0, plural, one {# image} other {# images}}"
+
+#: web/pages/status/StatusPage.tsx
+msgid "{active, plural, one {# camera is connected.} other {All # cameras are connected.}}"
+msgstr "{active, plural, one {# camera is connected.} other {All # cameras are connected.}}"
+
+#: web/pages/status/StatusPage.tsx
+msgid "{active, plural, one {# camera is recording.} other {All # cameras are recording.}}"
+msgstr "{active, plural, one {# camera is recording.} other {All # cameras are recording.}}"
+
+#: web/pages/link/LinkPage.tsx
+msgid "{app} is already connected. There's nothing more to do."
+msgstr "{app} is already connected. There's nothing more to do."
+
+#: web/pages/link/LinkPage.tsx
+msgid "{app} won't connect to CookieNVR."
+msgstr "{app} won't connect to CookieNVR."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "{area} of the picture"
+msgstr "{area} of the picture"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{badge}, running for {duration}"
+msgstr "{badge}, running for {duration}"
+
+#: web/pages/recordings/day.ts
+msgid "{base} ({rel})"
+msgstr "{base} ({rel})"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "{br} on {os}"
+msgstr "{br} on {os}"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "{cameraCount}, {groupCount}"
+msgstr "{cameraCount}, {groupCount}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {# camera has object detection on, but when it has motion only {supported} can be handled and the rest of its frames are skipped. Try lowering the detection rate or switching to a faster device.} other {# cameras have object detection on, but when they all have motion at once only {supported} can be handled and the rest of their frames are skipped. Try lowering the detection rate or switching to a faster device.}}"
+msgstr "{cameras, plural, one {# camera has object detection on, but when it has motion only {supported} can be handled and the rest of its frames are skipped. Try lowering the detection rate or switching to a faster device.} other {# cameras have object detection on, but when they all have motion at once only {supported} can be handled and the rest of their frames are skipped. Try lowering the detection rate or switching to a faster device.}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {About # camera} other {About # cameras}}"
+msgstr "{cameras, plural, one {About # camera} other {About # cameras}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {The # camera with object detection on can keep up even when it has motion.} other {The # cameras with object detection on can all keep up even when they all have motion at once.}}"
+msgstr "{cameras, plural, one {The # camera with object detection on can keep up even when it has motion.} other {The # cameras with object detection on can all keep up even when they all have motion at once.}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{cameras, plural, one {This machine can handle about # camera at the same time (each {clause})} other {This machine can handle about # cameras at the same time (each {clause})}}"
+msgstr "{cameras, plural, one {This machine can handle about # camera at the same time (each {clause})} other {This machine can handle about # cameras at the same time (each {clause})}}"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{camName}, {day} {clock}. The event and its thumbnail are deleted permanently. The recording is cleared later under the normal retention period."
+msgstr "{camName}, {day} {clock}. The event and its thumbnail are deleted permanently. The recording is cleared later under the normal retention period."
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{chosenCount} selected"
+msgstr "{chosenCount} selected"
+
+#: web/timeline/timeline.ts
+msgid "{clock} · {elapsed}"
+msgstr "{clock} · {elapsed}"
+
+#: web/timeline/timeline.ts
+msgid "{clock} · In progress"
+msgstr "{clock} · In progress"
+
+#: web/states/CropEditor.tsx
+msgid "{corner}, resize with the arrow keys"
+msgstr "{corner}, resize with the arrow keys"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "{count, plural, one {# area where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it.} other {# areas where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it.}}"
+msgstr "{count, plural, one {# area where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it.} other {# areas where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it.}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# camera not recording} other {# cameras not recording}}"
+msgstr "{count, plural, one {# camera not recording} other {# cameras not recording}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# camera offline} other {# cameras offline}}"
+msgstr "{count, plural, one {# camera offline} other {# cameras offline}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# camera with unstable recording} other {# cameras with unstable recording}}"
+msgstr "{count, plural, one {# camera with unstable recording} other {# cameras with unstable recording}}"
+
+#: web/timeline/timeline.ts
+msgid "{count, plural, one {# event · {kinds}} other {# events · {kinds}}}"
+msgstr "{count, plural, one {# event · {kinds}} other {# events · {kinds}}}"
+
+#: web/pages/recordings/Playback.tsx
+#: web/timeline/timeline.ts
+msgid "{count, plural, one {# event} other {# events}}"
+msgstr "{count, plural, one {# event} other {# events}}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{count, plural, one {# image of “{actual}” was read as “{predicted}”} other {# images of “{actual}” were read as “{predicted}”}}"
+msgstr "{count, plural, one {# image of “{actual}” was read as “{predicted}”} other {# images of “{actual}” were read as “{predicted}”}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# state sensor can't see the picture} other {# state sensors can't see the picture}}"
+msgstr "{count, plural, one {# state sensor can't see the picture} other {# state sensors can't see the picture}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# state sensor isn't trained yet} other {# state sensors aren't trained yet}}"
+msgstr "{count, plural, one {# state sensor isn't trained yet} other {# state sensors aren't trained yet}}"
+
+#: web/health.ts
+msgid "{count, plural, one {# state sensor needs retraining} other {# state sensors need retraining}}"
+msgstr "{count, plural, one {# state sensor needs retraining} other {# state sensors need retraining}}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "{count, plural, one {# user} other {# users}}"
+msgstr "{count, plural, one {# user} other {# users}}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{count, plural, one {Delete # picture?} other {Delete # pictures?}}"
+msgstr "{count, plural, one {Delete # picture?} other {Delete # pictures?}}"
+
+#: web/pages/status/explain.ts
+msgid "{count, plural, one {Restart recording for # camera?} other {Restart recording for # cameras?}}"
+msgstr "{count, plural, one {Restart recording for # camera?} other {Restart recording for # cameras?}}"
+
+#: web/health.ts
+msgid "{count} cameras not recording: {names}"
+msgstr "{count} cameras not recording: {names}"
+
+#: web/health.ts
+msgid "{count} cameras offline: {names}"
+msgstr "{count} cameras offline: {names}"
+
+#: web/health.ts
+msgid "{count} cameras with unstable recording: {names}"
+msgstr "{count} cameras with unstable recording: {names}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{cpuCores, plural, one {# core total} other {# cores total}}"
+msgstr "{cpuCores, plural, one {# core total} other {# cores total}}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{cpuCores, plural, one {Limit # core} other {Limit # cores}}"
+msgstr "{cpuCores, plural, one {Limit # core} other {Limit # cores}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{d, plural, one {# day} other {# days}}"
+msgstr "{d, plural, one {# day} other {# days}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{d, plural, one {About # day fits} other {About # days fit}}"
+msgstr "{d, plural, one {About # day fits} other {About # days fit}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{d, plural, one {Space only fits about # day} other {Space only fits about # days}}"
+msgstr "{d, plural, one {Space only fits about # day} other {Space only fits about # days}}"
+
+#: web/format.ts
+msgid "{days, plural, one {# day} other {# days}}"
+msgstr "{days, plural, one {# day} other {# days}}"
+
+#: web/pages/recordings/export.tsx
+msgid "{duration} · about {size}"
+msgstr "{duration} · about {size}"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{first} and {others} more"
+msgstr "{first} and {others} more"
+
+#: web/detect/object-model.ts
+msgid "{first} and {second}"
+msgstr "{first} and {second}"
+
+#: web/detect/object-model.ts
+msgid "{first}, {second} and {third}"
+msgstr "{first}, {second} and {third}"
+
+#: web/detect/object-model.ts
+msgid "{first}, {second}, etc. ({total} categories)"
+msgstr "{first}, {second}, etc. ({total} categories)"
+
+#: web/detect/benchmark-model.ts
+msgid "{fps} frames per second"
+msgstr "{fps} frames per second"
+
+#: web/format.ts
+#: web/states/model.ts
+msgid "{hours, plural, one {# hour ago} other {# hours ago}}"
+msgstr "{hours, plural, one {# hour ago} other {# hours ago}}"
+
+#: web/format.ts
+msgid "{hours, plural, one {# hour} other {# hours}}"
+msgstr "{hours, plural, one {# hour} other {# hours}}"
+
+#: web/app/Shell.tsx
+msgid "{issues, plural, one {# issue needs attention} other {# issues need attention}}"
+msgstr "{issues, plural, one {# issue needs attention} other {# issues need attention}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{keep, plural, one {, fewer than the # day you set, so the oldest recordings will be deleted early.} other {, fewer than the # days you set, so the oldest recordings will be deleted early.}}"
+msgstr "{keep, plural, one {, fewer than the # day you set, so the oldest recordings will be deleted early.} other {, fewer than the # days you set, so the oldest recordings will be deleted early.}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{keep, plural, one {. You keep recordings for # day, so there's enough space.} other {. You keep recordings for # days, so there's enough space.}}"
+msgstr "{keep, plural, one {. You keep recordings for # day, so there's enough space.} other {. You keep recordings for # days, so there's enough space.}}"
+
+#: web/ui/controls.tsx
+#: web/ui/SettingRow.tsx
+msgid "{label} (custom, unit: {unit})"
+msgstr "{label} (custom, unit: {unit})"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label} over the last 10 minutes: average {avg}%, peak {peak}%"
+msgstr "{label} over the last 10 minutes: average {avg}%, peak {peak}%"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label} recent trend: still collecting data"
+msgstr "{label} recent trend: still collecting data"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label} usage"
+msgstr "{label} usage"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{label}: {value}"
+msgstr "{label}: {value}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{lost, plural, one {# labeled image of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.} other {# labeled images of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.}}"
+msgstr "{lost, plural, one {# labeled image of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.} other {# labeled images of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.}}"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "{masks, plural, one {# excluded area} other {# excluded areas}}"
+msgstr "{masks, plural, one {# excluded area} other {# excluded areas}}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{memUsed} / {memTotal}"
+msgstr "{memUsed} / {memTotal}"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "{memUsed} / limit {memTotal}"
+msgstr "{memUsed} / limit {memTotal}"
+
+#: web/format.ts
+#: web/states/model.ts
+msgid "{minutes, plural, one {# minute ago} other {# minutes ago}}"
+msgstr "{minutes, plural, one {# minute ago} other {# minutes ago}}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{minutes, plural, one {Checks every # minute} other {Checks every # minutes}}"
+msgstr "{minutes, plural, one {Checks every # minute} other {Checks every # minutes}}"
+
+#: web/pages/link/LinkPage.tsx
+msgid "{minutes, plural, one {Valid for # minute} other {Valid for # minutes}}"
+msgstr "{minutes, plural, one {Valid for # minute} other {Valid for # minutes}}"
+
+#: web/format.ts
+msgid "{minutes} min"
+msgstr "{minutes} min"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{minutes} min {seconds} sec"
+msgstr "{minutes} min {seconds} sec"
+
+#: web/states/model.ts
+msgid "{missing} more as “{label}”"
+msgstr "{missing} more as “{label}”"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "{model} (file not found)"
+msgstr "{model} (file not found)"
+
+#: web/detect/mask-editor.ts
+msgid "{more, plural, one {Add at least # more point to close it.} other {Add at least # more points to close it.}}"
+msgstr "{more, plural, one {Add at least # more point to close it.} other {Add at least # more points to close it.}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{ms} ms for the slowest 10%"
+msgstr "{ms} ms for the slowest 10%"
+
+#: web/detect/benchmark-model.ts
+msgid "{ms} ms per frame on average"
+msgstr "{ms} ms per frame on average"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "{n, plural, one {# day} other {# days}}"
+msgstr "{n, plural, one {# day} other {# days}}"
+
+#: web/detect/mask-editor.ts
+msgid "{n, plural, one {# excluded area. Changes inside it won't trigger events. Tap an area to adjust or delete it.} other {# excluded areas. Changes inside them won't trigger events. Tap an area to adjust or delete one.}}"
+msgstr "{n, plural, one {# excluded area. Changes inside it won't trigger events. Tap an area to adjust or delete it.} other {# excluded areas. Changes inside them won't trigger events. Tap an area to adjust or delete one.}}"
+
+#: web/states/ClassesEditor.tsx
+msgid "{n, plural, one {# image} other {# images}}"
+msgstr "{n, plural, one {# image} other {# images}}"
+
+#: web/pages/status/StatusPage.tsx
+msgid "{n, plural, one {# thing needs attention} other {# things need attention}}"
+msgstr "{n, plural, one {# thing needs attention} other {# things need attention}}"
+
+#: web/detect/object-model.ts
+msgid "{name} ({index})"
+msgstr "{name} ({index})"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "{name} ({size})"
+msgstr "{name} ({size})"
+
+#: web/health.ts
+msgid "{name} is not recording"
+msgstr "{name} is not recording"
+
+#: web/health.ts
+msgid "{name} is offline"
+msgstr "{name} is offline"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "{name}: {state}"
+msgstr "{name}: {state}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{oldCount} old locations ({oldList})"
+msgstr "{oldCount} old locations ({oldList})"
+
+#: web/ui/controls.tsx
+msgid "{optLabel}, {optDesc}"
+msgstr "{optLabel}, {optDesc}"
+
+#: web/detect/object-model.ts
+msgid "{pct}% of the work runs on the CPU"
+msgstr "{pct}% of the work runs on the CPU"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "{pending} to label"
+msgstr "{pending} to label"
+
+#: web/detect/object-model.ts
+msgid "{perSecond, plural, one {# time per second} other {# times per second}}"
+msgstr "{perSecond, plural, one {# time per second} other {# times per second}}"
+
+#: web/detect/object-model.ts
+msgid "{perSecond, plural, one {detecting # time per second} other {detecting # times per second}}"
+msgstr "{perSecond, plural, one {detecting # time per second} other {detecting # times per second}}"
+
+#: web/detect/object-model.ts
+msgid "{rounded} ms per frame on average"
+msgstr "{rounded} ms per frame on average"
+
+#: web/pages/link/LinkPage.tsx
+msgid "{s, plural, one {Valid for # second} other {Valid for # seconds}}"
+msgstr "{s, plural, one {Valid for # second} other {Valid for # seconds}}"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{scope}: no {what} events"
+msgstr "{scope}: no {what} events"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{scope}: no events"
+msgstr "{scope}: no events"
+
+#: web/pages/events/EventsPage.tsx
+msgid "{scope}: no events yet"
+msgstr "{scope}: no events yet"
+
+#: web/pages/states/SensorPage.tsx
+msgid "{seconds, plural, one {Checks every # second} other {Checks every # seconds}}"
+msgstr "{seconds, plural, one {Checks every # second} other {Checks every # seconds}}"
+
+#: web/detect/benchmark-model.ts
+msgid "{seconds} s to load"
+msgstr "{seconds} s to load"
+
+#: web/format.ts
+#: web/pages/events/EventsPage.tsx
+msgid "{seconds} sec"
+msgstr "{seconds} sec"
+
+#: web/pages/recordings/export.tsx
+msgid "{selected}, up to 2 hours per export"
+msgstr "{selected}, up to 2 hours per export"
+
+#: web/states/bits.tsx
+msgid "{sensorName}:"
+msgstr "{sensorName}:"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{source}: {label}"
+msgstr "{source}: {label}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{source}: {label} ({percent}%)"
+msgstr "{source}: {label} ({percent}%)"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
+msgstr "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
+
+#: web/detect/benchmark-model.ts
+#: web/detect/object-model.ts
+msgid "{text}."
+msgstr "{text}."
+
+#: web/detect/benchmark-model.ts
+msgid "{text}. {device}: {shareText}"
+msgstr "{text}. {device}: {shareText}"
+
+#: web/states/model.ts
+msgid "{total, plural, one {Checked against your # labeled image: {correct} correct} other {Checked against your # labeled images: {correct} correct}}"
+msgstr "{total, plural, one {Checked against your # labeled image: {correct} correct} other {Checked against your # labeled images: {correct} correct}}"
+
+#: web/states/model.ts
+msgid "{total, plural, one {Checked against your # labeled image: correct} other {Checked against your # labeled images: all correct}}"
+msgstr "{total, plural, one {Checked against your # labeled image: correct} other {Checked against your # labeled images: all correct}}"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "{totalCameras, plural, one {# camera} other {# cameras}}"
+msgstr "{totalCameras, plural, one {# camera} other {# cameras}}"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "{totalGroups, plural, one {# group} other {# groups}}"
+msgstr "{totalGroups, plural, one {# group} other {# groups}}"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{totalText} total · {recordedText} recorded"
+msgstr "{totalText} total · {recordedText} recorded"
+
+#: web/states/model.ts
+msgid "{used, plural, one {Trained on # labeled image} other {Trained on # labeled images}}"
+msgstr "{used, plural, one {Trained on # labeled image} other {Trained on # labeled images}}"
+
+#: web/pages/status/explain.ts
+msgid "{used}% is used. The oldest recordings are deleted automatically before space runs out, and a shorter retention period keeps important clips from being deleted."
+msgstr "{used}% is used. The oldest recordings are deleted automatically before space runs out, and a shorter retention period keeps important clips from being deleted."
+
+#: web/pages/status/StatusPage.tsx
+msgid "{usedPct}% used"
+msgstr "{usedPct}% used"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "{usedPct}% used, {partsText}, {freeText} free"
+msgstr "{usedPct}% used, {partsText}, {freeText} free"
+
+#: web/app/Shell.tsx
+msgid "{username} {role}, {menuName} menu"
+msgstr "{username} {role}, {menuName} menu"
+
+#: web/app/Shell.tsx
+msgid "{username} {role}, {menuName} menu, {issueText}"
+msgstr "{username} {role}, {menuName} menu, {issueText}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "{v} sec"
+msgstr "{v} sec"
+
+#: web/pages/recordings/Playback.tsx
+msgid "{what} {clock} · {dur}"
+msgstr "{what} {clock} · {dur}"
+
+#: web/pages/recordings/Playback.tsx
+msgid "{what} {clock} · {dur} · In progress"
+msgstr "{what} {clock} · {dur} · In progress"
+
+#: web/detect/benchmark-model.ts
+msgid "{where}: {device}"
+msgstr "{where}: {device}"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Added to Home.</0> You can watch video in the Home app and get motion notifications."
+msgstr "<0>Added to Home.</0> You can watch video in the Home app and get motion notifications."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Home hub:</0> You need an Apple TV, HomePod, or iPad at home acting as a home hub to get notified when motion is detected and to watch away from home."
+msgstr "<0>Home hub:</0> You need an Apple TV, HomePod, or iPad at home acting as a home hub to get notified when motion is detected and to watch away from home."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>iCloud+:</0> To have Apple store motion clips (Secure Video), you need an iCloud+ plan that includes it. Live video works without a subscription."
+msgstr "<0>iCloud+:</0> To have Apple store motion clips (Secure Video), you need an iCloud+ plan that includes it. Live video works without a subscription."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Network setup:</0> Your iPhone finds the camera on your home network, so the CookieNVR container needs host networking (or its own LAN IP)."
+msgstr "<0>Network setup:</0> Your iPhone finds the camera on your home network, so the CookieNVR container needs host networking (or its own LAN IP)."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "<0>Waiting to be added.</0> Scan the QR code below with your iPhone."
+msgstr "<0>Waiting to be added.</0> Scan the QR code below with your iPhone."
+
+#: web/pages/recordings/Playback.tsx
+msgid "1 hour"
+msgstr "1 hour"
+
+#: web/pages/states/SensorPage.tsx
+msgid "1 min"
+msgstr "1 min"
+
+#: web/pages/recordings/Playback.tsx
+msgid "10 minutes"
+msgstr "10 minutes"
+
+#: web/pages/states/SensorPage.tsx
+msgid "10 sec"
+msgstr "10 sec"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "100% is all the CPU available to it"
+msgstr "100% is all the CPU available to it"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "100% is the CPU of the whole machine"
+msgstr "100% is the CPU of the whole machine"
+
+#: web/pages/recordings/Playback.tsx
+msgid "24 hours"
+msgstr "24 hours"
+
+#: web/detect/object-model.ts
+msgid "3 times per second"
+msgstr "3 times per second"
+
+#: web/pages/states/SensorPage.tsx
+msgid "5 sec"
+msgstr "5 sec"
+
+#: web/detect/object-model.ts
+msgid "5 times per second"
+msgstr "5 times per second"
+
+#: web/pages/recordings/Playback.tsx
+msgid "6 hours"
+msgstr "6 hours"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "A GPU is present, but its usage can't be read right now. The reason is in “Copy diagnostics”."
+msgstr "A GPU is present, but its usage can't be read right now. The reason is in “Copy diagnostics”."
+
+#: web/detect/object-model.ts
+msgid "A graphics card is faster at detecting objects and puts little load on the CPU."
+msgstr "A graphics card is faster at detecting objects and puts little load on the CPU."
+
+#: web/pages/status/explain.ts
+msgid "A state sensor has to see each look first (for example, a door open and a door closed) before it can tell them apart. Once you have labeled the pictures, training takes only a few seconds to a few dozen seconds. If you no longer need it, you can also just delete it."
+msgstr "A state sensor has to see each look first (for example, a door open and a door closed) before it can tell them apart. Once you have labeled the pictures, training takes only a few seconds to a few dozen seconds. If you no longer need it, you can also just delete it."
+
+#: web/states/ClassesEditor.tsx
+msgid "A transition between open and closed (for example “Moving”) can be its own class, or you can leave it out."
+msgstr "A transition between open and closed (for example “Moving”) can be its own class, or you can leave it out."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "A zip exported from Frigate; its labels come along"
+msgstr "A zip exported from Frigate; its labels come along"
+
 #: web/pages/account/Appearance.tsx
 msgid "Accent color"
 msgstr "Accent color"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Accept suggestion"
+msgstr "Accept suggestion"
+
+#: web/app/Shell.tsx
+msgid "Account"
+msgstr "Account"
+
+#: web/app/Shell.tsx
+msgid "Account and settings"
+msgstr "Account and settings"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Add"
+msgstr "Add"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Add a class?"
+msgstr "Add a class?"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Add an area to ignore"
+msgstr "Add an area to ignore"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Add another"
+msgstr "Add another"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Add another camera"
+msgstr "Add another camera"
+
+#: web/states/model.ts
+msgid "Add at least 2 classes"
+msgstr "Add at least 2 classes"
+
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings-cameras/CamerasListPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Add camera"
+msgstr "Add camera"
+
+#: web/states/ClassesEditor.tsx
+msgid "Add class"
+msgstr "Add class"
+
+#: web/detect/mask-editor.ts
+msgid "Add excluded area"
+msgstr "Add excluded area"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Add group"
+msgstr "Add group"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+#: web/pages/states/NewSensorPage.tsx
+msgid "Add state sensor"
+msgstr "Add state sensor"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Add to Apple Home"
+msgstr "Add to Apple Home"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Add user"
+msgstr "Add user"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Add your first camera"
+msgstr "Add your first camera"
+
+#: web/pages/cameras/CamerasPage.tsx
+msgid "Add your first camera and it starts recording right away."
+msgstr "Add your first camera and it starts recording right away."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Added"
+msgstr "Added"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Added \"{name}\""
+msgstr "Added \"{name}\""
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Added \"{username}\""
+msgstr "Added \"{username}\""
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Added group \"{groupName}\". Drag cameras into it."
+msgstr "Added group \"{groupName}\". Drag cameras into it."
+
+#: web/pages/recordings/export.tsx
+msgid "Added to exports. You can download it below the timeline when it's done."
+msgstr "Added to exports. You can download it below the timeline when it's done."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Adjust area"
+msgstr "Adjust area"
+
+#: web/pages/status/explain.ts
+msgid "Adjust retention"
+msgstr "Adjust retention"
+
+#: web/pages/status/explain.ts
+msgid "Adjust settings"
+msgstr "Adjust settings"
+
+#: web/app/Shell.tsx
+#: web/pages/account/AccountPage.tsx
+msgid "Admin"
+msgstr "Admin"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Admin account required"
+msgstr "Admin account required"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Administrator"
+msgstr "Administrator"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Advanced"
+msgstr "Advanced"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Advanced settings"
+msgstr "Advanced settings"
+
+#: web/pages/states/SensorPage.tsx
+msgid "After adding a class, label pictures for it and retrain. Detection stays paused until then."
+msgstr "After adding a class, label pictures for it and retrain. Detection stays paused until then."
+
+#: web/pages/states/SensorPage.tsx
+msgid "After deleting classes, retrain to resume detection."
+msgstr "After deleting classes, retrain to resume detection."
+
+#: web/pages/states/SensorPage.tsx
+msgid "After moving the area, the labeled pictures still show the old area. It’s best to pick new pictures and retrain."
+msgstr "After moving the area, the labeled pictures still show the old area. It’s best to pick new pictures and retrain."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "After turning on \"Let other apps read camera video\" under Settings → General, VLC or Home Assistant can use this URL to watch this camera."
+msgstr "After turning on \"Let other apps read camera video\" under Settings → General, VLC or Home Assistant can use this URL to watch this camera."
+
+#: web/pages/status/explain.ts
+msgid "After you add or delete a class, what was learned before no longer matches the new classes, so recognition is paused. Label a few pictures for each new class, then press “Retrain”."
+msgstr "After you add or delete a class, what was learned before no longer matches the new classes, so recognition is paused. Label a few pictures for each new class, then press “Retrain”."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Airplane"
+msgstr "Airplane"
+
+#: web/pages/events/EventsPage.tsx
+msgid "All cameras"
+msgstr "All cameras"
+
+#: web/pages/events/EventsPage.tsx
+msgid "All categories"
+msgstr "All categories"
+
+#: web/pages/events/EventsPage.tsx
+msgid "All dates"
+msgstr "All dates"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "All labeled"
+msgstr "All labeled"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Allow"
+msgstr "Allow"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Allow {app} to connect?"
+msgstr "Allow {app} to connect?"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Allowed"
+msgstr "Allowed"
+
+#: web/pages/status/explain.ts
+msgid "Almost full"
+msgstr "Almost full"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Also delete this camera's recordings"
+msgstr "Also delete this camera's recordings"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Animal"
+msgstr "Animal"
+
+#: web/detect/object-model.ts
+msgid "Annotate"
+msgstr "Annotate"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Another {oldSize} of recordings are in {where}. They aren't counted in the capacity above; they still play back and are cleared automatically by the retention days."
+msgstr "Another {oldSize} of recordings are in {where}. They aren't counted in the capacity above; they still play back and are cleared automatically by the retention days."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Any camera that supports RTSP"
+msgstr "Any camera that supports RTSP"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "App name"
+msgstr "App name"
+
+#: web/pages/status/explain.ts
+msgid "appdata disk"
+msgstr "appdata disk"
+
+#: web/health.ts
+msgid "appdata disk is almost full"
+msgstr "appdata disk is almost full"
+
+#: web/health.ts
+msgid "appdata disk space is low"
+msgstr "appdata disk space is low"
+
+#: web/pages/status/StatusPage.tsx
+msgid "appdata disk: {dataFree} free, {dataTotal} total"
+msgstr "appdata disk: {dataFree} free, {dataTotal} total"
 
 #: web/pages/account/Appearance.tsx
 msgid "Appearance"
 msgstr "Appearance"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Apple"
+msgstr "Apple"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/status/ResourcesCard.tsx
+msgid "Apple Home"
+msgstr "Apple Home"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Apple Home (experimental)"
+msgstr "Apple Home (experimental)"
+
 #: web/pages/account/Appearance.tsx
 msgid "Applies to this browser only"
 msgstr "Applies to this browser only"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Apps connected with this key lose access immediately."
+msgstr "Apps connected with this key lose access immediately."
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "Areas to ignore"
+msgstr "Areas to ignore"
+
+#: web/pages/cameras/CamerasPage.tsx
+msgid "Ask an admin to add a camera."
+msgstr "Ask an admin to add a camera."
+
+#: web/pages/events/EventsPage.tsx
+msgid "Ask an admin to add a camera. Detected motion will show up here."
+msgstr "Ask an admin to add a camera. Detected motion will show up here."
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Ask an admin to add a camera. The footage will show up here."
+msgstr "Ask an admin to add a camera. The footage will show up here."
+
+#: web/pages/auth/AuthPage.tsx
+#: web/pages/settings-users/UsersPage.tsx
+msgid "At least 8 characters"
+msgstr "At least 8 characters"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "At least 8 characters. Other devices will need to sign in again after you change it."
+msgstr "At least 8 characters. Other devices will need to sign in again after you change it."
+
+#: web/states/model.ts
+msgid "At most {max} classes"
+msgstr "At most {max} classes"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Auto"
+msgstr "Auto"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Auto (default)"
+msgstr "Auto (default)"
+
+#: web/detect/object-model.ts
+msgid "Auto (recommended)"
+msgstr "Auto (recommended)"
+
+#: web/pages/status/StatusPage.tsx
+msgid "available, {total} total"
+msgstr "available, {total} total"
+
+#: web/pages/settings/SettingsLayout.tsx
+#: web/ui/Panel.tsx
+msgid "Back"
+msgstr "Back"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Back / forward 10 seconds"
+msgstr "Back / forward 10 seconds"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Back to camera settings"
+msgstr "Back to camera settings"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/NewSensorPage.tsx
+msgid "Back to cameras"
+msgstr "Back to cameras"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Back to latest"
+msgstr "Back to latest"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Back to playhead"
+msgstr "Back to playhead"
+
+#: web/detect/mask-editor.ts
+msgid "Back to the first point to finish this area"
+msgstr "Back to the first point to finish this area"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Backpack"
+msgstr "Backpack"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Banana"
+msgstr "Banana"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Baseball bat"
+msgstr "Baseball bat"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Baseball glove"
+msgstr "Baseball glove"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Basic"
+msgstr "Basic"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bear"
+msgstr "Bear"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bed"
+msgstr "Bed"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Before you use it"
+msgstr "Before you use it"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bench"
+msgstr "Bench"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Benchmark"
+msgstr "Benchmark"
+
+#: web/detect/benchmark-model.ts
+msgid "Benchmark cancelled."
+msgstr "Benchmark cancelled."
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Benchmark progress"
+msgstr "Benchmark progress"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Benchmark results per device"
+msgstr "Benchmark results per device"
+
+#: web/detect/object-model.ts
+msgid "Benchmarking, detection paused"
+msgstr "Benchmarking, detection paused"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bicycle"
+msgstr "Bicycle"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bird"
+msgstr "Bird"
 
 #: web/theme.ts
 msgid "Blue"
 msgstr "Blue"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Boat"
+msgstr "Boat"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Book"
+msgstr "Book"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Both"
+msgstr "Both"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bottle"
+msgstr "Bottle"
+
+#: web/states/CropEditor.tsx
+msgid "Bottom left corner"
+msgstr "Bottom left corner"
+
+#: web/states/CropEditor.tsx
+msgid "Bottom right corner"
+msgstr "Bottom right corner"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bowl"
+msgstr "Bowl"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Box the area"
+msgstr "Box the area"
+
+#: web/states/CropEditor.tsx
+msgid "Box the thing to check (for example the whole door) and leave a little margin. Drag on an empty spot to redraw."
+msgstr "Box the thing to check (for example the whole door) and leave a little margin. Drag on an empty spot to redraw."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Broccoli"
+msgstr "Broccoli"
+
+#: web/detect/benchmark-model.ts
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Built-in model"
+msgstr "Built-in model"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Bus"
+msgstr "Bus"
+
+#: web/pages/status/explain.ts
+msgid "Busy for a long time"
+msgstr "Busy for a long time"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cake"
+msgstr "Cake"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Calculating…"
+msgstr "Calculating…"
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Camera"
+msgstr "Camera"
+
+#: web/pages/camera/PtzPanel.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Camera control"
+msgstr "Camera control"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Camera control is unavailable right now"
+msgstr "Camera control is unavailable right now"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Camera detection"
+msgstr "Camera detection"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Camera direction"
+msgstr "Camera direction"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera IP address"
+msgstr "Camera IP address"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/NewSensorPage.tsx
+msgid "Camera not found"
+msgstr "Camera not found"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera password"
+msgstr "Camera password"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera type"
+msgstr "Camera type"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Camera username"
+msgstr "Camera username"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Camera: {camera}"
+msgstr "Camera: {camera}"
+
+#: web/app/Shell.tsx
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings/SettingsLayout.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Cameras"
+msgstr "Cameras"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Cameras with a sub-stream gain very little. The CPU savings only show when decoding the main stream directly or high-resolution H.265."
+msgstr "Cameras with a sub-stream gain very little. The CPU savings only show when decoding the main stream directly or high-resolution H.265."
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Cameras without a group appear first on the home page"
+msgstr "Cameras without a group appear first on the home page"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Can also change all settings"
+msgstr "Can also change all settings"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Can view live video and recordings"
+msgstr "Can view live video and recordings"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Can't add: video format not supported"
+msgstr "Can't add: video format not supported"
+
+#: web/detect/benchmark-model.ts
+msgid "Can't be benchmarked"
+msgstr "Can't be benchmarked"
+
+#: web/pages/status/explain.ts
+msgid "Can't connect"
+msgstr "Can't connect"
+
+#: web/camera-form-logic.ts
+msgid "Can't find this hostname. Check it for typos."
+msgstr "Can't find this hostname. Check it for typos."
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Can't find your graphics card?"
+msgstr "Can't find your graphics card?"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Can't get the picture right now"
+msgstr "Can't get the picture right now"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Can't get the picture right now. The camera may be unreachable."
+msgstr "Can't get the picture right now. The camera may be unreachable."
+
+#: web/states/CropEditor.tsx
+msgid "Can’t get this camera’s picture. Draw a rough box for now and adjust it later."
+msgstr "Can’t get this camera’s picture. Draw a rough box for now and adjust it later."
+
+#: web/pages/status/explain.ts
+msgid "Can't keep up"
+msgstr "Can't keep up"
+
+#: web/playback/player.ts
+msgid "Can't load the recording right now. Retrying…"
+msgstr "Can't load the recording right now. Retrying…"
+
+#: web/pages/link/LinkPage.tsx
+#: web/ui/states.tsx
+msgid "Can't open this right now"
+msgstr "Can't open this right now"
+
+#: web/camera-form-logic.ts
+msgid "Can't reach this address. Check that the camera is on and on the same network as this host."
+msgstr "Can't reach this address. Check that the camera is on and on the same network as this host."
+
+#: web/camera-form-logic.ts
+msgid "Can't read any video. Check that the IP address is correct and the camera is on."
+msgstr "Can't read any video. Check that the IP address is correct and the camera is on."
+
+#: web/camera-form-logic.ts
+msgid "Can't read any video. Check that the stream URL is correct and the camera's RTSP feature is turned on."
+msgstr "Can't read any video. Check that the stream URL is correct and the camera's RTSP feature is turned on."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Can't read this camera's video right now. Turn this on after it connects."
+msgstr "Can't read this camera's video right now. Turn this on after it connects."
+
+#: web/pages/status/explain.ts
+msgid "Can't see the picture"
+msgstr "Can't see the picture"
+
+#: web/detect/mask-editor.ts
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/recordings/export.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+#: web/pages/settings-system/BenchmarkSection.tsx
+#: web/pages/settings-users/UsersPage.tsx
+#: web/pages/states/LabelBoard.tsx
+#: web/ui/Dialog.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#: web/pages/recordings/export.tsx
+msgid "Cancel export {title}"
+msgstr "Cancel export {title}"
+
+#: web/pages/recordings/export.tsx
+msgid "Cancel selection"
+msgstr "Cancel selection"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Car"
+msgstr "Car"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Car 91%"
+msgstr "Car 91%"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Carrot"
+msgstr "Carrot"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cat"
+msgstr "Cat"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Cat 88%"
+msgstr "Cat 88%"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Category"
+msgstr "Category"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Caught up to live, back to 1× speed"
+msgstr "Caught up to live, back to 1× speed"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cell phone"
+msgstr "Cell phone"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Chair"
+msgstr "Chair"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Change and save"
+msgstr "Change and save"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Change area {area}"
+msgstr "Change area {area}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Change area larger than"
+msgstr "Change area larger than"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Change password"
+msgstr "Change password"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Change the storage location?"
+msgstr "Change the storage location?"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Changes to excluded areas show up here after you save."
+msgstr "Changes to excluded areas show up here after you save."
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Changes to sensitivity and excluded areas show up here after you save."
+msgstr "Changes to sensitivity and excluded areas show up here after you save."
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Changes to sensitivity show up here after you save."
+msgstr "Changes to sensitivity show up here after you save."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Check right away on change"
+msgstr "Check right away on change"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Check roughly how many cameras this machine can handle at the same time."
+msgstr "Check roughly how many cameras this machine can handle at the same time."
+
+#: web/pages/status/explain.ts
+msgid "Check settings"
+msgstr "Check settings"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Checking this camera…"
+msgstr "Checking this camera…"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Checking…"
+msgstr "Checking…"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Checks immediately when something moves in the area, so it switches faster."
+msgstr "Checks immediately when something moves in the area, so it switches faster."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Checks on change only"
+msgstr "Checks on change only"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Choose a zip file"
+msgstr "Choose a zip file"
+
 #: web/pages/account/Appearance.tsx
 msgid "Choose light or dark, or follow your system automatically."
 msgstr "Choose light or dark, or follow your system automatically."
 
+#: web/pages/states/NewSensorPage.tsx
+msgid "Choose the zip file exported from Frigate"
+msgstr "Choose the zip file exported from Frigate"
+
+#: web/detect/object-model.ts
+msgid "Chosen automatically: currently using {name}. Uses a graphics card if one is available, otherwise the CPU."
+msgstr "Chosen automatically: currently using {name}. Uses a graphics card if one is available, otherwise the CPU."
+
+#: web/states/ClassesEditor.tsx
+msgid "class {num}"
+msgstr "class {num}"
+
+#: web/states/model.ts
+msgid "Class names can be at most {max} characters"
+msgstr "Class names can be at most {max} characters"
+
+#: web/states/model.ts
+msgid "Class names can't be empty"
+msgstr "Class names can't be empty"
+
+#: web/states/model.ts
+msgid "Class names can't contain a slash or backslash"
+msgstr "Class names can't contain a slash or backslash"
+
+#: web/states/model.ts
+msgid "Class names can't start with a dot"
+msgstr "Class names can't start with a dot"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Classes"
+msgstr "Classes"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Classes changed. Detection resumes after retraining."
+msgstr "Classes changed. Detection resumes after retraining."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear"
+msgstr "Clear"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Clear filters"
+msgstr "Clear filters"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear recordings"
+msgstr "Clear recordings"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear recordings of deleted cameras"
+msgstr "Clear recordings of deleted cameras"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clear recordings of deleted cameras?"
+msgstr "Clear recordings of deleted cameras?"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Cleared, freed {freed}"
+msgstr "Cleared, freed {freed}"
+
+#: web/timeline/timeline.ts
+msgid "Click to zoom into this stretch"
+msgstr "Click to zoom into this stretch"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Click which class each picture belongs to. The more you label, and under more kinds of light, the more accurate detection gets."
+msgstr "Click which class each picture belongs to. The more you label, and under more kinds of light, the more accurate detection gets."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Clips recorded when motion is detected. They can usually be kept longer than continuous recording."
+msgstr "Clips recorded when motion is detected. They can usually be kept longer than continuous recording."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Clock"
+msgstr "Clock"
+
+#: web/states/model.ts
+msgid "Closed"
+msgstr "Closed"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Code {spelledCode}"
+msgstr "Code {spelledCode}"
+
+#: web/app/Shell.tsx
+msgid "Collapse sidebar"
+msgstr "Collapse sidebar"
+
 #: web/pages/account/Appearance.tsx
 msgid "Color mode"
 msgstr "Color mode"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Compares changes in the picture. Works with every camera and can exclude areas you don't need."
+msgstr "Compares changes in the picture. Works with every camera and can exclude areas you don't need."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Confidence must be between 50% and 99%"
+msgstr "Confidence must be between 50% and 99%"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Confirm new password"
+msgstr "Confirm new password"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Confirm password"
+msgstr "Confirm password"
+
+#: web/states/model.ts
+msgid "Confirming: {candidate}"
+msgstr "Confirming: {candidate}"
+
+#: web/states/model.ts
+msgid "Confirming…"
+msgstr "Confirming…"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Connect other apps"
+msgstr "Connect other apps"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Connected"
+msgstr "Connected"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Connected and saved"
+msgstr "Connected and saved"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Connection"
+msgstr "Connection"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Connection code"
+msgstr "Connection code"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Conservative"
+msgstr "Conservative"
+
+#: web/pages/link/LinkPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Continue"
+msgstr "Continue"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Continuous recording"
+msgstr "Continuous recording"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Continuous recording is off for this camera."
+msgstr "Continuous recording is off for this camera."
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "CookieNVR camera connection test failed"
+msgstr "CookieNVR camera connection test failed"
+
+#: web/pages/status/explain.ts
+msgid "CookieNVR runs as the user set by PUID/PGID, but the recording folder contains folders it can't write to, usually created earlier when it ran as root (PUID not set). Restarting the container hands the folders to this user automatically. If it still doesn't work, give the recording and appdata folders to PUID:PGID on the host (for example chown -R 99:100 <path on the host>), then restart the container."
+msgstr "CookieNVR runs as the user set by PUID/PGID, but the recording folder contains folders it can't write to, usually created earlier when it ran as root (PUID not set). Restarting the container hands the folders to this user automatically. If it still doesn't work, give the recording and appdata folders to PUID:PGID on the host (for example chown -R 99:100 <path on the host>), then restart the container."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "CookieNVR's own 24/7 recording is unaffected. Recording settings in the Home app only apply on Apple's side."
+msgstr "CookieNVR's own 24/7 recording is unaffected. Recording settings in the Home app only apply on Apple's side."
+
+#: web/ui/Button.tsx
+msgid "Copied"
+msgstr "Copied"
+
+#: web/ui/Button.tsx
+msgid "Copied {label}"
+msgstr "Copied {label}"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Copy"
+msgstr "Copy"
+
+#: web/pages/states/SensorPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Copy diagnostics"
+msgstr "Copy diagnostics"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Copy error"
+msgstr "Copy error"
+
+#: web/ui/Button.tsx
+msgid "Copy failed"
+msgstr "Copy failed"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Copy it now and paste it into that app's settings. You won't be able to see the full key after leaving this page."
+msgstr "Copy it now and paste it into that app's settings. You won't be able to see the full key after leaving this page."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Copy low-quality URL"
+msgstr "Copy low-quality URL"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Copy stream URL"
+msgstr "Copy stream URL"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Couch"
+msgstr "Couch"
+
+#: web/ui/Button.tsx
+msgid "Couldn't copy. Select the text manually."
+msgstr "Couldn't copy. Select the text manually."
+
+#: web/ui/Button.tsx
+msgid "Couldn't copy. Try again."
+msgstr "Couldn't copy. Try again."
+
+#: web/pages/events/EventsPage.tsx
+msgid "Couldn't load earlier events"
+msgstr "Couldn't load earlier events"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Couldn't reach this camera, so nothing was saved"
+msgstr "Couldn't reach this camera, so nothing was saved"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Couldn't start, reset pairing"
+msgstr "Couldn't start, reset pairing"
+
+#: web/detect/object-model.ts
+msgid "Counts detections it isn't very sure about. Fewer misses, but more false alarms."
+msgstr "Counts detections it isn't very sure about. Fewer misses, but more false alarms."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Counts when either one detects something, so fewer things are missed."
+msgstr "Counts when either one detects something, so fewer things are missed."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cow"
+msgstr "Cow"
+
+#: web/detect/object-model.ts
+#: web/pages/settings-system/decode-model.ts
+#: web/pages/status/explain.ts
+#: web/pages/status/ResourcesCard.tsx
+msgid "CPU"
+msgstr "CPU"
+
+#: web/detect/object-model.ts
+msgid "CPU: {name}"
+msgstr "CPU: {name}"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Create account"
+msgstr "Create account"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Create and start labeling"
+msgstr "Create and start labeling"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Create connection key"
+msgstr "Create connection key"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Create the username and password in the Tapo app under \"Advanced settings → Camera account\". It is <0>not</0> your TP-Link cloud account."
+msgstr "Create the username and password in the Tapo app under \"Advanced settings → Camera account\". It is <0>not</0> your TP-Link cloud account."
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Created {ago}, never used"
+msgstr "Created {ago}, never used"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Creates an event whenever something moves, so you can find it quickly on the Events page."
+msgstr "Creates an event whenever something moves, so you can find it quickly on the Events page."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Creating…"
+msgstr "Creating…"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Cup"
+msgstr "Cup"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Current password"
+msgstr "Current password"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Current state"
+msgstr "Current state"
 
 #: web/pages/account/Appearance.tsx
 msgid "Currently dark"
@@ -39,25 +1673,1253 @@ msgstr "Currently dark"
 msgid "Currently light"
 msgstr "Currently light"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+#: web/ui/controls.tsx
+#: web/ui/SettingRow.tsx
+msgid "Custom"
+msgstr "Custom"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Custom sensitivity"
+msgstr "Custom sensitivity"
+
+#: web/ui/SettingRow.tsx
+msgid "Custom…"
+msgstr "Custom…"
+
 #: web/pages/account/Appearance.tsx
 msgid "Dark"
 msgstr "Dark"
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+msgid "Date"
+msgstr "Date"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "days"
+msgstr "days"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Default speed"
+msgstr "Default speed"
+
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/settings-users/UsersPage.tsx
+#: web/pages/states/LabelBoard.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Delete"
+msgstr "Delete"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Delete \"{askName}\"?"
+msgstr "Delete \"{askName}\"?"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Delete “{name}”"
+msgstr "Delete “{name}”"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Delete “{name}”? The preset will be removed from the camera."
+msgstr "Delete “{name}”? The preset will be removed from the camera."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete “{removedList}”?"
+msgstr "Delete “{removedList}”?"
+
+#: web/states/ClassesEditor.tsx
+msgid "Delete “{rowName}”"
+msgstr "Delete “{rowName}”"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete “{sensorName}”?"
+msgstr "Delete “{sensorName}”?"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Delete \"{username}\"?"
+msgstr "Delete \"{username}\"?"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete and save"
+msgstr "Delete and save"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Delete camera"
+msgstr "Delete camera"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Delete camera and recordings"
+msgstr "Delete camera and recordings"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Delete event"
+msgstr "Delete event"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Delete group"
+msgstr "Delete group"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Delete preset"
+msgstr "Delete preset"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete sensor"
+msgstr "Delete sensor"
+
+#: web/detect/mask-editor.ts
+msgid "Delete this area"
+msgstr "Delete this area"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Delete this camera"
+msgstr "Delete this camera"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Delete this event?"
+msgstr "Delete this event?"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Delete this sensor"
+msgstr "Delete this sensor"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Deleted \"{name}\""
+msgstr "Deleted \"{name}\""
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Deleted “{name}”"
+msgstr "Deleted “{name}”"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Deleted “{sensorName}”"
+msgstr "Deleted “{sensorName}”"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Deleted \"{username}\""
+msgstr "Deleted \"{username}\""
+
+#: web/pages/events/EventsPage.tsx
+msgid "Deleted camera"
+msgstr "Deleted camera"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Deleted cameras"
+msgstr "Deleted cameras"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Deleted group \"{name}\". Its cameras were moved to Ungrouped."
+msgstr "Deleted group \"{name}\". Its cameras were moved to Ungrouped."
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Deleted pictures won’t be used for training. This can’t be undone."
+msgstr "Deleted pictures won’t be used for training. This can’t be undone."
+
+#: web/pages/link/LinkPage.tsx
+msgid "Denied"
+msgstr "Denied"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Deny"
+msgstr "Deny"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Detailed numbers"
+msgstr "Detailed numbers"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Details"
+msgstr "Details"
+
+#: web/detect/object-model.ts
+msgid "Detect {list}"
+msgstr "Detect {list}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Detect motion"
+msgstr "Detect motion"
+
+#: web/detect/object-model.ts
+msgid "Detect objects"
+msgstr "Detect objects"
+
+#: web/pages/settings-system/DecodeRow.tsx
+msgid "Detecting graphics cards…"
+msgstr "Detecting graphics cards…"
+
+#: web/detect/object-model.ts
+msgid "detecting once every {seconds} seconds"
+msgstr "detecting once every {seconds} seconds"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Detection"
+msgstr "Detection"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Detection accuracy"
+msgstr "Detection accuracy"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Detection area"
+msgstr "Detection area"
+
+#: web/states/CropEditor.tsx
+msgid "Detection area. Move it with the arrow keys; hold Shift to move further."
+msgstr "Detection area. Move it with the arrow keys; hold Shift to move further."
+
+#: web/states/model.ts
+msgid "Detection isn't running"
+msgstr "Detection isn't running"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Detection method"
+msgstr "Detection method"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Detection model"
+msgstr "Detection model"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Detection only looks inside the box. Fit it snugly around “{trimmedName}” for the best results."
+msgstr "Detection only looks inside the box. Fit it snugly around “{trimmedName}” for the best results."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Detection only looks inside the box. Fit it snugly around the thing to check for the best results."
+msgstr "Detection only looks inside the box. Fit it snugly around the thing to check for the best results."
+
+#: web/detect/benchmark-model.ts
+msgid "Detection only runs when there is motion, and the estimate already leaves headroom for recording and decoding (half the CPU, 20% of a graphics card)."
+msgstr "Detection only runs when there is motion, and the estimate already leaves headroom for recording and decoding (half the CPU, 20% of a graphics card)."
+
+#: web/states/model.ts
+msgid "Detection paused"
+msgstr "Detection paused"
+
+#: web/detect/benchmark-model.ts
+msgid "Detection pauses during the test while events keep being recorded (cameras set to \"Filter\" temporarily switch to labeling). Each device takes about ten-odd seconds, and the first run on a graphics card may take longer."
+msgstr "Detection pauses during the test while events keep being recorded (cameras set to \"Filter\" temporarily switch to labeling). Each device takes about ten-odd seconds, and the first run on a graphics card may take longer."
+
+#: web/pages/status/explain.ts
+msgid "Detection will be interrupted for a few seconds. Recording is not affected."
+msgstr "Detection will be interrupted for a few seconds. Recording is not affected."
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Detections per second"
+msgstr "Detections per second"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Device"
+msgstr "Device"
+
+#: web/detect/benchmark-model.ts
+msgid "Device {current} of {total}"
+msgstr "Device {current} of {total}"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Devices to test"
+msgstr "Devices to test"
+
+#: web/pages/states/SensorPage.tsx
+#: web/pages/status/StatusPage.tsx
+msgid "Diagnostics copied. You can paste them to an AI or a technician."
+msgstr "Diagnostics copied. You can paste them to an AI or a technician."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Dining table"
+msgstr "Dining table"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Disable"
+msgstr "Disable"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Disabled"
+msgstr "Disabled"
+
+#: web/health.ts
+msgctxt "camera status"
+msgid "Disabled"
+msgstr "Disabled"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Disabled \"{name}\""
+msgstr "Disabled \"{name}\""
+
+#: web/ui/Dialog.tsx
+msgid "Discard changes"
+msgstr "Discard changes"
+
+#: web/ui/Dialog.tsx
+msgid "Discard these changes?"
+msgstr "Discard these changes?"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Dog"
+msgstr "Dog"
+
+#: web/detect/object-model.ts
+msgid "Don't detect"
+msgstr "Don't detect"
+
+#: web/detect/mask-editor.ts
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Done"
+msgstr "Done"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Donut"
+msgstr "Donut"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Down"
+msgstr "Down"
+
+#: web/pages/recordings/export.tsx
+msgid "Download"
+msgstr "Download"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Drag cameras here"
+msgstr "Drag cameras here"
+
+#: web/pages/recordings/export.tsx
+msgid "Drag on the timeline to select a range, or play to the spot you want and press “Set start”."
+msgstr "Drag on the timeline to select a range, or play to the spot you want and press “Set start”."
+
+#: web/detect/mask-editor.ts
+msgid "Drag the dots to adjust the shape."
+msgstr "Drag the dots to adjust the shape."
+
+#: web/detect/mask-editor.ts
+msgid "Draw the areas that don't need detection, such as a road, swaying trees or a timestamp watermark."
+msgstr "Draw the areas that don't need detection, such as a road, swaying trees or a timestamp watermark."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Draw the areas where objects don't need to be recognized, such as a parking spot. Motion is still detected inside, but things there won't get a category label."
+msgstr "Draw the areas where objects don't need to be recognized, such as a parking spot. Motion is still detected inside, but things there won't get a category label."
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Dropped \"{name}\""
+msgstr "Dropped \"{name}\""
+
+#: web/states/ClassesEditor.tsx
+msgid "e.g. Closed"
+msgstr "e.g. Closed"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "e.g. Front door"
+msgstr "e.g. Front door"
+
+#: web/states/ClassesEditor.tsx
+msgid "e.g. Moving"
+msgstr "e.g. Moving"
+
+#: web/states/ClassesEditor.tsx
+msgid "e.g. Open"
+msgstr "e.g. Open"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "e.g. Roller shutter, garage door, window"
+msgstr "e.g. Roller shutter, garage door, window"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Each camera's stream URL can be copied under \"Cameras → Edit → Advanced\". When an app such as VLC, Home Assistant or another NVR connects, use your username and password, or create a key (API token) for it under \"Settings → General → Connect other apps\"."
+msgstr "Each camera's stream URL can be copied under \"Cameras → Edit → Advanced\". When an app such as VLC, Home Assistant or another NVR connects, use your username and password, or create a key (API token) for it under \"Settings → General → Connect other apps\"."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Each tap turns a small step"
+msgstr "Each tap turns a small step"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Edit"
+msgstr "Edit"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Edit \"{cameraName}\""
+msgstr "Edit \"{cameraName}\""
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Elephant"
+msgstr "Elephant"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Enable"
+msgstr "Enable"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Enable this camera"
+msgstr "Enable this camera"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enabled"
+msgstr "Enabled"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Enabled \"{name}\""
+msgstr "Enabled \"{name}\""
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Enter 0 or a larger number for days and space"
+msgstr "Enter 0 or a larger number for days and space"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Enter a name for the app you want to connect"
+msgstr "Enter a name for the app you want to connect"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Enter a site name"
+msgstr "Enter a site name"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Enter a storage location"
+msgstr "Enter a storage location"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter a stream URL starting with rtsp://"
+msgstr "Enter a stream URL starting with rtsp://"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Enter a username"
+msgstr "Enter a username"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Enter a username and password"
+msgstr "Enter a username and password"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the camera password"
+msgstr "Enter the camera password"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the camera username"
+msgstr "Enter the camera username"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the camera's IP address"
+msgstr "Enter the camera's IP address"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Enter the connection code"
+msgstr "Enter the connection code"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Enter the ONVIF host"
+msgstr "Enter the ONVIF host"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Enter your current password"
+msgstr "Enter your current password"
+
+#: web/api.ts
+msgid "Error {status}"
+msgstr "Error {status}"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Error copied. You can paste it to an AI or a technician."
+msgstr "Error copied. You can paste it to an AI or a technician."
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Error: {error}"
+msgstr "Error: {error}"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Even subtle changes are detected. Good for indoors or when you don't want to miss anything."
+msgstr "Even subtle changes are detected. Good for indoors or when you don't want to miss anything."
+
+#: web/pages/recordings/Playback.tsx
+msgid "Event"
+msgstr "Event"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Event clips"
+msgstr "Event clips"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Event deleted"
+msgstr "Event deleted"
+
+#: web/health.ts
+msgid "Event in progress"
+msgstr "Event in progress"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Event list"
+msgstr "Event list"
+
+#: web/app/Shell.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+msgid "Events"
+msgstr "Events"
+
+#: web/detect/object-model.ts
+msgid "Events are recorded as usual and labeled with what was seen, such as \"Person\" or \"Car\"."
+msgstr "Events are recorded as usual and labeled with what was seen, such as \"Person\" or \"Car\"."
+
+#: web/detect/object-model.ts
+msgid "Events are still recorded and detection resumes when the test finishes."
+msgstr "Events are still recorded and detection resumes when the test finishes."
+
+#: web/detect/object-model.ts
+msgid "Every 2 seconds"
+msgstr "Every 2 seconds"
+
+#: web/pages/status/explain.ts
+msgid "Every camera's picture goes through this service, so when it stops, the picture and recording are interrupted. A restart interrupts them for a few seconds."
+msgstr "Every camera's picture goes through this service, so when it stops, the picture and recording are interrupted. A restart interrupts them for a few seconds."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Every class has pictures. Press “Start training”."
+msgstr "Every class has pictures. Press “Start training”."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Every class has pictures. Training takes a few seconds to a few dozen, and detection starts right after."
+msgstr "Every class has pictures. Training takes a few seconds to a few dozen, and detection starts right after."
+
+#: web/pages/status/StatusPage.tsx
+msgid "Everything is fine"
+msgstr "Everything is fine"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Excluded areas are drawn at fixed positions in the picture. If the camera turns another way they no longer line up, and they match again when it returns. If you change the angle for good, redraw them."
+msgstr "Excluded areas are drawn at fixed positions in the picture. If the camera turns another way they no longer line up, and they match again when it returns. If you change the angle for good, redraw them."
+
+#: web/app/Shell.tsx
+msgid "Expand sidebar"
+msgstr "Expand sidebar"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Experimental"
+msgstr "Experimental"
+
+#: web/pages/recordings/export.tsx
+msgid "Export"
+msgstr "Export"
+
+#: web/pages/recordings/export.tsx
+msgid "Export failed"
+msgstr "Export failed"
+
+#: web/pages/recordings/export.tsx
+msgid "Export finished: {title}"
+msgstr "Export finished: {title}"
+
+#: web/pages/recordings/export.tsx
+msgid "Export jobs"
+msgstr "Export jobs"
+
+#: web/pages/recordings/export.tsx
+msgid "Export progress"
+msgstr "Export progress"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Export the event video from {clock}"
+msgstr "Export the event video from {clock}"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Export video (includes 5 seconds before and after)"
+msgstr "Export video (includes 5 seconds before and after)"
+
+#: web/pages/recordings/export.tsx
+msgid "Exported videos"
+msgstr "Exported videos"
+
+#: web/pages/recordings/export.tsx
+msgid "Exporting {pct}%"
+msgstr "Exporting {pct}%"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Face"
+msgstr "Face"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Fairly conservative"
+msgstr "Fairly conservative"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Fairly sensitive"
+msgstr "Fairly sensitive"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Fastest"
+msgstr "Fastest"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "ffprobe output:"
+msgstr "ffprobe output:"
+
+#: web/api.ts
+msgid "File too large (limit 100 MB)"
+msgstr "File too large (limit 100 MB)"
+
+#: web/detect/object-model.ts
+msgid "Filter"
+msgstr "Filter"
+
+#: web/pages/recordings/export.tsx
+msgid "Finished videos are kept for 24 hours."
+msgstr "Finished videos are kept for 24 hours."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Fire hydrant"
+msgstr "Fire hydrant"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "First time here? Create an admin account, then you can add cameras."
+msgstr "First time here? Create an admin account, then you can add cameras."
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Fix the highlighted fields"
+msgstr "Fix the highlighted fields"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "For example \"Downstairs\" or \"Outdoors\". The home page shows cameras in sections by group."
+msgstr "For example \"Downstairs\" or \"Outdoors\". The home page shows cameras in sections by group."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "For example 192.168.1.50"
+msgstr "For example 192.168.1.50"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "For example, Home Assistant"
+msgstr "For example, Home Assistant"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "For example: Home Assistant"
+msgstr "For example: Home Assistant"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "For example: Living room, Front door"
+msgstr "For example: Living room, Front door"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "For example: Outdoors"
+msgstr "For example: Outdoors"
+
+#: web/pages/link/LinkPage.tsx
+msgid "For security, connection requests can only be approved in CookieNVR's own tab."
+msgstr "For security, connection requests can only be approved in CookieNVR's own tab."
+
+#: web/pages/status/explain.ts
+msgid "For the past 5 minutes memory has been above 90% almost the whole time. When it runs out, the system force-quits programs and recording may be interrupted. {topMem} If CookieNVR runs in Docker with a memory limit, you can raise the limit."
+msgstr "For the past 5 minutes memory has been above 90% almost the whole time. When it runs out, the system force-quits programs and recording may be interrupted. {topMem} If CookieNVR runs in Docker with a memory limit, you can raise the limit."
+
+#: web/pages/status/explain.ts
+msgid "For the past 5 minutes the CPU has been above 90% almost the whole time, so video may lag and recording may drop frames. {topCpu} You can turn off motion detection you don't need, open fewer live views, or have cameras detect on a lower-resolution substream."
+msgstr "For the past 5 minutes the CPU has been above 90% almost the whole time, so video may lag and recording may drop frames. {topCpu} You can turn off motion detection you don't need, open fewer live views, or have cameras detect on a lower-resolution substream."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Fork"
+msgstr "Fork"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Free"
+msgstr "Free"
+
+#: web/pages/status/explain.ts
+msgid "Free up space on the appdata disk"
+msgstr "Free up space on the appdata disk"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "Frees {freed}"
+msgstr "Frees {freed}"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Frigate settings"
+msgstr "Frigate settings"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Frigate’s guess"
+msgstr "Frigate’s guess"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Frisbee"
+msgstr "Frisbee"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "From {ip}"
+msgstr "From {ip}"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Full screen"
+msgstr "Full screen"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Gap"
+msgstr "Gap"
+
+#: web/pages/recordings/export.tsx
+msgid "gaps are skipped"
+msgstr "gaps are skipped"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "General"
+msgstr "General"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "General settings saved"
+msgstr "General settings saved"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Get notified when something moves"
+msgstr "Get notified when something moves"
+
+#: web/health.ts
+msgid "Getting familiar with the picture, starting in a few seconds"
+msgstr "Getting familiar with the picture, starting in a few seconds"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Getting ready to use: {names}"
+msgstr "Getting ready to use: {names}"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Getting ready. You can add it in a few seconds…"
+msgstr "Getting ready. You can add it in a few seconds…"
+
+#: web/states/CropEditor.tsx
+msgid "Getting the picture…"
+msgstr "Getting the picture…"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Giraffe"
+msgstr "Giraffe"
+
+#: web/states/model.ts
+msgid "Give it a name, for example “Roller shutter”"
+msgstr "Give it a name, for example “Roller shutter”"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Give this camera a name"
+msgstr "Give this camera a name"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Give this group a name"
+msgstr "Give this group a name"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Give this position a name"
+msgstr "Give this position a name"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Go back to {app} and it will finish setting up on its own. You can revoke access at any time in Settings → General → Connect other apps."
+msgstr "Go back to {app} and it will finish setting up on its own. You can revoke access at any time in Settings → General → Connect other apps."
+
+#: web/pages/link/LinkPage.tsx
+msgid "Go back to {app} and start again to get a new code."
+msgstr "Go back to {app} and start again to get a new code."
+
+#: web/pages/status/explain.ts
+msgid "Go label"
+msgstr "Go label"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Go to CookieNVR"
+msgstr "Go to CookieNVR"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Going to “{name}”"
+msgstr "Going to “{name}”"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "GPU memory {used} / {total}"
+msgstr "GPU memory {used} / {total}"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "Graphics card"
+msgstr "Graphics card"
+
+#: web/pages/settings-system/DecodeRow.tsx
+msgid "Graphics card information isn't available right now."
+msgstr "Graphics card information isn't available right now."
 
 #: web/theme.ts
 msgid "Green"
 msgstr "Green"
 
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Group name"
+msgstr "Group name"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "H.264 not supported"
+msgstr "H.264 not supported"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "H.265 not supported"
+msgstr "H.265 not supported"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Hair drier"
+msgstr "Hair drier"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Handbag"
+msgstr "Handbag"
+
+#: web/ui/FormCard.tsx
+msgid "Has errors"
+msgstr "Has errors"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "has low-quality stream"
+msgstr "has low-quality stream"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "has ONVIF"
+msgstr "has ONVIF"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Has recordings"
+msgstr "Has recordings"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Has sound"
+msgstr "Has sound"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "High"
+msgstr "High"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "High quality"
+msgstr "High quality"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Hold to keep turning, tap to nudge."
+msgstr "Hold to keep turning, tap to nudge."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Hold to turn"
+msgstr "Hold to turn"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Hold to turn if the camera supports it"
+msgstr "Hold to turn if the camera supports it"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Home Assistant finds CookieNVR on its own: press \"Add\" there, then come back here and press \"Allow\". For other apps, you can create a dedicated key here with the same permissions as your account. All connected apps are listed below, and you can revoke one at any time. (Technically this is called an API token.)"
+msgstr "Home Assistant finds CookieNVR on its own: press \"Add\" there, then come back here and press \"Allow\". For other apps, you can create a dedicated key here with the same permissions as your account. All connected apps are listed below, and you can revoke one at any time. (Technically this is called an API token.)"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Horse"
+msgstr "Horse"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Hot dog"
+msgstr "Hot dog"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "How do I use it?"
+msgstr "How do I use it?"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "How long to wait after motion stops before ending the event"
+msgstr "How long to wait after motion stops before ending the event"
+
+#: web/pages/states/SensorPage.tsx
+msgid "How often to check"
+msgstr "How often to check"
+
+#: web/pages/states/SensorPage.tsx
+msgid "How sure it must be"
+msgstr "How sure it must be"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "I've saved it"
+msgstr "I've saved it"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "If \"Uncertified Accessory\" appears, choose \"Add Anyway\"."
+msgstr "If \"Uncertified Accessory\" appears, choose \"Add Anyway\"."
+
+#: web/pages/status/StatusPage.tsx
+msgid "If something goes wrong, copy the diagnostics and paste them to an AI or a technician. Passwords and similar data are masked automatically."
+msgstr "If something goes wrong, copy the diagnostics and paste them to an AI or a technician. Passwords and similar data are masked automatically."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "If the camera is mounted upside down or flipped in its app, up and down are usually reversed too."
+msgstr "If the camera is mounted upside down or flipped in its app, up and down are usually reversed too."
+
+#: web/pages/link/LinkPage.tsx
+msgid "If you allow it, {app} will act as {username} and can:"
+msgstr "If you allow it, {app} will act as {username} and can:"
+
+#: web/pages/link/LinkPage.tsx
+msgid "If you didn't just start this in {app}, choose Deny."
+msgstr "If you didn't just start this in {app}, choose Deny."
+
+#: web/detect/mask-editor.ts
+msgid "Ignored"
+msgstr "Ignored"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Image recognition"
+msgstr "Image recognition"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Images labeled per class"
+msgstr "Images labeled per class"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Import"
+msgstr "Import"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Import Frigate training data"
+msgstr "Import Frigate training data"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Import from Frigate settings"
+msgstr "Import from Frigate settings"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Imported"
+msgstr "Imported"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Imported the area and settings from Frigate “{frigateName}”"
+msgstr "Imported the area and settings from Frigate “{frigateName}”"
+
+#: web/states/bits.tsx
+msgid "Importing training data, waiting for other sensors to finish…"
+msgstr "Importing training data, waiting for other sensors to finish…"
+
+#: web/states/bits.tsx
+msgid "Importing training data…"
+msgstr "Importing training data…"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "In \"{name}\""
+msgstr "In \"{name}\""
+
+#: web/health.ts
+#: web/pages/recordings/Playback.tsx
+#: web/timeline/timeline.ts
+msgid "In progress"
+msgstr "In progress"
+
+#: web/pages/status/explain.ts
+msgid "In the last 10 minutes recording was interrupted and recovered on its own many times. A common cause is an unstable network signal."
+msgstr "In the last 10 minutes recording was interrupted and recovered on its own many times. A common cause is an unstable network signal."
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "In use"
+msgstr "In use"
+
+#: web/detect/object-model.ts
+msgid "In use: {deviceName}"
+msgstr "In use: {deviceName}"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "In use: {names}"
+msgstr "In use: {names}"
+
 #: web/theme.ts
 msgid "Indigo"
 msgstr "Indigo"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Inference device"
+msgstr "Inference device"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "iPhone finds cameras on your home network, so the CookieNVR container needs host networking (or its own LAN IP). To get motion notifications and watch away from home, you need an Apple TV, HomePod or iPad acting as a home hub; to have Apple store motion clips, you also need an iCloud+ plan with HomeKit Secure Video. This is an experimental feature, so video quality and whether recording works depend on real-world use."
+msgstr "iPhone finds cameras on your home network, so the CookieNVR container needs host networking (or its own LAN IP). To get motion notifications and watch away from home, you need an Apple TV, HomePod or iPad acting as a home hub; to have Apple store motion clips, you also need an iCloud+ plan with HomeKit Secure Video. This is an experimental feature, so video quality and whether recording works depend on real-world use."
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/pages/states/NewSensorPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "It may have been deleted."
+msgstr "It may have been deleted."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "It needs to see every state first. Pick a way to get pictures, then label which class each one is."
+msgstr "It needs to see every state first. Pick a way to get pictures, then label which class each one is."
+
+#: web/pages/states/SensorPage.tsx
+msgid "It settles once it sees the same state several times in a row, usually within a few dozen seconds."
+msgstr "It settles once it sees the same state several times in a row, usually within a few dozen seconds."
+
+#: web/pages/states/SensorPage.tsx
+msgid "It will resume once the picture settles."
+msgstr "It will resume once the picture settles."
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "It will try again automatically in a moment."
+msgstr "It will try again automatically in a moment."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Just enter the IP and camera account"
+msgstr "Just enter the IP and camera account"
+
+#: web/format.ts
+#: web/states/model.ts
+msgid "Just now"
+msgstr "Just now"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Keep {keepFree} free · {pathText}"
+msgstr "Keep {keepFree} free · {pathText}"
+
+#: web/ui/Dialog.tsx
+msgid "Keep editing"
+msgstr "Keep editing"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Key copied"
+msgstr "Key copied"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Keyboard"
+msgstr "Keyboard"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Kite"
+msgstr "Kite"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Knife"
+msgstr "Knife"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Label"
+msgstr "Label"
+
+#: web/states/model.ts
+msgid "Label {list} before training"
+msgstr "Label {list} before training"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Label all as suggested"
+msgstr "Label all as suggested"
+
+#: web/pages/status/explain.ts
+msgid "Label each class of picture, then press “Start training”"
+msgstr "Label each class of picture, then press “Start training”"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Label pictures"
+msgstr "Label pictures"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Label pictures below. Once every class has some, you can train."
+msgstr "Label pictures below. Once every class has some, you can train."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Labeled pictures and training results will be deleted too."
+msgstr "Labeled pictures and training results will be deleted too."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Labeled pictures, training results and the change history will all be deleted. This can’t be undone."
+msgstr "Labeled pictures, training results and the change history will all be deleted. This can’t be undone."
 
 #: web/pages/account/Appearance.tsx
 msgid "Language"
 msgstr "Language"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Laptop"
+msgstr "Laptop"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Large"
+msgstr "Large"
+
+#: web/detect/benchmark-model.ts
+msgid "Last benchmark: {time}"
+msgstr "Last benchmark: {time}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Last guess"
+msgstr "Last guess"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Last signed in {ago}"
+msgstr "Last signed in {ago}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Last switched: {since}"
+msgstr "Last switched: {since}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Last switched: {since}, now checking whether it became “{candidate}”"
+msgstr "Last switched: {since}, now checking whether it became “{candidate}”"
+
+#: web/pages/account/SessionsPanel.tsx
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Last used {ago}"
+msgstr "Last used {ago}"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Leave"
+msgstr "Leave"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Leave this page?"
+msgstr "Leave this page?"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Left"
+msgstr "Left"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Length {duration}"
+msgstr "Length {duration}"
+
+#: web/timeline/timeline.ts
+msgid "Length {length}"
+msgstr "Length {length}"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+#: web/states/model.ts
+msgid "Lenient"
+msgstr "Lenient"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Let other apps read camera video"
+msgstr "Let other apps read camera video"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Lets cameras join the Home app on iPhone. After turning it on, add each camera in its own settings."
+msgstr "Lets cameras join the Home app on iPhone. After turning it on, add each camera in its own settings."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Lets you steer the camera and receive events the camera detects itself."
+msgstr "Lets you steer the camera and receive events the camera detects itself."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "License plate"
+msgstr "License plate"
+
 #: web/pages/account/Appearance.tsx
 msgid "Light"
 msgstr "Light"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Limit reached ({max}). Delete one first."
+msgstr "Limit reached ({max}). Delete one first."
+
+#: web/health.ts
+msgid "Live changes unavailable"
+msgstr "Live changes unavailable"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Live motion in the picture"
+msgstr "Live motion in the picture"
+
+#: web/health.ts
+msgid "Live view only"
+msgstr "Live view only"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Live viewing"
+msgstr "Live viewing"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Loading earlier events…"
+msgstr "Loading earlier events…"
+
+#: web/detect/object-model.ts
+msgid "Loading model…"
+msgstr "Loading model…"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Loading pictures…"
+msgstr "Loading pictures…"
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+#: web/pages/settings-cameras/StatesSection.tsx
+#: web/pages/states/SensorPage.tsx
+#: web/ui/states.tsx
+msgid "Loading…"
+msgstr "Loading…"
+
+#: web/detect/object-model.ts
+msgid "Loose"
+msgstr "Loose"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Low"
+msgstr "Low"
+
+#: web/pages/status/explain.ts
+msgid "Low on space"
+msgstr "Low on space"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Low quality"
+msgstr "Low quality"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Low-quality stream URL"
+msgstr "Low-quality stream URL"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Low-quality stream URL copied"
+msgstr "Low-quality stream URL copied"
+
+#: web/camera-form-logic.ts
+msgid "Low-quality stream: {message}"
+msgstr "Low-quality stream: {message}"
+
+#: web/app/Shell.tsx
+msgid "Main menu"
+msgstr "Main menu"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Make administrator"
+msgstr "Make administrator"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Make regular user"
+msgstr "Make regular user"
+
+#: web/pages/status/explain.ts
+msgid "Make sure the camera is on and connected to the network"
+msgstr "Make sure the camera is on and connected to the network"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Make sure this matches the code on the {app} screen"
+msgstr "Make sure this matches the code on the {app} screen"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Manage storage"
+msgstr "Manage storage"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Mark as"
+msgstr "Mark as"
 
 #: web/pages/account/Appearance.tsx
 msgid "Match browser"
@@ -67,26 +2929,2505 @@ msgstr "Match browser"
 msgid "Match system"
 msgstr "Match system"
 
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Maybe later"
+msgstr "Maybe later"
+
+#: web/app/Shell.tsx
+msgctxt "phone tab bar"
+msgid "Me"
+msgstr "Me"
+
+#: web/detect/benchmark-model.ts
+msgid "Measuring"
+msgstr "Measuring"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Medium"
+msgstr "Medium"
+
+#: web/pages/status/explain.ts
+#: web/pages/status/ResourcesCard.tsx
+msgid "Memory"
+msgstr "Memory"
+
+#: web/health.ts
+msgid "Memory is running low"
+msgstr "Memory is running low"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Memory used by each task"
+msgstr "Memory used by each task"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Microwave"
+msgstr "Microwave"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Minimum free space"
+msgstr "Minimum free space"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Model"
+msgstr "Model"
+
+#: web/detect/object-model.ts
+msgid "Model unavailable"
+msgstr "Model unavailable"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "More actions for \"{name}\""
+msgstr "More actions for \"{name}\""
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "More actions for \"{username}\""
+msgstr "More actions for \"{username}\""
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "More actions for group \"{name}\""
+msgstr "More actions for group \"{name}\""
+
+#: web/pages/events/EventsPage.tsx
+msgid "More actions for this event"
+msgstr "More actions for this event"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "More categories"
+msgstr "More categories"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "More categories ({moreSelected} selected)"
+msgstr "More categories ({moreSelected} selected)"
+
+#: web/detect/object-model.ts
+msgid "More checks per second confirm what's in the picture sooner, but use more computer resources. The recommended value is fine for most setups."
+msgstr "More checks per second confirm what's in the picture sooner, but use more computer resources. The recommended value is fine for most setups."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "More options"
+msgstr "More options"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Most setups need no changes"
+msgstr "Most setups need no changes"
+
+#: web/detect/object-model.ts
+msgid "Mostly runs on the CPU in practice (about {pct}% of the work), so the graphics card helps little"
+msgstr "Mostly runs on the CPU in practice (about {pct}% of the work), so the graphics card helps little"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Motion"
+msgstr "Motion"
+
+#: web/timeline/model.ts
+msgctxt "event without objects"
+msgid "Motion"
+msgstr "Motion"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Motion + camera detection"
+msgstr "Motion + camera detection"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Motion counts only when an area this large changes. Raise it to ignore small animals and falling leaves. The live motion curve follows."
+msgstr "Motion counts only when an area this large changes. Raise it to ignore small animals and falling leaves. The live motion curve follows."
+
+#: web/health.ts
+msgid "Motion detected"
+msgstr "Motion detected"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Motion detection"
+msgstr "Motion detection"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Motion during the wait counts toward the same event."
+msgstr "Motion during the wait counts toward the same event."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Motorcycle"
+msgstr "Motorcycle"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Mouse"
+msgstr "Mouse"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Move"
+msgstr "Move"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move \"{name}\""
+msgstr "Move \"{name}\""
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Move back to unlabeled"
+msgstr "Move back to unlabeled"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Move cameras that can pan and tilt"
+msgstr "Move cameras that can pan and tilt"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move cancelled"
+msgstr "Move cancelled"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move cancelled, position unchanged"
+msgstr "Move cancelled, position unchanged"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move group \"{name}\""
+msgstr "Move group \"{name}\""
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move out of group"
+msgstr "Move out of group"
+
+#: web/pages/status/explain.ts
+msgid "Move the camera closer to the router or use a wired connection"
+msgstr "Move the camera closer to the router or use a wired connection"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Move to \"{name}\""
+msgstr "Move to \"{name}\""
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Moved \"{name}\" to \"{to}\""
+msgstr "Moved \"{name}\" to \"{to}\""
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Moved to group number {position}"
+msgstr "Moved to group number {position}"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Movement"
+msgstr "Movement"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Moving"
+msgstr "Moving"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Mute"
+msgstr "Mute"
+
+#: web/pages/settings-cameras/fields.tsx
+#: web/pages/states/NewSensorPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Name"
+msgstr "Name"
+
+#: web/states/ClassesEditor.tsx
+msgid "Name of class {num}"
+msgstr "Name of class {num}"
+
+#: web/states/model.ts
+msgid "Names can be at most {max} characters"
+msgstr "Names can be at most {max} characters"
+
+#: web/detect/object-model.ts
+msgid "Needs an almost perfectly clear view. Distant or partly hidden objects are often missed."
+msgstr "Needs an almost perfectly clear view. Distant or partly hidden objects are often missed."
+
+#: web/pages/status/explain.ts
+#: web/states/model.ts
+msgid "Needs retraining"
+msgstr "Needs retraining"
+
+#: web/format.ts
+msgid "Never"
+msgstr "Never"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Never signed in"
+msgstr "Never signed in"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "New password"
+msgstr "New password"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "New recordings will be saved to \"{newPath}\". Old recordings stay where they are and can still be played back, but they won't be moved."
+msgstr "New recordings will be saved to \"{newPath}\". Old recordings stay where they are and can still be played back, but they won't be moved."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Next"
+msgstr "Next"
+
+#: web/ui/DatePicker.tsx
+msgid "Next day"
+msgstr "Next day"
+
+#: web/ui/DatePicker.tsx
+msgid "Next month"
+msgstr "Next month"
+
+#: web/pages/events/EventsPage.tsx
+msgid "No {what} events"
+msgstr "No {what} events"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "No address yet"
+msgstr "No address yet"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "No apps are connected yet."
+msgstr "No apps are connected yet."
+
+#: web/pages/status/StatusPage.tsx
+msgid "No cameras are enabled yet."
+msgstr "No cameras are enabled yet."
+
+#: web/detect/benchmark-model.ts
+msgid "No cameras have object detection turned on right now."
+msgstr "No cameras have object detection turned on right now."
+
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/settings-cameras/CamerasListPage.tsx
+msgid "No cameras yet"
+msgstr "No cameras yet"
+
+#: web/pages/status/StatusPage.tsx
+msgid "No cameras yet."
+msgstr "No cameras yet."
+
+#: web/detect/object-model.ts
+msgid "No categories are checked, so events won't be labeled with what was seen."
+msgstr "No categories are checked, so events won't be labeled with what was seen."
+
+#: web/detect/object-model.ts
+msgid "No categories are checked, so this camera won't record any events."
+msgstr "No categories are checked, so this camera won't record any events."
+
+#: web/detect/object-model.ts
+msgid "No categories selected, no events recorded"
+msgstr "No categories selected, no events recorded"
+
+#: web/pages/states/SensorPage.tsx
+msgid "No changes yet. State changes will be logged here."
+msgstr "No changes yet. State changes will be logged here."
+
+#: web/pages/events/EventsPage.tsx
+#: web/pages/recordings/Playback.tsx
+msgid "No earlier events"
+msgstr "No earlier events"
+
+#: web/pages/events/EventsPage.tsx
+msgid "No earlier events on this day"
+msgstr "No earlier events on this day"
+
+#: web/pages/recordings/Playback.tsx
+msgid "No events on this day"
+msgstr "No events on this day"
+
+#: web/pages/events/EventsPage.tsx
+msgid "No events yet"
+msgstr "No events yet"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "No GPU detected."
+msgstr "No GPU detected."
+
+#: web/pages/recordings/Playback.tsx
+msgid "No later events"
+msgstr "No later events"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "No location set"
+msgstr "No location set"
+
+#: web/health.ts
+msgid "No motion"
+msgstr "No motion"
+
+#: web/health.ts
+msgid "No permission to write to the recording location"
+msgstr "No permission to write to the recording location"
+
+#: web/states/model.ts
+msgid "No picture"
+msgstr "No picture"
+
+#: web/pages/status/explain.ts
+msgid "No picture is coming in, so nothing can be recorded either. Common causes are the camera losing power, Wi-Fi dropping, or the IP address changing. If you changed routers recently, update the IP in the camera settings. A camera can only serve a few stream connections at once. If other software such as Frigate also connects to this camera directly, the slots can run out, so point them at CookieNVR's stream URL instead."
+msgstr "No picture is coming in, so nothing can be recorded either. Common causes are the camera losing power, Wi-Fi dropping, or the IP address changing. If you changed routers recently, update the IP in the camera settings. A camera can only serve a few stream connections at once. If other software such as Frigate also connects to this camera directly, the slots can run out, so point them at CookieNVR's stream URL instead."
+
+#: web/pages/states/LabelBoard.tsx
+msgid "No pictures labeled “{activeView}” yet."
+msgstr "No pictures labeled “{activeView}” yet."
+
+#: web/pages/states/SensorPage.tsx
+msgid "No pictures were misread during checking."
+msgstr "No pictures were misread during checking."
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "No presets yet. Turn the camera to the position you want, then press “Save current position”."
+msgstr "No presets yet. Turn the camera to the position you want, then press “Save current position”."
+
+#: web/pages/recordings/Playback.tsx
+msgid "No recordings today yet"
+msgstr "No recordings today yet"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "No recordings yet."
+msgstr "No recordings yet."
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "No sound"
+msgstr "No sound"
+
+#: web/pages/settings-system/decode-model.ts
+msgid "No usable graphics card was detected, so the CPU is decoding."
+msgstr "No usable graphics card was detected, so the CPU is decoding."
+
+#: web/pages/status/explain.ts
+msgid "No write permission"
+msgstr "No write permission"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "None. Previews use the high-quality stream, scaled down."
+msgstr "None. Previews use the high-quality stream, scaled down."
+
+#: web/pages/recordings/Playback.tsx
+msgid "Normal speed"
+msgstr "Normal speed"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Not detected"
+msgstr "Not detected"
+
+#: web/health.ts
+#: web/pages/status/explain.ts
+msgid "Not recording"
+msgstr "Not recording"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Not set up"
+msgstr "Not set up"
+
+#: web/pages/status/explain.ts
+#: web/states/model.ts
+msgid "Not trained yet"
+msgstr "Not trained yet"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+#: web/pages/settings/SettingsLayout.tsx
+#: web/pages/status/explain.ts
+msgid "Object detection"
+msgstr "Object detection"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Object detection can't keep up"
+msgstr "Object detection can't keep up"
+
+#: web/health.ts
+msgid "Object detection isn't working properly"
+msgstr "Object detection isn't working properly"
+
+#: web/pages/status/explain.ts
+msgid "Object detection restarted"
+msgstr "Object detection restarted"
+
+#: web/health.ts
+msgid "Object detection stopped"
+msgstr "Object detection stopped"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Object detection turned off"
+msgstr "Object detection turned off"
+
+#: web/pages/settings-cameras/form-model.ts
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Off"
+msgstr "Off"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Off (turn it on first under Settings → General)"
+msgstr "Off (turn it on first under Settings → General)"
+
+#: web/health.ts
+msgctxt "camera status"
+msgid "Offline"
+msgstr "Offline"
+
+#: web/ui/Dialog.tsx
+msgid "OK"
+msgstr "OK"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "On"
+msgstr "On"
+
+#: web/pages/states/SensorPage.tsx
+msgid "On change only"
+msgstr "On change only"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android."
+msgstr "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android."
+
+#: web/detect/object-model.ts
+msgid "once every {seconds} seconds"
+msgstr "once every {seconds} seconds"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Once motion detection is on, detected events show up here."
+msgstr "Once motion detection is on, detected events show up here."
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Once on, each camera can choose to record events only when it sees a person or vehicle. It uses some extra computer resources."
+msgstr "Once on, each camera can choose to record events only when it sees a person or vehicle. It uses some extra computer resources."
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Once on, each camera can choose to record events only when it sees a person, vehicle or animal, so wind in the leaves and changing light no longer fill up the event list. It uses some extra computer resources."
+msgstr "Once on, each camera can choose to record events only when it sees a person, vehicle or animal, so wind in the leaves and changing light no longer fill up the event list. It uses some extra computer resources."
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Once on, media and smart home apps on other devices at home can also see the live picture. Recording is not affected."
+msgstr "Once on, media and smart home apps on other devices at home can also see the live picture. Recording is not affected."
+
+#: web/detect/object-model.ts
+msgid "Once per second"
+msgstr "Once per second"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Once recording starts, you can play it back here within a few minutes."
+msgstr "Once recording starts, you can play it back here within a few minutes."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Once there are some recordings, this will estimate how many days fit."
+msgstr "Once there are some recordings, this will estimate how many days fit."
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Once you add a camera it starts recording, and the footage shows up here."
+msgstr "Once you add a camera it starts recording, and the footage shows up here."
+
+#: web/pages/events/EventsPage.tsx
+msgid "Once you add a camera, detected motion shows up here."
+msgstr "Once you add a camera, detected motion shows up here."
+
+#: web/pages/status/explain.ts
+msgid "Only {free} is left, below the minimum free space you set, and the system is deleting the oldest recordings to free up space."
+msgstr "Only {free} is left, below the minimum free space you set, and the system is deleting the oldest recordings to free up space."
+
+#: web/pages/link/LinkPage.tsx
+msgid "Only admins can allow {app} to connect. Sign in with an admin account, then open this page again."
+msgstr "Only admins can allow {app} to connect. Sign in with an admin account, then open this page again."
+
+#: web/detect/object-model.ts
+msgid "Only counts what it is quite sure about. Fewer false alarms, but unclear objects may be missed."
+msgstr "Only counts what it is quite sure about. Fewer false alarms, but unclear objects may be missed."
+
+#: web/detect/object-model.ts
+msgid "Only detects whether there is motion, without working out what is in the picture."
+msgstr "Only detects whether there is motion, without working out what is in the picture."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Only obvious motion counts. Good for places with many trees, cars, or changing light."
+msgstr "Only obvious motion counts. Good for places with many trees, cars, or changing light."
+
+#: web/detect/object-model.ts
+msgid "Only record {list}"
+msgstr "Only record {list}"
+
+#: web/detect/object-model.ts
+msgid "Only records events and sends notifications when a checked object is seen, so shadows, light changes and bugs won't bother you."
+msgstr "Only records events and sends notifications when a checked object is seen, so shadows, light changes and bugs won't bother you."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "ONVIF host"
+msgstr "ONVIF host"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "ONVIF isn't set up for this camera, so it can't receive the camera's detections. Turn on \"Use ONVIF\" under Connection → Advanced, or switch to motion detection."
+msgstr "ONVIF isn't set up for this camera, so it can't receive the camera's detections. Turn on \"Use ONVIF\" under Connection → Advanced, or switch to motion detection."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "ONVIF isn't set up for this camera, so only motion detection is used for now. To use camera detection too, turn on \"Use ONVIF\" under Connection → Advanced."
+msgstr "ONVIF isn't set up for this camera, so only motion detection is used for now. To use camera detection too, turn on \"Use ONVIF\" under Connection → Advanced."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "ONVIF password"
+msgstr "ONVIF password"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "ONVIF username"
+msgstr "ONVIF username"
+
+#: web/states/model.ts
+msgid "Open"
+msgstr "Open"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Open in a new tab"
+msgstr "Open in a new tab"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Open the Home app, tap + in the top right, and choose \"Add Accessory\"."
+msgstr "Open the Home app, tap + in the top right, and choose \"Add Accessory\"."
+
+#: web/pages/link/LinkPage.tsx
+msgid "Open this page directly"
+msgstr "Open this page directly"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Optional. If provided, home page previews and motion detection use fewer resources."
+msgstr "Optional. If provided, home page previews and motion detection use fewer resources."
+
 #: web/theme.ts
 msgid "Orange"
 msgstr "Orange"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Orange"
+msgstr "Orange"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Other"
+msgstr "Other"
+
+#: web/pages/settings-cameras/fields.tsx
+#: web/pages/settings-cameras/form-model.ts
+msgid "Other camera"
+msgstr "Other camera"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Other cameras"
+msgstr "Other cameras"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Other files"
+msgstr "Other files"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Other programs"
+msgstr "Other programs"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Other programs and cache"
+msgstr "Other programs and cache"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Oven"
+msgstr "Oven"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Overall status"
+msgstr "Overall status"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Overwrite"
+msgstr "Overwrite"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Overwrite preset"
+msgstr "Overwrite preset"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Package"
+msgstr "Package"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Pairing code"
+msgstr "Pairing code"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Pairing code {spokenCode}"
+msgstr "Pairing code {spokenCode}"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Pairing reset. Add it again with the new pairing code."
+msgstr "Pairing reset. Add it again with the new pairing code."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Pan reversed"
+msgstr "Pan reversed"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Parking meter"
+msgstr "Parking meter"
+
+#: web/pages/auth/AuthPage.tsx
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Password"
+msgstr "Password"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Password changed"
+msgstr "Password changed"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Password must be at least 8 characters"
+msgstr "Password must be at least 8 characters"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Paste the classification section of your Frigate config to import the box and detection settings."
+msgstr "Paste the classification section of your Frigate config to import the box and detection settings."
+
+#: web/pages/recordings/Playback.tsx
+msgid "Pause"
+msgstr "Pause"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Paused"
+msgstr "Paused"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Performance"
+msgstr "Performance"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Person"
+msgstr "Person"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Person 96%"
+msgstr "Person 96%"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Pet"
+msgstr "Pet"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Pick from recordings automatically"
+msgstr "Pick from recordings automatically"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pick more from recordings"
+msgstr "Pick more from recordings"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Picked up \"{name}\""
+msgstr "Picked up \"{name}\""
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Picked up group \"{name}\""
+msgstr "Picked up group \"{name}\""
+
+#: web/states/bits.tsx
+msgid "Picking frames from recordings, waiting for other sensors to finish…"
+msgstr "Picking frames from recordings, waiting for other sensors to finish…"
+
+#: web/states/bits.tsx
+msgid "Picking frames from recordings…"
+msgstr "Picking frames from recordings…"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Picks 24 different frames from this camera’s recordings"
+msgstr "Picks 24 different frames from this camera’s recordings"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture {n}"
+msgstr "Picture {n}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture {n}, {label}"
+msgstr "Picture {n}, {label}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture {n}, suggested “{guess}”"
+msgstr "Picture {n}, suggested “{guess}”"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Picture categories"
+msgstr "Picture categories"
+
+#: web/health.ts
+msgid "Picture changes will be compared after you save"
+msgstr "Picture changes will be compared after you save"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Picture from {name}"
+msgstr "Picture from {name}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pictures detection isn’t sure about are added here automatically."
+msgstr "Pictures detection isn’t sure about are added here automatically."
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pictures labeled “{activeView}”"
+msgstr "Pictures labeled “{activeView}”"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Pictures will show up here when they’re ready"
+msgstr "Pictures will show up here when they’re ready"
 
 #: web/theme.ts
 msgid "Pink"
 msgstr "Pink"
 
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Pizza"
+msgstr "Pizza"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Play"
+msgstr "Play"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Play / pause"
+msgstr "Play / pause"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Play recording"
+msgstr "Play recording"
+
+#: web/pages/recordings/export.tsx
+msgid "Play the video or click the timeline first, then set the start and end"
+msgstr "Play the video or click the timeline first, then set the start and end"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Playback speed"
+msgstr "Playback speed"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Player"
+msgstr "Player"
+
+#: web/detect/mask-editor.ts
+msgid "Point {n}"
+msgstr "Point {n}"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Port"
+msgstr "Port"
+
+#: web/pages/status/explain.ts
+msgid "Port in use"
+msgstr "Port in use"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Possible causes"
+msgstr "Possible causes"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Potted plant"
+msgstr "Potted plant"
+
+#: web/pages/recordings/export.tsx
+msgid "Preparing"
+msgstr "Preparing"
+
+#: web/detect/benchmark-model.ts
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Preparing…"
+msgstr "Preparing…"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Preset name"
+msgstr "Preset name"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Presets"
+msgstr "Presets"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Press Space or Enter to pick up, use the arrow keys to move, and press again to drop. Press Esc to cancel."
+msgstr "Press Space or Enter to pick up, use the arrow keys to move, and press again to drop. Press Esc to cancel."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Previous"
+msgstr "Previous"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Previous / next event"
+msgstr "Previous / next event"
+
+#: web/ui/DatePicker.tsx
+msgid "Previous day"
+msgstr "Previous day"
+
+#: web/ui/DatePicker.tsx
+msgid "Previous month"
+msgstr "Previous month"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "QR code for adding to Apple Home"
+msgstr "QR code for adding to Apple Home"
+
+#: web/pages/camera/CameraPage.tsx
+msgid "Quality"
+msgstr "Quality"
+
+#: web/pages/recordings/export.tsx
+msgid "Queued, {ahead} ahead"
+msgstr "Queued, {ahead} ahead"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Recent changes"
+msgstr "Recent changes"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Recognition"
+msgstr "Recognition"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Recognize people, vehicles and animals in the picture"
+msgstr "Recognize people, vehicles and animals in the picture"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Record 24/7"
+msgstr "Record 24/7"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Record sound"
+msgstr "Record sound"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Record straight from the camera"
+msgstr "Record straight from the camera"
+
+#: web/pages/recordings/Playback.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Recording"
+msgstr "Recording"
+
+#: web/health.ts
+msgctxt "camera status"
+msgid "Recording"
+msgstr "Recording"
+
+#: web/pages/status/ResourcesCard.tsx
+msgctxt "resource usage"
+msgid "Recording"
+msgstr "Recording"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Recording 24/7 · with sound"
+msgstr "Recording 24/7 · with sound"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Recording 24/7 · without sound"
+msgstr "Recording 24/7 · without sound"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Recording and storage"
+msgstr "Recording and storage"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Recording and storage settings saved"
+msgstr "Recording and storage settings saved"
+
+#: web/pages/status/explain.ts
+msgid "Recording can't be written to storage. Restarting the container usually fixes it"
+msgstr "Recording can't be written to storage. Restarting the container usually fixes it"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Recording disk {usedPct}% used"
+msgstr "Recording disk {usedPct}% used"
+
+#: web/health.ts
+msgid "Recording disk space is almost full"
+msgstr "Recording disk space is almost full"
+
+#: web/health.ts
+msgid "Recording disk space is low"
+msgstr "Recording disk space is low"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Recording is off for this camera, so there’s nothing to pick from"
+msgstr "Recording is off for this camera, so there’s nothing to pick from"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Recording keeps working if the video service has problems, but it uses one more connection on the camera."
+msgstr "Recording keeps working if the video service has problems, but it uses one more connection on the camera."
+
+#: web/pages/recordings/Playback.tsx
+msgid "Recording now"
+msgstr "Recording now"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Recording of {camName}"
+msgstr "Recording of {camName}"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Recording off"
+msgstr "Recording off"
+
+#: web/health.ts
+msgid "Recording on {name} is unstable"
+msgstr "Recording on {name} is unstable"
+
+#: web/pages/status/explain.ts
+msgid "Recording restarted"
+msgstr "Recording restarted"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Recording started"
+msgstr "Recording started"
+
+#: web/health.ts
+#: web/pages/status/explain.ts
+msgid "Recording unstable"
+msgstr "Recording unstable"
+
+#: web/pages/status/explain.ts
+msgid "Recording will be interrupted for a few seconds."
+msgstr "Recording will be interrupted for a few seconds."
+
+#: web/app/Shell.tsx
+#: web/pages/recordings/Playback.tsx
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Recordings"
+msgstr "Recordings"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Recordings and appdata are actually on the same disk. If you mounted the recordings folder separately to put it on another disk (for example an Unraid array), check that share's primary storage setting."
+msgstr "Recordings and appdata are actually on the same disk. If you mounted the recordings folder separately to put it on another disk (for example an Unraid array), check that share's primary storage setting."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Recordings older than this are deleted automatically. When space runs low, the oldest recordings go first, whatever the days say."
+msgstr "Recordings older than this are deleted automatically. When space runs low, the oldest recordings go first, whatever the days say."
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Records straight from the camera"
+msgstr "Records straight from the camera"
+
+#: web/pages/status/explain.ts
+msgid "Reduce the work running at once, or move to a more powerful machine"
+msgstr "Reduce the work running at once, or move to a more powerful machine"
+
+#: web/pages/status/explain.ts
+msgid "Reduce what the cameras are doing, or add memory"
+msgstr "Reduce what the cameras are doing, or add memory"
+
+#: web/states/CropEditor.tsx
+msgid "Refresh picture"
+msgstr "Refresh picture"
+
+#: web/pages/status/StatusPage.tsx
+msgid "Refreshes every 5 seconds · last at {updatedAt}"
+msgstr "Refreshes every 5 seconds · last at {updatedAt}"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Refrigerator"
+msgstr "Refrigerator"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Regular user"
+msgstr "Regular user"
+
+#: web/pages/link/LinkPage.tsx
+#: web/ui/states.tsx
+msgid "Reload"
+msgstr "Reload"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Remote"
+msgstr "Remote"
+
+#: web/pages/recordings/export.tsx
+msgid "Remove this export"
+msgstr "Remove this export"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Rename"
+msgstr "Rename"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Rename group"
+msgstr "Rename group"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Renaming doesn’t need retraining; adding or deleting a class does."
+msgstr "Renaming doesn’t need retraining; adding or deleting a class does."
+
+#: web/pages/link/LinkPage.tsx
+msgid "Request from <0>{ip}</0>"
+msgstr "Request from <0>{ip}</0>"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Reset pairing"
+msgstr "Reset pairing"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Reset pairing?"
+msgstr "Reset pairing?"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Reset password"
+msgstr "Reset password"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Reset password for \"{username}\""
+msgstr "Reset password for \"{username}\""
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Reset the password for \"{username}\""
+msgstr "Reset the password for \"{username}\""
+
+#: web/pages/status/explain.ts
+msgid "Restart"
+msgstr "Restart"
+
+#: web/pages/status/explain.ts
+msgid "Restart it and detection usually recovers"
+msgstr "Restart it and detection usually recovers"
+
+#: web/pages/status/explain.ts
+msgid "Restart it and it usually recovers"
+msgstr "Restart it and it usually recovers"
+
+#: web/pages/status/explain.ts
+msgid "Restart it to bring back the picture and recording"
+msgstr "Restart it to bring back the picture and recording"
+
+#: web/pages/status/explain.ts
+msgid "Restart object detection?"
+msgstr "Restart object detection?"
+
+#: web/pages/status/explain.ts
+msgid "Restart recording for “{cameraName}”?"
+msgstr "Restart recording for “{cameraName}”?"
+
+#: web/pages/status/explain.ts
+msgid "Restart state recognition?"
+msgstr "Restart state recognition?"
+
+#: web/pages/status/explain.ts
+msgid "Restart the video service?"
+msgstr "Restart the video service?"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Retention"
+msgstr "Retention"
+
+#: web/pages/states/SensorPage.tsx
+#: web/pages/status/explain.ts
+msgid "Retrain"
+msgstr "Retrain"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Retry"
+msgstr "Retry"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Reverse left and right"
+msgstr "Reverse left and right"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Reverse up and down"
+msgstr "Reverse up and down"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Revert"
+msgstr "Revert"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Revoke"
+msgstr "Revoke"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Revoke \"{name}\"?"
+msgstr "Revoke \"{name}\"?"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "Revoked \"{name}\""
+msgstr "Revoked \"{name}\""
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Right"
+msgstr "Right"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Role"
+msgstr "Role"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "RTSP, host {host}, transport {transport}"
+msgstr "RTSP, host {host}, transport {transport}"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "rtsp://username:password@192.168.1.60:554/stream1"
+msgstr "rtsp://username:password@192.168.1.60:554/stream1"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Run benchmark"
+msgstr "Run benchmark"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Running for {elapsed}"
+msgstr "Running for {elapsed}"
+
+#: web/timeline/timeline.ts
+msgid "Running for {running}"
+msgstr "Running for {running}"
+
+#: web/pages/status/explain.ts
+msgid "Running low"
+msgstr "Running low"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sandwich"
+msgstr "Sandwich"
+
+#: web/pages/camera/PtzPresets.tsx
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Save"
+msgstr "Save"
+
+#: web/pages/settings-system/SystemPage.tsx
+#: web/pages/storage/StoragePage.tsx
+msgid "Save changes"
+msgstr "Save changes"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Save current position"
+msgstr "Save current position"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Saved"
+msgstr "Saved"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Saved “{name}”"
+msgstr "Saved “{name}”"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Saving…"
+msgstr "Saving…"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Scan this QR code. If you opened this page on the same phone, choose \"More Options\", tap this camera, and enter the pairing code."
+msgstr "Scan this QR code. If you opened this page on the same phone, choose \"More Options\", tap this camera, and enter the pairing code."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Scissors"
+msgstr "Scissors"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "sec"
+msgstr "sec"
+
+#: web/pages/link/LinkPage.tsx
+msgid "See the picture and recordings of every camera"
+msgstr "See the picture and recordings of every camera"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Select"
+msgstr "Select"
+
+#: web/ui/DatePicker.tsx
+msgid "Select {pickerLabel}"
+msgstr "Select {pickerLabel}"
+
+#: web/ui/DatePicker.tsx
+msgid "Select a date"
+msgstr "Select a date"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Select at least one device."
+msgstr "Select at least one device."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Sensitive"
+msgstr "Sensitive"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Sensitivity"
+msgstr "Sensitivity"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Sensitivity: {level}"
+msgstr "Sensitivity: {level}"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Sensor not found"
+msgstr "Sensor not found"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Set “{name}” to the current position"
+msgstr "Set “{name}” to the current position"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Set “{name}” to where the camera is pointing now? The old position will be replaced."
+msgstr "Set “{name}” to where the camera is pointing now? The old position will be replaced."
+
+#: web/pages/recordings/export.tsx
+msgid "Set end"
+msgstr "Set end"
+
+#: web/pages/recordings/export.tsx
+msgid "Set start"
+msgstr "Set start"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Set to current position"
+msgstr "Set to current position"
+
+#: web/app/Shell.tsx
+#: web/pages/settings/SettingsLayout.tsx
+#: web/pages/states/SensorPage.tsx
+msgid "Settings"
+msgstr "Settings"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Settings tabs"
+msgstr "Settings tabs"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Shares memory with the system"
+msgstr "Shares memory with the system"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sheep"
+msgstr "Sheep"
+
+#: web/pages/status/explain.ts
+msgid "Shorten the retention period or get a bigger disk"
+msgstr "Shorten the retention period or get a bigger disk"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Show all cameras"
+msgstr "Show all cameras"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Show all categories"
+msgstr "Show all categories"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Show all dates"
+msgstr "Show all dates"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Show more"
+msgstr "Show more"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Shown on the home page and the recordings page."
+msgstr "Shown on the home page and the recordings page."
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Shown on the sign-in page, in the sidebar and in the browser tab title."
+msgstr "Shown on the sign-in page, in the sidebar and in the browser tab title."
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Sign in"
+msgstr "Sign in"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Sign in to approve the connection request."
+msgstr "Sign in to approve the connection request."
+
+#: web/app/Shell.tsx
+#: web/pages/account/SessionsPanel.tsx
+msgid "Sign out"
+msgstr "Sign out"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Sign out “{name}”?"
+msgstr "Sign out “{name}”?"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Signed out that device"
+msgstr "Signed out that device"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Signed-in devices"
+msgstr "Signed-in devices"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sink"
+msgstr "Sink"
+
+#: web/pages/settings-system/SystemPage.tsx
+msgid "Site name"
+msgstr "Site name"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Skateboard"
+msgstr "Skateboard"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Skipped a {gap} gap"
+msgstr "Skipped a {gap} gap"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Skis"
+msgstr "Skis"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Small"
+msgstr "Small"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Snowboard"
+msgstr "Snowboard"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Sort the unlabeled pictures below into classes."
+msgstr "Sort the unlabeled pictures below into classes."
+
+#: web/pages/recordings/Playback.tsx
+msgid "Space"
+msgstr "Space"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Speed"
+msgstr "Speed"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Speed {speed}"
+msgstr "Speed {speed}"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Spoon"
+msgstr "Spoon"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Sports ball"
+msgstr "Sports ball"
+
+#: web/detect/object-model.ts
+#: web/pages/camera/CameraPage.tsx
+#: web/states/model.ts
+msgid "Standard"
+msgstr "Standard"
+
+#: web/app/Shell.tsx
+#: web/pages/account/AccountPage.tsx
+msgid "Standard user"
+msgstr "Standard user"
+
+#: web/pages/status/explain.ts
+msgid "Start again"
+msgstr "Start again"
+
+#: web/pages/status/explain.ts
+msgid "Start recording again and it usually recovers"
+msgstr "Start recording again and it usually recovers"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Start training"
+msgstr "Start training"
+
+#: web/detect/object-model.ts
+msgid "Starting…"
+msgstr "Starting…"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Starts with rtsp://, usually found in the camera's manual or app. You can put the username and password in the URL."
+msgstr "Starts with rtsp://, usually found in the camera's manual or app. You can put the username and password in the URL."
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/status/explain.ts
+msgid "State recognition"
+msgstr "State recognition"
+
+#: web/health.ts
+msgid "State recognition isn't working properly"
+msgstr "State recognition isn't working properly"
+
+#: web/pages/status/explain.ts
+msgid "State recognition restarted"
+msgstr "State recognition restarted"
+
+#: web/health.ts
+msgid "State recognition stopped"
+msgstr "State recognition stopped"
+
+#: web/pages/status/explain.ts
+msgid "State recognition uses the same picture as motion detection. When this camera's detection picture is interrupted, it can't tell the state. Check that “Detection” is turned on in the camera settings. If it still doesn't work, use “Copy diagnostics” at the bottom of the page to find the cause."
+msgstr "State recognition uses the same picture as motion detection. When this camera's detection picture is interrupted, it can't tell the state. Check that “Detection” is turned on in the camera settings. If it still doesn't work, use “Copy diagnostics” at the bottom of the page to find the cause."
+
+#: web/pages/status/explain.ts
+msgid "States will become unknown first and be checked again after a few seconds. Recording is not affected."
+msgstr "States will become unknown first and be checked again after a few seconds. Recording is not affected."
+
+#: web/pages/camera/StateChips.tsx
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Status"
+msgstr "Status"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "Status isn't available right now"
+msgstr "Status isn't available right now"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Steps"
+msgstr "Steps"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Stop"
+msgstr "Stop"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Stop sign"
+msgstr "Stop sign"
+
+#: web/pages/status/explain.ts
+msgid "Stopped"
+msgstr "Stopped"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+msgid "Stops recording and removes its settings. You can choose whether to delete the recorded video too."
+msgstr "Stops recording and removes its settings. You can choose whether to delete the recorded video too."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Stops when you let go"
+msgstr "Stops when you let go"
+
+#: web/pages/status/explain.ts
+#: web/pages/status/StatusPage.tsx
+#: web/pages/storage/StoragePage.tsx
+msgid "Storage"
+msgstr "Storage"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Storage location"
+msgstr "Storage location"
+
+#: web/health.ts
+msgid "Storage space is almost full"
+msgstr "Storage space is almost full"
+
+#: web/health.ts
+msgid "Storage space is low"
+msgstr "Storage space is low"
+
+#: web/camera-form-logic.ts
+msgid "Stream not found. Check that the path at the end of the URL (for example /stream1) is correct."
+msgstr "Stream not found. Check that the path at the end of the URL (for example /stream1) is correct."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Stream URL"
+msgstr "Stream URL"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Stream URL copied"
+msgstr "Stream URL copied"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Stream URL for other apps"
+msgstr "Stream URL for other apps"
+
+#: web/detect/object-model.ts
+#: web/pages/settings-cameras/ObjectSection.tsx
+#: web/states/model.ts
+msgid "Strict"
+msgstr "Strict"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Stricter means fewer false detections, but it may take longer to settle in poor light."
+msgstr "Stricter means fewer false detections, but it may take longer to settle in poor light."
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "Strictness"
+msgstr "Strictness"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Suitcase"
+msgstr "Suitcase"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Surfboard"
+msgstr "Surfboard"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "System resources"
+msgstr "System resources"
+
+#: web/detect/mask-editor.ts
+msgid "Tap the first point again or press \"Done\" to close the area."
+msgstr "Tap the first point again or press \"Done\" to close the area."
+
+#: web/detect/mask-editor.ts
+msgid "Tap the screen to mark the area to exclude, one corner per tap."
+msgstr "Tap the screen to mark the area to exclude, one corner per tap."
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Tap to move one step."
+msgstr "Tap to move one step."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Tap to step"
+msgstr "Tap to step"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Tapo, host {host}"
+msgstr "Tapo, host {host}"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "TCP is stable and doesn't drop frames, so it's recommended. UDP has lower latency but can show glitches on an unstable network."
+msgstr "TCP is stable and doesn't drop frames, so it's recommended. UDP has lower latency but can show glitches on an unstable network."
+
 #: web/theme.ts
 msgid "Teal"
 msgstr "Teal"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Teddy bear"
+msgstr "Teddy bear"
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Tell what something in the picture looks like right now, such as whether a roller door is open or closed. Draw the area and label a few frames, and it learns on its own."
+msgstr "Tell what something in the picture looks like right now, such as whether a roller door is open or closed. Draw the area and label a few frames, and it learns on its own."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Tennis racket"
+msgstr "Tennis racket"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Test all"
+msgstr "Test all"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Test and save"
+msgstr "Test and save"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "Test only the one in use"
+msgstr "Test only the one in use"
+
+#: web/pages/settings-cameras/CameraEditPage.tsx
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Testing connection…"
+msgstr "Testing connection…"
+
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "The arrangement wasn't saved: {reason}"
+msgstr "The arrangement wasn't saved: {reason}"
+
+#: web/detect/benchmark-model.ts
+msgid "The benchmark didn't finish. Please try again later."
+msgstr "The benchmark didn't finish. Please try again later."
+
+#: web/pages/status/explain.ts
+msgid "The biggest user right now is “{category}”. "
+msgstr "The biggest user right now is “{category}”. "
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "The built-in model doesn't include packages. To detect packages, add a custom model that has this category."
+msgstr "The built-in model doesn't include packages. To detect packages, add a custom model that has this category."
+
+#: web/pages/states/SensorPage.tsx
+msgid "The camera has no picture. Detection resumes once it connects."
+msgstr "The camera has no picture. Detection resumes once it connects."
+
+#: web/pages/status/explain.ts
+msgid "The camera is connected, but state recognition isn't receiving any picture"
+msgstr "The camera is connected, but state recognition isn't receiving any picture"
+
+#: web/health.ts
+msgid "The camera is moving, detection paused"
+msgstr "The camera is moving, detection paused"
+
+#: web/camera-form-logic.ts
+msgid "The camera isn't responding. Check that the IP address is correct and the camera is on."
+msgstr "The camera isn't responding. Check that the IP address is correct and the camera is on."
+
+#: web/camera-form-logic.ts
+msgid "The camera refused the connection. Check that the IP address and port are correct and that the camera's RTSP feature is turned on."
+msgstr "The camera refused the connection. Check that the IP address and port are correct and that the camera's RTSP feature is turned on."
+
+#: web/camera-form-logic.ts
+msgid "The camera refused the connection. Check that the IP address is correct and that you created a camera account in the Tapo app. If Frigate or other software is watching this camera, its connections may also be full."
+msgstr "The camera refused the connection. Check that the IP address is correct and that you created a camera account in the Tapo app. If Frigate or other software is watching this camera, its connections may also be full."
+
+#: web/camera-form-logic.ts
+msgid "The camera responded but isn't sending video, usually because its stream connections are full (a Tapo allows only about 1 to 2 per quality). Pause Frigate, Home Assistant, other NVRs, or phone apps that connect to this camera directly, then try again. After adding it, other software can use CookieNVR's stream URL instead (copy it from the camera's \"Advanced\" settings), so it no longer needs to connect to the camera directly."
+msgstr "The camera responded but isn't sending video, usually because its stream connections are full (a Tapo allows only about 1 to 2 per quality). Pause Frigate, Home Assistant, other NVRs, or phone apps that connect to this camera directly, then try again. After adding it, other software can use CookieNVR's stream URL instead (copy it from the camera's \"Advanced\" settings), so it no longer needs to connect to the camera directly."
+
+#: web/camera-form-logic.ts
+msgid "The camera says it can't find a video stream. Make sure this is a Tapo camera."
+msgstr "The camera says it can't find a video stream. Make sure this is a Tapo camera."
+
+#: web/playback/player.ts
+msgid "The camera's codec changed, and this browser can't keep playing."
+msgstr "The camera's codec changed, and this browser can't keep playing."
+
+#: web/pages/states/SensorPage.tsx
+msgid "The checking pictures weren’t used for learning, so detection saw them for the first time, just like in real use. Trained {trainedAt} on {trainedCount} images. Mistakes are mostly from different lighting or in-between frames; label a few more like them and retrain to improve."
+msgstr "The checking pictures weren’t used for learning, so detection saw them for the first time, just like in real use. Trained {trainedAt} on {trainedCount} images. Mistakes are mostly from different lighting or in-between frames; label a few more like them and retrain to improve."
+
+#: web/pages/status/explain.ts
+msgid "The classes changed. It will keep recognizing after you retrain it"
+msgstr "The classes changed. It will keep recognizing after you retrain it"
+
+#: web/pages/link/LinkPage.tsx
+msgid "The code is 8 letters"
+msgstr "The code is 8 letters"
+
+#: web/pages/link/LinkPage.tsx
+msgid "The code is shown on the screen of the app you want to connect, such as Home Assistant."
+msgstr "The code is shown on the screen of the app you want to connect, such as Home Assistant."
+
+#: web/health.ts
+msgid "The CPU has been busy for a long time"
+msgstr "The CPU has been busy for a long time"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "The current model has no package category."
+msgstr "The current model has no package category."
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "The custom model hasn't been loaded yet, so the category list is the built-in model's for now. It updates once loaded."
+msgstr "The custom model hasn't been loaded yet, so the category list is the built-in model's for now. It updates once loaded."
+
+#: web/pages/status/explain.ts
+msgid "The database, event thumbnails and exported videos live on this disk, and only {free} is left. Nothing here is cleaned up automatically. When the space runs out, exports fail and events and settings may not be saved. Delete other files on the same disk that you don't need (for example data from other containers), or move /data to a larger disk."
+msgstr "The database, event thumbnails and exported videos live on this disk, and only {free} is left. Nothing here is cleaned up automatically. When the space runs out, exports fail and events and settings may not be saved. Delete other files on the same disk that you don't need (for example data from other containers), or move /data to a larger disk."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "The database, thumbnails and exports live on the appdata disk ({dataPath}): {dataFree} free of {dataTotal}."
+msgstr "The database, thumbnails and exports live on the appdata disk ({dataPath}): {dataFree} free of {dataTotal}."
+
+#: web/detect/benchmark-model.ts
+msgid "The device currently in use wasn't tested this time. Run a test on it to find out whether it is enough."
+msgstr "The device currently in use wasn't tested this time. Run a test on it to find out whether it is enough."
+
+#: web/detect/object-model.ts
+msgid "The device you picked earlier can't be detected right now, so the system is choosing automatically. It switches back once the device returns."
+msgstr "The device you picked earlier can't be detected right now, so the system is choosing automatically. It switches back once the device returns."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "The disk holding the recording location <0>{recordPath}</0>"
+msgstr "The disk holding the recording location <0>{recordPath}</0>"
+
+#: web/pages/recordings/export.tsx
+msgid "The event is longer than 2 hours. Only the first 2 hours are exported."
+msgstr "The event is longer than 2 hours. Only the first 2 hours are exported."
+
+#: web/pages/events/EventsPage.tsx
+msgid "The event is still in progress. You can delete it once it ends."
+msgstr "The event is still in progress. You can delete it once it ends."
+
+#: web/detect/object-model.ts
+msgid "The first time a graphics card is used, this can take about a minute."
+msgstr "The first time a graphics card is used, this can take about a minute."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "The folder where recordings are stored. After you change it, new recordings go to the new location and old ones can still be played back."
+msgstr "The folder where recordings are stored. After you change it, new recordings go to the new location and old ones can still be played back."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "The further right, the more sensitive."
+msgstr "The further right, the more sensitive."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "The Home app couldn't find this camera. Go to Settings → Status and press \"Copy diagnostics\" to see why."
+msgstr "The Home app couldn't find this camera. Go to Settings → Status and press \"Copy diagnostics\" to see why."
+
+#: web/pages/states/SensorPage.tsx
+msgid "The interval must be a whole number from 0 to 3600 seconds"
+msgstr "The interval must be a whole number from 0 to 3600 seconds"
+
+#: web/pages/settings-system/ConnectedApps.tsx
+msgid "The key for \"{name}\" is shown only once"
+msgstr "The key for \"{name}\" is shown only once"
+
+#: web/pages/states/SensorPage.tsx
+msgid "The labels differ from the last training. Retrain to use the new labels."
+msgstr "The labels differ from the last training. Retrain to use the new labels."
 
 #: web/pages/account/Appearance.tsx
 msgid "The language of the interface."
 msgstr "The language of the interface."
 
+#: web/health.ts
+msgid "The light changed suddenly, adjusting again"
+msgstr "The light changed suddenly, adjusting again"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "The low-quality stream URL must start with rtsp://"
+msgstr "The low-quality stream URL must start with rtsp://"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "The main stream has no video, so it can't be added."
+msgstr "The main stream has no video, so it can't be added."
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "The new password must be at least 8 characters"
+msgstr "The new password must be at least 8 characters"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "the old location {oldList}"
+msgstr "the old location {oldList}"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "The ONVIF port must be a number from 1 to 65535"
+msgstr "The ONVIF port must be a number from 1 to 65535"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "The password must be at least 8 characters"
+msgstr "The password must be at least 8 characters"
+
+#: web/pages/status/explain.ts
+msgid "The picture and recording of every camera will be interrupted for a few seconds."
+msgstr "The picture and recording of every camera will be interrupted for a few seconds."
+
+#: web/pages/status/explain.ts
+msgid "The picture is fine, but recording won't start. Common causes are low storage space or being unable to write to the storage location. If it still isn't recording after starting again, use “Copy diagnostics” at the bottom of the page to find the cause."
+msgstr "The picture is fine, but recording won't start. Common causes are low storage space or being unable to write to the storage location. If it still isn't recording after starting again, use “Copy diagnostics” at the bottom of the page to find the cause."
+
+#: web/health.ts
+msgid "The port used for RTSP restreaming is already in use by another program on this host"
+msgstr "The port used for RTSP restreaming is already in use by another program on this host"
+
+#: web/pages/status/explain.ts
+msgid "The process that judges the state of the picture isn't running, so every state sensor stays at “Unknown”. Recording and motion detection are not affected. Right after boot it takes a moment to start. If it doesn't recover, restart it. If that still doesn't help, use “Copy diagnostics” at the bottom of the page to find the cause."
+msgstr "The process that judges the state of the picture isn't running, so every state sensor stays at “Unknown”. Recording and motion detection are not affected. Right after boot it takes a moment to start. If it doesn't recover, restart it. If that still doesn't help, use “Copy diagnostics” at the bottom of the page to find the cause."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "The recommended setting for most situations."
+msgstr "The recommended setting for most situations."
+
+#: web/detect/object-model.ts
+msgid "The recommended value for most setups."
+msgstr "The recommended value for most setups."
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "The result may be out of date (the model or device changed). Running the benchmark again is recommended."
+msgstr "The result may be out of date (the model or device changed). Running the benchmark again is recommended."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "The settings contain {foundCount} entries; pick the one to use:"
+msgstr "The settings contain {foundCount} entries; pick the one to use:"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "The system itself"
+msgstr "The system itself"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "The two new passwords don't match"
+msgstr "The two new passwords don't match"
+
+#: web/pages/auth/AuthPage.tsx
+msgid "The two passwords don't match"
+msgstr "The two passwords don't match"
+
+#: web/playback/player.ts
+msgid "The video can't be decoded. Reload the page and try again."
+msgstr "The video can't be decoded. Reload the page and try again."
+
+#: web/health.ts
+msgid "The video service isn't working properly"
+msgstr "The video service isn't working properly"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "The video service, Apple Home and the system itself are shared by all cameras and are not counted under individual cameras."
+msgstr "The video service, Apple Home and the system itself are shared by all cameras and are not counted under individual cameras."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "There are several in the settings; pick one"
+msgstr "There are several in the settings; pick one"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "These cameras no longer exist. Their recordings will be permanently deleted right away, which can't be undone, freeing {freed}. Recordings of other cameras aren't affected."
+msgstr "These cameras no longer exist. Their recordings will be permanently deleted right away, which can't be undone, freeing {freed}. Recordings of other cameras aren't affected."
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone."
+msgstr "This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone."
+
+#: web/camera-form-logic.ts
+msgid "This account isn't allowed to view the video. Check the account's permissions in the camera's settings."
+msgstr "This account isn't allowed to view the video. Check the account's permissions in the camera's settings."
+
+#: web/live/LiveFrame.tsx
+msgid "This browser can't play H.265 live video"
+msgstr "This browser can't play H.265 live video"
+
+#: web/live/LiveFrame.tsx
+msgid "This browser can't play live video from this camera"
+msgstr "This browser can't play live video from this camera"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "This browser can't play recordings"
+msgstr "This browser can't play recordings"
+
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/cameras/CamerasPage.tsx
+msgid "This browser doesn't support live video. The picture refreshes every 3 seconds."
+msgstr "This browser doesn't support live video. The picture refreshes every 3 seconds."
+
+#: web/playback/player.ts
+msgid "This browser doesn't support this codec ({codecs}), so it can't play this recording."
+msgstr "This browser doesn't support this codec ({codecs}), so it can't play this recording."
+
+#: web/playback/player.ts
+msgid "This browser doesn't support this codec, so it can't play this recording."
+msgstr "This browser doesn't support this codec, so it can't play this recording."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "This camera can pan and tilt. Control it from the live view."
+msgstr "This camera can pan and tilt. Control it from the live view."
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "This camera can pan, tilt, and zoom. Control it from the live view."
+msgstr "This camera can pan, tilt, and zoom. Control it from the live view."
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "This camera has no recordings yet"
+msgstr "This camera has no recordings yet"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "This camera is disabled"
+msgstr "This camera is disabled"
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "This camera is disabled."
+msgstr "This camera is disabled."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "This camera is disabled. Enable it and save to see the picture here and draw areas that shouldn't be detected."
+msgstr "This camera is disabled. Enable it and save to see the picture here and draw areas that shouldn't be detected."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera sends a full frame (keyframe) only every {keyframeSec} seconds, longer than the 4 seconds Apple requires, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
+msgstr "This camera sends a full frame (keyframe) only every {keyframeSec} seconds, longer than the 4 seconds Apple requires, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera will stop working in the Home app. Remove it in the Home app first, then add it again with the new pairing code. Video already recorded in CookieNVR is not affected."
+msgstr "This camera will stop working in the Home app. Remove it in the Home app first, then add it again with the new pairing code. Video already recorded in CookieNVR is not affected."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera's full-frame (keyframe) interval is longer than 4 seconds, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
+msgstr "This camera's full-frame (keyframe) interval is longer than 4 seconds, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "This camera's main stream is {codec}, but the Home app only supports H.264. Change the main stream to H.264 in the camera's app, then you can turn this on."
+msgstr "This camera's main stream is {codec}, but the Home app only supports H.264. Change the main stream to H.264 in the camera's app, then you can turn this on."
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "This device"
+msgstr "This device"
+
+#: web/detect/benchmark-model.ts
+msgid "This device is too slow to keep up with even 1 camera detecting {rate}. Try lowering the detection rate or switching to a faster device."
+msgstr "This device is too slow to keep up with even 1 camera detecting {rate}. Try lowering the detection rate or switching to a faster device."
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "This device will need to sign in again next time it opens."
+msgstr "This device will need to sign in again next time it opens."
+
+#: web/camera-form-logic.ts
+msgid "This host is missing the program used to test connections, so it can't test. Copy the error and send it to a technician."
+msgstr "This host is missing the program used to test connections, so it can't test. Copy the error and send it to a technician."
+
+#: web/pages/recordings/export.tsx
+msgid "This position is too close to the edge. Try another one."
+msgstr "This position is too close to the edge. Try another one."
+
+#: web/pages/link/LinkPage.tsx
+msgid "This request didn't come from your home network. Unless you're sure about it, choose Deny."
+msgstr "This request didn't come from your home network. Unless you're sure about it, choose Deny."
+
+#: web/pages/link/LinkPage.tsx
+msgid "This request has expired"
+msgstr "This request has expired"
+
+#: web/pages/link/LinkPage.tsx
+msgid "This request is already done"
+msgstr "This request is already done"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. All of its recordings are also deleted right away and can't be recovered."
+msgstr "This stops recording and removes the camera. All of its recordings are also deleted right away and can't be recovered."
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back, and retention is set to unlimited, so the oldest are deleted only when space runs low. Until then they keep using space."
+msgstr "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back, and retention is set to unlimited, so the oldest are deleted only when space runs low. Until then they keep using space."
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period (continuous {continuous}, events {events}) and are then deleted automatically."
+msgstr "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period (continuous {continuous}, events {events}) and are then deleted automatically."
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period and are then deleted automatically."
+msgstr "This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period and are then deleted automatically."
+
+#: web/camera-form-logic.ts
+msgid "This stream has no video. Use the URL of a video stream instead."
+msgstr "This stream has no video. Use the URL of a video stream instead."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Tie"
+msgstr "Tie"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Tilt reversed"
+msgstr "Tilt reversed"
+
+#: web/timeline/timeline.ts
+msgid "timeline"
+msgstr "timeline"
+
+#: web/pages/recordings/Playback.tsx
+#: web/timeline/timeline.ts
+msgid "Timeline"
+msgstr "Timeline"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Timeline range"
+msgstr "Timeline range"
+
+#: web/pages/settings-system/ObjectsGroup.tsx
+msgid "To use your own model, put the .onnx file in the <0>{modelsDir}</0> folder and it will show up in the menu within a few seconds."
+msgstr "To use your own model, put the .onnx file in the <0>{modelsDir}</0> folder and it will show up in the menu within a few seconds."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Toaster"
+msgstr "Toaster"
+
+#: web/detect/model.ts
+#: web/pages/recordings/day.ts
+#: web/ui/date-logic.ts
+#: web/ui/DatePicker.tsx
+msgid "Today"
+msgstr "Today"
+
+#: web/states/model.ts
+msgid "Today {clock}"
+msgstr "Today {clock}"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Toilet"
+msgstr "Toilet"
+
+#: web/detect/benchmark-model.ts
+msgid "Too slow to handle even 1 camera"
+msgstr "Too slow to handle even 1 camera"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Toothbrush"
+msgstr "Toothbrush"
+
+#: web/states/CropEditor.tsx
+msgid "Top left corner"
+msgstr "Top left corner"
+
+#: web/states/CropEditor.tsx
+msgid "Top right corner"
+msgstr "Top right corner"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Traffic light"
+msgstr "Traffic light"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Train"
+msgstr "Train"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Training"
+msgstr "Training"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Training data exported from Frigate, up to 100 MB"
+msgstr "Training data exported from Frigate, up to 100 MB"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Training failed: {failedError}"
+msgstr "Training failed: {failedError}"
+
+#: web/states/bits.tsx
+msgid "Training, waiting for other sensors to finish…"
+msgstr "Training, waiting for other sensors to finish…"
+
+#: web/states/bits.tsx
+msgid "Training…"
+msgstr "Training…"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Transport"
+msgstr "Transport"
+
+#: web/pages/settings-cameras/ScoreMeter.tsx
+msgid "Trigger line"
+msgstr "Trigger line"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Truck"
+msgstr "Truck"
+
+#: web/detect/object-model.ts
+msgid "Try a different model."
+msgstr "Try a different model."
+
+#: web/pages/events/EventsPage.tsx
+msgid "Try again"
+msgstr "Try again"
+
+#: web/pages/events/EventsPage.tsx
+msgid "Try another category or date, or clear the filters."
+msgstr "Try another category or date, or clear the filters."
+
+#: web/pages/events/EventsPage.tsx
+msgid "Try another day, or clear the filters."
+msgstr "Try another day, or clear the filters."
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Turn camera"
+msgstr "Turn camera"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Turn on \"Apple Home\" in <0>Settings → General</0> first to use it here."
+msgstr "Turn on \"Apple Home\" in <0>Settings → General</0> first to use it here."
+
+#: web/pages/states/SensorPage.tsx
+msgid "Turn on “Detection” in the settings below to resume."
+msgstr "Turn on “Detection” in the settings below to resume."
+
+#: web/pages/recordings/RecordingsPage.tsx
+msgid "Turn on in camera settings"
+msgstr "Turn on in camera settings"
+
+#: web/pages/settings-system/ObjectsEmpty.tsx
+msgid "Turn on object detection"
+msgstr "Turn on object detection"
+
+#: web/pages/link/LinkPage.tsx
+msgid "Turn recording and detection on or off, and change every setting (the same as your admin account)"
+msgstr "Turn recording and detection on or off, and change every setting (the same as your admin account)"
+
+#: web/pages/settings-cameras/PtzPrefs.tsx
+msgid "Turn this on if pressing \"Left\" turns the camera right."
+msgstr "Turn this on if pressing \"Left\" turns the camera right."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Turning this on shows a QR code for pairing."
+msgstr "Turning this on shows a QR code for pairing."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "TV"
+msgstr "TV"
+
+#: web/detect/object-model.ts
+msgid "Twice per second (recommended)"
+msgstr "Twice per second (recommended)"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Umbrella"
+msgstr "Umbrella"
+
+#: web/api.ts
+msgid "Unable to connect to the server"
+msgstr "Unable to connect to the server"
+
+#: web/detect/benchmark-model.ts
+msgid "Unavailable"
+msgstr "Unavailable"
+
+#: web/detect/object-model.ts
+msgid "Under 1 ms per frame on average"
+msgstr "Under 1 ms per frame on average"
+
+#: web/detect/mask-editor.ts
+msgid "Undo"
+msgstr "Undo"
+
+#: web/pages/cameras/CamerasPage.tsx
+#: web/pages/settings-cameras/CameraLayoutEditor.tsx
+msgid "Ungrouped"
+msgstr "Ungrouped"
+
+#: web/pages/account/SessionsPanel.tsx
+msgid "Unknown browser"
+msgstr "Unknown browser"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Unlabeled"
+msgstr "Unlabeled"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Unlabeled pictures"
+msgstr "Unlabeled pictures"
+
+#: web/pages/settings-cameras/useDeleteCamera.tsx
+msgid "unlimited"
+msgstr "unlimited"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Unlimited"
+msgstr "Unlimited"
+
+#: web/pages/recordings/Playback.tsx
+msgid "Unmute"
+msgstr "Unmute"
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Unnamed"
+msgstr "Unnamed"
+
+#: web/pages/states/SensorPage.tsx
+msgid "Unsaved"
+msgstr "Unsaved"
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "Unsaved changes will be lost."
+msgstr "Unsaved changes will be lost."
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Unsupported format"
+msgstr "Unsupported format"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Up"
+msgstr "Up"
+
+#: web/detect/mask-editor.ts
+msgid "Up to {max} excluded areas."
+msgstr "Up to {max} excluded areas."
+
+#: web/pages/recordings/export.tsx
+msgid "up to now"
+msgstr "up to now"
+
+#: web/pages/account/PasswordPanel.tsx
+msgid "Update password"
+msgstr "Update password"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Updated “{name}” to the current position"
+msgstr "Updated “{name}” to the current position"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Uploading {uploadPct}%"
+msgstr "Uploading {uploadPct}%"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Usage"
+msgstr "Usage"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Usage by"
+msgstr "Usage by"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Usage unavailable"
+msgstr "Usage unavailable"
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "Use ONVIF"
+msgstr "Use ONVIF"
+
 #: web/pages/account/Appearance.tsx
 msgid "Used for buttons, selections, and navigation."
 msgstr "Used for buttons, selections, and navigation."
 
+#: web/pages/auth/AuthPage.tsx
+#: web/pages/settings-users/UsersPage.tsx
+msgid "Username"
+msgstr "Username"
+
+#: web/pages/settings/SettingsLayout.tsx
+msgid "Users"
+msgstr "Users"
+
+#: web/detect/object-model.ts
+msgid "Uses a graphics card if one is available, otherwise the CPU. This is fine for most setups."
+msgstr "Uses a graphics card if one is available, otherwise the CPU. This is fine for most setups."
+
+#: web/pages/settings-cameras/form-model.ts
+msgid "Uses ONVIF"
+msgstr "Uses ONVIF"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Uses the camera's built-in detection. It doesn't use this computer's resources, but can't exclude areas."
+msgstr "Uses the camera's built-in detection. It doesn't use this computer's resources, but can't exclude areas."
+
+#: web/pages/status/explain.ts
+msgid "Using the CPU"
+msgstr "Using the CPU"
+
+#: web/pages/status/explain.ts
+msgid "Usually another surveillance program is running on the same host (for example Frigate or go2rtc, which also use 8554). When the container uses Host networking, set the environment variable RTSP_PORT to a port nobody uses. With bridge networking, set RTSP_PORT and the host-side and container-side ports to the same number. Restart the container afterwards."
+msgstr "Usually another surveillance program is running on the same host (for example Frigate or go2rtc, which also use 8554). When the container uses Host networking, set the environment variable RTSP_PORT to a port nobody uses. With bridge networking, set RTSP_PORT and the host-side and container-side ports to the same number. Restart the container afterwards."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Vase"
+msgstr "Vase"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Vehicle"
+msgstr "Vehicle"
+
+#: web/detect/mask-editor.ts
+msgid "Vertex {n}, move with the arrow keys"
+msgstr "Vertex {n}, move with the arrow keys"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Very conservative"
+msgstr "Very conservative"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Very sensitive"
+msgstr "Very sensitive"
+
+#: web/detect/object-model.ts
+msgid "Very strict"
+msgstr "Very strict"
+
+#: web/pages/settings-system/DecodeRow.tsx
+#: web/pages/status/explain.ts
+msgid "Video decoding"
+msgstr "Video decoding"
+
+#: web/health.ts
+msgid "Video decoding fell back to the CPU"
+msgstr "Video decoding fell back to the CPU"
+
+#: web/pages/settings-system/DecodeRow.tsx
+msgid "Video decoding settings saved"
+msgstr "Video decoding settings saved"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Video export"
+msgstr "Video export"
+
+#: web/pages/storage/StoragePage.tsx
+msgid "Video recorded around the clock."
+msgstr "Video recorded around the clock."
+
+#: web/pages/status/explain.ts
+#: web/pages/status/ResourcesCard.tsx
+msgid "Video service"
+msgstr "Video service"
+
+#: web/pages/status/explain.ts
+msgid "Video service restarted"
+msgstr "Video service restarted"
+
+#: web/health.ts
+msgid "Video service stopped"
+msgstr "Video service stopped"
+
+#: web/pages/cameras/CamerasPage.tsx
+msgid "View"
+msgstr "View"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "View by camera"
+msgstr "View by camera"
+
 #: web/theme.ts
 msgid "Violet"
 msgstr "Violet"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Wait before ending the event"
+msgstr "Wait before ending the event"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Waiting to be added in the Home app"
+msgstr "Waiting to be added in the Home app"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Waits {cooldown} sec before ending"
+msgstr "Waits {cooldown} sec before ending"
+
+#: web/pages/camera/CameraPage.tsx
+msgid "Watch playback"
+msgstr "Watch playback"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "Watch this camera in the Home app on iPhone, iPad, or Mac, and get notified when there is motion."
+msgstr "Watch this camera in the Home app on iPhone, iPad, or Mac, and get notified when there is motion."
+
+#: web/pages/link/LinkPage.tsx
+msgid "We couldn't find that code. It may have been mistyped or expired."
+msgstr "We couldn't find that code. It may have been mistyped or expired."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "We recommend reserving this address in your router."
+msgstr "We recommend reserving this address in your router."
+
+#: web/pages/auth/AuthPage.tsx
+msgid "Welcome"
+msgstr "Welcome"
+
+#: web/states/CropEditor.tsx
+msgid "What detection sees"
+msgstr "What detection sees"
+
+#: web/pages/settings-cameras/HomekitSection.tsx
+msgid "What do I need?"
+msgstr "What do I need?"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "What states it can be in"
+msgstr "What states it can be in"
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "What to detect"
+msgstr "What to detect"
+
+#: web/pages/settings-cameras/ObjectSection.tsx
+msgid "What to watch for"
+msgstr "What to watch for"
+
+#: web/pages/events/EventsPage.tsx
+msgid "When a camera detects motion, the event shows up here."
+msgstr "When a camera detects motion, the event shows up here."
+
+#: web/pages/status/explain.ts
+msgid "When detection can't keep up, the extra frames are skipped. Recording and motion detection are not affected, but events may miss what was seen. Lowering the detection rate, using a faster device, or running the speed test in settings to see what this machine can do will all help."
+msgstr "When detection can't keep up, the extra frames are skipped. Recording and motion detection are not affected, but events may miss what was seen. Lowering the detection rate, using a faster device, or running the speed test in settings to see what this machine can do will all help."
+
+#: web/pages/settings-cameras/fields.tsx
+msgid "When disabled, it neither shows video nor records, but its settings are kept."
+msgstr "When disabled, it neither shows video nor records, but its settings are kept."
+
+#: web/pages/states/SensorPage.tsx
+msgid "When off, labels and training results are kept; detection just pauses."
+msgstr "When off, labels and training results are kept; detection just pauses."
+
+#: web/pages/storage/StoragePage.tsx
+msgid "When the disk has less free space than this, the oldest recordings are deleted first."
+msgstr "When the disk has less free space than this, the oldest recordings are deleted first."
+
+#: web/pages/status/explain.ts
+msgid "When the graphics card can't decode, video is decoded by the CPU instead. Recording and motion detection still work, but the CPU does some extra work. You can pick another graphics card or switch back to automatic in “Settings → General”. The reason is written in “Copy diagnostics”."
+msgstr "When the graphics card can't decode, video is decoded by the CPU instead. Recording and motion detection still work, but the CPU does some extra work. You can pick another graphics card or switch back to automatic in “Settings → General”. The reason is written in “Copy diagnostics”."
+
+#: web/pages/events/EventsPage.tsx
+msgid "When this camera detects motion, the event shows up here."
+msgstr "When this camera detects motion, the event shows up here."
+
+#: web/pages/settings-cameras/CameraFormPage.tsx
+msgid "When you're done, press \"Test and save\". If the connection works, it's saved and starts recording right away."
+msgstr "When you're done, press \"Test and save\". If the connection works, it's saved and starts recording right away."
+
+#: web/pages/states/NewSensorPage.tsx
+msgid "Where pictures come from"
+msgstr "Where pictures come from"
+
+#: web/pages/status/ResourcesCard.tsx
+msgid "Where resources go"
+msgstr "Where resources go"
+
+#: web/pages/camera/PtzPresets.tsx
+msgid "Where the camera is pointing now is stored on the camera."
+msgstr "Where the camera is pointing now is stored on the camera."
+
+#: web/pages/status/explain.ts
+msgid "While object detection is stopped, recording and motion detection are not affected, but events won't be tagged with what was seen. Cameras set to “Filter” create events from ordinary motion instead. If it is still stopped after a restart, use “Copy diagnostics” at the bottom of the page to find the cause, or go to “Settings → Object detection” to switch the model or inference device."
+msgstr "While object detection is stopped, recording and motion detection are not affected, but events won't be tagged with what was seen. Cameras set to “Filter” create events from ordinary motion instead. If it is still stopped after a restart, use “Copy diagnostics” at the bottom of the page to find the cause, or go to “Settings → Object detection” to switch the model or inference device."
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Wine glass"
+msgstr "Wine glass"
+
+#: web/pages/states/SensorPage.tsx
+msgid "With “On change only”, it checks only when the picture inside the area changes."
+msgstr "With “On change only”, it checks only when the picture inside the area changes."
+
+#: web/pages/settings-cameras/StatesSection.tsx
+msgid "Working"
+msgstr "Working"
+
+#: web/detect/object-model.ts
+msgid "Works on every computer, but struggles when detecting objects on several cameras at once."
+msgstr "Works on every computer, but struggles when detecting objects on several cameras at once."
+
+#: web/pages/settings-cameras/CamerasListPage.tsx
+msgid "Works with Tapo and any camera that supports RTSP. Once added, it starts recording automatically."
+msgstr "Works with Tapo and any camera that supports RTSP. Once added, it starts recording automatically."
+
+#: web/camera-form-logic.ts
+msgid "Wrong username or password. Check the credentials after rtsp:// in the URL."
+msgstr "Wrong username or password. Check the credentials after rtsp:// in the URL."
+
+#: web/camera-form-logic.ts
+msgid "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account."
+msgstr "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account."
+
+#: web/detect/model.ts
+#: web/pages/recordings/day.ts
+#: web/ui/date-logic.ts
+msgid "Yesterday"
+msgstr "Yesterday"
+
+#: web/states/model.ts
+msgid "Yesterday {clock}"
+msgstr "Yesterday {clock}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "You"
+msgstr "You"
+
+#: web/pages/settings-system/BenchmarkSection.tsx
+msgid "You can run the benchmark once object detection is ready."
+msgstr "You can run the benchmark once object detection is ready."
+
+#: web/pages/status/explain.ts
+msgid "You can shorten the retention period first"
+msgstr "You can shorten the retention period first"
+
+#: web/ui/Dialog.tsx
+msgid "You haven't saved your recent edits. Closing will discard them."
+msgstr "You haven't saved your recent edits. Closing will discard them."
+
+#: web/pages/recordings/Playback.tsx
+msgid "You've reached the latest recording"
+msgstr "You've reached the latest recording"
+
+#: web/detect/label-names.ts
+msgctxt "object category"
+msgid "Zebra"
+msgstr "Zebra"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Zoom"
+msgstr "Zoom"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Zoom in"
+msgstr "Zoom in"
+
+#: web/pages/camera/PtzPanel.tsx
+msgid "Zoom out"
+msgstr "Zoom out"

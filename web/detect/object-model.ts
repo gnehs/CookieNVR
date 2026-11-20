@@ -1,8 +1,9 @@
+import { joinClauses } from "../format.ts";
 import { i18n, type MessageDescriptor } from "@lingui/core";
 import { msg, plural, t } from "@lingui/core/macro";
 import type { InferenceDeviceDto, ObjectLabelsDto, ObjectsDto, ObjectsStatusDto } from "../../src/api-types.ts";
 import { LIMITS } from "../../src/detect/config.ts";
-import { labelName } from "../../src/objects/labels.ts";
+import { labelName } from "./label-names.ts";
 import { OBJECT_FPS_CHOICES, type ObjectMode } from "../../src/types.ts";
 
 export const AUTO_DEVICE = "auto";
@@ -102,7 +103,7 @@ export const OBJECT_MODES: { value: ObjectMode; label: string; desc: string }[] 
   {
     value: "off",
     get label() {
-      return t`Off`;
+      return t`Don't detect`;
     },
     get desc() {
       return t`Only detects whether there is motion, without working out what is in the picture.`;
@@ -111,7 +112,7 @@ export const OBJECT_MODES: { value: ObjectMode; label: string; desc: string }[] 
   {
     value: "annotate",
     get label() {
-      return t`Label`;
+      return t`Annotate`;
     },
     get desc() {
       return t`Events are recorded as usual and labeled with what was seen, such as "Person" or "Car".`;
@@ -187,7 +188,6 @@ export function cpuShareNote(share: number | null | undefined): { tone: "ok" | "
 }
 
 /** 一句話裡幾段之間的分隔：「，」 */
-export const listSeparator = (): string => t({ message: ", ", context: "clause separator" });
 
 /** 句尾加句號 */
 const sentence = (text: string): string => t`${text}.`;
@@ -229,7 +229,7 @@ export function objectsView(status: ObjectsStatusDto): ObjectsView {
       const share = cpuShareNote(status.cpuShare);
       const deviceName = status.device ? tidyName(status.device.name) : t`CPU`;
       const warnings = [status.fallback?.reason, share?.tone === "warn" ? sentence(share.text) : null, status.warning].filter((w): w is string => !!w);
-      const note = [speedText(status), share?.tone === "ok" ? share.text : null].filter(Boolean).join(listSeparator());
+      const note = joinClauses([speedText(status), share?.tone === "ok" ? share.text : null].filter((x): x is string => !!x));
       return {
         tone: warnings.length ? "warn" : "ok",
         title: t`In use: ${deviceName}`,
@@ -242,8 +242,8 @@ export function objectsView(status: ObjectsStatusDto): ObjectsView {
 
 /** 類別勾選：預設列出 common，其餘收在「更多類別」；已勾選但不在目前模型裡的類別（換過模型）也留在清單上，才取消得掉 */
 export interface LabelGroups {
-  common: { key: string; zh: string }[];
-  more: { key: string; zh: string }[];
+  common: { key: string; name: string }[];
+  more: { key: string; name: string }[];
   /** 「更多類別」裡有已勾選的，預設展開 */
   moreHasSelected: boolean;
   /** 目前模型沒有「包裹」類別 */
@@ -252,14 +252,14 @@ export interface LabelGroups {
 
 export function labelGroups(catalog: Pick<ObjectLabelsDto, "labels" | "common"> | null, selected: readonly string[]): LabelGroups {
   const labels = catalog?.labels ?? [];
-  const byKey = new Map(labels.map((l) => [l.key, l.zh]));
+  const byKey = new Map(labels.map((l) => [l.key, l.en]));
   const commonKeys = (catalog?.common ?? []).filter((k) => byKey.has(k));
   const orphan = selected.filter((k) => !byKey.has(k));
   const shown = new Set([...commonKeys, ...orphan]);
-  const more = labels.filter((l) => !shown.has(l.key)).map((l) => ({ key: l.key, zh: l.zh }));
+  const more = labels.filter((l) => !shown.has(l.key)).map((l) => ({ key: l.key, name: labelName(l.key, l.en) }));
   const sel = new Set(selected);
   return {
-    common: [...commonKeys, ...orphan].map((key) => ({ key, zh: byKey.get(key) ?? labelName(key) })),
+    common: [...commonKeys, ...orphan].map((key) => ({ key, name: labelName(key, byKey.get(key)) })),
     more,
     moreHasSelected: more.some((l) => sel.has(l.key)),
     noPackage: !!catalog && !byKey.has("package") && !byKey.has("parcel"),
@@ -270,22 +270,22 @@ export function labelGroups(catalog: Pick<ObjectLabelsDto, "labels" | "common"> 
  * 事件頁類別篩選的選項：只列攝影機有開啟的類別，加上事件裡實際出現過的；模型支援但沒人開的不列。
  * seen 每個事件的每個類別各給一次（重複即次數），依出現次數由多到少排；次數相同照目錄順序，事件裡另外出現的（相機自己回報的 vehicle、pet，或之後關掉的類別）排在同次數的最後。
  */
-export function eventLabelOptions(catalog: Pick<ObjectLabelsDto, "labels"> | null, enabled: Iterable<string>, seen: Iterable<string>): { key: string; zh: string }[] {
-  const zh = new Map((catalog?.labels ?? []).map((l) => [l.key, l.zh]));
+export function eventLabelOptions(catalog: Pick<ObjectLabelsDto, "labels"> | null, enabled: Iterable<string>, seen: Iterable<string>): { key: string; name: string }[] {
+  const modelNames = new Map((catalog?.labels ?? []).map((l) => [l.key, l.en]));
   const on = new Set(enabled);
   const count = new Map<string, number>();
   for (const key of seen) count.set(key, (count.get(key) ?? 0) + 1);
   const ordered = (catalog?.labels ?? []).filter((l) => on.has(l.key)).map((l) => l.key);
   return [...new Set([...ordered, ...on, ...count.keys()])]
     .sort((a, b) => (count.get(b) ?? 0) - (count.get(a) ?? 0))
-    .map((key) => ({ key, zh: zh.get(key) ?? labelName(key) }));
+    .map((key) => ({ key, name: labelName(key, modelNames.get(key)) }));
 }
 
 
 /** 卡片收合時的摘要：「辨識人與汽車」「只記錄人、汽車與貓」；不辨識就沒有 */
 export function objectSummary(mode: ObjectMode, labels: readonly string[]): string | null {
   if (mode === "off") return null;
-  const names = [...new Set(labels.map(labelName))];
+  const names = [...new Set(labels.map((l) => labelName(l)))];
   if (names.length === 0) return mode === "filter" ? t`No categories selected, no events recorded` : t`Detect objects`;
   const list = names.length <= 3 ? listNames(names) : etcNames(names);
   return mode === "filter" ? t`Only record ${list}` : t`Detect ${list}`;
