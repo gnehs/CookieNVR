@@ -31,6 +31,8 @@ export interface FakeOnvifOptions {
   capabilitiesUnsupported?: boolean;
   /** 從 GetCapabilities 拿掉的服務，模擬沒有 PTZ 或事件的相機 */
   without?: ("PTZ" | "Events")[];
+  /** device 服務的埠，預設隨機；模擬重開機時用同一個埠再起一台 */
+  port?: number;
 }
 
 export interface FakeRequest {
@@ -115,7 +117,7 @@ export class FakeOnvif {
       this.fixtures.set(name, await Bun.file(join(FIXTURES, `${name}.xml`)).text());
     }
     const handler = (req: Request) => this.handle(req);
-    this.device = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: handler });
+    this.device = Bun.serve({ hostname: "127.0.0.1", port: this.opts.port ?? 0, fetch: handler });
     this.events = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: handler });
     return this;
   }

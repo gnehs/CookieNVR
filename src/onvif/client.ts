@@ -252,6 +252,11 @@ export class OnvifClient {
     try {
       return await send();
     } catch (err) {
+      // 連不上多半是相機斷電或重開機，回來時時鐘與服務都可能變了；下次呼叫重新探測、重新對時
+      if (isOnvifError(err, "unreachable") || isOnvifError(err, "timeout")) {
+        this.probing = null;
+        this.lastSyncAt = null;
+      }
       const stale = this.lastSyncAt === null || this.now() - this.lastSyncAt >= RESYNC_MIN_INTERVAL_MS;
       if (opts.auth === false || !isOnvifError(err, "auth") || !stale) throw err;
       await this.syncClock(opts.signal);

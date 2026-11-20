@@ -177,6 +177,18 @@ describe("OnvifClient 網路錯誤", () => {
     expect(err.message).not.toContain("pw-xyz");
   });
 
+  test("相機斷線重開、時鐘也變了，恢復後第一個請求就成功", async () => {
+    const f = await start();
+    const client = new OnvifClient(f.endpoint, { timeoutMs: 2_000 });
+    await client.capabilities();
+    const port = f.port;
+    await f.stop();
+    expect((await rejection(getPresets(client))).kind).toBe("unreachable");
+    const rebooted = await start({ port, clockSkewMs: 3600_000 });
+    expect(await getPresets(client)).toEqual([]);
+    expect(rebooted.actions()[0]).toBe("GetSystemDateAndTime");
+  });
+
   test("非 SOAP 的 HTTP 錯誤回報 protocol", async () => {
     const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("<html>nope</html>", { status: 404 }) });
     try {
