@@ -28,6 +28,15 @@ export function mediaSourceCtor(): MediaSourceCtor | null {
 
 class Unsupported extends Error {}
 
+/** The server has the segment indexed but cannot serve it (file missing or unreadable): skip it, retrying never helps. */
+class SegmentGone extends Error {
+  constructor(readonly seg: SegmentDto, readonly status: number) {
+    super(`segment ${seg.id}: HTTP ${status}`);
+  }
+}
+/** How many unreadable segments in a row a single load may skip before it reports an error. */
+const MAX_SKIPS = 60;
+
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve) => {
     const t = setTimeout(resolve, ms);
@@ -257,6 +266,7 @@ export class Player {
     });
 
     let failures = 0;
+    let skips = 0;
     for (;;) {
       if (gen !== this.gen) return;
       try {
@@ -278,6 +288,18 @@ export class Player {
         if (e instanceof Unsupported) {
           this.setStatus({ kind: "error", message: e.message });
           return;
+        }
+        if (e instanceof SegmentGone && ++skips <= MAX_SKIPS) {
+          // play on from the end of the unreadable segment, like a gap; the page shows the jump
+          console.warn("[player] 跳過讀不到的錄影片段", e.message);
+          const end = e.seg.endMs ?? e.seg.startMs + 60_000;
+          w = Math.max(end, (this.wall() ?? w) + 1);
+          this.pending = w;
+          this.map = [];
+          await this.op(gen, (sb) => {
+            if (sb.buffered.length > 0) sb.remove(0, Infinity);
+          }).catch(() => {});
+          continue;
         }
         console.warn("[player] 載入錄影失敗", e);
         // after a few quick retries show the error, but keep trying slowly so a passing hiccup recovers on its own
@@ -372,6 +394,7 @@ export class Player {
       throw e;
     }
     if (res.status === 416) return 0;
+    if (res.status === 404 || res.status === 403 || res.status === 410) throw new SegmentGone(seg, res.status);
     if (!res.ok || !res.body) throw new Error(`segment ${seg.id}: HTTP ${res.status}`);
     // a server that ignores Range resends the whole file
     let skip = from > 0 && res.status !== 206 ? from : 0;

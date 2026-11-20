@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
-import { stat } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, stat } from "node:fs/promises";
 import type { ErrorDto, PurgeDto, SegmentDto } from "../api-types.ts";
 import type { CameraId, Route, Segment } from "../types.ts";
 import { getSegment, quarterHourBuckets, segmentsInRange } from "./store.ts";
@@ -100,6 +101,9 @@ export function recordingRoutes(deps: { db: Database; purgeOrphans: () => Promis
         // A recording segment keeps growing, so the size is read per request rather than from the index.
         const size = await stat(segment.path).then((s) => s.size, () => null);
         if (size === null) return fail(404, "segment file missing");
+        // A file the server may not read (for example written by root before PUID was set) would otherwise fail
+        // halfway through the stream; answer up front so the player skips it instead of retrying.
+        if (!(await access(segment.path, constants.R_OK).then(() => true, () => false))) return fail(403, "segment file unreadable");
 
         const headers = new Headers({
           "Content-Type": "video/mp4",

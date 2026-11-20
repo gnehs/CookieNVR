@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { appendFile } from "node:fs/promises";
+import { appendFile, chmod, rm } from "node:fs/promises";
 import { openDb } from "../db.ts";
 import type { SegmentDto } from "../api-types.ts";
 import type { Route } from "../types.ts";
@@ -96,6 +96,24 @@ test("segment download honours Range against the file's current size", async () 
   expect(past.headers.get("content-range")).toBe("bytes */16");
 
   expect((await call("/api/segments/999", "/api/segments/:id", { id: "999" })).status).toBe(404);
+});
+
+test("an indexed segment the server cannot read is refused up front, so the player skips it", async () => {
+  const { settings, call, indexer, db } = await setup();
+  const t = Date.UTC(2026, 10, 18, 12, 0);
+  const path = await writeSegment(settings, "cam1", t, 0, t);
+  await Bun.write(path, "0123456789");
+  await indexer.scanOnce(t + 1_000);
+  const { id } = db.query("SELECT id FROM segments").get() as { id: number };
+  const get = () => call(`/api/segments/${id}`, "/api/segments/:id", { id: String(id) });
+  // root reads everything, so the check only means something for an unprivileged test run
+  if (process.getuid?.() !== 0) {
+    await chmod(path, 0o000);
+    expect((await get()).status).toBe(403);
+    await chmod(path, 0o644);
+  }
+  await rm(path);
+  expect((await get()).status).toBe(404);
 });
 
 test("DELETE /api/recordings/orphaned reports what the purge freed", async () => {
