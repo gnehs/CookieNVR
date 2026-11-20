@@ -25,6 +25,10 @@
   --bad: light-dark(#c62828, #ff7b72);
   --warn: light-dark(#a35200, #f0b14a);
   --ph-icon: light-dark(#8f8f98, #75757f);
+  /* 狀態燈：比文字用的 --ok／--bad 亮，像一顆會發光的小燈；只用在圓點，不放文字 */
+  --lamp-ok: light-dark(#22c55e, #4fcf80);
+  --lamp-bad: light-dark(#ef4444, #ff7b72);
+  --lamp-warn: light-dark(#f59e0b, #f0b14a);
 
 
   /* 回放時間軸：錄影區段、缺片、事件標記、播放頭 */
@@ -100,6 +104,17 @@ button, a, summary, label { touch-action: manipulation; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .icon { display: inline-flex; flex: none; }
 .icon svg { display: block; }
+/*
+ * 雙色圖示的淡色層：文字色混進「圖示底下的底色」，算出不透明的淡色（圖示不用透明度）。
+ * 底色不是 --surface 的地方（側欄、按鈕、深色泡泡）各自設 --icon-bg。
+ */
+.icon .duo { fill: color-mix(in srgb, currentColor var(--duo, 22%), var(--icon-bg, var(--surface))); }
+.sidebar, .user-btn { --icon-bg: var(--frame); }
+.nav-link[aria-current="page"], .user-btn[data-current] { --icon-bg: var(--surface); --duo: 26%; }
+.menu, .popup { --icon-bg: var(--overlay); }
+.row-ico, .cam-frame, .ev-card-thumb { --icon-bg: var(--fill); }
+.toast, .tip { --icon-bg: var(--text); --duo: 30%; }
+.toast.error { --icon-bg: var(--bad-text); }
 .muted { color: var(--muted); }
 
 /* 滑動底色（ui/indicator.ts）：一塊方塊跟著目前項目移動，取代每一項各自的選中底色。
@@ -228,7 +243,9 @@ button, a, summary, label { touch-action: manipulation; }
   .user-btn .user-label { display: block; }
   .user-btn[data-current] { background: transparent; box-shadow: none; color: var(--accent-text); --nav-bg: var(--accent-soft); }
   .user-btn[data-current] .avatar { background: var(--surface); }
-  .sidebar { --nav-bg: var(--surface); }
+  .sidebar { --nav-bg: var(--surface); --icon-bg: var(--surface); }
+  .user-btn { --icon-bg: var(--surface); }
+  .nav-link[aria-current="page"], .user-btn[data-current] { --icon-bg: var(--accent-soft); }
   .nav-link[aria-current="page"] { --nav-bg: var(--accent-soft); }
   .nav-link { flex: 1; flex-direction: column; gap: 2px; padding: 7px 4px 6px; font-size: 12px; border-radius: 16px; align-items: center; min-width: 0; }
   .nav-link[aria-current="page"] { color: var(--accent-text); }
@@ -329,12 +346,12 @@ button, a, summary, label { touch-action: manipulation; }
   padding: 3px 9px 3px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; line-height: 1.5;
   background: var(--surface); color: var(--text-2); box-shadow: var(--shadow-sm);
 }
-.cam-status > i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-.cam-tile[data-status="recording"] .cam-status > i { background: var(--ok); }
+.cam-status > i { width: 7px; height: 7px; border-radius: 50%; background-color: var(--muted); background-image: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.7), transparent 50%); box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.12); }
+.cam-tile[data-status="recording"] .cam-status > i { background-color: var(--lamp-ok); }
 .cam-tile[data-tone="bad"] .cam-status { background: var(--bad-soft); color: var(--bad-text); }
-.cam-tile[data-tone="bad"] .cam-status > i { background: var(--bad-text); }
+.cam-tile[data-tone="bad"] .cam-status > i { background-color: var(--lamp-bad); }
 .cam-tile[data-tone="warn"] .cam-status { background: var(--warn-soft); color: var(--warn-text); }
-.cam-tile[data-tone="warn"] .cam-status > i { background: var(--warn-text); }
+.cam-tile[data-tone="warn"] .cam-status > i { background-color: var(--lamp-warn); }
 
 /* 有問題時首頁頁首的一條提醒：中性底色，紅點＋文字，右邊「查看」 */
 .home-alert {
@@ -356,15 +373,21 @@ button, a, summary, label { touch-action: manipulation; }
   display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; flex: none;
   font-size: 12px; font-weight: 600; background: var(--fill); color: var(--text-2); white-space: nowrap; line-height: 1.5;
 }
-.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.badge.ok { background: var(--ok-soft); color: var(--ok-text); }
-.badge.bad { background: var(--bad-soft); color: var(--bad-text); }
-.badge.warn { background: var(--warn-soft); color: var(--warn-text); }
-.badge.accent { background: var(--accent-soft); color: var(--accent-text); }
+/* 狀態點像一顆小燈：上方一點高光，外面一圈同色的淡環 */
+.badge::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background-color: var(--dot, currentColor);
+  background-image: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.7), transparent 50%);
+  box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.12), 0 0 0 2px color-mix(in srgb, var(--dot, currentColor) 20%, transparent);
+}
+.badge.ok { background: var(--ok-soft); color: var(--ok-text); --dot: var(--lamp-ok); }
+.badge.bad { background: var(--bad-soft); color: var(--bad-text); --dot: var(--lamp-bad); }
+.badge.warn { background: var(--warn-soft); color: var(--warn-text); --dot: var(--lamp-warn); }
+.badge.accent { background: var(--accent-soft); color: var(--accent-text); --dot: var(--accent); }
 .badge.plain::before { display: none; }
 /* 正在進行的狀態（錄製中、事件進行中）：平靜的色調，小點輕輕脈動 */
 .badge.live { --pulse: var(--ok); }
-.badge.live:not(.accent)::before { background: var(--ok); }
+.badge.live:not(.accent) { --dot: var(--lamp-ok); }
 .badge.accent.live { --pulse: var(--accent); }
 .badge.live::before { animation: live-pulse 2.4s var(--ease-out) infinite; }
 @keyframes live-pulse {
@@ -430,6 +453,28 @@ button, a, summary, label { touch-action: manipulation; }
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform var(--dur-1) var(--ease-out);
 }
 .btn[aria-busy="true"] { cursor: progress; }
+/*
+ * 實體按鍵的質感：上緣一道亮邊、下緣一點陰影、由上往下微微變暗；主要按鈕外面再一圈同色的柔光。
+ * 只用在按鈕本身（底色、陰影），圖示與文字照舊是實色。
+ */
+.btn:not(.ghost):not(:disabled) {
+  background-image: linear-gradient(to bottom, light-dark(color-mix(in srgb, var(--surface) 70%, white), color-mix(in srgb, var(--surface) 95%, white)), transparent 60%);
+  box-shadow: inset 0 1px 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.07)), 0 1px 2px light-dark(rgb(20 20 30 / 0.07), rgb(0 0 0 / 0.5));
+}
+.btn.primary:not(:disabled), .pb-controls > .pb-ctl:first-child {
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 82%, white), var(--accent) 55%, color-mix(in srgb, var(--accent) 90%, black));
+  border-color: color-mix(in srgb, var(--accent) 80%, black);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -1px 0 rgb(0 0 0 / 0.12),
+    0 1px 2px color-mix(in srgb, var(--accent) 35%, transparent),
+    0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.btn.danger.solid:not(:disabled) {
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--bad) 84%, white), var(--bad) 55%, color-mix(in srgb, var(--bad) 90%, black));
+  border-color: color-mix(in srgb, var(--bad) 80%, black);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), inset 0 -1px 0 rgb(0 0 0 / 0.12), 0 6px 16px -6px color-mix(in srgb, var(--bad) 55%, transparent);
+}
 .copy-face { display: inline-flex; align-items: center; gap: 7px; }
 .copy-btn[data-state="done"], .copy-btn[data-state="done"] .icon { color: var(--ok-text); }
 .copy-btn[data-state="failed"], .copy-btn[data-state="failed"] .icon { color: var(--bad-text); }
@@ -440,6 +485,9 @@ button, a, summary, label { touch-action: manipulation; }
 .btn:active:not(:disabled) { transform: scale(0.97); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 .btn.primary .icon { color: var(--accent-fg); }
+.btn.primary, .pb-controls > .pb-ctl:first-child { --icon-bg: var(--accent); --duo: 30%; }
+.btn.danger.solid { --icon-bg: var(--bad); --duo: 30%; }
+.btn:disabled { --icon-bg: var(--fill); }
 @media (hover: hover) { .btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); } }
 .btn.danger, .btn.danger .icon { color: var(--bad-text); }
 .btn.danger.solid { background: var(--bad); border-color: var(--bad); color: var(--surface); }

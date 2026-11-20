@@ -32,6 +32,6 @@ export function icon(name: string, size = 18): HTMLSpanElement {
   const span = document.createElement("span");
   span.className = "icon";
   span.setAttribute("aria-hidden", "true");
-  span.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${(ICONS as Record<string, string>)[name] ?? ""}</svg>`;
+  span.innerHTML = `<svg viewBox="0 0 256 256" width="${size}" height="${size}" fill="currentColor">${(ICONS as Record<string, string>)[name] ?? ""}</svg>`;
   return span;
 }
