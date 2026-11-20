@@ -1,3 +1,6 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg, plural } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyHints } from "../../ui/Kbd.tsx";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
@@ -23,14 +26,13 @@ import { dayEventsQuery, daysQuery, recordingsQuery, sortSegs } from "./queries.
 const route = getRouteApi("/_authed/_shell/recordings");
 
 const HOUR = 3_600_000;
-const ZOOMS = [
-  { value: String(24 * HOUR), label: "24 小時" },
-  { value: String(6 * HOUR), label: "6 小時" },
-  { value: String(HOUR), label: "1 小時" },
-  { value: String(600_000), label: "10 分鐘" },
+const ZOOMS: { value: string; label: MessageDescriptor }[] = [
+  { value: String(24 * HOUR), label: msg`24 hours` },
+  { value: String(6 * HOUR), label: msg`6 hours` },
+  { value: String(HOUR), label: msg`1 hour` },
+  { value: String(600_000), label: msg`10 minutes` },
 ];
 const RATES = [1, 2, 4, 8, 16];
-const RATE_ENTRIES = RATES.map((r) => ({ value: String(r), label: `${r}×`, desc: r === 1 ? "正常速度" : undefined }));
 /** "回到現在" lands this far behind the newest recording, so the indexer's lag never starves playback. */
 const LIVE_LAG_MS = 30_000;
 /** 快轉中追到錄製中的片段、距離現在不到這麼久時，改回 1 倍速 */
@@ -58,6 +60,10 @@ export interface PlaybackProps {
  * 換攝影機、日期、縮放與資料更新都呼叫它們的方法，不重建，播放位置與緩衝才不會丟。
  */
 export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps) {
+  const { t, i18n } = useLingui();
+  const camName = cam.config.name;
+  const rateEntries = RATES.map((r) => ({ value: String(r), label: `${r}×`, desc: r === 1 ? t`Normal speed` : undefined }));
+  const zoomOptions = ZOOMS.map((z) => ({ value: z.value, label: i18n._(z.label) }));
   const navigate = useNavigate();
   const qc = useQueryClient();
   const tParam = route.useSearch({ select: (s) => s.t });
@@ -79,6 +85,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
   const [following, setFollowing] = useState(true);
   const [span, setSpan] = useState(() => (matchMedia(NARROW).matches ? 6 * HOUR : 24 * HOUR));
   const [shown, setShown] = useState<{ segs: SegmentDto[]; events: EventDto[] }>({ segs: [], events: [] });
+  const count = shown.events.length;
 
   const rootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -144,7 +151,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     if (s.date !== today) {
       let list = days;
       if (!list.includes(today)) list = await qc.fetchQuery({ ...daysQuery(cam.id), staleTime: 0 });
-      if (!list.includes(today)) return toast("今天還沒有錄影", "error");
+      if (!list.includes(today)) return toast(t`No recordings today yet`, "error");
       goDate(today, "default");
       return;
     }
@@ -164,7 +171,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     const video = videoRef.current;
     if (!p || !video) return;
     const w = p.wall();
-    const t = performance.now();
+    const ts = performance.now();
     tl.current?.setPlayhead(w);
     if (w !== null) {
       const sec = Math.floor(w / 1000);
@@ -177,15 +184,16 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
       if (rate > 1 && p.live && Date.now() - w < CATCH_UP_MS) {
         setRate(1);
         p.setRate(1);
-        setGapNote("已追到最新，改回 1 倍速");
+        setGapNote(t`Caught up to live, back to 1× speed`);
         clearTimeout(s.noteTimer);
         s.noteTimer = setTimeout(() => setGapNote(null), 4_000);
       }
       // a forward jump far beyond what the playback rate explains is a skipped gap
       if (s.prevWall !== null && p.state.kind === "playing") {
-        const skipped = w - s.prevWall - (t - s.prevTick) * video.playbackRate;
+        const skipped = w - s.prevWall - (ts - s.prevTick) * video.playbackRate;
         if (skipped > 5_000) {
-          setGapNote(`跳過 ${formatDuration(skipped)} 缺片`);
+          const gap = formatDuration(skipped);
+          setGapNote(t`Skipped a ${gap} gap`);
           clearTimeout(s.noteTimer);
           s.noteTimer = setTimeout(() => setGapNote(null), 4_000);
         }
@@ -197,23 +205,23 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
         const d = dayOf(w);
         qc.setQueryData(daysQuery(cam.id).queryKey, (list) => (list && !list.includes(d) ? [...list, d].sort() : list));
         goDate(d, "none");
-      } else if (loaded && Math.abs(w - s.urlT) >= 1000 && (t - s.urlAt >= URL_WRITE_MS || p.state.kind !== "playing")) {
-        writeUrl(w, t);
+      } else if (loaded && Math.abs(w - s.urlT) >= 1000 && (ts - s.urlAt >= URL_WRITE_MS || p.state.kind !== "playing")) {
+        writeUrl(w, ts);
       }
     }
     s.prevWall = w;
-    s.prevTick = t;
+    s.prevTick = ts;
   }
 
   function onKey(e: KeyboardEvent) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
-    const t = e.target instanceof Element ? e.target : document.body;
+    const el = e.target instanceof Element ? e.target : document.body;
     // 日期選單、下拉選單與對話框裡的按鍵是它們自己的
-    if (t.closest('input, select, textarea, [contenteditable], dialog, [role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"], [role="grid"]')) return;
+    if (el.closest('input, select, textarea, [contenteditable], dialog, [role="dialog"], [role="alertdialog"], [role="listbox"], [role="menu"], [role="grid"]')) return;
     const p = player.current;
     if (!p) return;
     if (e.key === " ") {
-      if (t.closest("button, a, summary")) return;
+      if (el.closest("button, a, summary")) return;
       p.toggle();
     } else if (e.key === "ArrowLeft") seekBy(e.shiftKey ? -60_000 : -10_000);
     else if (e.key === "ArrowRight") seekBy(e.shiftKey ? 60_000 : 10_000);
@@ -222,7 +230,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
       if (w === null) return;
       const ev = e.key === "]" ? nextEvent(s.events, w) : prevEvent(s.events, w);
       if (ev) jumpToEvent(ev);
-      else toast(e.key === "]" ? "後面沒有事件了" : "前面沒有事件了");
+      else toast(e.key === "]" ? t`No later events` : t`No earlier events`);
     } else return;
     e.preventDefault();
   }
@@ -252,7 +260,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
       url: (seg) => api.segmentUrl(seg.id),
     };
     const p = new Player(video, source, setStatus);
-    const t = new Timeline({
+    const tline = new Timeline({
       onSeek: (w, dir) => fns.current.seekTo(w, dir),
       onEvent: (e) => fns.current.jumpToEvent(e),
       onFollow: setFollowing,
@@ -260,13 +268,13 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
       thumbUrl: (e) => api.eventThumbUrl(e.id),
       onSelect: (r) => fns.current.select(r),
     });
-    t.el.setAttribute("aria-describedby", "tl-keys");
-    host.append(t.el);
+    tline.el.setAttribute("aria-describedby", "tl-keys");
+    host.append(tline.el);
     const [b0, b1] = dayRange(s.date);
-    t.setBounds(b0, b1);
-    t.setSpan(matchMedia(NARROW).matches ? 6 * HOUR : 24 * HOUR);
+    tline.setBounds(b0, b1);
+    tline.setSpan(matchMedia(NARROW).matches ? 6 * HOUR : 24 * HOUR);
     player.current = p;
-    tl.current = t;
+    tl.current = tline;
     setStatus(p.state);
 
     const onVideo = () => fns.current.tick();
@@ -276,15 +284,15 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     document.addEventListener("keydown", onKeyDown);
     let raf = requestAnimationFrame(function frame() {
       raf = requestAnimationFrame(frame);
-      t.setPlayhead(p.wall());
+      tline.setPlayhead(p.wall());
     });
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(s.noteTimer);
       document.removeEventListener("keydown", onKeyDown);
       for (const type of types) video.removeEventListener(type, onVideo);
-      t.destroy();
-      t.el.remove();
+      tline.destroy();
+      tline.el.remove();
       p.destroy();
       tl.current = null;
       player.current = null;
@@ -311,11 +319,11 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
   const segs = segQ.isPlaceholderData ? undefined : segQ.data;
   const events = evQ.isPlaceholderData ? undefined : evQ.data;
   useEffect(() => {
-    const t = tl.current;
-    if (!t || !daysReady || !segs || !events) return;
+    const tline = tl.current;
+    if (!tline || !daysReady || !segs || !events) return;
     s.segs = segs;
     s.events = events;
-    t.setData(segs, events, Date.now());
+    tline.setData(segs, events, Date.now());
     setShown({ segs, events });
     if (s.appliedKey === key) return;
     // a new camera or day: until now the old one kept playing
@@ -325,13 +333,13 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
     s.camId = cam.id;
     s.date = date;
     s.urlT = 0;
-    t.setBounds(start, end);
+    tline.setBounds(start, end);
     exp.reset([start, end]);
     const intent = s.intent.key === key ? s.intent.v : (tParam ?? "default");
     if (intent === "none") return;
     const w = typeof intent === "number" ? intent : date === todayKey() ? latestWall() : (segs[0]?.startMs ?? null);
     if (w !== null) seekTo(w, 1, true, newCamera);
-    t.recenter();
+    tline.recenter();
     // exp and tParam are read when a new day lands; a change to either alone must not seek again
   }, [segs, events, key, daysReady]);
 
@@ -361,12 +369,12 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
       {camPick}
       {/* 日曆上標出有錄影的日子，只能選那些天；前一天、後一天也只會跳到有錄影的日子 */}
       <DatePicker
-        label="日期"
+        label={t`Date`}
         value={date}
         min={days[0] ?? null}
         max={todayKey()}
         marked={new Set(days)}
-        markedLabel="有錄影"
+        markedLabel={t`Has recordings`}
         onlyMarked
         stepper
         className="pb-date"
@@ -379,15 +387,15 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
   return (
     <div className="pb" ref={rootRef}>
       <header className="page-head pb-head">
-        <h1>錄影</h1>
+        <h1>{t`Recordings`}</h1>
         {narrow ? null : toolbar}
       </header>
       <div className="pb-grid">
-        <section className="card pb-player" aria-label="播放器" ref={panelRef}>
+        <section className="card pb-player" aria-label={t`Player`} ref={panelRef}>
           {/* 手機上攝影機與日期收進播放器上方，跟播放器一起黏在頂端 */}
           {narrow ? toolbar : null}
           <div className="pb-stage" ref={stageRef}>
-            <video ref={videoRef} playsInline muted aria-label={`${cam.config.name} 的錄影`} />
+            <video ref={videoRef} playsInline muted aria-label={t`Recording of ${camName}`} />
             <div className="pb-overlay" role="status" aria-live="polite" data-kind={status.kind}>
               <Overlay status={status} />
             </div>
@@ -396,7 +404,7 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
             </span>
           </div>
           <div className="pb-controls">
-            <button className="pb-ctl" type="button" aria-label={playing ? "暫停" : "播放"} onClick={() => player.current?.toggle()}>
+            <button className="pb-ctl" type="button" aria-label={playing ? t`Pause` : t`Play`} onClick={() => player.current?.toggle()}>
               <span>
                 <Icon name={playing ? "pause" : "play"} size={20} />
               </span>
@@ -405,35 +413,35 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
             <div className="pb-time">
               <b className="pb-clock num">{clock ? formatClock(clock.wall) : "--:--:--"}</b>
               <span className="pb-sub">
-                <small hidden={clock?.live}>{clock ? dayLabel(dayOf(clock.wall)).replace(/（.*）/, "") : ""}</small>
+                <small hidden={clock?.live}>{clock ? dayLabel(dayOf(clock.wall), false, false) : ""}</small>
                 <span className="badge live" hidden={!clock?.live}>
-                  錄製中
+                  {t`Recording now`}
                 </span>
               </span>
             </div>
             {/* 換行時整組靠右，不會散成左邊一排 */}
             <div className="pb-actions">
-              <button className="pb-ctl pb-ctl-text" type="button" aria-label="回到最新" onClick={() => void goLive()}>
+              <button className="pb-ctl pb-ctl-text" type="button" aria-label={t`Back to latest`} onClick={() => void goLive()}>
                 <Icon name="skip-end" size={16} />
-                <span>回到最新</span>
+                <span>{t`Back to latest`}</span>
               </button>
               <Select
-                label="播放速度"
+                label={t`Playback speed`}
                 variant="quiet"
                 className="pb-rate"
-                entries={RATE_ENTRIES}
+                entries={rateEntries}
                 value={String(rate)}
                 onChange={(v) => {
                   setRate(Number(v));
                   player.current?.setRate(Number(v));
                 }}
               />
-              <button className="pb-ctl" type="button" aria-label={muted ? "開啟聲音" : "靜音"} aria-pressed={!muted} onClick={toggleMute}>
+              <button className="pb-ctl" type="button" aria-label={muted ? t`Unmute` : t`Mute`} aria-pressed={!muted} onClick={toggleMute}>
                 <span>
                   <Icon name={muted ? "volume-off" : "volume"} size={20} />
                 </span>
               </button>
-              <button className="pb-ctl" type="button" aria-label="全螢幕" onClick={fullscreen}>
+              <button className="pb-ctl" type="button" aria-label={t`Full screen`} onClick={fullscreen}>
                 <Icon name="expand" size={18} />
               </button>
             </div>
@@ -441,8 +449,8 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
         </section>
         <section className="panel pb-events">
           <div className="panel-head">
-            <h2>事件</h2>
-            <span className="hint">{shown.events.length ? `${shown.events.length} 筆` : ""}</span>
+            <h2>{t`Events`}</h2>
+            <span className="hint">{count ? plural(count, { one: "# event", other: "# events" }) : ""}</span>
           </div>
           <div className="panel-body">
             <EventList events={shown.events} current={currentEvent} onJump={onJump} onExport={onExport} />
@@ -450,15 +458,15 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
         </section>
         <section className="panel pb-timeline">
           <div className="panel-head">
-            <h2>時間軸</h2>
+            <h2>{t`Timeline`}</h2>
             <button className="btn small" type="button" hidden={following} onClick={() => tl.current?.recenter()}>
               <Icon name="crosshair" size={16} />
-              回到播放位置
+              {t`Back to playhead`}
             </button>
             <ExportButton ui={exp} />
             <Segmented
-              label="時間軸範圍"
-              options={ZOOMS}
+              label={t`Timeline range`}
+              options={zoomOptions}
               value={String(span)}
               onChange={(v) => {
                 tl.current?.setSpan(Number(v));
@@ -472,27 +480,27 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
             <div className="pb-legend">
               <span>
                 <i className="sw rec" />
-                錄影
+                {t`Recording`}
               </span>
               <span>
                 <i className="sw live" />
-                錄製中
+                {t`Recording now`}
               </span>
               <span>
                 <i className="sw gap" />
-                缺片
+                {t`Gap`}
               </span>
               <span>
                 <i className="sw ev" />
-                事件
+                {t`Event`}
               </span>
               <KeyHints
                 className="pb-legend-keys"
                 id="tl-keys"
                 hints={[
-                  { keys: ["空白鍵"], label: "播放／暫停" },
-                  { keys: ["←", "→"], label: "前後 10 秒" },
-                  { keys: ["[", "]"], label: "上／下一個事件" },
+                  { keys: [t`Space`], label: t`Play / pause` },
+                  { keys: ["←", "→"], label: t`Back / forward 10 seconds` },
+                  { keys: ["[", "]"], label: t`Previous / next event` },
                 ]}
               />
             </div>
@@ -505,14 +513,15 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
 }
 
 function Overlay({ status }: { status: PlayerStatus }) {
+  const { t } = useLingui();
   if (status.kind === "loading" || status.kind === "waiting")
     return (
       <span className="loading">
         <span className="spin" />
-        載入中
+        {t`Loading…`}
       </span>
     );
-  if (status.kind === "ended") return <span className="pb-msg">已經播到最新的錄影</span>;
+  if (status.kind === "ended") return <span className="pb-msg">{t`You've reached the latest recording`}</span>;
   if (status.kind === "error")
     return (
       <div className="callout bad">
@@ -525,6 +534,7 @@ function Overlay({ status }: { status: PlayerStatus }) {
 
 /** 每秒的時鐘更新不會重畫清單；只有資料或目前的事件變了才會 */
 const EventList = memo(function EventList({ events, current, onJump, onExport }: { events: EventDto[]; current: number | null; onJump: (e: EventDto) => void; onExport: (e: EventDto) => void }) {
+  const { t } = useLingui();
   const listRef = useRef<HTMLOListElement>(null);
   useEffect(() => {
     const list = listRef.current;
@@ -538,14 +548,17 @@ const EventList = memo(function EventList({ events, current, onJump, onExport }:
   }, [current]);
 
   return (
-    <ol className="ev-list scroll-fade" aria-label="事件清單" ref={listRef}>
+    <ol className="ev-list scroll-fade" aria-label={t`Event list`} ref={listRef}>
       {events.length === 0 ? (
         <li className="ev-empty">
-          <EmptyState title="這一天沒有事件" body="開啟動作偵測後，偵測到的事件會出現在這裡。" icon="activity" />
+          <EmptyState title={t`No events on this day`} body={t`Once motion detection is on, detected events show up here.`} icon="activity" />
         </li>
       ) : (
         events.map((e) => {
-          const dur = e.endMs === null ? `已持續 ${formatDuration(Date.now() - e.startMs)}` : formatDuration(e.endMs - e.startMs);
+          const elapsed = formatDuration((e.endMs ?? Date.now()) - e.startMs);
+          const dur = e.endMs === null ? t`Running for ${elapsed}` : elapsed;
+          const what = labelText(e.labels);
+          const clock = formatClock(e.startMs);
           return (
             <li className="ev-row" key={e.id}>
               <button
@@ -553,7 +566,7 @@ const EventList = memo(function EventList({ events, current, onJump, onExport }:
                 className="ev-item"
                 data-event={e.id}
                 aria-current={e.id === current ? "true" : undefined}
-                aria-label={`${labelText(e.labels)} ${formatClock(e.startMs)} · ${dur}${e.endMs === null ? " 進行中" : ""}`}
+                aria-label={e.endMs === null ? t`${what} ${clock} · ${dur} · In progress` : t`${what} ${clock} · ${dur}`}
                 onClick={() => onJump(e)}
               >
                 <span className="ev-thumb">{e.hasThumb ? <img src={api.eventThumbUrl(e.id)} alt="" loading="lazy" decoding="async" width="96" height="54" /> : <Icon name="activity" size={18} />}</span>
@@ -563,13 +576,13 @@ const EventList = memo(function EventList({ events, current, onJump, onExport }:
                     {formatClock(e.startMs)} · {dur}
                   </span>
                 </span>
-                {e.endMs === null ? <span className="badge accent live">進行中</span> : null}
+                {e.endMs === null ? <span className="badge accent live">{t`In progress`}</span> : null}
               </button>
               <button
                 type="button"
                 className="btn ghost icon-only ev-export"
-                aria-label={`匯出 ${formatClock(e.startMs)} 的事件影片`}
-                title="匯出影片（含前後 5 秒）"
+                aria-label={t`Export the event video from ${clock}`}
+                title={t`Export video (includes 5 seconds before and after)`}
                 onClick={() => onExport(e)}
               >
                 <Icon name="download" size={16} />

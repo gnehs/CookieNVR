@@ -1,3 +1,4 @@
+import { plural, t } from "@lingui/core/macro";
 import type { EventDto, SegmentDto } from "../../src/api-types.ts";
 import { h } from "../dom.ts";
 import { formatClock, formatDuration } from "../format.ts";
@@ -103,8 +104,8 @@ export class Timeline {
         class: "tl",
         tabindex: "0",
         role: "slider",
-        "aria-label": "時間軸",
-        "aria-roledescription": "時間軸",
+        "aria-label": t`Timeline`,
+        "aria-roledescription": t`timeline`,
         "aria-keyshortcuts": "ArrowLeft ArrowRight PageUp PageDown Home End",
       },
       this.canvas,
@@ -580,16 +581,19 @@ export class Timeline {
       return;
     }
     const c = hit.cluster;
+    const count = c.count;
     const evs = this.events.slice(c.first, c.first + c.count);
     const first = evs[0]!;
     if (c.count === 1) {
       const end = first.endMs;
+      const running = formatDuration(this.now - first.startMs);
+      const length = end === null ? "" : formatDuration(end - first.startMs);
       tip.replaceChildren(
         ...(first.hasThumb ? [h("img", { src: this.opts.thumbUrl(first), alt: "", width: "112", height: "63" })] : []),
         h("div", { class: "tl-tip-body" },
           h("b", null, labelText(first.labels)),
-          h("span", { class: "num" }, `${formatClock(first.startMs)} – ${end === null ? "進行中" : formatClock(end)}`),
-          h("span", null, end === null ? `已持續 ${formatDuration(this.now - first.startMs)}` : `長度 ${formatDuration(end - first.startMs)}`),
+          h("span", { class: "num" }, `${formatClock(first.startMs)} – ${end === null ? t`In progress` : formatClock(end)}`),
+          h("span", null, end === null ? t`Running for ${running}` : t`Length ${length}`),
         ),
       );
     } else {
@@ -597,10 +601,10 @@ export class Timeline {
       const lastEnd = Math.max(...evs.map((e) => e.endMs ?? this.now));
       tip.replaceChildren(
         h("div", { class: "tl-tip-body" },
-          h("b", null, `${c.count} 個事件`),
+          h("b", null, plural(count, { one: "# event", other: "# events" })),
           h("span", { class: "num" }, `${formatClock(first.startMs)} – ${formatClock(lastEnd)}`),
           h("span", null, labelText(labels)),
-          h("span", { class: "hint" }, "點一下放大這一段"),
+          h("span", { class: "hint" }, t`Click to zoom into this stretch`),
         ),
       );
     }
@@ -891,12 +895,16 @@ export class Timeline {
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     const evs = this.events.slice(c.first, c.first + c.count);
-    const title = c.count === 1 ? labelText(first.labels) : `${c.count} 個事件 · ${labelText([...new Set(evs.flatMap((e) => e.labels))])}`;
+    const count = c.count;
+    const kinds = labelText([...new Set(evs.flatMap((e) => e.labels))]);
+    const title = count === 1 ? labelText(first.labels) : plural(count, { one: `# event · ${kinds}`, other: `# events · ${kinds}` });
+    const clock = formatClock(first.startMs);
+    const elapsed = first.endMs === null ? "" : formatDuration(first.endMs - first.startMs);
     const sub =
       c.count === 1
         ? first.endMs === null
-          ? `${formatClock(first.startMs)} · 進行中`
-          : `${formatClock(first.startMs)} · ${formatDuration(first.endMs - first.startMs)}`
+          ? t`${clock} · In progress`
+          : t`${clock} · ${elapsed}`
         : `${formatClock(first.startMs)} – ${formatClock(this.lastEnd(c))}`;
     ctx.font = "650 14px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = colors["--text"];

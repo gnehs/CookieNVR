@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,7 +12,7 @@ import { dayBounds, dayKey, dayTitle, groupByDay, mergeEvents, playbackSearch } 
 import { eventLabelOptions } from "../../detect/object-model.ts";
 import { errMsg, formatClock } from "../../format.ts";
 import { EVENT_ACTIVE } from "../../health.ts";
-import { labelText } from "../../timeline/model.ts";
+import { joinList, labelText } from "../../timeline/model.ts";
 import { Button, ButtonLink } from "../../ui/Button.tsx";
 import { DatePicker } from "../../ui/DatePicker.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
@@ -56,7 +58,9 @@ function clip(ms: number): string {
 
 function spoken(ms: number): string {
   const s = Math.max(1, Math.round(ms / 1000));
-  return s < 60 ? `${s} 秒` : `${Math.floor(s / 60)} 分 ${s % 60} 秒`;
+  const seconds = s % 60;
+  const minutes = Math.floor(s / 60);
+  return s < 60 ? t`${seconds} sec` : t`${minutes} min ${seconds} sec`;
 }
 
 const listKey = (f: Filter) => ["events", "list", { camera: f.camera, labels: f.labels.join(","), date: f.date }] as const;
@@ -75,6 +79,7 @@ async function fetchPage(f: Filter, before: number | null): Promise<Page> {
 }
 
 export function EventsPage() {
+  const { t } = useLingui();
   const isAdmin = useMe().role === "admin";
   const cams = useQuery(camerasQuery);
   if (cams.isError) return <ErrorBox error={cams.error} onRetry={() => void cams.refetch()} />;
@@ -85,12 +90,12 @@ export function EventsPage() {
         <Header />
         <EmptyState
           icon="camera"
-          title="還沒有攝影機"
-          body={isAdmin ? "加入攝影機後，偵測到的動作會出現在這裡。" : "請管理員加入攝影機，偵測到的動作會出現在這裡。"}
+          title={t`No cameras yet`}
+          body={isAdmin ? t`Once you add a camera, detected motion shows up here.` : t`Ask an admin to add a camera. Detected motion will show up here.`}
           action={
             isAdmin ? (
               <ButtonLink to="/settings/cameras/new" variant="primary" icon="plus">
-                新增攝影機
+                {t`Add camera`}
               </ButtonLink>
             ) : undefined
           }
@@ -102,15 +107,17 @@ export function EventsPage() {
 }
 
 function Header({ children }: { children?: React.ReactNode }) {
+  const { t } = useLingui();
   return (
     <header className="page-head ev-head">
-      <h1>事件</h1>
+      <h1>{t`Events`}</h1>
       {children}
     </header>
   );
 }
 
 function EventsList() {
+  const { t } = useLingui();
   const isAdmin = useMe().role === "admin";
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -124,7 +131,7 @@ function EventsList() {
     date: search.date ?? null,
     labels: search.label ? search.label.split(",") : [],
   };
-  const nameOf = (id: string) => cams.find((c) => c.id === id)?.config.name ?? "已刪除的攝影機";
+  const nameOf = (id: string) => cams.find((c) => c.id === id)?.config.name ?? t`Deleted camera`;
   const setFilter = (next: Filter) =>
     void navigate({
       to: "/events",
@@ -164,8 +171,8 @@ function EventsList() {
   useEffect(() => {
     if (!hasLive) return;
     setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, [hasLive]);
 
   const refetching = useRef(new Set<number>());
@@ -197,11 +204,14 @@ function EventsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, catalog, cams, search.label]);
 
-  const camEntries: SelectEntry<string>[] = [{ value: "", label: "所有攝影機" }, "separator", ...cams.map((c) => ({ value: c.id, label: c.config.name }))];
-  const ALL = { value: "", label: "所有類別" };
+  const camEntries: SelectEntry<string>[] = [{ value: "", label: t`All cameras` }, "separator", ...cams.map((c) => ({ value: c.id, label: c.config.name }))];
+  const ALL = { value: "", label: t`All categories` };
   // 照選單的順序念，不照網址上排序過的鍵
   const labelNames = labelOptions.filter((o) => filter.labels.includes(o.key)).map((o) => o.zh);
-  const labelSummary = labelNames.length === 0 ? ALL.label : labelNames.length <= 2 ? labelNames.join("、") : `${labelNames[0]}等 ${labelNames.length} 類`;
+  const first = labelNames[0];
+  const others = labelNames.length - 1;
+  const labelSummary =
+    labelNames.length === 0 ? ALL.label : labelNames.length <= 2 ? joinList(labelNames) : t`${first} and ${others} more`;
   const opt = (l: { key: string; zh: string }) => ({ value: l.key, label: l.zh });
   const labelEntries: SelectEntry<string>[] = [ALL, "separator", ...labelOptions.map(opt)];
   /** 還沒有任何事件帶類別（沒用物件辨識、相機也沒回報）就不佔位；篩選中一定要看得到 */
@@ -225,8 +235,11 @@ function EventsList() {
   }, [canMore, fetchNextPage, list.data]);
 
   async function remove(e: EventDto, el: HTMLElement | null) {
-    if (e.endMs === null) return toast("事件還在進行中，結束後才能刪除", "error");
-    const ok = await confirmDialog("刪除這筆事件？", `${nameOf(e.cameraId)}，${dayTitle(dayKey(e.startMs), Date.now())} ${formatClock(e.startMs)}。事件與縮圖會永久刪除，錄影之後照一般的保留天數清除。`, { confirmLabel: "刪除", danger: true });
+    if (e.endMs === null) return toast(t`The event is still in progress. You can delete it once it ends.`, "error");
+    const camName = nameOf(e.cameraId);
+    const day = dayTitle(dayKey(e.startMs), Date.now());
+    const clock = formatClock(e.startMs);
+    const ok = await confirmDialog(t`Delete this event?`, t`${camName}, ${day} ${clock}. The event and its thumbnail are deleted permanently. The recording is cleared later under the normal retention period.`, { confirmLabel: t`Delete`, danger: true });
     if (!ok) return;
     try {
       await api.deleteEvent(e.id);
@@ -237,10 +250,10 @@ function EventsList() {
       qc.setQueryData<InfiniteData<Page, number | null>>(key, (d) => d && { ...d, pages: d.pages.map((p) => ({ ...p, events: p.events.filter((x) => x.id !== e.id) })) });
     if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) drop();
     else el.animate([{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(0.96)" }], { duration: 160, easing: "ease-out" }).finished.then(drop, drop);
-    toast("已刪除事件");
+    toast(t`Event deleted`);
   }
 
-  const who = filter.camera ? `「${nameOf(filter.camera)}」` : "";
+  const who = filter.camera ? nameOf(filter.camera) : "";
   const when = filter.date ? dayTitle(filter.date, Date.now()) : "";
   const what = filter.labels.length ? labelSummary : "";
   const narrowed = [who, when, what].filter(Boolean).length;
@@ -260,22 +273,23 @@ function EventsList() {
           ))}
         </ul>
         <span className="sr-only" role="status">
-          載入中…
+          {t`Loading…`}
         </span>
       </div>
     );
   } else if (list.isError && !list.data) {
     body = <ErrorBox error={list.error} onRetry={() => void list.refetch()} />;
   } else if (items.length === 0) {
-    if (narrowed === 0) body = <EmptyState icon="activity" title="還沒有事件" body="攝影機偵測到動作時，事件會出現在這裡。" />;
+    if (narrowed === 0) body = <EmptyState icon="activity" title={t`No events yet`} body={t`When a camera detects motion, the event shows up here.`} />;
     else {
-      const title = what ? `${who}${when}沒有看到${what}的事件` : when ? `${who}${when}沒有事件` : `${who}還沒有事件`;
+      const scope = [who, when].filter(Boolean).join(" · ");
+      const title = what ? (scope ? t`${scope}: no ${what} events` : t`No ${what} events`) : when ? t`${scope}: no events` : t`${scope}: no events yet`;
       body = (
         <EmptyState
           icon="activity"
           title={title}
-          body={what ? "換個類別或日期看看，或清除篩選。" : when ? "換一天看看，或清除篩選。" : "這台偵測到動作時，事件會出現在這裡。"}
-          action={<Button onClick={resetFilter}>{narrowed > 1 ? "清除篩選" : what ? "看所有類別" : who ? "看所有攝影機" : "看所有日期"}</Button>}
+          body={what ? t`Try another category or date, or clear the filters.` : when ? t`Try another day, or clear the filters.` : t`When this camera detects motion, the event shows up here.`}
+          action={<Button onClick={resetFilter}>{narrowed > 1 ? t`Clear filters` : what ? t`Show all categories` : who ? t`Show all cameras` : t`Show all dates`}</Button>}
         />
       );
     }
@@ -297,10 +311,10 @@ function EventsList() {
     <div className="ev-page">
       <Header>
         <div className="ev-filters">
-          <Select label="攝影機" icon="camera" entries={camEntries} value={filter.camera ?? ""} onChange={(v) => setFilter({ ...filter, camera: v || null })} />
+          <Select label={t`Camera`} icon="camera" entries={camEntries} value={filter.camera ?? ""} onChange={(v) => setFilter({ ...filter, camera: v || null })} />
           {showLabelPick ? (
             <MultiSelect
-              label="類別"
+              label={t`Category`}
               icon="tag"
               entries={labelEntries}
               summary={labelSummary}
@@ -309,7 +323,7 @@ function EventsList() {
               onChange={(v) => setFilter({ ...filter, labels: v.includes("") && filter.labels.length ? [] : v.filter((l) => l !== "") })}
             />
           ) : null}
-          <DatePicker label="日期" value={filter.date} clearLabel="所有日期" max={dayOf(Date.now())} onChange={(date) => setFilter({ ...filter, date })} />
+          <DatePicker label={t`Date`} value={filter.date} clearLabel={t`All dates`} max={dayOf(Date.now())} onChange={(date) => setFilter({ ...filter, date })} />
         </div>
       </Header>
       <div className="ev-body">{body}</div>
@@ -319,17 +333,17 @@ function EventsList() {
           {!showFoot ? null : isFetchingNextPage ? (
             <>
               <span className="spin" />
-              <span>載入更早的事件…</span>
+              <span>{t`Loading earlier events…`}</span>
             </>
           ) : isFetchNextPageError ? (
             <>
-              <span>更早的事件沒有載入成功</span>
+              <span>{t`Couldn't load earlier events`}</span>
               <Button small icon="refresh" iconSize={15} onClick={() => void fetchNextPage()}>
-                再試一次
+                {t`Try again`}
               </Button>
             </>
           ) : !hasNextPage ? (
-            <span>{filter.date ? "這天沒有更早的事件了" : "沒有更早的事件了"}</span>
+            <span>{filter.date ? t`No earlier events on this day` : t`No earlier events`}</span>
           ) : null}
         </div>
       </div>
@@ -338,17 +352,22 @@ function EventsList() {
 }
 
 function EventCard({ e, now, name, admin, onRemove }: { e: EventDto; now: number; name: string; admin: boolean; onRemove: (e: EventDto, el: HTMLElement | null) => void }) {
+  const { t } = useLingui();
   const li = useRef<HTMLLIElement>(null);
   const live = e.endMs === null;
   const len = (e.endMs ?? now) - e.startMs;
   const labels = e.labels.length ? labelText(e.labels) : null;
+  const when = `${dayTitle(dayKey(e.startMs), now)} ${formatClock(e.startMs)}`;
+  const duration = spoken(len);
+  const badge = EVENT_ACTIVE.badge;
+  const label = [name, when, labels, live ? t`${badge}, running for ${duration}` : t`Length ${duration}`, t`Play recording`].filter((x): x is string => !!x).join(t({ message: ", ", context: "clause separator" }));
   return (
     <li className="ev-card" ref={li} data-live={live ? "" : undefined}>
       <Link
         className="ev-card-link"
         to="/recordings"
         search={playbackSearch(e)}
-        aria-label={`${name}，${dayTitle(dayKey(e.startMs), now)} ${formatClock(e.startMs)}${labels ? `，${labels}` : ""}，${live ? `${EVENT_ACTIVE.badge}，已持續 ${spoken(len)}` : `長度 ${spoken(len)}`}，播放錄影`}
+        aria-label={label}
       >
         <span className="ev-card-thumb">
           {e.hasThumb ? (
@@ -374,7 +393,7 @@ function EventCard({ e, now, name, admin, onRemove }: { e: EventDto; now: number
       </Link>
       {admin ? (
         <span className="menu-wrap">
-          <MenuButton label="這筆事件的更多動作" items={[{ label: "刪除事件", icon: "trash", danger: true, onSelect: () => onRemove(e, li.current) }]} />
+          <MenuButton label={t`More actions for this event`} items={[{ label: t`Delete event`, icon: "trash", danger: true, onSelect: () => onRemove(e, li.current) }]} />
         </span>
       ) : null}
     </li>

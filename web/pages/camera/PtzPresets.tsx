@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { PtzPresetDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
@@ -26,6 +27,7 @@ export interface PtzPresetsProps {
  * 一般使用者沒有任何預置點時整段不出現。
  */
 export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say }: PtzPresetsProps) {
+  const { t } = useLingui();
   const [presets, setPresets] = useState(initial);
   const [editing, setEditing] = useState(false);
   const [goingTo, setGoingTo] = useState<string | null>(null);
@@ -39,7 +41,8 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
     beforeGo();
     setGoingTo(p.token);
     clearTimeout(flash.current);
-    say(`前往「${p.name}」`);
+    const name = p.name;
+    say(t`Going to “${name}”`);
     try {
       await api.ptzGotoPreset(cameraId, p.token, speed());
       flash.current = setTimeout(() => say(null), 1800);
@@ -51,22 +54,24 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
   }
 
   async function overwrite(p: PtzPresetDto) {
-    if (!(await confirmDialog("覆寫預置點", `要把「${p.name}」改成鏡頭現在的位置嗎？原本的位置會被取代。`, { confirmLabel: "覆寫" }))) return;
+    const name = p.name;
+    if (!(await confirmDialog(t`Overwrite preset`, t`Set “${name}” to where the camera is pointing now? The old position will be replaced.`, { confirmLabel: t`Overwrite` }))) return;
     try {
       setPresets((await api.ptzSavePreset(cameraId, { name: p.name, token: p.token })).presets);
-      toast(`已把「${p.name}」更新為目前位置`);
+      toast(t`Updated “${name}” to the current position`);
     } catch (e) {
       toast(errMsg(e), "error");
     }
   }
 
   async function remove(p: PtzPresetDto) {
-    if (!(await confirmDialog("刪除預置點", `要刪除「${p.name}」嗎？這個預置點會從相機上移除。`, { confirmLabel: "刪除", danger: true }))) return;
+    const name = p.name;
+    if (!(await confirmDialog(t`Delete preset`, t`Delete “${name}”? The preset will be removed from the camera.`, { confirmLabel: t`Delete`, danger: true }))) return;
     try {
       const next = (await api.ptzRemovePreset(cameraId, { token: p.token })).presets;
       setPresets(next);
       if (next.length === 0) setEditing(false);
-      toast(`已刪除「${p.name}」`);
+      toast(t`Deleted “${name}”`);
     } catch (e) {
       toast(errMsg(e), "error");
     }
@@ -76,49 +81,52 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
   return (
     <div className="ptz-section" data-editing={String(editing)}>
       <div className="ptz-sub">
-        <h3>預置點</h3>
+        <h3>{t`Presets`}</h3>
         {admin ? (
           <div className="ptz-sub-tools">
             <Button small icon="plus" disabled={full} aria-describedby="ptz-limit" onClick={() => setAdding(true)}>
-              儲存目前位置
+              {t`Save current position`}
             </Button>
             {presets.length > 0 ? (
               <Button small variant="ghost" aria-pressed={editing} onClick={() => setEditing(!editing)}>
-                {editing ? "完成" : "編輯"}
+                {editing ? t`Done` : t`Edit`}
               </Button>
             ) : null}
           </div>
         ) : null}
       </div>
       <p className="ptz-hint" id="ptz-limit" hidden={!admin || !full}>
-        {full ? `已達上限（${max} 個），請先刪除一個。` : ""}
+        {full ? t`Limit reached (${max}). Delete one first.` : ""}
       </p>
       <ul className="ptz-presets scroll-fade-x" hidden={presets.length === 0}>
-        {presets.map((p) => (
-          <li className="ptz-preset" key={p.token}>
-            <button className="ptz-preset-go" type="button" aria-busy={goingTo === p.token ? "true" : undefined} onClick={() => void go(p)}>
-              <span>{p.name}</span>
-            </button>
-            {editing ? (
-              <span className="ptz-preset-tools">
-                <Button iconOnly variant="ghost" aria-label={`把「${p.name}」覆寫成目前位置`} title="覆寫成目前位置" onClick={() => void overwrite(p)}>
-                  <Icon name="crosshair" size={18} />
-                </Button>
-                <Button iconOnly variant="ghost" className="danger" aria-label={`刪除「${p.name}」`} title="刪除" onClick={() => void remove(p)}>
-                  <Icon name="trash" size={18} />
-                </Button>
-              </span>
-            ) : null}
-          </li>
-        ))}
+        {presets.map((p) => {
+          const name = p.name;
+          return (
+            <li className="ptz-preset" key={p.token}>
+              <button className="ptz-preset-go" type="button" aria-busy={goingTo === p.token ? "true" : undefined} onClick={() => void go(p)}>
+                <span>{p.name}</span>
+              </button>
+              {editing ? (
+                <span className="ptz-preset-tools">
+                  <Button iconOnly variant="ghost" aria-label={t`Set “${name}” to the current position`} title={t`Set to current position`} onClick={() => void overwrite(p)}>
+                    <Icon name="crosshair" size={18} />
+                  </Button>
+                  <Button iconOnly variant="ghost" className="danger" aria-label={t`Delete “${name}”`} title={t`Delete`} onClick={() => void remove(p)}>
+                    <Icon name="trash" size={18} />
+                  </Button>
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
-      {admin && presets.length === 0 ? <p className="ptz-hint">還沒有預置點。把鏡頭轉到想要的位置，再按「儲存目前位置」。</p> : null}
+      {admin && presets.length === 0 ? <p className="ptz-hint">{t`No presets yet. Turn the camera to the position you want, then press “Save current position”.`}</p> : null}
       <AddPresetDialog
         open={adding}
         onOpenChange={setAdding}
         save={async (name) => {
           setPresets((await api.ptzSavePreset(cameraId, { name })).presets);
-          toast(`已儲存「${name}」`);
+          toast(t`Saved “${name}”`);
         }}
       />
     </div>
@@ -126,6 +134,7 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
 }
 
 function AddPresetDialog({ open, onOpenChange, save }: { open: boolean; onOpenChange: (o: boolean) => void; save: (name: string) => Promise<void> }) {
+  const { t } = useLingui();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -133,7 +142,7 @@ function AddPresetDialog({ open, onOpenChange, save }: { open: boolean; onOpenCh
     e.preventDefault();
     const value = input.current!.value.trim();
     if (!value) {
-      setError("請幫這個位置取個名稱");
+      setError(t`Give this position a name`);
       return input.current!.focus();
     }
     setError("");
@@ -148,15 +157,15 @@ function AddPresetDialog({ open, onOpenChange, save }: { open: boolean; onOpenCh
     }
   };
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="儲存目前位置" initialFocus={input} onClosed={() => setError("")}>
+    <Dialog open={open} onOpenChange={onOpenChange} title={t`Save current position`} initialFocus={input} onClosed={() => setError("")}>
       <form className="form" onSubmit={submit}>
-        <Field label="預置點名稱" hint="鏡頭現在對著的位置會存到相機裡。" error={error}>
-          <input ref={input} type="text" maxLength={30} autoComplete="off" placeholder="例如：大門" />
+        <Field label={t`Preset name`} hint={t`Where the camera is pointing now is stored on the camera.`} error={error}>
+          <input ref={input} type="text" maxLength={30} autoComplete="off" placeholder={t`e.g. Front door`} />
         </Field>
         <div className="dlg-actions">
-          <Button onClick={() => onOpenChange(false)}>取消</Button>
+          <Button onClick={() => onOpenChange(false)}>{t`Cancel`}</Button>
           <Button type="submit" variant="primary" aria-busy={busy || undefined} disabled={busy}>
-            儲存
+            {t`Save`}
           </Button>
         </div>
       </form>

@@ -1,4 +1,6 @@
+import { t } from "@lingui/core/macro";
 import type { SegmentDto } from "../../src/api-types.ts";
+import { joinList } from "../timeline/model.ts";
 import { mimeType, Mp4Splitter, type InitInfo, type Unit } from "./mp4.ts";
 import { bufToWall, offsetFor, trimBefore, wallToBuf, type Placement } from "./timemap.ts";
 
@@ -232,7 +234,7 @@ export class Player {
 
   private async recover() {
     if (this.recoveries >= 3) {
-      this.setStatus({ kind: "error", message: "影片無法解碼，請重新整理頁面再試一次。" });
+      this.setStatus({ kind: "error", message: t`The video can't be decoded. Reload the page and try again.` });
       return;
     }
     this.recoveries++;
@@ -303,7 +305,7 @@ export class Player {
         }
         console.warn("[player] 載入錄影失敗", e);
         // after a few quick retries show the error, but keep trying slowly so a passing hiccup recovers on its own
-        if (++failures >= 4) this.setStatus({ kind: "error", message: "暫時無法載入錄影，正在重試…" });
+        if (++failures >= 4) this.setStatus({ kind: "error", message: t`Can't load the recording right now. Retrying…` });
         await sleep(failures >= 4 ? 5_000 : 1_000 * failures, signal);
         if (gen !== this.gen) return;
         // resume where the playhead is, so a retry does not replay what was already watched
@@ -466,10 +468,10 @@ export class Player {
 
   private async ensureBuffer(gen: number, info: InitInfo) {
     const mime = mimeType(info);
-    if (!mime) throw new Unsupported("瀏覽器不支援這個編碼，無法播放這段錄影。");
+    if (!mime) throw new Unsupported(t`This browser doesn't support this codec, so it can't play this recording.`);
     if (!this.Ctor.isTypeSupported(mime)) {
-      const codecs = info.tracks.map((t) => t.codec).join("、");
-      throw new Unsupported(`瀏覽器不支援這個編碼（${codecs}），無法播放這段錄影。`);
+      const codecs = joinList(info.tracks.flatMap((track) => track.codec ?? []));
+      throw new Unsupported(t`This browser doesn't support this codec (${codecs}), so it can't play this recording.`);
     }
     if (gen !== this.gen || !this.ms) return;
     if (!this.sb) {
@@ -477,7 +479,7 @@ export class Player {
       this.mime = mime;
     } else if (mime !== this.mime) {
       const sb = this.sb;
-      if (typeof sb.changeType !== "function") throw new Unsupported("攝影機的編碼改變了，這個瀏覽器無法接續播放。");
+      if (typeof sb.changeType !== "function") throw new Unsupported(t`The camera's codec changed, and this browser can't keep playing.`);
       await this.op(gen, () => sb.changeType(mime));
       this.mime = mime;
     }

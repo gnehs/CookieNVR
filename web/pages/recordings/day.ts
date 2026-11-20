@@ -1,6 +1,6 @@
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import { addDays, dayOf, type DayKey } from "../../ui/date-logic.ts";
-
-const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
 
 /** 一天在瀏覽器時區的起訖（毫秒），夏令時間那天不是 24 小時 */
 export function dayRange(date: DayKey): [number, number] {
@@ -10,11 +10,13 @@ export function dayRange(date: DayKey): [number, number] {
 
 export const todayKey = () => dayOf(Date.now());
 
-export function dayLabel(date: DayKey, short = false): string {
+/** `withRel` 為 false 時不加「今天」「昨天」的註記 */
+export function dayLabel(date: DayKey, short = false, withRel = true): string {
   const [y, m, d] = date.split("-").map(Number) as [number, number, number];
   const today = todayKey();
-  const rel = date === today ? "今天" : date === addDays(today, -1) ? "昨天" : "";
+  const rel = date === today ? t`Today` : date === addDays(today, -1) ? t`Yesterday` : "";
   // 手機上的日期選單很窄，今天、昨天只寫一個詞
   if (short && rel) return rel;
-  return `${m}/${d} 週${WEEKDAY[new Date(y, m - 1, d).getDay()]}${rel ? `（${rel}）` : ""}`;
+  const base = new Intl.DateTimeFormat(i18n.locale, { month: "numeric", day: "numeric", weekday: "short" }).format(new Date(y, m - 1, d));
+  return rel && withRel ? t`${base} (${rel})` : base;
 }

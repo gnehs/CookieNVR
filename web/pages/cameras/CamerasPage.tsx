@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef } from "react";
@@ -44,6 +45,7 @@ function CameraTile({ cam, eventActive, register }: { cam: CameraDto; eventActiv
 
 /** 首頁：所有攝影機的即時畫面。多宮格共用一條 `GET /api/live` 連線，啟用中的攝影機組合變了才重開 */
 export function CamerasPage() {
+  const { t } = useLingui();
   const isAdmin = useMe().role === "admin";
   const cams = useQuery(camerasQuery);
   const groups = useQuery(cameraGroupsQuery).data ?? [];
@@ -52,8 +54,8 @@ export function CamerasPage() {
 
   // 每格的 <video> 由 LiveFrame 登記進來；子元件的 effect 先跑，下面開連線時已經齊了
   const targets = useRef(new Map<string, LiveTarget>());
-  const register = useCallback((id: string, t: LiveTarget | null) => {
-    if (t) targets.current.set(id, t);
+  const register = useCallback((id: string, target: LiveTarget | null) => {
+    if (target) targets.current.set(id, target);
     else targets.current.delete(id);
   }, []);
   const gridKey = (cams.data ?? []).filter((c) => c.config.enabled).map((c) => c.id).join(",");
@@ -61,7 +63,7 @@ export function CamerasPage() {
     if (!gridKey) return;
     const ids = gridKey.split(",");
     const list = ids.map((id) => targets.current.get(id));
-    if (list.some((t) => !t)) return;
+    if (list.some((target) => !target)) return;
     return playGrid(ids, "sd", list as LiveTarget[]);
   }, [gridKey]);
 
@@ -71,11 +73,11 @@ export function CamerasPage() {
   return (
     <div>
       <header className="page-head">
-        <h1>攝影機</h1>
+        <h1>{t`Cameras`}</h1>
         {isAdmin ? (
           <div className="page-actions">
             <ButtonLink to="/settings/cameras/new" icon="plus" iconSize={18} hidden={!list || list.length === 0}>
-              新增攝影機
+              {t`Add camera`}
             </ButtonLink>
           </div>
         ) : null}
@@ -84,14 +86,14 @@ export function CamerasPage() {
         <i className="home-alert-dot" aria-hidden="true" />
         <span className="home-alert-text">{alertText}</span>
         <span className="home-alert-go">
-          查看
+          {t`View`}
           <Icon name="chevron" size={16} />
         </span>
       </Link>
       {liveSupported() ? null : (
         <p className="live-fallback-note">
           <Icon name="info" size={16} />
-          這個瀏覽器不支援即時影像，畫面每 3 秒更新一次。
+          {t`This browser doesn't support live video. The picture refreshes every 3 seconds.`}
         </p>
       )}
       <div>
@@ -101,13 +103,13 @@ export function CamerasPage() {
           <ErrorBox error={cams.error} onRetry={() => void cams.refetch()} />
         ) : list!.length === 0 ? (
           <EmptyState
-            title="還沒有攝影機"
-            body={isAdmin ? "加入第一台攝影機，馬上就會開始錄影。" : "請管理員加入攝影機。"}
+            title={t`No cameras yet`}
+            body={isAdmin ? t`Add your first camera and it starts recording right away.` : t`Ask an admin to add a camera.`}
             icon="camera"
             action={
               isAdmin ? (
                 <ButtonLink to="/settings/cameras/new" variant="primary" icon="plus" iconSize={18}>
-                  新增攝影機
+                  {t`Add camera`}
                 </ButtonLink>
               ) : undefined
             }
@@ -118,10 +120,10 @@ export function CamerasPage() {
             {sectionsOf(list!, groups)
               .filter((s) => s.cameras.length > 0)
               .map((s) => (
-                <section key={s.group?.id ?? "ungrouped"} className="cam-section" aria-label={groups.length ? (s.group?.name ?? "未分區") : undefined}>
+                <section key={s.group?.id ?? "ungrouped"} className="cam-section" aria-label={groups.length ? (s.group?.name ?? t`Ungrouped`) : undefined}>
                   {groups.length ? (
                     <h2 className="cam-section-title">
-                      {s.group?.name ?? "未分區"}
+                      {s.group?.name ?? t`Ungrouped`}
                       <span className="cam-section-count num">{s.cameras.length}</span>
                     </h2>
                   ) : null}

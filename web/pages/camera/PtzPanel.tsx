@@ -1,3 +1,6 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { KeyHints } from "../../ui/Kbd.tsx";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -21,7 +24,7 @@ const VEC: Record<Dir, Vec> = {
   zoomIn: { pan: 0, tilt: 0, zoom: 1 },
   zoomOut: { pan: 0, tilt: 0, zoom: -1 },
 };
-const LABEL: Record<Dir, string> = { up: "向上", down: "向下", left: "向左", right: "向右", zoomIn: "放大", zoomOut: "縮小" };
+const LABEL: Record<Dir, MessageDescriptor> = { up: msg`Up`, down: msg`Down`, left: msg`Left`, right: msg`Right`, zoomIn: msg`Zoom in`, zoomOut: msg`Zoom out` };
 const ICON: Record<Dir, IconName> = { up: "up", down: "down", left: "left", right: "right", zoomIn: "plus", zoomOut: "minus" };
 const KEY_DIR: Record<string, Dir> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", "+": "zoomIn", "=": "zoomIn", "-": "zoomOut", _: "zoomOut" };
 const ACTIVATE = new Set([" ", "Enter"]);
@@ -35,6 +38,7 @@ type Supported = Extract<PtzDto, { supported: true }>;
  * onMode 讓外層依有沒有面板調整版面。
  */
 export function PtzPanel({ cam, admin, onMode }: { cam: CameraDto; admin: boolean; onMode: (m: "panel" | "note" | undefined) => void }) {
+  const { t } = useLingui();
   // 每次進頁面都重抓（預置點可能被別處改過）；面板開著時不因為視窗重新聚焦而重抓，免得中途換掉 driver
   const q = useQuery({
     ...ptzQuery(cam.id),
@@ -58,11 +62,11 @@ export function PtzPanel({ cam, admin, onMode }: { cam: CameraDto; admin: boolea
       <div className="ptz-note" role="status">
         <Icon name="info" size={18} />
         <div className="ptz-note-text">
-          <b>暫時無法控制鏡頭</b>
+          <b>{t`Camera control is unavailable right now`}</b>
           {message ? <small>{message}</small> : null}
         </div>
         <Button small icon="refresh" aria-busy={q.isFetching || undefined} disabled={q.isFetching} onClick={() => void q.refetch()}>
-          重試
+          {t`Retry`}
         </Button>
       </div>
     );
@@ -71,6 +75,7 @@ export function PtzPanel({ cam, admin, onMode }: { cam: CameraDto; admin: boolea
 }
 
 function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: boolean }) {
+  const { t, i18n } = useLingui();
   const [speed, setSpeed] = useState(() => Math.min(1, Math.max(0.1, caps.prefs.speed)));
   const speedRef = useRef(speed);
   speedRef.current = speed;
@@ -136,7 +141,7 @@ function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: b
 
   const plan = planMotion(caps, mode)!;
   const pressed = (dir: Dir) => snap.held.includes(`p:${dir}`) || snap.held.includes(`k:${dir}`);
-  const statusText = snap.error ?? (note?.tone === "error" ? note.text : null) ?? (snap.moving ? "移動中" : (note?.text ?? ""));
+  const statusText = snap.error ?? (note?.tone === "error" ? note.text : null) ?? (snap.moving ? t`Moving` : (note?.text ?? ""));
   const statusTone = snap.error !== null || note?.tone === "error" ? "error" : statusText ? "info" : "";
   const say = (text: string | null, tone: "info" | "error" = "info") => setNote(text ? { text, tone } : null);
 
@@ -147,8 +152,8 @@ function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: b
       <button
         type="button"
         className={`ptz-key ptz-${dir}`}
-        aria-label={LABEL[dir]}
-        title={LABEL[dir]}
+        aria-label={i18n._(LABEL[dir])}
+        title={i18n._(LABEL[dir])}
         data-pressed={pressed(dir) ? "" : undefined}
         onPointerDown={(e) => {
           if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
@@ -180,7 +185,7 @@ function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: b
         <Icon name={ICON[dir]} size={22} />
         {dir.startsWith("zoom") ? (
           <span className="ptz-key-label" aria-hidden="true">
-            {LABEL[dir]}
+            {i18n._(LABEL[dir])}
           </span>
         ) : null}
       </button>
@@ -190,38 +195,38 @@ function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: b
   const speedId = `ptz-speed-${cam.id}`;
   const pct = `${Math.round(speed * 100)}%`;
   return (
-    <section className="ptz" aria-label="鏡頭控制">
+    <section className="ptz" aria-label={t`Camera control`}>
       <div className="ptz-head">
-        <h2>鏡頭控制</h2>
+        <h2>{t`Camera control`}</h2>
         <span className="ptz-state" aria-live="polite" role="status" data-tone={statusTone}>
           {statusText}
         </span>
       </div>
       <div className="ptz-ctl" data-zoom={hasZoom ? "on" : "off"}>
-        <div className="ptz-pad" role="group" aria-label="鏡頭方向">
+        <div className="ptz-pad" role="group" aria-label={t`Camera direction`}>
           {key("up")}
           {key("left")}
-          <button type="button" className="ptz-key ptz-stop" aria-label="停止" title="停止" onClick={() => driverRef.current?.halt()}>
+          <button type="button" className="ptz-key ptz-stop" aria-label={t`Stop`} title={t`Stop`} onClick={() => driverRef.current?.halt()}>
             <Icon name="stop" size={20} />
           </button>
           {key("right")}
           {key("down")}
         </div>
         {hasZoom ? (
-          <div className="ptz-zoom" role="group" aria-label="變焦">
+          <div className="ptz-zoom" role="group" aria-label={t`Zoom`}>
             {key("zoomIn")}
             {key("zoomOut")}
           </div>
         ) : null}
       </div>
       <div className="ptz-speed">
-        <span id={speedId}>速度</span>
+        <span id={speedId}>{t`Speed`}</span>
         <Slider min={0.1} max={1} step={0.05} aria-labelledby={speedId} aria-valuetext={pct} value={speed} onChange={setSpeed} />
         <output className="num">{pct}</output>
       </div>
       <p className="ptz-hint ptz-keys">
-        {plan.hold ? "按住持續轉動，點一下微調。" : "點一下移動一步。"}
-        <KeyHints className="ptz-kbd" hints={[{ keys: ["↑", "↓", "←", "→"], label: "轉動鏡頭" }]} />
+        {plan.hold ? t`Hold to keep turning, tap to nudge.` : t`Tap to move one step.`}
+        <KeyHints className="ptz-kbd" hints={[{ keys: ["↑", "↓", "←", "→"], label: t`Turn camera` }]} />
       </p>
       <PtzPresets cameraId={cam.id} initial={caps.presets} max={caps.maxPresets} admin={admin} speed={() => speedRef.current} beforeGo={() => driverRef.current?.cancel()} say={say} />
     </section>

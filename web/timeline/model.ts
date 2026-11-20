@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type { EventDto, SegmentDto } from "../../src/api-types.ts";
 import { labelName } from "../../src/objects/labels.ts";
 import { GAP_MS } from "../playback/timemap.ts";
@@ -159,5 +160,8 @@ export function eventAt(events: readonly EventDto[], w: number, now: number): Ev
   return null;
 }
 
+/** 清單項目之間的分隔：英文「, 」，中日文「、」 */
+export const joinList = (items: readonly string[]) => items.join(t({ message: ", ", context: "list separator" }));
+
 /** 事件的標題：看到了什麼；沒有類別就是「動作」 */
-export const labelText = (labels: readonly string[]) => (labels.length ? [...new Set(labels.map(labelName))].join("、") : "動作");
+export const labelText = (labels: readonly string[]) => (labels.length ? joinList([...new Set(labels.map(labelName))]) : t`Motion`);

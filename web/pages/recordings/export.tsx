@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import type { EventDto, ExportDto, SegmentDto } from "../../../src/api-types.ts";
@@ -32,6 +33,7 @@ export type ExportUi = ReturnType<typeof useExport>;
 
 /** 匯出：時間軸上的選取範圍、送出、進度與下載。工作清單每秒更新，只在有進行中的工作時 */
 export function useExport(o: ExportOptions) {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const [selecting, setSelectingState] = useState(false);
   const [sel, setSel] = useState<Range | null>(null);
@@ -40,10 +42,10 @@ export function useExport(o: ExportOptions) {
   const jobs = jobsQ.data ?? [];
 
   useEffect(() => {
-    const t = o.timeline.current;
-    if (!t) return;
-    t.setSelectMode(selecting);
-    t.setSelection(selecting ? sel : null);
+    const tl = o.timeline.current;
+    if (!tl) return;
+    tl.setSelectMode(selecting);
+    tl.setSelection(selecting ? sel : null);
   }, [o.timeline, selecting, sel]);
 
   // 進行中的工作完成或失敗時通知一次；比對的是上一次看到的狀態
@@ -53,8 +55,11 @@ export function useExport(o: ExportOptions) {
     for (const j of jobsQ.data) {
       const before = seen.current.get(j.id);
       if (before !== "queued" && before !== "running") continue;
-      if (j.state === "done") toast(`匯出完成：${jobTitle(j)}`);
-      else if (j.state === "failed") toast(j.error ?? "匯出失敗", "error");
+      if (j.state === "done") {
+        const title = jobTitle(j);
+        toast(t`Export finished: ${title}`);
+      }
+      else if (j.state === "failed") toast(j.error ?? t`Export failed`, "error");
     }
     seen.current = new Map(jobsQ.data.map((j) => [j.id, j.state]));
   }, [jobsQ.data]);
@@ -78,15 +83,15 @@ export function useExport(o: ExportOptions) {
 
   function pin(which: "start" | "end") {
     const w = o.wall();
-    if (w === null) return toast("先播放或點一下時間軸，再設定開始與結束", "error");
+    if (w === null) return toast(t`Play the video or click the timeline first, then set the start and end`, "error");
     const [from, to] = o.bounds;
     const limit = Math.min(to, Date.now());
-    const t = Math.round(Math.min(Math.max(w, from), limit) / 1000) * 1000;
+    const at = Math.round(Math.min(Math.max(w, from), limit) / 1000) * 1000;
     const next: Range =
       which === "start"
-        ? { start: t, end: sel && sel.end - t >= 1000 ? sel.end : Math.min(t + DEFAULT_LENGTH_MS, limit) }
-        : { start: sel && t - sel.start >= 1000 ? sel.start : Math.max(from, t - DEFAULT_LENGTH_MS), end: t };
-    if (next.end - next.start < 1000) return toast("這個位置太靠近邊界，換一個位置試試", "error");
+        ? { start: at, end: sel && sel.end - at >= 1000 ? sel.end : Math.min(at + DEFAULT_LENGTH_MS, limit) }
+        : { start: sel && at - sel.start >= 1000 ? sel.start : Math.max(from, at - DEFAULT_LENGTH_MS), end: at };
+    if (next.end - next.start < 1000) return toast(t`This position is too close to the edge. Try another one.`, "error");
     setSel(next);
   }
 
@@ -118,11 +123,11 @@ export function useExport(o: ExportOptions) {
     let endMs = (e.endMs ?? Date.now()) + EVENT_PREROLL_MS;
     if (endMs - startMs > MAX_EXPORT_MS) {
       endMs = startMs + MAX_EXPORT_MS;
-      toast("事件超過 2 小時，只匯出前 2 小時");
+      toast(t`The event is longer than 2 hours. Only the first 2 hours are exported.`);
     }
     try {
       addJob(await api.createExport({ cameraId: e.cameraId, startMs, endMs, tz: browserTz() }));
-      toast("已加入匯出，完成後可以在時間軸下方下載");
+      toast(t`Added to exports. You can download it below the timeline when it's done.`);
     } catch (err) {
       toast(errMsg(err), "error");
     }
@@ -149,23 +154,31 @@ export function useExport(o: ExportOptions) {
 }
 
 export function ExportButton({ ui }: { ui: ExportUi }) {
+  const { t } = useLingui();
   return (
     <Button small icon="download" className={ui.selecting ? "active" : undefined} aria-pressed={ui.selecting} onClick={() => ui.setSelecting(!ui.selecting)}>
-      匯出
+      {t`Export`}
     </Button>
   );
 }
 
 /** The selection bar, shown above the timeline while select mode is on. */
 export function ExportPick({ ui }: { ui: ExportUi }) {
+  const { t } = useLingui();
   const { sel } = ui;
   const plan = sel ? planExport(ui.segments, sel.start, sel.end, Date.now()) : null;
   let meta: { cls: string; text: string };
-  if (!sel || !plan) meta = { cls: "ex-meta hint", text: "在時間軸上拖曳選取範圍，或播放到想要的位置再按「設為開始」。" };
-  else if (!plan.ok) meta = { cls: "ex-meta bad", text: plan.reason === "too-long" ? `${formatDuration(sel.end - sel.start)}，一次最多匯出 2 小時` : plan.message };
+  if (!sel || !plan) meta = { cls: "ex-meta hint", text: t`Drag on the timeline to select a range, or play to the spot you want and press “Set start”.` };
+  else if (!plan.ok) {
+    const selected = formatDuration(sel.end - sel.start);
+    meta = { cls: "ex-meta bad", text: plan.reason === "too-long" ? t`${selected}, up to 2 hours per export` : plan.message };
+  }
   else {
     const gaps = sel.end - sel.start - plan.durationMs > 1500;
-    meta = { cls: "ex-meta", text: `${formatDuration(plan.durationMs)} · 約 ${formatBytes(plan.estimatedBytes)}${gaps ? " · 缺片會略過" : ""}${plan.includesRecording ? " · 到現在為止" : ""}` };
+    const duration = formatDuration(plan.durationMs);
+    const size = formatBytes(plan.estimatedBytes);
+    const notes = [gaps ? t`gaps are skipped` : null, plan.includesRecording ? t`up to now` : null].filter((x): x is string => x !== null);
+    meta = { cls: "ex-meta", text: [t`${duration} · about ${size}`, ...notes].join(" · ") };
   }
   return (
     <div className="ex-pick" hidden={!ui.selecting}>
@@ -176,18 +189,18 @@ export function ExportPick({ ui }: { ui: ExportUi }) {
             {meta.text}
           </span>
         </div>
-        <Button small variant="ghost" iconOnly icon="x" className="ex-close" aria-label="取消選取" onClick={() => ui.setSelecting(false)} />
+        <Button small variant="ghost" iconOnly icon="x" className="ex-close" aria-label={t`Cancel selection`} onClick={() => ui.setSelecting(false)} />
       </div>
       <div className="ex-acts">
         <Button small onClick={() => ui.pin("start")}>
-          設為開始
+          {t`Set start`}
         </Button>
         <Button small onClick={() => ui.pin("end")}>
-          設為結束
+          {t`Set end`}
         </Button>
         <span className="ex-grow" />
         <Button small variant="primary" icon="download" disabled={!plan?.ok || ui.sending} onClick={() => void ui.start()}>
-          匯出
+          {t`Export`}
         </Button>
       </div>
     </div>
@@ -195,7 +208,9 @@ export function ExportPick({ ui }: { ui: ExportUi }) {
 }
 
 function JobRow({ job: j, onRemove }: { job: ExportDto; onRemove: (id: string) => void }) {
-  const dismiss = <Button small variant="ghost" iconOnly icon="x" aria-label="移除這筆匯出" onClick={() => onRemove(j.id)} />;
+  const { t } = useLingui();
+  const dismiss = <Button small variant="ghost" iconOnly icon="x" aria-label={t`Remove this export`} onClick={() => onRemove(j.id)} />;
+  const title = jobTitle(j);
   let lead, sub, acts;
   if (j.state === "done") {
     lead = <Icon name="check-circle" size={20} />;
@@ -204,29 +219,30 @@ function JobRow({ job: j, onRemove }: { job: ExportDto; onRemove: (id: string) =
       <>
         <a className="btn small primary" href={api.exportFileUrl(j.id)} download={j.fileName}>
           <Icon name="download" size={16} />
-          下載
+          {t`Download`}
         </a>
         {dismiss}
       </>
     );
   } else if (j.state === "failed") {
     lead = <Icon name="alert-circle" size={20} />;
-    sub = <span className="ex-job-sub bad">{j.error ?? "匯出失敗"}</span>;
+    sub = <span className="ex-job-sub bad">{j.error ?? t`Export failed`}</span>;
     acts = dismiss;
   } else {
     const pct = Math.round(j.progress * 100);
+    const ahead = j.ahead;
     lead = <span className="spin" />;
     sub = (
       <span className="ex-job-prog">
-        <span className="bar ex-bar" role="progressbar" aria-label="匯出進度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={j.state === "running" ? pct : undefined} hidden={j.state === "queued"}>
+        <span className="bar ex-bar" role="progressbar" aria-label={t`Export progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={j.state === "running" ? pct : undefined} hidden={j.state === "queued"}>
           <i style={{ width: `${j.state === "running" ? pct : 0}%` }} />
         </span>
-        <span className="ex-job-sub">{j.state === "queued" ? (j.ahead ? `排隊中，前面還有 ${j.ahead} 個` : "準備中") : `匯出中 ${pct}%`}</span>
+        <span className="ex-job-sub">{j.state === "queued" ? (j.ahead ? t`Queued, ${ahead} ahead` : t`Preparing`) : t`Exporting ${pct}%`}</span>
       </span>
     );
     acts = (
-      <Button small variant="ghost" aria-label={`取消匯出 ${jobTitle(j)}`} onClick={() => onRemove(j.id)}>
-        取消
+      <Button small variant="ghost" aria-label={t`Cancel export ${title}`} onClick={() => onRemove(j.id)}>
+        {t`Cancel`}
       </Button>
     );
   }
@@ -244,15 +260,16 @@ function JobRow({ job: j, onRemove }: { job: ExportDto; onRemove: (id: string) =
 
 /** Running and finished exports, shown below the timeline. */
 export function ExportJobs({ ui }: { ui: ExportUi }) {
+  const { t } = useLingui();
   return (
-    <section className="ex ex-list" hidden={ui.jobs.length === 0} aria-label="匯出的影片">
-      <ul className="ex-jobs" aria-label="匯出工作">
+    <section className="ex ex-list" hidden={ui.jobs.length === 0} aria-label={t`Exported videos`}>
+      <ul className="ex-jobs" aria-label={t`Export jobs`}>
         {ui.jobs.map((j) => (
           <JobRow key={j.id} job={j} onRemove={(id) => void ui.remove(id)} />
         ))}
       </ul>
       <p className="hint ex-keep" hidden={!ui.jobs.some((j) => j.state === "done")}>
-        完成的影片會保留 24 小時。
+        {t`Finished videos are kept for 24 hours.`}
       </p>
     </section>
   );

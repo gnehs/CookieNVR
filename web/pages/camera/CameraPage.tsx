@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -33,14 +34,15 @@ function saveQuality(q: Quality): void {
 }
 
 function NotFound() {
+  const { t } = useLingui();
   return (
     <EmptyState
       icon="camera"
-      title="找不到這台攝影機"
-      body="可能已經被刪除了。"
+      title={t`Camera not found`}
+      body={t`It may have been deleted.`}
       action={
         <ButtonLink to="/cameras" icon="left">
-          回到攝影機
+          {t`Back to cameras`}
         </ButtonLink>
       }
     />
@@ -59,11 +61,12 @@ export function CameraPage() {
 }
 
 function Live({ cam }: { cam: CameraDto }) {
+  const { t } = useLingui();
   const isAdmin = useMe().role === "admin";
   const [quality, setQuality] = useState<Quality>(savedQuality);
   const target = useRef<LiveTarget | null>(null);
-  const onTarget = useCallback((t: LiveTarget | null) => {
-    target.current = t;
+  const onTarget = useCallback((next: LiveTarget | null) => {
+    target.current = next;
   }, []);
   const enabled = cam.config.enabled;
   const id = cam.id;
@@ -77,7 +80,7 @@ function Live({ cam }: { cam: CameraDto }) {
   return (
     <div className="live-page">
       <header className="page-head sub-head live-head">
-        <Link to="/cameras" className="back-btn" aria-label="回到攝影機">
+        <Link to="/cameras" className="back-btn" aria-label={t`Back to cameras`}>
           <Icon name="left" />
         </Link>
         <div className="live-title">
@@ -87,10 +90,10 @@ function Live({ cam }: { cam: CameraDto }) {
         <div className="page-actions">
           {enabled ? (
             <Segmented
-              label="畫質"
+              label={t`Quality`}
               options={[
-                { value: "sd", label: "標準" },
-                { value: "hd", label: "高畫質" },
+                { value: "sd", label: t`Standard` },
+                { value: "hd", label: t`High` },
               ]}
               value={quality}
               onChange={(q) => {
@@ -100,7 +103,7 @@ function Live({ cam }: { cam: CameraDto }) {
             />
           ) : null}
           <ButtonLink to="/recordings" search={{ camera: id }} variant="primary" icon="film">
-            看回放
+            {t`Watch playback`}
           </ButtonLink>
         </div>
       </header>
@@ -108,7 +111,7 @@ function Live({ cam }: { cam: CameraDto }) {
       {liveSupported() ? null : (
         <p className="live-fallback-note below">
           <Icon name="info" size={16} />
-          這個瀏覽器不支援即時影像，畫面每 3 秒更新一次。
+          {t`This browser doesn't support live video. The picture refreshes every 3 seconds.`}
         </p>
       )}
     </div>

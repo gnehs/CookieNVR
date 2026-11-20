@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef, useState } from "react";
 import type { CameraDto } from "../../src/api-types.ts";
 import { Icon } from "../ui/Icon.tsx";
@@ -13,7 +14,7 @@ const SNAPSHOT_GRACE_MS = 1_500;
 
 export function codecHint(codec: string | null): string {
   const hevc = codec !== null && /^(hvc1|hev1)/.test(codec);
-  return hevc ? "這個瀏覽器無法播放 H.265 即時畫面" : "這個瀏覽器無法播放這台的即時畫面";
+  return hevc ? t`This browser can't play H.265 live video` : t`This browser can't play live video from this camera`;
 }
 
 export interface LiveFrameProps {

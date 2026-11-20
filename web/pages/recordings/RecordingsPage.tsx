@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { camerasQuery } from "../../data/queries.ts";
@@ -35,6 +36,7 @@ export function parseRecordingsSearch(s: Record<string, unknown>): RecordingsSea
 const route = getRouteApi("/_authed/_shell/recordings");
 
 export function RecordingsPage() {
+  const { t } = useLingui();
   const admin = useMe().role === "admin";
   const navigate = useNavigate();
   const wanted = route.useSearch({ select: (s) => s.camera });
@@ -50,16 +52,16 @@ export function RecordingsPage() {
     return (
       <div>
         <header className="page-head">
-          <h1>錄影</h1>
+          <h1>{t`Recordings`}</h1>
         </header>
         <EmptyState
-          title="還沒有攝影機"
-          body={admin ? "加入攝影機後就會開始錄影，錄好的影片會出現在這裡。" : "請管理員加入攝影機，錄好的影片會出現在這裡。"}
+          title={t`No cameras yet`}
+          body={admin ? t`Once you add a camera it starts recording, and the footage shows up here.` : t`Ask an admin to add a camera. The footage will show up here.`}
           icon="camera"
           action={
             admin ? (
               <ButtonLink to="/settings/cameras/new" variant="primary" icon="plus" iconSize={18}>
-                新增攝影機
+                {t`Add camera`}
               </ButtonLink>
             ) : undefined
           }
@@ -70,7 +72,7 @@ export function RecordingsPage() {
 
   const camPick = (
     <Select
-      label="攝影機"
+      label={t`Camera`}
       icon="camera"
       className="pb-cam"
       entries={cams.data.map((c) => ({ value: c.id, label: c.config.name }))}
@@ -80,7 +82,7 @@ export function RecordingsPage() {
   );
   const head = (
     <header className="page-head">
-      <h1>錄影</h1>
+      <h1>{t`Recordings`}</h1>
       {camPick}
     </header>
   );
@@ -95,12 +97,12 @@ export function RecordingsPage() {
       <div>
         {head}
         <EmptyState
-          title="這台攝影機還沒有錄影"
-          body={!cam.config.enabled ? "這台攝影機已停用。" : cam.config.record.enabled ? "錄影開始後，幾分鐘內就能在這裡回放。" : "這台攝影機沒有開啟全天候錄影。"}
+          title={t`This camera has no recordings yet`}
+          body={!cam.config.enabled ? t`This camera is disabled.` : cam.config.record.enabled ? t`Once recording starts, you can play it back here within a few minutes.` : t`Continuous recording is off for this camera.`}
           action={
             admin && off ? (
               <ButtonLink to="/settings/cameras/$id" params={{ id: cam.id }} icon="edit">
-                到攝影機設定開啟
+                {t`Turn on in camera settings`}
               </ButtonLink>
             ) : undefined
           }
@@ -112,7 +114,11 @@ export function RecordingsPage() {
     return (
       <div>
         {head}
-        <EmptyState title="這個瀏覽器無法播放錄影" body="iPhone 請更新到 iOS 17.1 以上；也可以改用電腦或 Android 上的 Chrome、Edge、Firefox 或 Safari。" icon="alert" />
+        <EmptyState
+          title={t`This browser can't play recordings`}
+          body={t`On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android.`}
+          icon="alert"
+        />
       </div>
     );
   }
