@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyHints } from "../../ui/Kbd.tsx";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { CameraDto, EventDto, SegmentDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { errMsg, formatClock, formatDuration } from "../../format.ts";
@@ -15,6 +15,7 @@ import { Icon } from "../../ui/Icon.tsx";
 import { Select } from "../../ui/Select.tsx";
 import { EmptyState } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
+import { useMedia } from "../../ui/useMedia.ts";
 import { dayLabel, dayRange, todayKey } from "./day.ts";
 import { ExportButton, ExportJobs, ExportPick, useExport } from "./export.tsx";
 import { dayEventsQuery, daysQuery, recordingsQuery, sortSegs } from "./queries.ts";
@@ -38,17 +39,6 @@ const DAY_POLL_MS = 10_000;
 /** 播放位置寫回網址（replace）的最短間隔，暫停與跳轉時立刻寫 */
 const URL_WRITE_MS = 5_000;
 const NARROW = "(max-width: 760px)";
-
-function useMedia(query: string): boolean {
-  return useSyncExternalStore(
-    (cb) => {
-      const m = matchMedia(query);
-      m.addEventListener("change", cb);
-      return () => m.removeEventListener("change", cb);
-    },
-    () => matchMedia(query).matches,
-  );
-}
 
 /** 換到一天之後要不要跳過去：default 是今天跳到最新、其他日子跳到第一段，none 是播放自己跨過午夜 */
 type Intent = "default" | "none" | number;

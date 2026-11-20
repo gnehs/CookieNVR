@@ -779,11 +779,59 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .dlg[data-ending-style] { opacity: 0; transform: scale(0.98); transition-duration: var(--dur-1); }
 .dlg-backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(8 8 12 / 0.45); transition: opacity var(--dur-2) ease; @starting-style { opacity: 0; } }
 .dlg-backdrop[data-ending-style] { opacity: 0; }
-.dlg > h2 { font-size: 17px; font-weight: 650; margin-bottom: 10px; overflow-wrap: anywhere; }
+.dlg-title { font-size: 17px; font-weight: 650; margin-bottom: 10px; overflow-wrap: anywhere; }
+/* 有固定動作列的對話框（攝影機設定的各個區塊）：標題與動作列不動，中間捲動 */
+.dlg.wide { width: min(760px, calc(100vw - 32px)); }
+:is(.dlg, .sheet).has-foot { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.dlg.has-foot { width: min(560px, calc(100vw - 32px)); }
+.dlg.has-foot.wide { width: min(760px, calc(100vw - 32px)); }
+:is(.dlg, .sheet).has-foot .dlg-title { flex: none; margin: 0; padding: 18px 22px 14px; border-bottom: 1px solid var(--border); }
+.has-foot .dlg-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; container-type: inline-size; }
+.has-foot .dlg-foot {
+  flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px 10px; flex-wrap: wrap;
+  padding: 12px 16px 12px 22px; border-top: 1px solid var(--border); background: var(--overlay);
+}
+/* 有錯誤訊息時自成一行，按鈕維持在同一列 */
+.dlg-foot .foot-status:has(.form-error:empty) { flex: 1 1 0; }
+.dlg-foot .foot-status:has(.form-error:not(:empty)) { flex: 1 1 100%; }
 .dlg-text { margin-bottom: 18px; color: var(--text-2); overflow-wrap: anywhere; }
 .dlg-text:has(+ .dlg-option) { margin-bottom: 12px; }
 .dlg-option { padding-top: 14px; border-top: 1px solid var(--border); }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+/* 手機的底部面板（Base UI Drawer）：按住往下拉會跟著手指，放開時依距離或速度關閉或彈回 */
+.sheet-viewport { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; touch-action: none; }
+.sheet {
+  --bleed: 3rem;
+  position: relative; box-sizing: border-box; width: 100%; outline: none;
+  max-height: calc(100dvh - 24px - var(--kb, 0px) + var(--bleed)); margin-bottom: calc(-1 * var(--bleed)); overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--border); border-width: 1px 0 0; border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 0 18px calc(18px + env(safe-area-inset-bottom, 0px) + var(--bleed));
+  background: var(--overlay); color: var(--text); box-shadow: var(--shadow-lg);
+  translate: 0 calc(-1 * var(--kb, 0px));
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition: transform 420ms var(--ease-drawer), opacity var(--dur-2) var(--ease-out);
+  will-change: transform;
+}
+.sheet[data-starting-style], .sheet[data-ending-style] { transform: translateY(calc(100% - var(--bleed) + 2px)); }
+.sheet[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * 380ms); }
+.sheet[data-swiping] { transition-duration: 0ms; user-select: none; -webkit-user-select: none; }
+.sheet.has-foot { padding: 0 0 var(--bleed); }
+.sheet.has-foot.wide { height: calc(100dvh - 24px - var(--kb, 0px) + var(--bleed)); }
+/* 面板頂端的把手：只是提示可以往下拉，整個標題列都能拖 */
+.sheet-grip { flex: none; height: 24px; display: grid; place-items: center; user-select: none; -webkit-user-select: none; }
+.sheet-grip::before { content: ""; width: 36px; height: 5px; border-radius: 99px; background: var(--border-strong); }
+.sheet .dlg-title { -webkit-user-select: none; user-select: none; }
+.sheet.has-foot .dlg-title { padding: 0 18px 12px; }
+.sheet.has-foot .sheet-content { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.sheet.has-foot .dlg-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.sheet.has-foot .dlg-foot .btn { flex: 1; }
+.sheet .dlg-foot .foot-status:has(.form-error:empty) { display: none; }
+.sheet .dlg-actions { flex-direction: column; align-items: stretch; }
+.sheet .dlg-actions .btn { width: 100%; }
+.dlg-backdrop.swipeable { opacity: calc(1 - var(--drawer-swipe-progress, 0)); }
+.dlg-backdrop.swipeable[data-starting-style], .dlg-backdrop.swipeable[data-ending-style] { opacity: 0; }
+.dlg-backdrop.swipeable[data-swiping] { transition-duration: 0ms; }
+
 .toasts { position: fixed; right: 16px; top: 16px; z-index: 100; display: grid; gap: 8px; width: min(360px, calc(100vw - 32px)); pointer-events: none; }
 @media (max-width: 760px) { .toasts { top: auto; right: 16px; bottom: calc(92px + env(safe-area-inset-bottom)); } }
 .toast {
@@ -948,17 +996,6 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
   .home-alert { min-height: 48px; }
 }
 @media (max-width: 560px) {
-  /* 底部面板：只有上方圓角，主要動作在最下面靠近拇指 */
-  .dlg {
-    margin: auto 0 0; width: 100%; max-width: 100%; max-height: calc(100dvh - 24px - var(--kb, 0px));
-    border-radius: var(--r-xl) var(--r-xl) 0 0; border-width: 1px 0 0;
-    padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
-    translate: 0 calc(-1 * var(--kb, 0px));
-    transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-3) var(--ease-drawer);
-    @starting-style { opacity: 1; transform: translateY(100%); }
-  }
-  .dlg::before { content: ""; display: block; width: 36px; height: 5px; border-radius: 99px; background: var(--border-strong); margin: 0 auto 14px; }
-  .dlg[data-ending-style] { opacity: 1; transform: translateY(100%); }
   .dlg-actions { flex-direction: column; align-items: stretch; }
   .dlg-actions .btn { width: 100%; }
 
@@ -988,6 +1025,9 @@ a.menu-item { text-decoration: none; }
   .spin { animation-duration: 2s; }
   .dlg, .toast, .menu { @starting-style { transform: none; opacity: 0; } }
   .toast[data-ending-style], .dlg[data-ending-style] { transform: none; opacity: 0; }
+  /* 面板仍跟著手指走（那是使用者自己的動作），但進出場只淡入淡出、不滑動 */
+  .sheet[data-starting-style] { transform: none; opacity: 0; }
+  .sheet[data-ending-style] { transform: translateY(var(--drawer-swipe-movement-y, 0px)); opacity: 0; transition-duration: var(--dur-2); }
   /* ::details-content 不在上面 *::before/::after 的範圍內，要另外關掉展開動畫 */
   details.disclosure::details-content { transition: none; }
   .pb-ctl:active { transform: none; }
