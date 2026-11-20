@@ -198,7 +198,8 @@ export function CameraLayoutEditor({ cams, onRemove }: { cams: CameraDto[]; onRe
       </div>
       <DndContext sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={onDragCancel} accessibility={{ announcements, screenReaderInstructions: { draggable: "按空白鍵或 Enter 拿起，用方向鍵移動，再按一次放下；按 Esc 取消。" } }}>
         <div className="layout-editor" data-dragging={active !== null ? (isGroupKey(active) ? "group" : "camera") : undefined}>
-          {hasGroups || (layout.boxes[UNGROUPED]?.length ?? 0) > 0 ? (
+          {/* 沒有未分區的攝影機就收起來；拖攝影機時才冒出來當放置區 */}
+          {(layout.boxes[UNGROUPED]?.length ?? 0) > 0 || activeCam ? (
             <section className="layout-box" aria-label={hasGroups ? "未分區" : "攝影機"}>
               {hasGroups ? (
                 <header className="layout-head">
