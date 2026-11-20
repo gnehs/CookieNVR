@@ -7,6 +7,11 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: zh-Hant\n"
 
+#: web/server-messages/requests.ts
+msgctxt "alternatives separator"
+msgid " or "
+msgstr " 或 "
+
 #: web/format.ts
 #: web/pages/events/EventsPage.tsx
 msgctxt "clause separator"
@@ -21,6 +26,10 @@ msgstr "、"
 #: web/states/bits.tsx
 msgid ", may change to “{candidate}”"
 msgstr "，可能變成「{candidate}」"
+
+#: web/server-messages/states.ts
+msgid "; "
+msgstr "；"
 
 #: web/pages/storage/StoragePage.tsx
 msgid ". There's no day limit; when space runs low, the oldest recordings are deleted first."
@@ -100,6 +109,14 @@ msgstr "{base}（{rel}）"
 msgid "{br} on {os}"
 msgstr "{os} 上的 {br}"
 
+#: web/server-messages/detection.ts
+msgid "{camera} isn't decoding on the selected graphics card: {reason}"
+msgstr "{camera}沒有用設定的顯示卡解碼：{reason}"
+
+#: web/server-messages/detection.ts
+msgid "{camera} switched to CPU decoding: {reason}"
+msgstr "{camera}改用處理器解碼：{reason}"
+
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "{cameraCount}, {groupCount}"
 msgstr "{cameraCount}，{groupCount}"
@@ -135,6 +152,14 @@ msgstr "{clock} · {elapsed}"
 #: web/timeline/timeline.ts
 msgid "{clock} · In progress"
 msgstr "{clock} · 進行中"
+
+#: web/server-messages/detection.ts
+msgid "{codec} hardware decoding"
+msgstr "{codec} 硬體解碼"
+
+#: web/server-messages/detection.ts
+msgid "{codec} hardware encoding"
+msgstr "{codec} 硬體編碼"
 
 #: web/states/CropEditor.tsx
 msgid "{corner}, resize with the arrow keys"
@@ -193,6 +218,10 @@ msgstr "{count, plural, other {刪除 # 張畫面？}}"
 msgid "{count, plural, one {Restart recording for # camera?} other {Restart recording for # cameras?}}"
 msgstr "{count, plural, other {重新開始 # 台的錄影？}}"
 
+#: web/server-messages/detection.ts
+msgid "{count} cameras aren't decoding on the selected graphics card: {reason}"
+msgstr "{count} 台攝影機沒有用設定的顯示卡解碼：{reason}"
+
 #: web/health.ts
 msgid "{count} cameras not recording: {names}"
 msgstr "{count} 台沒在錄影：{names}"
@@ -200,6 +229,10 @@ msgstr "{count} 台沒在錄影：{names}"
 #: web/health.ts
 msgid "{count} cameras offline: {names}"
 msgstr "{count} 台連不上：{names}"
+
+#: web/server-messages/detection.ts
+msgid "{count} cameras switched to CPU decoding: {reason}"
+msgstr "{count} 台攝影機改用處理器解碼：{reason}"
 
 #: web/health.ts
 msgid "{count} cameras with unstable recording: {names}"
@@ -229,9 +262,29 @@ msgstr "{d, plural, other {空間只夠存約 # 天}}"
 msgid "{days, plural, one {# day} other {# days}}"
 msgstr "{days, plural, other {# 天}}"
 
+#: web/server-messages/detection.ts
+msgid "{device} failed to load the model. Switched to another device"
+msgstr "{device}載入模型失敗，已改用其他裝置"
+
+#: web/server-messages/detection.ts
+msgid "{device} isn't actually running this model ({runtime} handed the work back to the CPU). Switched to another device"
+msgstr "{device} 沒有實際執行這個模型（{runtime} 把運算交回處理器），已改用其他裝置"
+
+#: web/server-messages/detection.ts
+msgid "{device} isn't actually running this model ({runtime} handed the work back to the CPU). This device isn't suitable for detection"
+msgstr "{device} 沒有實際執行這個模型（{runtime} 把運算交回處理器），這個裝置不適合用來辨識"
+
+#: web/server-messages/detection.ts
+msgid "{device}: {text}"
+msgstr "{device}：{text}"
+
 #: web/pages/recordings/export.tsx
 msgid "{duration} · about {size}"
 msgstr "{duration} · 約 {size}"
+
+#: web/server-messages/states.ts
+msgid "{field} must be true or false"
+msgstr "{field}必須是 true 或 false"
 
 #: web/pages/events/EventsPage.tsx
 msgid "{first} and {others} more"
@@ -252,6 +305,10 @@ msgstr "{first}、{second}等 {total} 類"
 #: web/detect/benchmark-model.ts
 msgid "{fps} frames per second"
 msgstr "每秒約 {fps} 張"
+
+#: web/server-messages/detection.ts
+msgid "{fps} frames/s"
+msgstr "每秒 {fps} 張"
 
 #: web/format.ts
 #: web/states/model.ts
@@ -396,6 +453,14 @@ msgstr "{oldCount} 個舊的位置（{oldList}）"
 msgid "{optLabel}, {optDesc}"
 msgstr "{optLabel}，{optDesc}"
 
+#: web/server-messages/requests.ts
+msgid "{path} is not a settable field"
+msgstr "{path} 不是可設定的欄位"
+
+#: web/server-messages/requests.ts
+msgid "{path} only accepts {value}"
+msgstr "{path} 只接受 {value}"
+
 #: web/detect/object-model.ts
 msgid "{pct}% of the work runs on the CPU"
 msgstr "約 {pct}% 的運算在處理器上執行"
@@ -403,6 +468,10 @@ msgstr "約 {pct}% 的運算在處理器上執行"
 #: web/pages/settings-cameras/StatesSection.tsx
 msgid "{pending} to label"
 msgstr "{pending} 張待標記"
+
+#: web/server-messages/detection.ts
+msgid "{percent}% of recent frames were too late to analyze. Lower the detection rate or switch to a faster device."
+msgstr "最近有 {percent}% 的畫面來不及辨識。可以降低辨識頻率，或改用更快的裝置。"
 
 #: web/detect/object-model.ts
 msgid "{perSecond, plural, one {# time per second} other {# times per second}}"
@@ -453,6 +522,10 @@ msgstr "{selected}，一次最多匯出 2 小時"
 msgid "{sensorName}:"
 msgstr "{sensorName}："
 
+#: web/server-messages/states.ts
+msgid "{skipped} unreadable images skipped"
+msgstr "{skipped} 張無法讀取已略過"
+
 #: web/pages/states/LabelBoard.tsx
 msgid "{source}: {label}"
 msgstr "{source}：{label}"
@@ -464,6 +537,10 @@ msgstr "{source}：{label}（{percent}%）"
 #: web/pages/states/LabelBoard.tsx
 msgid "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
 msgstr "{suggestedCount, plural, other {# 張有預選的類別（虛線框），確認沒問題就一次標好。}}"
+
+#: web/server-messages/detection.ts
+msgid "{text} ({forCodec})"
+msgstr "{text}（{forCodec}）"
 
 #: web/detect/benchmark-model.ts
 #: web/detect/object-model.ts
@@ -598,6 +675,10 @@ msgstr "每秒 5 次"
 msgid "6 hours"
 msgstr "6 小時"
 
+#: web/server-messages/detection.ts
+msgid "A benchmark is already running"
+msgstr "測速正在進行中"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "A GPU is present, but its usage can't be read right now. The reason is in “Copy diagnostics”."
 msgstr "有顯示卡，但目前讀不到它的使用情況；原因寫在「複製診斷資訊」裡。"
@@ -625,6 +706,10 @@ msgstr "主色"
 #: web/pages/states/LabelBoard.tsx
 msgid "Accept suggestion"
 msgstr "採用預選"
+
+#: web/server-messages/requests.ts
+msgid "Access denied"
+msgstr "禁止存取"
 
 #: web/app/Shell.tsx
 msgid "Account"
@@ -713,6 +798,10 @@ msgstr "已加入「{name}」"
 msgid "Added \"{username}\""
 msgstr "已新增「{username}」"
 
+#: web/server-messages/states.ts
+msgid "Added classes: {list}"
+msgstr "新增類別：{list}"
+
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Added group \"{groupName}\". Drag cameras into it."
 msgstr "已新增分區「{groupName}」，把攝影機拖進去吧"
@@ -745,6 +834,10 @@ msgstr "需要管理員帳號"
 #: web/pages/settings-users/UsersPage.tsx
 msgid "Administrator"
 msgstr "管理員"
+
+#: web/server-messages/requests.ts
+msgid "Administrator access required"
+msgstr "需要管理員權限"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Advanced"
@@ -903,6 +996,10 @@ msgstr "至少 8 個字元"
 msgid "At least 8 characters. Other devices will need to sign in again after you change it."
 msgstr "至少 8 個字元。變更後，其他裝置需要重新登入。"
 
+#: web/server-messages/requests.ts
+msgid "At least one administrator must remain"
+msgstr "至少需要保留一位管理員"
+
 #: web/states/model.ts
 msgid "At most {max} classes"
 msgstr "最多 {max} 個類別"
@@ -989,6 +1086,10 @@ msgctxt "object category"
 msgid "Bed"
 msgstr "床"
 
+#: web/server-messages/requests.ts
+msgid "before must be integer UTC milliseconds"
+msgstr "before 必須是整數 UTC 毫秒"
+
 #: web/pages/settings-system/SystemPage.tsx
 msgid "Before you use it"
 msgstr "使用前要知道"
@@ -1013,6 +1114,10 @@ msgstr "測速進度"
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "Benchmark results per device"
 msgstr "各裝置的測速結果"
+
+#: web/server-messages/detection.ts
+msgid "Benchmarking"
+msgstr "測速中"
 
 #: web/detect/object-model.ts
 msgid "Benchmarking, detection paused"
@@ -1131,8 +1236,15 @@ msgstr "相機 IP 位址"
 #: web/pages/camera/CameraPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/states/NewSensorPage.tsx
+#: web/server-messages/camera.ts
+#: web/server-messages/requests.ts
+#: web/server-messages/states.ts
 msgid "Camera not found"
 msgstr "找不到這台攝影機"
+
+#: web/server-messages/requests.ts
+msgid "Camera not found, or it is disabled"
+msgstr "找不到攝影機，或這台已停用"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Camera password"
@@ -1157,6 +1269,10 @@ msgstr "攝影機：{camera}"
 #: web/pages/status/StatusPage.tsx
 msgid "Cameras"
 msgstr "攝影機"
+
+#: web/server-messages/requests.ts
+msgid "cameras must have 1 to {max} entries"
+msgstr "cameras 要有 1 到 {max} 台"
 
 #: web/pages/settings-system/decode-model.ts
 msgid "Cameras with a sub-stream gain very little. The CPU savings only show when decoding the main stream directly or high-resolution H.265."
@@ -1214,10 +1330,30 @@ msgstr "跟不上"
 msgid "Can't load the recording right now. Retrying…"
 msgstr "暫時無法載入錄影，正在重試…"
 
+#: web/server-messages/detection.ts
+msgid "Can't make sense of the model's output shape {shape} (input {width}×{height}, expected {expected} grid points). Supported: YOLOX ([1, N, 85]), Ultralytics YOLOv8 / 11 ([1, 84, N]) and models with NMS built in ([1, K, 6])"
+msgstr "看不懂模型的輸出形狀 {shape}（輸入 {width}×{height}，格點應有 {expected} 個）；支援 YOLOX（[1, N, 85]）、Ultralytics YOLOv8 / 11（[1, 84, N]）與內含 NMS 的 [1, K, 6]"
+
+#: web/server-messages/detection.ts
+msgid "Can't make sense of the model's output shape {shape}. Supported: YOLOX ([1, N, 85]), Ultralytics YOLOv8 / 11 ([1, 84, N]) and models with NMS built in ([1, K, 6])"
+msgstr "看不懂模型的輸出形狀 {shape}；支援 YOLOX（[1, N, 85]）、Ultralytics YOLOv8 / 11（[1, 84, N]）與內含 NMS 的 [1, K, 6]"
+
+#: web/server-messages/detection.ts
+msgid "Can't open the graphics card ({node}). Make sure /dev/dri is mounted in the container and the container has joined the host's render group"
+msgstr "無法開啟顯示卡（{node}）：確認容器掛入了 /dev/dri，而且加入了主機的 render 群組"
+
 #: web/pages/link/LinkPage.tsx
 #: web/ui/states.tsx
 msgid "Can't open this right now"
 msgstr "這裡暫時打不開"
+
+#: web/server-messages/camera.ts
+msgid "Can't reach the camera's control connection. Check that the camera is on, on the same network as this host, and that the ONVIF address and port are correct"
+msgstr "連不上相機的控制連線，請確認相機已開機、與本機在同一個網路，且 ONVIF 位址與埠號正確"
+
+#: web/server-messages/camera.ts
+msgid "Can't reach this address. Check that the camera is on and on the same network as this host"
+msgstr "無法連到這個位址，請確認攝影機已開機，且與本機在同一個網路"
 
 #: web/camera-form-logic.ts
 msgid "Can't reach this address. Check that the camera is on and on the same network as this host."
@@ -1231,9 +1367,21 @@ msgstr "讀不到影像，請確認 IP 位址正確、相機已開機。"
 msgid "Can't read any video. Check that the stream URL is correct and the camera's RTSP feature is turned on."
 msgstr "讀不到影像，請確認串流網址正確、相機的 RTSP 功能已開啟。"
 
+#: web/server-messages/camera.ts
+msgid "Can't read the stream"
+msgstr "無法讀取串流"
+
+#: web/server-messages/camera.ts
+msgid "Can't read the stream: {line}"
+msgstr "無法讀取串流：{line}"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "Can't read this camera's video right now. Turn this on after it connects."
 msgstr "目前讀不到這台的畫面，等它連上後再開啟。"
+
+#: web/server-messages/camera.ts
+msgid "Can't resolve the hostname. Check the address"
+msgstr "無法解析主機名稱，請檢查網址"
 
 #: web/pages/status/explain.ts
 msgid "Can't see the picture"
@@ -1260,6 +1408,14 @@ msgstr "取消匯出 {title}"
 #: web/pages/recordings/export.tsx
 msgid "Cancel selection"
 msgstr "取消選取"
+
+#: web/server-messages/camera.ts
+msgid "Cancelled"
+msgstr "已取消"
+
+#: web/server-messages/requests.ts
+msgid "Cannot read this camera's picture right now. Try again once it is connected"
+msgstr "目前讀不到這台的畫面，等它連上後再試一次"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -1382,6 +1538,18 @@ msgstr "自動選擇：目前用的是 {name}。有可用的顯卡就用顯卡�
 msgid "class {num}"
 msgstr "第 {num} 類"
 
+#: web/server-messages/states.ts
+msgid "Class name can't contain / or a backslash, or start with a dot"
+msgstr "類別名稱不可含 / 或 \\，也不可以 . 開頭"
+
+#: web/server-messages/states.ts
+msgid "Class name must be 1 to 32 characters"
+msgstr "類別名稱要 1 到 32 字"
+
+#: web/server-messages/states.ts
+msgid "Class name must be a string"
+msgstr "類別名稱必須是字串"
+
 #: web/states/model.ts
 msgid "Class names can be at most {max} characters"
 msgstr "類別名稱最多 {max} 個字"
@@ -1397,6 +1565,10 @@ msgstr "類別名稱不能有 / 或 \\"
 #: web/states/model.ts
 msgid "Class names can't start with a dot"
 msgstr "類別名稱不能以 . 開頭"
+
+#: web/server-messages/states.ts
+msgid "Class names must be unique"
+msgstr "類別名稱不可重複"
 
 #: web/pages/states/SensorPage.tsx
 msgid "Classes"
@@ -1471,6 +1643,14 @@ msgstr "比對畫面的變化，每台攝影機都能用，也能排除不需要
 msgid "Confidence must be between 50% and 99%"
 msgstr "把握程度要在 50% 到 99% 之間"
 
+#: web/server-messages/states.ts
+msgid "Confidence threshold must be a number from {min} to {max}"
+msgstr "信心門檻必須是 {min} 到 {max} 的數字"
+
+#: web/server-messages/states.ts
+msgid "config must be an object"
+msgstr "config 必須是物件"
+
 #: web/pages/account/PasswordPanel.tsx
 msgid "Confirm new password"
 msgstr "再次輸入新密碼"
@@ -1507,6 +1687,18 @@ msgstr "連線"
 #: web/pages/link/LinkPage.tsx
 msgid "Connection code"
 msgstr "連線代碼"
+
+#: web/server-messages/requests.ts
+msgid "Connection not found"
+msgstr "找不到這個連線"
+
+#: web/server-messages/camera.ts
+msgid "Connection refused. Check the IP address and port, and that the camera's RTSP feature is turned on"
+msgstr "連線被拒絕，請確認 IP 位址與連接埠，以及攝影機的 RTSP 功能已開啟"
+
+#: web/server-messages/camera.ts
+msgid "Connection timed out. Check that the IP address is correct, the camera is on, and the network is reachable"
+msgstr "連線逾時，請確認 IP 位址正確、攝影機已開機且網路可連通"
 
 #: web/pages/settings-cameras/DetectSection.tsx
 msgid "Conservative"
@@ -1588,9 +1780,29 @@ msgstr "無法複製，請手動選取"
 msgid "Couldn't copy. Try again."
 msgstr "無法複製，請再試一次"
 
+#: web/server-messages/detection.ts
+msgid "Couldn't create a {codec} test clip (this ffmpeg may not have a software encoder)"
+msgstr "無法產生 {codec} 的試跑影片（這個 ffmpeg 可能沒有軟體編碼器）"
+
+#: web/server-messages/states.ts
+msgid "Couldn't get any frames from recordings. The files may still be writing or already removed"
+msgstr "從錄影抽不到畫面，錄影檔可能還沒寫完或已被清除"
+
 #: web/pages/events/EventsPage.tsx
 msgid "Couldn't load earlier events"
 msgstr "更早的事件沒有載入成功"
+
+#: web/server-messages/states.ts
+msgid "Couldn't load the image feature model for state classification"
+msgstr "無法載入狀態辨識用的影像特徵模型"
+
+#: web/server-messages/detection.ts
+msgid "Couldn't load the model. The file may not be a valid ONNX model"
+msgstr "無法載入模型，檔案可能不是有效的 ONNX 模型"
+
+#: web/server-messages/states.ts
+msgid "Couldn't parse this YAML: {detail}"
+msgstr "看不懂這段 YAML：{detail}"
 
 #: web/pages/settings-cameras/form-model.ts
 msgid "Couldn't reach this camera, so nothing was saved"
@@ -1872,6 +2084,10 @@ msgstr "辨識區域"
 msgid "Detection area. Move it with the arrow keys; hold Shift to move further."
 msgstr "辨識區域。用方向鍵移動，按住 Shift 一次移動多一點"
 
+#: web/server-messages/states.ts
+msgid "Detection interval must be an integer from {min} to {max}"
+msgstr "辨識間隔必須是 {min} 到 {max} 的整數"
+
 #: web/states/model.ts
 msgid "Detection isn't running"
 msgstr "辨識程序沒有運作"
@@ -1896,9 +2112,14 @@ msgstr "只看框裡的畫面來判斷。框得剛好包住要判斷的東西，
 msgid "Detection only runs when there is motion, and the estimate already leaves headroom for recording and decoding (half the CPU, 20% of a graphics card)."
 msgstr "只在有動作時才辨識，換算時已替錄影與解碼保留餘裕（處理器留一半、顯卡留兩成）。"
 
+#: web/server-messages/states.ts
 #: web/states/model.ts
 msgid "Detection paused"
 msgstr "已暫停辨識"
+
+#: web/server-messages/states.ts
+msgid "Detection paused: the camera is moving or the brightness changed suddenly"
+msgstr "鏡頭移動中或畫面亮度突變，暫停辨識"
 
 #: web/detect/benchmark-model.ts
 msgid "Detection pauses during the test while events keep being recorded (cameras set to \"Filter\" temporarily switch to labeling). Each device takes about ten-odd seconds, and the first run on a graphics card may take longer."
@@ -1919,6 +2140,10 @@ msgstr "裝置"
 #: web/detect/benchmark-model.ts
 msgid "Device {current} of {total}"
 msgstr "第 {current} 個裝置，共 {total} 個"
+
+#: web/server-messages/detection.ts
+msgid "Devices not found: {list}"
+msgstr "找不到這些裝置：{list}"
 
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "Devices to test"
@@ -1958,6 +2183,10 @@ msgstr "放棄變更"
 #: web/ui/Dialog.tsx
 msgid "Discard these changes?"
 msgstr "要放棄這些變更嗎？"
+
+#: web/server-messages/requests.ts
+msgid "Do this directly on the CookieNVR web page"
+msgstr "請直接在 CookieNVR 網頁上操作"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -2036,6 +2265,10 @@ msgstr "例如：鐵捲門、車庫門、窗戶"
 msgid "Each camera's stream URL can be copied under \"Cameras → Edit → Advanced\". When an app such as VLC, Home Assistant or another NVR connects, use your username and password, or create a key (API token) for it under \"Settings → General → Connect other apps\"."
 msgstr "每台攝影機的串流網址在「攝影機 → 編輯 → 進階設定」裡可以複製。像 VLC、Home Assistant 或另一套 NVR 這類 App 連線時，用你的帳號密碼，或在「設定 → 一般 → 連接其他 App」為它建立一組密鑰（API Token）。"
 
+#: web/server-messages/states.ts
+msgid "Each class needs at least {min} labeled images before training"
+msgstr "每一類至少要有 {min} 張已標記的圖片才能訓練"
+
 #: web/pages/settings-cameras/PtzPrefs.tsx
 msgid "Each tap turns a small step"
 msgstr "每按一下轉一小步"
@@ -2068,6 +2301,10 @@ msgstr "已啟用"
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Enabled \"{name}\""
 msgstr "已啟用「{name}」"
+
+#: web/server-messages/requests.ts
+msgid "end must not be before start"
+msgstr "end 不能早於 start"
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Enter 0 or a larger number for days and space"
@@ -2158,6 +2395,10 @@ msgstr "事件進行中"
 msgid "Event list"
 msgstr "事件清單"
 
+#: web/server-messages/requests.ts
+msgid "Event not found"
+msgstr "找不到這筆事件"
+
 #: web/app/Shell.tsx
 #: web/pages/events/EventsPage.tsx
 #: web/pages/recordings/Playback.tsx
@@ -2212,6 +2453,10 @@ msgstr "匯出"
 msgid "Export failed"
 msgstr "匯出失敗"
 
+#: web/server-messages/camera.ts
+msgid "Export failed. Please try again later"
+msgstr "匯出失敗，請稍後再試"
+
 #: web/pages/recordings/export.tsx
 msgid "Export finished: {title}"
 msgstr "匯出完成：{title}"
@@ -2219,6 +2464,10 @@ msgstr "匯出完成：{title}"
 #: web/pages/recordings/export.tsx
 msgid "Export jobs"
 msgstr "匯出工作"
+
+#: web/server-messages/camera.ts
+msgid "Export not found. It may have expired"
+msgstr "找不到這個匯出，可能已經過期"
 
 #: web/pages/recordings/export.tsx
 msgid "Export progress"
@@ -2257,12 +2506,132 @@ msgstr "偏靈敏"
 msgid "Fastest"
 msgstr "最快"
 
+#: web/server-messages/camera.ts
+msgid "ffprobe ({bin}) was not found. Make sure it is installed"
+msgstr "找不到 ffprobe（{bin}），請確認已安裝"
+
 #: web/pages/settings-cameras/form-model.ts
 msgid "ffprobe output:"
 msgstr "ffprobe 輸出："
 
+#: web/server-messages/camera.ts
+msgid "Field {key} must be a number from {min} to {max}"
+msgstr "欄位 {key} 必須是 {min} 到 {max} 的數字"
+
+#: web/server-messages/camera.ts
+msgid "Field {key} must be an integer in UTC milliseconds"
+msgstr "欄位 {key} 必須是 UTC 毫秒的整數"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} cannot be empty"
+msgstr "欄位 {path} 不能為空"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} cannot contain control characters"
+msgstr "欄位 {path} 不能含控制字元"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} is not a valid host name"
+msgstr "欄位 {path} 不是有效的主機名稱"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} is not a valid URL"
+msgstr "欄位 {path} 不是有效的網址"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} is too long"
+msgstr "欄位 {path} 太長"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be {list}"
+msgstr "欄位 {path} 必須是 {list}"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a boolean"
+msgstr "欄位 {path} 必須是布林值"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a number from {min} to {max}"
+msgstr "欄位 {path} 必須是 {min} 到 {max} 的數字"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a string"
+msgstr "欄位 {path} 必須是字串"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a string or null"
+msgstr "欄位 {path} 必須是字串或 null"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an absolute path"
+msgstr "欄位 {path} 必須是絕對路徑"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an array"
+msgstr "欄位 {path} 必須是陣列"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an array of at most {max} polygons"
+msgstr "欄位 {path} 必須是最多 {max} 個多邊形的陣列"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an array of strings"
+msgstr "欄位 {path} 必須是字串陣列"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an integer from {min} to {max}"
+msgstr "欄位 {path} 必須是 {min} 到 {max} 的整數"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an object"
+msgstr "欄位 {path} 必須是物件"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an rtsp:// or rtsps:// URL"
+msgstr "欄位 {path} 必須是 rtsp:// 或 rtsps:// 網址"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be auto, cpu, or a detected device ID"
+msgstr "欄位 {path} 必須是 auto、cpu 或偵測到的裝置識別字"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be one of {list}"
+msgstr "欄位 {path} 必須是 {list} 之一"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be true or false"
+msgstr "欄位 {path} 必須是 true 或 false"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be two numbers from 0 to 1"
+msgstr "欄位 {path} 必須是兩個 0 到 1 的數字"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must have {min} to {max} points"
+msgstr "欄位 {path} 必須有 {min} 到 {max} 個頂點"
+
+#: web/server-messages/requests.ts
+msgid "Field detect.labels must be an array of up to 40 label keys (lowercase letters, digits, underscores)"
+msgstr "欄位 detect.labels 必須是最多 40 個類別鍵（小寫英文、數字、底線）的陣列"
+
+#: web/server-messages/camera.ts
+msgid "Field name can't be empty"
+msgstr "欄位 name 不能為空"
+
+#: web/server-messages/requests.ts
+msgid "Field objects.model must be builtin or an .onnx file name in the models folder"
+msgstr "欄位 objects.model 必須是 builtin 或 models 資料夾裡的 .onnx 檔名"
+
+#: web/server-messages/camera.ts
+msgid "Field tz is not a valid time zone"
+msgstr "欄位 tz 不是有效的時區"
+
 #: web/api.ts
 msgid "File too large (limit 100 MB)"
+msgstr "檔案太大，上限 100 MB"
+
+#: web/server-messages/states.ts
+msgid "File too large. The limit is 100 MB"
 msgstr "檔案太大，上限 100 MB"
 
 #: web/detect/object-model.ts
@@ -2449,6 +2818,10 @@ msgstr "顯示卡"
 msgid "Graphics card information isn't available right now."
 msgstr "暫時看不到顯示卡的資訊。"
 
+#: web/server-messages/detection.ts
+msgid "graphics memory"
+msgstr "顯示記憶體"
+
 #: web/theme.ts
 msgid "Green"
 msgstr "綠"
@@ -2456,6 +2829,10 @@ msgstr "綠"
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Group name"
 msgstr "分區名稱"
+
+#: web/server-messages/requests.ts
+msgid "Group not found"
+msgstr "找不到這個分區"
 
 #: web/pages/settings-system/decode-model.ts
 msgid "H.264 not supported"
@@ -2551,6 +2928,10 @@ msgstr "要多有把握才算數"
 msgid "I've saved it"
 msgstr "我已經存好了"
 
+#: web/server-messages/states.ts
+msgid "ids must be 1 to 1000 image ids"
+msgstr "ids 必須是 1 到 1000 個圖片 id"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "If \"Uncertified Accessory\" appears, choose \"Add Anyway\"."
 msgstr "出現「未認證的配件」時選「仍要加入」。"
@@ -2575,6 +2956,10 @@ msgstr "如果不是你剛剛在 {app} 裡按的，請按拒絕。"
 msgid "Ignored"
 msgstr "不偵測"
 
+#: web/server-messages/states.ts
+msgid "Image not found"
+msgstr "找不到這張圖片"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "Image recognition"
 msgstr "影像辨識"
@@ -2598,6 +2983,10 @@ msgstr "從 Frigate 的設定帶入"
 #: web/pages/states/NewSensorPage.tsx
 msgid "Imported"
 msgstr "已帶入"
+
+#: web/server-messages/states.ts
+msgid "Imported {labeled} labeled and {pending} unlabeled images"
+msgstr "匯入 {labeled} 張已標記、{pending} 張待標記的圖片"
 
 #: web/pages/states/NewSensorPage.tsx
 msgid "Imported the area and settings from Frigate “{frigateName}”"
@@ -2644,6 +3033,14 @@ msgstr "靛"
 #: web/pages/settings-system/ObjectsGroup.tsx
 msgid "Inference device"
 msgstr "推論裝置"
+
+#: web/server-text.ts
+msgid "Internal server error"
+msgstr "伺服器內部錯誤"
+
+#: web/server-messages/requests.ts
+msgid "Invalid time zone: {tz}"
+msgstr "無效的時區：{tz}"
 
 #: web/pages/settings-system/SystemPage.tsx
 msgid "iPhone finds cameras on your home network, so the CookieNVR container needs host networking (or its own LAN IP). To get motion notifications and watch away from home, you need an Apple TV, HomePod or iPad acting as a home hub; to have Apple store motion clips, you also need an iCloud+ plan with HomeKit Secure Video. This is an experimental feature, so video quality and whether recording works depend on real-world use."
@@ -2824,9 +3221,25 @@ msgstr "車牌"
 msgid "Light"
 msgstr "淺色"
 
+#: web/server-messages/requests.ts
+msgid "limit must be a positive integer"
+msgstr "limit 必須是正整數"
+
 #: web/pages/camera/PtzPresets.tsx
 msgid "Limit reached ({max}). Delete one first."
 msgstr "已達上限（{max} 個），請先刪除一個。"
+
+#: web/server-messages/requests.ts
+msgid "Link request not found. Check the code, or start over in the app"
+msgstr "找不到這個連結請求，請確認代碼，或回到 App 重新開始"
+
+#: web/server-messages/requests.ts
+msgid "Link request not found. It may have expired"
+msgstr "找不到這個連結請求，可能已過期"
+
+#: web/server-messages/requests.ts
+msgid "Link requests are being created too often. Try again later"
+msgstr "建立連結請求太頻繁，請稍後再試"
 
 #: web/health.ts
 msgid "Live changes unavailable"
@@ -2890,6 +3303,7 @@ msgid "Low-quality stream URL copied"
 msgstr "已複製低畫質串流網址"
 
 #: web/camera-form-logic.ts
+#: web/pages/settings-cameras/form-model.ts
 msgid "Low-quality stream: {message}"
 msgstr "低畫質串流：{message}"
 
@@ -2912,6 +3326,10 @@ msgstr "確認相機有開機並連上網路"
 #: web/pages/link/LinkPage.tsx
 msgid "Make sure this matches the code on the {app} screen"
 msgstr "確認和 {app} 畫面上的代碼一樣"
+
+#: web/server-messages/requests.ts
+msgid "Malformed URL"
+msgstr "網址格式錯誤"
 
 #: web/pages/status/StatusPage.tsx
 msgid "Manage storage"
@@ -2972,6 +3390,10 @@ msgstr "最低剩餘空間"
 #: web/pages/settings-system/ObjectsGroup.tsx
 msgid "Model"
 msgstr "模型"
+
+#: web/server-messages/detection.ts
+msgid "Model file {file} not found"
+msgstr "找不到模型檔 {file}"
 
 #: web/detect/object-model.ts
 msgid "Model unavailable"
@@ -3123,6 +3545,14 @@ msgstr "靜音"
 msgid "Name"
 msgstr "名稱"
 
+#: web/server-messages/requests.ts
+msgid "Name must be 1 to 100 characters"
+msgstr "名稱必須是 1 到 100 個字元"
+
+#: web/server-messages/states.ts
+msgid "Name must be 1 to 40 characters"
+msgstr "名稱要 1 到 40 字"
+
 #: web/states/ClassesEditor.tsx
 msgid "Name of class {num}"
 msgstr "第 {num} 類的名稱"
@@ -3147,6 +3577,18 @@ msgstr "從未"
 #: web/pages/settings-users/UsersPage.tsx
 msgid "Never signed in"
 msgstr "還沒登入過"
+
+#: web/server-messages/states.ts
+msgid "New class name can't contain / or a backslash, or start with a dot"
+msgstr "新的類別名稱不可含 / 或 \\，也不可以 . 開頭"
+
+#: web/server-messages/states.ts
+msgid "New class name must be 1 to 32 characters"
+msgstr "新的類別名稱要 1 到 32 字"
+
+#: web/server-messages/states.ts
+msgid "New class name must be a string"
+msgstr "新的類別名稱必須是字串"
 
 #: web/pages/account/PasswordPanel.tsx
 msgid "New password"
@@ -3232,9 +3674,21 @@ msgstr "這一天沒有事件"
 msgid "No events yet"
 msgstr "還沒有事件"
 
+#: web/server-messages/states.ts
+msgid "No file received"
+msgstr "沒有收到檔案"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "No GPU detected."
 msgstr "沒有偵測到顯示卡。"
+
+#: web/server-messages/detection.ts
+msgid "No Intel graphics detected"
+msgstr "沒有偵測到Intel 內顯"
+
+#: web/server-messages/detection.ts
+msgid "No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings"
+msgstr "容器裡找不到 Intel 內顯（/dev/dri），請在容器設定掛入 /dev/dri"
 
 #: web/pages/recordings/Playback.tsx
 msgid "No later events"
@@ -3247,6 +3701,22 @@ msgstr "未設定位置"
 #: web/health.ts
 msgid "No motion"
 msgstr "沒有動作"
+
+#: web/server-messages/detection.ts
+msgid "No Nvidia graphics card detected"
+msgstr "沒有偵測到Nvidia 顯卡"
+
+#: web/server-messages/detection.ts
+msgid "No Nvidia graphics card is visible in the container. Make sure the NVIDIA Container Toolkit is installed on the host, and start the container with --gpus all or runtime: nvidia"
+msgstr "容器裡看不到 Nvidia 顯卡，請確認主機已裝 NVIDIA Container Toolkit，並以 --gpus all 或 runtime: nvidia 啟動"
+
+#: web/server-messages/detection.ts
+msgid "No permission to use /dev/dri. Add the container to the host's render group (--group-add)"
+msgstr "沒有權限使用 /dev/dri，請把容器加入主機 render 群組（--group-add）"
+
+#: web/server-messages/detection.ts
+msgid "No permission to use the graphics card ({node}). Add the container to the host's render group"
+msgstr "沒有權限使用顯示卡（{node}），請把容器加入主機的 render 群組"
 
 #: web/health.ts
 msgid "No permission to write to the recording location"
@@ -3284,9 +3754,21 @@ msgstr "還沒有錄影。"
 msgid "No sound"
 msgstr "無聲音"
 
+#: web/server-messages/states.ts
+msgid "No state classification config found (classification.custom.<name>.state_config.cameras.<camera>.crop)"
+msgstr "找不到狀態辨識的設定（classification.custom.<名稱>.state_config.cameras.<攝影機>.crop）"
+
+#: web/server-messages/states.ts
+msgid "No thumbnail"
+msgstr "沒有縮圖"
+
 #: web/pages/settings-system/decode-model.ts
 msgid "No usable graphics card was detected, so the CPU is decoding."
 msgstr "沒有偵測到可用的顯示卡，用處理器解碼。"
+
+#: web/server-messages/states.ts
+msgid "No usable images found in the zip (expected png, jpg or webp under <name>/dataset/<class>/ or <name>/train/)"
+msgstr "zip 裡找不到可以用的圖片（需要 <名稱>/dataset/<類別>/ 或 <名稱>/train/ 底下的 png、jpg、webp）"
 
 #: web/pages/status/explain.ts
 msgid "No write permission"
@@ -3304,6 +3786,14 @@ msgstr "正常速度"
 msgid "Not detected"
 msgstr "不辨識"
 
+#: web/server-messages/camera.ts
+msgid "Not enough disk space to export a video this long"
+msgstr "磁碟空間不足，無法匯出這麼長的影片"
+
+#: web/server-messages/requests.ts
+msgid "Not found"
+msgstr "找不到資源"
+
 #: web/health.ts
 #: web/pages/status/explain.ts
 msgid "Not recording"
@@ -3318,15 +3808,24 @@ msgstr "未設定"
 msgid "Not trained yet"
 msgstr "還沒訓練"
 
+#: web/server-messages/states.ts
+msgid "Not trained yet: label frames for every class, then press Train"
+msgstr "還沒訓練：標記每一類的畫面後按「訓練」"
+
 #: web/pages/settings-cameras/ObjectSection.tsx
 #: web/pages/settings/SettingsLayout.tsx
 #: web/pages/status/explain.ts
+#: web/server-messages/detection.ts
 msgid "Object detection"
 msgstr "物件辨識"
 
 #: web/pages/status/StatusPage.tsx
 msgid "Object detection can't keep up"
 msgstr "物件辨識跟不上"
+
+#: web/server-messages/detection.ts
+msgid "Object detection isn't ready yet. Turn it on and wait for it to finish loading, then run the benchmark"
+msgstr "物件辨識還沒準備好，開啟並等它載入完成後再測速"
 
 #: web/health.ts
 msgid "Object detection isn't working properly"
@@ -3418,6 +3917,10 @@ msgstr "加入攝影機後，偵測到的動作會出現在這裡。"
 msgid "Only {free} is left, below the minimum free space you set, and the system is deleting the oldest recordings to free up space."
 msgstr "剩下 {free}，低於設定的最低剩餘空間，系統正在刪除最舊的錄影來騰出空間。"
 
+#: web/server-messages/requests.ts
+msgid "Only administrators can allow another app to connect"
+msgstr "只有管理員可以允許其他 App 連線"
+
 #: web/pages/link/LinkPage.tsx
 msgid "Only admins can allow {app} to connect. Sign in with an admin account, then open this page again."
 msgstr "只有管理員可以允許 {app} 連線，請改用管理員帳號登入後再開啟這個頁面。"
@@ -3477,6 +3980,10 @@ msgstr "打開「家庭」App，點右上角的 ＋，選「加入配件」。"
 #: web/pages/link/LinkPage.tsx
 msgid "Open this page directly"
 msgstr "請直接開啟這個頁面"
+
+#: web/server-messages/detection.ts
+msgid "OpenVINO can't see the Intel graphics. The driver may not support this GPU"
+msgstr "OpenVINO 看不到 Intel 內顯，可能是驅動不支援這顆內顯"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Optional. If provided, home page previews and motion detection use fewer resources."
@@ -3564,9 +4071,17 @@ msgstr "停車計時器"
 msgid "Password"
 msgstr "密碼"
 
+#: web/server-messages/requests.ts
+msgid "Password cannot be longer than {max} characters"
+msgstr "密碼不能超過 {max} 個字元"
+
 #: web/pages/account/PasswordPanel.tsx
 msgid "Password changed"
 msgstr "已變更密碼"
+
+#: web/server-messages/requests.ts
+msgid "Password must be at least {min} characters"
+msgstr "密碼至少需要 {min} 個字元"
 
 #: web/pages/auth/AuthPage.tsx
 msgid "Password must be at least 8 characters"
@@ -3609,6 +4124,10 @@ msgstr "從錄影自動挑選"
 #: web/pages/states/LabelBoard.tsx
 msgid "Pick more from recordings"
 msgstr "從錄影再挑一些"
+
+#: web/server-messages/states.ts
+msgid "Picked {count} frames from recordings and added them to unlabeled"
+msgstr "從錄影挑了 {count} 張畫面放進待標記"
 
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Picked up \"{name}\""
@@ -3699,9 +4218,17 @@ msgstr "播放速度"
 msgid "Player"
 msgstr "播放器"
 
+#: web/server-messages/requests.ts
+msgid "Please sign in"
+msgstr "請先登入"
+
 #: web/detect/mask-editor.ts
 msgid "Point {n}"
 msgstr "第 {n} 點"
+
+#: web/server-messages/requests.ts
+msgid "Polling too often. Try again later"
+msgstr "輪詢太頻繁，請稍後再試"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Port"
@@ -3733,9 +4260,17 @@ msgstr "準備中…"
 msgid "Preset name"
 msgstr "預置點名稱"
 
+#: web/server-messages/camera.ts
+msgid "Preset not found"
+msgstr "找不到這個預置點"
+
 #: web/pages/camera/PtzPresets.tsx
 msgid "Presets"
 msgstr "預置點"
+
+#: web/server-messages/camera.ts
+msgid "Presets are full. This camera supports at most {max}. Delete one first"
+msgstr "預置點已滿，這台相機最多 {max} 個，請先刪除一個"
 
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Press Space or Enter to pick up, use the arrow keys to move, and press again to drop. Press Esc to cancel."
@@ -3756,6 +4291,14 @@ msgstr "前一天"
 #: web/ui/DatePicker.tsx
 msgid "Previous month"
 msgstr "上個月"
+
+#: web/server-messages/states.ts
+msgid "Provide {min} to {max} classes"
+msgstr "類別要 {min} 到 {max} 個"
+
+#: web/server-messages/requests.ts
+msgid "Provide at least role or password"
+msgstr "至少需要提供 role 或 password"
 
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "QR code for adding to Apple Home"
@@ -3842,6 +4385,14 @@ msgstr "錄影硬碟的空間快滿了"
 msgid "Recording disk space is low"
 msgstr "錄影硬碟的空間不足"
 
+#: web/server-messages/requests.ts
+msgid "Recording file cannot be read"
+msgstr "錄影檔案無法讀取"
+
+#: web/server-messages/requests.ts
+msgid "Recording file is missing"
+msgstr "錄影檔案不存在"
+
 #: web/pages/states/NewSensorPage.tsx
 msgid "Recording is off for this camera, so there’s nothing to pick from"
 msgstr "這台沒有開錄影，挑不到畫面"
@@ -3869,6 +4420,10 @@ msgstr "{name}的錄影不穩定"
 #: web/pages/status/explain.ts
 msgid "Recording restarted"
 msgstr "已重新開始錄影"
+
+#: web/server-messages/requests.ts
+msgid "Recording segment not found"
+msgstr "找不到這段錄影"
 
 #: web/pages/settings-cameras/CameraFormPage.tsx
 msgid "Recording started"
@@ -3952,9 +4507,21 @@ msgstr "重新命名分區"
 msgid "Renaming doesn’t need retraining; adding or deleting a class does."
 msgstr "改名不用重新訓練；新增或刪除類別後要重新訓練。"
 
+#: web/server-messages/requests.ts
+msgid "Request body is not valid JSON"
+msgstr "請求內容不是有效的 JSON"
+
+#: web/server-messages/requests.ts
+msgid "Request body must be an object"
+msgstr "請求內容必須是物件"
+
 #: web/pages/link/LinkPage.tsx
 msgid "Request from <0>{ip}</0>"
 msgstr "請求來自 <0>{ip}</0>"
+
+#: web/server-messages/requests.ts
+msgid "Request method not supported"
+msgstr "不支援的請求方法"
 
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "Reset pairing"
@@ -4192,6 +4759,10 @@ msgstr "設定"
 msgid "Settings tabs"
 msgstr "設定分頁"
 
+#: web/server-messages/requests.ts
+msgid "Setup is already complete"
+msgstr "已完成初始設定"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "Shares memory with the system"
 msgstr "與系統共用記憶體"
@@ -4233,6 +4804,10 @@ msgstr "顯示在登入頁、側欄與瀏覽器分頁標題。"
 msgid "Sign in"
 msgstr "登入"
 
+#: web/server-messages/requests.ts
+msgid "Sign in on the CookieNVR web page to approve"
+msgstr "請在 CookieNVR 網頁上登入後核准"
+
 #: web/pages/auth/AuthPage.tsx
 msgid "Sign in to approve the connection request."
 msgstr "登入後就能核准連線請求。"
@@ -4249,6 +4824,10 @@ msgstr "登出「{name}」？"
 #: web/pages/account/SessionsPanel.tsx
 msgid "Signed out that device"
 msgstr "已登出那台裝置"
+
+#: web/server-messages/requests.ts
+msgid "Signed-in device not found"
+msgstr "找不到登入裝置"
 
 #: web/pages/account/SessionsPanel.tsx
 msgid "Signed-in devices"
@@ -4294,6 +4873,10 @@ msgstr "在下面把待標記的畫面分好類。"
 msgid "Space"
 msgstr "空白鍵"
 
+#: web/server-messages/camera.ts
+msgid "Specify a direction (at least one of pan, tilt, zoom must be non-zero)"
+msgstr "請指定移動方向（pan、tilt、zoom 至少一個不為 0）"
+
 #: web/pages/camera/PtzPanel.tsx
 msgid "Speed"
 msgstr "速度"
@@ -4326,6 +4909,10 @@ msgstr "一般使用者"
 #: web/pages/status/explain.ts
 msgid "Start again"
 msgstr "重新開始"
+
+#: web/server-messages/requests.ts
+msgid "start and end must be integer UTC milliseconds"
+msgstr "start 與 end 必須是整數 UTC 毫秒"
 
 #: web/pages/status/explain.ts
 msgid "Start recording again and it usually recovers"
@@ -4363,6 +4950,10 @@ msgstr "狀態辨識停止"
 #: web/pages/status/explain.ts
 msgid "State recognition uses the same picture as motion detection. When this camera's detection picture is interrupted, it can't tell the state. Check that “Detection” is turned on in the camera settings. If it still doesn't work, use “Copy diagnostics” at the bottom of the page to find the cause."
 msgstr "狀態辨識跟動作偵測用同一份畫面；這台的偵測畫面中斷時就沒辦法判斷。到攝影機設定確認「偵測」有開啟，仍然不行時，用頁面下方的「複製診斷資訊」找原因。"
+
+#: web/server-messages/states.ts
+msgid "State sensor not found"
+msgstr "找不到這個狀態感應器"
 
 #: web/pages/status/explain.ts
 msgid "States will become unknown first and be checked again after a few seconds. Recording is not affected."
@@ -4423,6 +5014,10 @@ msgstr "儲存空間不足"
 #: web/camera-form-logic.ts
 msgid "Stream not found. Check that the path at the end of the URL (for example /stream1) is correct."
 msgstr "找不到這個串流，請確認網址最後的路徑（例如 /stream1）是否正確。"
+
+#: web/server-messages/camera.ts
+msgid "Stream not found. Check that the URL path is correct"
+msgstr "找不到這個串流，請檢查網址路徑是否正確"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Stream URL"
@@ -4501,6 +5096,10 @@ msgstr "泰迪熊"
 msgid "Tell what something in the picture looks like right now, such as whether a roller door is open or closed. Draw the area and label a few frames, and it learns on its own."
 msgstr "判斷畫面上某個東西目前的樣子，例如鐵捲門是開還是關。框出區域、標記幾張畫面，就會自己學會。"
 
+#: web/server-messages/detection.ts
+msgid "temperature"
+msgstr "溫度"
+
 #: web/detect/label-names.ts
 msgctxt "object category"
 msgid "Tennis racket"
@@ -4540,6 +5139,22 @@ msgstr "目前用最多的是「{category}」。"
 msgid "The built-in model doesn't include packages. To detect packages, add a custom model that has this category."
 msgstr "內建模型不含包裹；要辨識包裹需要放入含有這個類別的自訂模型。"
 
+#: web/server-messages/camera.ts
+msgid "The camera denied access (403). Check the account's permissions"
+msgstr "攝影機拒絕存取（403），請確認帳號權限"
+
+#: web/server-messages/camera.ts
+msgid "The camera didn't respond. Please try again later"
+msgstr "相機沒有回應，請稍後再試"
+
+#: web/server-messages/states.ts
+msgid "The camera has no picture"
+msgstr "攝影機沒有畫面"
+
+#: web/server-messages/requests.ts
+msgid "The camera has no picture right now"
+msgstr "攝影機目前沒有畫面"
+
 #: web/pages/states/SensorPage.tsx
 msgid "The camera has no picture. Detection resumes once it connects."
 msgstr "攝影機沒有畫面，等它連上就會繼續。"
@@ -4556,6 +5171,10 @@ msgstr "鏡頭轉動中，暫停偵測"
 msgid "The camera isn't responding. Check that the IP address is correct and the camera is on."
 msgstr "相機沒有回應，請確認 IP 位址正確、相機已開機。"
 
+#: web/server-messages/camera.ts
+msgid "The camera refused the connection, probably because its connection limit is reached. Try again later or close other devices that are reading from it"
+msgstr "攝影機拒絕了連線，可能是同時連線數已達上限，請稍後再試或關閉其他正在讀取的裝置"
+
 #: web/camera-form-logic.ts
 msgid "The camera refused the connection. Check that the IP address and port are correct and that the camera's RTSP feature is turned on."
 msgstr "相機拒絕連線，請確認 IP 位址與連接埠正確，且相機的 RTSP 功能已開啟。"
@@ -4563,6 +5182,18 @@ msgstr "相機拒絕連線，請確認 IP 位址與連接埠正確，且相機�
 #: web/camera-form-logic.ts
 msgid "The camera refused the connection. Check that the IP address is correct and that you created a camera account in the Tapo app. If Frigate or other software is watching this camera, its connections may also be full."
 msgstr "相機拒絕連線。請確認 IP 位址正確，且在 Tapo App 建立了相機帳戶；如果 Frigate 等其他軟體正在看這台相機，也可能是連線名額滿了。"
+
+#: web/server-messages/camera.ts
+msgid "The camera rejected the username or password. Check the camera account in settings"
+msgstr "相機拒絕了帳號或密碼，請到設定確認相機帳戶"
+
+#: web/server-messages/camera.ts
+msgid "The camera rejected this command. Please try again later"
+msgstr "相機拒絕了這個指令，請稍後再試"
+
+#: web/server-messages/camera.ts
+msgid "The camera responded but isn't sending video, probably because its connection limit is reached"
+msgstr "攝影機有回應，但沒有送出影像，可能是同時連線數已達上限"
 
 #: web/camera-form-logic.ts
 msgid "The camera responded but isn't sending video, usually because its stream connections are full (a Tapo allows only about 1 to 2 per quality). Pause Frigate, Home Assistant, other NVRs, or phone apps that connect to this camera directly, then try again. After adding it, other software can use CookieNVR's stream URL instead (copy it from the camera's \"Advanced\" settings), so it no longer needs to connect to the camera directly."
@@ -4576,13 +5207,45 @@ msgstr "相機說找不到影像串流，請確認這是一台 Tapo 攝影機。
 msgid "The camera's codec changed, and this browser can't keep playing."
 msgstr "攝影機的編碼改變了，這個瀏覽器無法接續播放。"
 
+#: web/server-messages/camera.ts
+msgid "The camera's response wasn't recognized. It may not support lens control"
+msgstr "相機的回應無法辨識，這台可能不支援鏡頭控制"
+
 #: web/pages/states/SensorPage.tsx
 msgid "The checking pictures weren’t used for learning, so detection saw them for the first time, just like in real use. Trained {trainedAt} on {trainedCount} images. Mistakes are mostly from different lighting or in-between frames; label a few more like them and retrain to improve."
 msgstr "驗證的畫面都沒有拿來學，跟實際使用時一樣是第一次看到。{trainedAt} 訓練，用了 {trainedCount} 張。看錯的多半是光線不同或過渡中的畫面，多標幾張類似的再重新訓練就會改善。"
 
+#: web/server-messages/states.ts
+msgid "The class \"{name}\" already exists"
+msgstr "已經有「{name}」這個類別"
+
 #: web/pages/status/explain.ts
 msgid "The classes changed. It will keep recognizing after you retrain it"
 msgstr "類別改過了，重新訓練後才會繼續辨識"
+
+#: web/server-messages/states.ts
+msgid "The classes changed. Retrain to resume detection"
+msgstr "類別改過了，要重新訓練才會繼續辨識"
+
+#: web/server-messages/states.ts
+msgid "The classifier couldn't start"
+msgstr "狀態辨識程序無法啟動"
+
+#: web/server-messages/states.ts
+msgid "The classifier couldn't start: {text}"
+msgstr "狀態辨識程序無法啟動：{text}"
+
+#: web/server-messages/states.ts
+msgid "The classifier couldn't start: failed to load the image feature model"
+msgstr "狀態辨識程序無法啟動：無法載入狀態辨識用的影像特徵模型"
+
+#: web/server-messages/states.ts
+msgid "The classifier is starting"
+msgstr "狀態辨識程序啟動中"
+
+#: web/server-messages/states.ts
+msgid "The classifier restarted and the task was interrupted. Try again"
+msgstr "狀態辨識程序重新啟動，工作中斷，請再試一次"
 
 #: web/pages/link/LinkPage.tsx
 msgid "The code is 8 letters"
@@ -4592,6 +5255,18 @@ msgstr "代碼是 8 個英文字母"
 msgid "The code is shown on the screen of the app you want to connect, such as Home Assistant."
 msgstr "代碼顯示在要連線的 App（例如 Home Assistant）畫面上。"
 
+#: web/server-messages/detection.ts
+msgid "The container doesn't have the device for this graphics card ({node}). Mount /dev/dri in the container settings"
+msgstr "容器裡沒有這張顯示卡的裝置（{node}），請在容器設定掛入 /dev/dri"
+
+#: web/server-messages/detection.ts
+msgid "The container has no Nvidia driver. Start it with the NVIDIA Container Toolkit"
+msgstr "容器裡沒有 Nvidia 驅動程式，請用 NVIDIA Container Toolkit 啟動容器"
+
+#: web/server-messages/detection.ts
+msgid "The container hasn't loaded Nvidia's video codec libraries. NVIDIA_DRIVER_CAPABILITIES in the container settings must include video"
+msgstr "容器沒有載入 Nvidia 的影像編解碼元件，容器設定的 NVIDIA_DRIVER_CAPABILITIES 需要包含 video"
+
 #: web/health.ts
 msgid "The CPU has been busy for a long time"
 msgstr "處理器長時間忙碌"
@@ -4599,6 +5274,10 @@ msgstr "處理器長時間忙碌"
 #: web/pages/settings-cameras/ObjectSection.tsx
 msgid "The current model has no package category."
 msgstr "目前的模型沒有包裹這個類別。"
+
+#: web/server-messages/requests.ts
+msgid "The current password is incorrect"
+msgstr "目前的密碼不正確"
 
 #: web/pages/settings-cameras/ObjectSection.tsx
 msgid "The custom model hasn't been loaded yet, so the category list is the built-in model's for now. It updates once loaded."
@@ -4611,6 +5290,10 @@ msgstr "資料庫、事件縮圖與匯出的影片放在這顆，只剩 {free}�
 #: web/pages/storage/StoragePage.tsx
 msgid "The database, thumbnails and exports live on the appdata disk ({dataPath}): {dataFree} free of {dataTotal}."
 msgstr "資料庫、縮圖與匯出放在 appdata（{dataPath}）那顆硬碟：可用 {dataFree}，共 {dataTotal}。"
+
+#: web/server-messages/detection.ts
+msgid "The detector restarted, so the benchmark was interrupted"
+msgstr "推論程序重新啟動，測速中斷"
 
 #: web/detect/benchmark-model.ts
 msgid "The device currently in use wasn't tested this time. Run a test on it to find out whether it is enough."
@@ -4628,9 +5311,33 @@ msgstr "錄影位置 <0>{recordPath}</0> 所在的硬碟"
 msgid "The event is longer than 2 hours. Only the first 2 hours are exported."
 msgstr "事件超過 2 小時，只匯出前 2 小時"
 
+#: web/server-messages/requests.ts
+msgid "The event is still in progress. You can delete it once it ends"
+msgstr "事件還在進行中，結束後才能刪除"
+
 #: web/pages/events/EventsPage.tsx
 msgid "The event is still in progress. You can delete it once it ends."
 msgstr "事件還在進行中，結束後才能刪除"
+
+#: web/server-messages/camera.ts
+msgid "The export isn't finished yet"
+msgstr "匯出還沒有完成"
+
+#: web/server-messages/camera.ts
+msgid "The export queue is full. Wait for earlier exports to finish"
+msgstr "匯出佇列已滿，請等前面的匯出完成"
+
+#: web/server-messages/camera.ts
+msgid "The export timed out and was stopped"
+msgstr "匯出逾時，已經停止"
+
+#: web/server-messages/camera.ts
+msgid "The export used too much memory and was stopped"
+msgstr "匯出佔用的記憶體過多，已經停止"
+
+#: web/server-messages/camera.ts
+msgid "The exported file can't be played. Please try again later"
+msgstr "匯出的檔案無法播放，請稍後再試"
 
 #: web/detect/object-model.ts
 msgid "The first time a graphics card is used, this can take about a minute."
@@ -4644,9 +5351,33 @@ msgstr "錄影存放的資料夾。改了之後新的錄影存到新位置，舊
 msgid "The further right, the more sensitive."
 msgstr "往右越靈敏。"
 
+#: web/server-messages/detection.ts
+msgid "The graphics card didn't complete {w}"
+msgstr "顯示卡沒有完成 {w}"
+
+#: web/server-messages/detection.ts
+msgid "The graphics card didn't finish {w} in time"
+msgstr "顯示卡沒有在時限內完成 {w}"
+
+#: web/server-messages/detection.ts
+msgid "The graphics card failed to start {w}"
+msgstr "顯示卡啟動 {w}失敗"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "The Home app couldn't find this camera. Go to Settings → Status and press \"Copy diagnostics\" to see why."
 msgstr "沒辦法讓家庭 App 找到這台攝影機。到「設定 → 狀態」按「複製診斷資訊」，可以看到原因。"
+
+#: web/server-messages/detection.ts
+msgid "The host has this Intel graphics card, but {node} isn't in the container. Mount /dev/dri in the container settings"
+msgstr "主機有這張 Intel 顯示卡，但容器裡沒有 {node}：請在容器設定掛入 /dev/dri"
+
+#: web/server-messages/detection.ts
+msgid "The Intel graphics link in /dev/dri/by-path is missing, so OpenVINO can't find it. Start the container as root (you can drop privileges with PUID/PGID) so CookieNVR can add it automatically"
+msgstr "Intel 內顯缺少 /dev/dri/by-path 連結，OpenVINO 找不到它；請以 root 啟動容器（可用 PUID／PGID 降權）讓 CookieNVR 自動補上"
+
+#: web/server-messages/detection.ts
+msgid "The Intel video driver (VAAPI) wasn't found. The image may be missing intel-media-va-driver"
+msgstr "找不到 Intel 的影像驅動程式（VAAPI），映像可能缺少 intel-media-va-driver"
 
 #: web/pages/states/SensorPage.tsx
 msgid "The interval must be a whole number from 0 to 3600 seconds"
@@ -4675,6 +5406,34 @@ msgstr "低畫質串流網址需以 rtsp:// 開頭"
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "The main stream has no video, so it can't be added."
 msgstr "讀到的主畫面沒有影像，無法加入。"
+
+#: web/server-messages/detection.ts
+msgid "The model failed to load"
+msgstr "模型載入失敗"
+
+#: web/server-messages/detection.ts
+msgid "The model has {count} classes but no class names. Only COCO 80 classes or models with names in their metadata are supported"
+msgstr "模型有 {count} 個類別，但沒有附類別名稱；目前只支援 COCO 80 類或在 metadata 帶 names 的模型"
+
+#: web/server-messages/detection.ts
+msgid "The model should have exactly one image input, but this one has {count}"
+msgstr "模型應該只有一個影像輸入，這個模型有 {count} 個"
+
+#: web/server-messages/states.ts
+msgid "The model was trained with a different backbone version. Retrain it"
+msgstr "模型是用不同版本的骨幹訓練的，需要重新訓練"
+
+#: web/server-messages/detection.ts
+msgid "The model's input should be an image of shape [1, 3, height, width], but this model's is {shape}"
+msgstr "模型的輸入應該是 [1, 3, 高, 寬] 的影像，這個模型是 {shape}"
+
+#: web/server-messages/detection.ts
+msgid "The model's input size {width}×{height} isn't a multiple of 32, so it doesn't look like a YOLO model"
+msgstr "模型的輸入尺寸 {width}×{height} 不是 32 的倍數，看起來不是 YOLO 模型"
+
+#: web/server-messages/detection.ts
+msgid "The model's input type is {type}. Only float32 is supported"
+msgstr "模型的輸入型別是 {type}，目前只支援 float32"
 
 #: web/pages/account/PasswordPanel.tsx
 msgid "The new password must be at least 8 characters"
@@ -4716,13 +5475,45 @@ msgstr "大多數情況的建議值。"
 msgid "The recommended value for most setups."
 msgstr "大多數情況的建議值。"
 
+#: web/server-messages/states.ts
+msgid "The region is too small, or its top-left corner isn't above and left of the bottom-right"
+msgstr "區域太小，或左上角不在右下角的左上方"
+
+#: web/server-messages/states.ts
+msgid "The region must be 4 numbers from 0 to 1: [x1, y1, x2, y2]"
+msgstr "區域必須是 4 個 0 到 1 的數字 [x1, y1, x2, y2]"
+
+#: web/server-messages/requests.ts
+msgid "The request Content-Type must be {list}"
+msgstr "請求的 Content-Type 必須是 {list}"
+
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "The result may be out of date (the model or device changed). Running the benchmark again is recommended."
 msgstr "結果可能已過期（換了模型或裝置），建議重新測速。"
 
+#: web/server-messages/detection.ts
+msgid "The selected device wasn't found (it may have been removed or replaced). Switched to automatic selection"
+msgstr "指定的裝置目前找不到（可能已拔除或換了顯示卡），已改用自動選擇"
+
+#: web/server-messages/detection.ts
+msgid "The selected graphics card wasn't found (it may have been removed or replaced). Switched to automatic selection"
+msgstr "找不到設定的顯示卡（可能拔掉或換了），已改用自動選擇"
+
+#: web/server-messages/camera.ts
+msgid "The selected range is too short. It must be at least 1 second"
+msgstr "選取的範圍太短，至少要 1 秒"
+
+#: web/server-messages/camera.ts
+msgid "The server is shutting down"
+msgstr "伺服器正在關閉"
+
 #: web/pages/states/NewSensorPage.tsx
 msgid "The settings contain {foundCount} entries; pick the one to use:"
 msgstr "設定裡有 {foundCount} 個，選要用的那個："
+
+#: web/server-messages/camera.ts
+msgid "The stream has no video track"
+msgstr "串流中沒有影像軌"
 
 #: web/pages/status/ResourcesCard.tsx
 msgid "The system itself"
@@ -4748,13 +5539,33 @@ msgstr "影像服務沒有正常運作"
 msgid "The video service, Apple Home and the system itself are shared by all cameras and are not counted under individual cameras."
 msgstr "影像服務、Apple 家庭與系統本身由所有攝影機共用，沒有算在個別攝影機裡。"
 
+#: web/server-messages/states.ts
+msgid "The zip has too many files ({count}, limit {max})"
+msgstr "zip 裡的檔案太多（{count} 個，上限 {max}）"
+
 #: web/pages/states/NewSensorPage.tsx
 msgid "There are several in the settings; pick one"
 msgstr "設定裡有好幾個，選一個"
 
+#: web/server-messages/requests.ts
+msgid "There are too many link requests right now. Try again later"
+msgstr "目前有太多連結請求，請稍後再試"
+
+#: web/server-messages/states.ts
+msgid "There is no class \"{name}\""
+msgstr "沒有「{name}」這個類別"
+
+#: web/server-messages/camera.ts
+msgid "There is no recording in this time range"
+msgstr "這段時間沒有錄影"
+
 #: web/pages/storage/StoragePage.tsx
 msgid "These cameras no longer exist. Their recordings will be permanently deleted right away, which can't be undone, freeing {freed}. Recordings of other cameras aren't affected."
 msgstr "這些攝影機已經不在了，錄影會立刻永久刪除，無法復原，並釋放 {freed}。其他攝影機的錄影不受影響。"
+
+#: web/server-messages/states.ts
+msgid "These classes have no usable images: {list}"
+msgstr "這些類別沒有可用的圖片：{list}"
 
 #: web/pages/settings-users/UsersPage.tsx
 msgid "This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone."
@@ -4797,9 +5608,41 @@ msgstr "這台可以轉動鏡頭，到即時畫面就能操作。"
 msgid "This camera can pan, tilt, and zoom. Control it from the live view."
 msgstr "這台可以轉動鏡頭與變焦，到即時畫面就能操作。"
 
+#: web/server-messages/camera.ts
+msgid "This camera doesn't support continuous movement. Use fine adjust or auto mode"
+msgstr "這台相機不支援持續移動，請改用微調或自動模式"
+
+#: web/server-messages/camera.ts
+msgid "This camera doesn't support fine adjust. Use continuous movement or auto mode"
+msgstr "這台相機不支援微調，請改用持續移動或自動模式"
+
+#: web/server-messages/camera.ts
+msgid "This camera has no lens control"
+msgstr "這台相機沒有鏡頭控制功能"
+
+#: web/server-messages/requests.ts
+msgid "This camera has no live view"
+msgstr "這台攝影機沒有即時畫面"
+
+#: web/server-messages/camera.ts
+msgid "This camera has no ONVIF set up, so its lens can't be controlled"
+msgstr "這台相機沒有設定 ONVIF，無法控制鏡頭"
+
+#: web/server-messages/states.ts
+msgid "This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset"
+msgstr "這台還沒有錄影可以抽樣；等錄一段時間後再試，或匯入資料集"
+
 #: web/pages/recordings/RecordingsPage.tsx
 msgid "This camera has no recordings yet"
 msgstr "這台攝影機還沒有錄影"
+
+#: web/server-messages/camera.ts
+msgid "This camera has no zoom"
+msgstr "這台相機沒有變焦功能"
+
+#: web/server-messages/requests.ts
+msgid "This camera has not been added to Apple Home"
+msgstr "這台還沒有加入 Apple 家庭"
 
 #: web/pages/settings-cameras/DetectSection.tsx
 msgid "This camera is disabled"
@@ -4813,6 +5656,10 @@ msgstr "這台攝影機已停用。"
 msgid "This camera is disabled. Enable it and save to see the picture here and draw areas that shouldn't be detected."
 msgstr "這台攝影機已停用。啟用並儲存後，才能在這裡看到畫面、畫出不需要偵測的區域。"
 
+#: web/server-messages/requests.ts
+msgid "This camera is disabled. Enable it before adding it to Apple Home"
+msgstr "這台攝影機已停用，先啟用才能加入 Apple 家庭"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "This camera sends a full frame (keyframe) only every {keyframeSec} seconds, longer than the 4 seconds Apple requires, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
 msgstr "這台每 {keyframeSec} 秒才有一張完整畫面（關鍵幀），超過 Apple 要求的 4 秒，安全錄影可能失敗。建議在攝影機設定裡把關鍵幀間隔（I-frame）調到 4 秒以內。"
@@ -4825,9 +5672,17 @@ msgstr "家庭 App 裡的這台攝影機會失效，請先在家庭 App 移除�
 msgid "This camera's full-frame (keyframe) interval is longer than 4 seconds, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
 msgstr "這台的完整畫面（關鍵幀）間隔超過 4 秒，安全錄影可能失敗。建議在攝影機設定裡把關鍵幀間隔（I-frame）調到 4 秒以內。"
 
+#: web/server-messages/requests.ts
+msgid "This camera's main stream has no video"
+msgstr "這台的主畫面沒有影像"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "This camera's main stream is {codec}, but the Home app only supports H.264. Change the main stream to H.264 in the camera's app, then you can turn this on."
 msgstr "這台攝影機的主畫面是 {codec}，家庭 App 只支援 H.264。在攝影機的 App 裡把主畫面改成 H.264 後，就可以開啟。"
+
+#: web/server-messages/requests.ts
+msgid "This camera's main stream is not H.264, which Apple Home does not support"
+msgstr "這台的主畫面不是 H.264，Apple 家庭不支援"
 
 #: web/pages/account/SessionsPanel.tsx
 msgid "This device"
@@ -4837,29 +5692,73 @@ msgstr "這台裝置"
 msgid "This device is too slow to keep up with even 1 camera detecting {rate}. Try lowering the detection rate or switching to a faster device."
 msgstr "這個裝置太慢，撐不住 1 台攝影機{rate}的辨識。建議降低辨識頻率，或換更快的裝置。"
 
+#: web/server-messages/detection.ts
+msgid "This device wasn't found"
+msgstr "找不到這個裝置"
+
 #: web/pages/account/SessionsPanel.tsx
 msgid "This device will need to sign in again next time it opens."
 msgstr "這台裝置下次開啟時需要重新登入。"
+
+#: web/server-messages/detection.ts
+msgid "This GPU doesn't report utilization"
+msgstr "這個 GPU 不提供使用率"
+
+#: web/server-messages/detection.ts
+msgid "This graphics card doesn't report {list}"
+msgstr "這張顯示卡不提供{list}"
+
+#: web/server-messages/detection.ts
+msgid "This graphics card doesn't support {w}"
+msgstr "這張顯示卡不支援 {w}"
 
 #: web/camera-form-logic.ts
 msgid "This host is missing the program used to test connections, so it can't test. Copy the error and send it to a technician."
 msgstr "這台主機少了測試用的程式，無法測試連線。請複製錯誤內容給技術人員。"
 
+#: web/server-messages/detection.ts
+msgid "This image has no Intel graphics inference components (only the amd64 image does)"
+msgstr "這個映像沒有 Intel 內顯推論元件（只有 amd64 的映像有）"
+
+#: web/server-messages/detection.ts
+msgid "This image has no Nvidia inference components. Use the latest-nvidia image"
+msgstr "這個映像沒有 Nvidia 推論元件，請改用 latest-nvidia 映像"
+
+#: web/server-messages/states.ts
+msgid "This isn't a zip file"
+msgstr "這不是 zip 檔"
+
 #: web/pages/recordings/export.tsx
 msgid "This position is too close to the edge. Try another one."
 msgstr "這個位置太靠近邊界，換一個位置試試"
+
+#: web/server-messages/camera.ts
+msgid "This recording has been deleted"
+msgstr "這段錄影已經被清除"
 
 #: web/pages/link/LinkPage.tsx
 msgid "This request didn't come from your home network. Unless you're sure about it, choose Deny."
 msgstr "這個請求不是從你家裡的網路送出的。除非你很確定，否則請按拒絕。"
 
+#: web/server-messages/requests.ts
+msgid "This request has already been handled"
+msgstr "這個請求已經處理過了"
+
 #: web/pages/link/LinkPage.tsx
 msgid "This request has expired"
 msgstr "這個請求已經過期"
 
+#: web/server-messages/requests.ts
+msgid "This request has expired. Start over in the app"
+msgstr "這個請求已經過期，請回到 App 重新開始"
+
 #: web/pages/link/LinkPage.tsx
 msgid "This request is already done"
 msgstr "這個請求已經完成"
+
+#: web/server-messages/states.ts
+msgid "This sensor is busy with another task. Wait for it to finish"
+msgstr "這個感應器正在進行其他工作，請等它完成"
 
 #: web/pages/settings-cameras/useDeleteCamera.tsx
 msgid "This stops recording and removes the camera. All of its recordings are also deleted right away and can't be recovered."
@@ -4880,6 +5779,10 @@ msgstr "會停止錄影並移除這台攝影機。已錄的影片會留在硬碟
 #: web/camera-form-logic.ts
 msgid "This stream has no video. Use the URL of a video stream instead."
 msgstr "這個串流沒有影像，請改用影像串流的網址。"
+
+#: web/server-messages/requests.ts
+msgid "Thumbnail not found"
+msgstr "找不到縮圖"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -4928,6 +5831,22 @@ msgctxt "object category"
 msgid "Toilet"
 msgstr "馬桶"
 
+#: web/server-messages/requests.ts
+msgid "Token not found"
+msgstr "找不到 Token"
+
+#: web/server-messages/requests.ts
+msgid "Too many attempts. Try again later"
+msgstr "嘗試太多次了，請稍後再試"
+
+#: web/server-messages/requests.ts
+msgid "Too many failed sign-in attempts. Try again later"
+msgstr "登入失敗次數過多，請稍後再試"
+
+#: web/server-messages/requests.ts
+msgid "Too many link requests are waiting for approval. Finish them or wait for them to expire"
+msgstr "待核准的連結請求太多，請先完成或等它們過期"
+
 #: web/detect/benchmark-model.ts
 msgid "Too slow to handle even 1 camera"
 msgstr "太慢，連 1 台也撐不住"
@@ -4966,6 +5885,18 @@ msgstr "Frigate 匯出的訓練資料，最大 100 MB"
 #: web/pages/states/SensorPage.tsx
 msgid "Training failed: {failedError}"
 msgstr "訓練失敗：{failedError}"
+
+#: web/server-messages/states.ts
+msgid "Training finished (each class needs at least 2 images to estimate accuracy)"
+msgstr "訓練完成（每一類至少要 2 張才能估計準確度）"
+
+#: web/server-messages/states.ts
+msgid "Training finished but the model file couldn't be read"
+msgstr "訓練完成但讀不到模型檔"
+
+#: web/server-messages/states.ts
+msgid "Training finished. {accuracy}% correct on the labeled frames"
+msgstr "訓練完成，用標記的畫面驗證答對 {accuracy}%"
 
 #: web/states/bits.tsx
 msgid "Training, waiting for other sensors to finish…"
@@ -5155,10 +6086,22 @@ msgstr "使用 ONVIF"
 msgid "Used for buttons, selections, and navigation."
 msgstr "用在按鈕、選取狀態與導覽列。"
 
+#: web/server-messages/requests.ts
+msgid "User not found"
+msgstr "找不到使用者"
+
 #: web/pages/auth/AuthPage.tsx
 #: web/pages/settings-users/UsersPage.tsx
 msgid "Username"
 msgstr "帳號"
+
+#: web/server-messages/requests.ts
+msgid "Username already exists"
+msgstr "帳號已存在"
+
+#: web/server-messages/requests.ts
+msgid "Username must be 1 to 64 characters with no control characters"
+msgstr "帳號必須是 1 到 64 個字元，且不能含控制字元"
 
 #: web/pages/settings/SettingsLayout.tsx
 msgid "Users"
@@ -5183,6 +6126,10 @@ msgstr "改用處理器"
 #: web/pages/status/explain.ts
 msgid "Usually another surveillance program is running on the same host (for example Frigate or go2rtc, which also use 8554). When the container uses Host networking, set the environment variable RTSP_PORT to a port nobody uses. With bridge networking, set RTSP_PORT and the host-side and container-side ports to the same number. Restart the container afterwards."
 msgstr "通常是同一台主機上還跑著其他監視器軟體（例如 Frigate、go2rtc 也用 8554）。容器用 Host 網路時，設定環境變數 RTSP_PORT 換一個沒人用的 port；用 bridge 網路時，把 RTSP_PORT 和主機、容器兩側的 port 改成同一個數字。改完重新啟動容器。"
+
+#: web/server-messages/detection.ts
+msgid "utilization"
+msgstr "使用率"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -5324,6 +6271,10 @@ msgstr "停用後不看畫面也不錄影，但保留設定。"
 msgid "When off, labels and training results are kept; detection just pauses."
 msgstr "關掉時保留標記與訓練結果，只是暫停判斷。"
 
+#: web/server-messages/detection.ts
+msgid "When the {cameras} cameras with object detection all see motion at once, it can't keep up. This machine can handle about {supported} at a time. Lower the detection rate or switch to a faster device."
+msgstr "開了物件辨識的 {cameras} 台攝影機同時有動作時會來不及，這台機器大約能同時處理 {supported} 台。可以降低辨識頻率，或改用更快的裝置。"
+
 #: web/pages/storage/StoragePage.tsx
 msgid "When the disk has less free space than this, the oldest recordings are deleted first."
 msgstr "硬碟剩下的空間少於這個值時，先刪除最舊的錄影。"
@@ -5365,6 +6316,10 @@ msgstr "酒杯"
 msgid "With “On change only”, it checks only when the picture inside the area changes."
 msgstr "選「不定時」時只在區域內畫面有變化時看。"
 
+#: web/server-messages/requests.ts
+msgid "Worker not found"
+msgstr "找不到這個 worker"
+
 #: web/pages/settings-cameras/StatesSection.tsx
 msgid "Working"
 msgstr "處理中"
@@ -5377,13 +6332,26 @@ msgstr "每台電腦都能用，但同時辨識多台攝影機時會比較吃力
 msgid "Works with Tapo and any camera that supports RTSP. Once added, it starts recording automatically."
 msgstr "支援 Tapo 與任何有 RTSP 的攝影機，加入後就會自動開始錄影。"
 
+#: web/server-messages/camera.ts
+#: web/server-messages/requests.ts
+msgid "Wrong username or password"
+msgstr "帳號或密碼錯誤"
+
 #: web/camera-form-logic.ts
 msgid "Wrong username or password. Check the credentials after rtsp:// in the URL."
 msgstr "帳號或密碼不對，請檢查網址中 rtsp:// 後面的帳號與密碼。"
 
+#: web/server-messages/camera.ts
+msgid "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account"
+msgstr "帳號或密碼錯誤。請使用 Tapo App「進階設定 → 相機帳戶」建立的帳密，不是 TP-Link 雲端帳號"
+
 #: web/camera-form-logic.ts
 msgid "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account."
 msgstr "帳號或密碼不對。請用 Tapo App「進階設定 → 相機帳戶」建立的帳密，不是 TP-Link 雲端帳號。"
+
+#: web/server-messages/states.ts
+msgid "yaml must be a string"
+msgstr "yaml 必須是字串"
 
 #: web/detect/model.ts
 #: web/pages/recordings/day.ts
@@ -5398,6 +6366,10 @@ msgstr "昨天 {clock}"
 #: web/pages/settings-users/UsersPage.tsx
 msgid "You"
 msgstr "你"
+
+#: web/server-messages/camera.ts
+msgid "You can export at most 2 hours at a time. Shorten the selected range"
+msgstr "一次最多匯出 2 小時，請縮短選取的範圍"
 
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "You can run the benchmark once object detection is ready."

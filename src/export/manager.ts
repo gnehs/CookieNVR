@@ -3,6 +3,7 @@ import { mkdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { ExportDto, ExportRequestDto } from "../api-types.ts";
 import type { Env } from "../env.ts";
+import { msg, zh, type Msg } from "../messages/index.ts";
 import { getSegment, segmentsInRange } from "../recording/store.ts";
 import type { CameraId, CameraStore } from "../types.ts";
 import { processStartToken, reapOrphans, signalGroup, writePidFile } from "../workers/process-group.ts";
@@ -17,9 +18,9 @@ export const MAX_LIVE_JOBS = 10;
 export class ExportError extends Error {
   constructor(
     readonly kind: "not-found" | "invalid" | "empty" | "busy" | "disk",
-    message: string,
+    readonly msg: Msg,
   ) {
-    super(message);
+    super(zh(msg));
   }
 }
 
@@ -42,7 +43,7 @@ type Phase =
   | { tag: "queued" }
   | { tag: "running"; progress: number }
   | { tag: "done"; finishedAt: number; sizeBytes: number }
-  | { tag: "failed"; finishedAt: number; error: string };
+  | { tag: "failed"; finishedAt: number; error: Msg };
 
 interface Job {
   id: string;
@@ -103,7 +104,7 @@ export function createExports(opts: ExportsOptions): Exports {
   const jobs = new Map<string, Job>();
   /** Queue order; a job leaves it when it starts. */
   const queue: string[] = [];
-  let current: { job: Job; pid: number | null; stop: (error: string | null) => void } | null = null;
+  let current: { job: Job; pid: number | null; stop: (error: Msg | null) => void } | null = null;
   let closed = false;
 
   const ready = (async () => {
@@ -132,7 +133,8 @@ export function createExports(opts: ExportsOptions): Exports {
       progress: p.tag === "done" ? 1 : p.tag === "running" ? p.progress : 0,
       ahead: p.tag === "queued" ? queue.indexOf(job.id) + (current ? 1 : 0) : null,
       sizeBytes: p.tag === "done" ? p.sizeBytes : null,
-      error: p.tag === "failed" ? p.error : null,
+      error: p.tag === "failed" ? zh(p.error) : null,
+      errorMsg: p.tag === "failed" ? p.error : null,
       fileName: job.fileName,
       createdAt: job.createdAt,
       finishedAt,
@@ -146,14 +148,14 @@ export function createExports(opts: ExportsOptions): Exports {
   }
 
   async function create(request: ExportRequestDto): Promise<ExportDto> {
-    if (closed) throw new ExportError("busy", "伺服器正在關閉");
+    if (closed) throw new ExportError("busy", msg("export.shuttingDown"));
     const camera = opts.cameras.get(request.cameraId);
-    if (!camera) throw new ExportError("not-found", "找不到攝影機");
+    if (!camera) throw new ExportError("not-found", msg("export.cameraNotFound"));
     const plan = planFor(request);
-    if (!plan.ok) throw new ExportError(plan.reason === "empty" ? "empty" : "invalid", plan.message);
+    if (!plan.ok) throw new ExportError(plan.reason === "empty" ? "empty" : "invalid", plan.msg);
     const live = [...jobs.values()].filter((j) => j.phase.tag === "queued" || j.phase.tag === "running").length;
-    if (live >= MAX_LIVE_JOBS) throw new ExportError("busy", "匯出佇列已滿，請等前面的匯出完成");
-    if (plan.estimatedBytes > (await opts.freeBytes())) throw new ExportError("disk", "磁碟空間不足，無法匯出這麼長的影片");
+    if (live >= MAX_LIVE_JOBS) throw new ExportError("busy", msg("export.queueFull"));
+    if (plan.estimatedBytes > (await opts.freeBytes())) throw new ExportError("disk", msg("export.diskFull"));
 
     const tz = request.tz ?? "UTC";
     const job: Job = {
@@ -185,20 +187,20 @@ export function createExports(opts: ExportsOptions): Exports {
       return;
     }
     job.phase = { tag: "running", progress: 0 };
-    const run = { job, pid: null as number | null, stop: (_e: string | null) => {} };
+    const run = { job, pid: null as number | null, stop: (_e: Msg | null) => {} };
     current = run;
     void execute(job, run)
-      .catch((e) => fail(job, e instanceof ExportError ? e.message : "匯出失敗，請稍後再試", e))
+      .catch((e) => fail(job, e instanceof ExportError ? e.msg : msg("export.failed"), e))
       .finally(() => {
         if (current === run) current = null;
         pump();
       });
   }
 
-  function fail(job: Job, message: string, cause?: unknown): void {
+  function fail(job: Job, error: Msg, cause?: unknown): void {
     if (!jobs.has(job.id) || job.phase.tag === "failed") return;
     if (cause !== undefined && !(cause instanceof ExportError)) console.error(`[export] ${job.id}`, cause);
-    job.phase = { tag: "failed", finishedAt: now(), error: message };
+    job.phase = { tag: "failed", finishedAt: now(), error };
     void rm(dirOf(job), { recursive: true, force: true });
   }
 
@@ -228,9 +230,9 @@ export function createExports(opts: ExportsOptions): Exports {
     if (job.phase.tag !== "running") return;
     // Re-plan: segments may have closed or been deleted while the job waited in the queue.
     const plan = planFor({ cameraId: job.cameraId, startMs: job.startMs, endMs: job.endMs });
-    if (!plan.ok) throw new ExportError("empty", "這段錄影已經被清除");
+    if (!plan.ok) throw new ExportError("empty", msg("export.purged"));
     const files = await stage(job, plan.parts);
-    if (files.length === 0) throw new ExportError("empty", "這段錄影已經被清除");
+    if (files.length === 0) throw new ExportError("empty", msg("export.purged"));
     const dir = dirOf(job);
     const listPath = join(dir, "list.txt");
     await Bun.write(listPath, concatList(files));
@@ -250,16 +252,16 @@ export function createExports(opts: ExportsOptions): Exports {
     const token = processStartToken(proc.pid);
     if (token) writePidFile(opts.pidFile, [{ id: `export:${job.id}`, pid: proc.pid, startToken: token }]);
 
-    let stopReason: string | null = null;
+    let stopReason: Msg | null = null;
     let killTimer: ReturnType<typeof setTimeout> | null = null;
-    const terminate = (reason: string | null) => {
+    const terminate = (reason: Msg | null) => {
       if (stopReason !== null || killTimer) return;
-      stopReason = reason ?? "已取消";
+      stopReason = reason ?? msg("export.cancelled");
       signalGroup(proc.pid, "SIGTERM");
       killTimer = setTimeout(() => signalGroup(proc.pid, "SIGKILL"), killGraceMs);
     };
     run.stop = terminate;
-    const deadline = setTimeout(() => terminate("匯出逾時，已經停止"), timeoutMs);
+    const deadline = setTimeout(() => terminate(msg("export.timedOut")), timeoutMs);
 
     const stderrTail: string[] = [];
     const readStderr = (async () => {
@@ -298,11 +300,11 @@ export function createExports(opts: ExportsOptions): Exports {
     if (stopReason !== null) throw new ExportError("busy", stopReason);
     if (code !== 0) {
       console.error(`[export] ${job.id} ffmpeg exited ${code}\n${stderrTail.join("\n")}`);
-      throw new ExportError("busy", "匯出失敗，請稍後再試");
+      throw new ExportError("busy", msg("export.failed"));
     }
     const size = await stat(partial).then((s) => s.size, () => 0);
     if (size === 0 || (await probeDuration(opts.env.ffprobeBin, partial)) <= 0) {
-      throw new ExportError("busy", "匯出的檔案無法播放，請稍後再試");
+      throw new ExportError("busy", msg("export.unplayable"));
     }
     await rename(partial, outPath(job));
     await Promise.all([rm(listPath, { force: true }), ...files.filter((f) => f.part.open).map((f) => rm(f.path, { force: true }))]);
@@ -344,7 +346,7 @@ export function createExports(opts: ExportsOptions): Exports {
     },
     activePid: () => current?.pid ?? null,
     killForMemory() {
-      current?.stop("匯出佔用的記憶體過多，已經停止");
+      current?.stop(msg("export.memory"));
     },
     async shutdown() {
       closed = true;

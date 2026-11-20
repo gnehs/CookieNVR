@@ -55,9 +55,17 @@ class Fallback:
     reason: str
     #: 給開發者的技術細節（例外訊息等）
     detail: str = ""
+    #: 訊息代碼與參數：前端依它換成使用者的語言（見 src/messages/detection.ts），沒有時顯示 reason
+    code: str | None = None
+    params: dict = field(default_factory=dict)
 
     def to_json(self) -> dict:
-        return {"reason": self.reason, "detail": self.detail}
+        out: dict = {"reason": self.reason, "detail": self.detail}
+        if self.code:
+            out["code"] = self.code
+            if self.params:
+                out["params"] = self.params
+        return out
 
 
 @dataclass(frozen=True)
@@ -271,22 +279,23 @@ def unavailable_reason(kind: str, p: Probe) -> Fallback | None:
     if kind == "intel":
         if not p.has_openvino:
             detail = p.openvino_plugin_error or "onnxruntime-ep-openvino 沒有安裝"
-            return Fallback("這個映像沒有 Intel 內顯推論元件（只有 amd64 的映像有）", detail)
+            return Fallback("這個映像沒有 Intel 內顯推論元件（只有 amd64 的映像有）", detail, "detector.noIntelRuntime")
         if not p.dri_nodes:
-            return Fallback("容器裡找不到 Intel 內顯（/dev/dri），請在容器設定掛入 /dev/dri", "no /dev/dri/renderD*")
+            return Fallback("容器裡找不到 Intel 內顯（/dev/dri），請在容器設定掛入 /dev/dri", "no /dev/dri/renderD*", "detector.noDri")
         if not p.dri_accessible:
-            return Fallback("沒有權限使用 /dev/dri，請把容器加入主機 render 群組（--group-add）", f"{p.dri_nodes} not readable/writable")
+            return Fallback("沒有權限使用 /dev/dri，請把容器加入主機 render 群組（--group-add）", f"{p.dri_nodes} not readable/writable", "detector.driNoAccess")
         if p.devices and not p.of_kind("intel") and "intel" in p.enum_errors:
             if "/dev/dri/by-path" in p.enum_errors["intel"]:
-                return Fallback("Intel 內顯缺少 /dev/dri/by-path 連結，OpenVINO 找不到它；請以 root 啟動容器（可用 PUID／PGID 降權）讓 CookieNVR 自動補上", p.enum_errors["intel"])
-            return Fallback("OpenVINO 看不到 Intel 內顯，可能是驅動不支援這顆內顯", p.enum_errors["intel"])
+                return Fallback("Intel 內顯缺少 /dev/dri/by-path 連結，OpenVINO 找不到它；請以 root 啟動容器（可用 PUID／PGID 降權）讓 CookieNVR 自動補上", p.enum_errors["intel"], "detector.byPathMissing")
+            return Fallback("OpenVINO 看不到 Intel 內顯，可能是驅動不支援這顆內顯", p.enum_errors["intel"], "detector.openvinoNoGpu")
     if kind == "nvidia":
         if not p.has_cuda:
-            return Fallback("這個映像沒有 Nvidia 推論元件，請改用 latest-nvidia 映像", f"providers={p.providers}")
+            return Fallback("這個映像沒有 Nvidia 推論元件，請改用 latest-nvidia 映像", f"providers={p.providers}", "detector.noNvidiaRuntime")
         if not p.nvidia_nodes:
             return Fallback(
                 "容器裡看不到 Nvidia 顯卡，請確認主機已裝 NVIDIA Container Toolkit，並以 --gpus all 或 runtime: nvidia 啟動",
                 "no /dev/nvidia[0-9]",
+                "detector.noNvidiaGpu",
             )
     return None
 
@@ -307,7 +316,7 @@ def resolve(requested: str, p: Probe) -> tuple[list[Device], Fallback | None]:
         found = p.of_kind(requested)
         if found:
             return [found[0], *cpu], None
-        reason = unavailable_reason(requested, p) or Fallback(f"沒有偵測到{KIND_NAMES[requested]}", "")
+        reason = unavailable_reason(requested, p) or Fallback(f"沒有偵測到{KIND_NAMES[requested]}", "", f"detector.no{requested.capitalize()}Detected")
         return cpu, reason
     device = p.find(requested)
     if device:
@@ -315,7 +324,7 @@ def resolve(requested: str, p: Probe) -> tuple[list[Device], Fallback | None]:
     kind = requested.split(":", 1)[0]
     reason = unavailable_reason(kind, p) if kind in KINDS else None
     if reason is None:
-        reason = Fallback(f"指定的裝置目前找不到（可能已拔除或換了顯示卡），已改用自動選擇", requested)
+        reason = Fallback("指定的裝置目前找不到（可能已拔除或換了顯示卡），已改用自動選擇", requested, "detector.deviceGone")
     return auto_candidates(p), reason
 
 
@@ -366,6 +375,7 @@ class NotOnDevice(RuntimeError):
 
     def __init__(self, device: Device, placement: dict[str, float]):
         self.placement = placement
+        self.params = {"device": device.name, "runtime": RUNTIME_NAMES.get(device.kind, device.kind)}
         super().__init__(f"{device.name} 沒有實際執行這個模型（{RUNTIME_NAMES.get(device.kind, device.kind)} 把運算交回處理器）")
 
 
@@ -447,10 +457,10 @@ def build_engine(ort, model_path: str, device: Device, p: Probe) -> Engine:
         try:
             inputs = session.get_inputs()
             if len(inputs) != 1:
-                raise yolo.ModelFormatError(f"模型應該只有一個影像輸入，這個模型有 {len(inputs)} 個")
+                raise yolo.ModelFormatError(f"模型應該只有一個影像輸入，這個模型有 {len(inputs)} 個", "detector.modelInputCount", {"count": len(inputs)})
             width, height = yolo.input_size(list(inputs[0].shape))
             if inputs[0].type != "tensor(float)":
-                raise yolo.ModelFormatError(f"模型的輸入型別是 {inputs[0].type}，目前只支援 float32")
+                raise yolo.ModelFormatError(f"模型的輸入型別是 {inputs[0].type}，目前只支援 float32", "detector.modelInputType", {"type": inputs[0].type})
             dummy = np.full((1, 3, height, width), yolo.PAD_VALUE, dtype=np.float32)
             outputs = session.run(None, {inputs[0].name: dummy})
             session.run(None, {inputs[0].name: dummy})
@@ -498,8 +508,10 @@ def load(ort, model_path: str, requested: str, p: Probe | None = None) -> LoadRe
                 err = f"{err}；實際執行：{placement_text(e.placement)}"
             attempts.append({"device": device.id, "ok": False, "error": err[:600], "ms": round((time.monotonic() - t0) * 1000)})
             if fallback is None:
-                reason = f"{e}，已改用其他裝置" if isinstance(e, NotOnDevice) else f"{device.name}載入模型失敗，已改用其他裝置"
-                fallback = Fallback(reason, err[:600])
+                if isinstance(e, NotOnDevice):
+                    fallback = Fallback(f"{e}，已改用其他裝置", err[:600], "detector.notOnDevice", e.params)
+                else:
+                    fallback = Fallback(f"{device.name}載入模型失敗，已改用其他裝置", err[:600], "detector.loadFailed", {"device": device.name})
             continue
         attempts.append({"device": device.id, "ok": True, "ms": round((time.monotonic() - t0) * 1000), "placement": engine.placement})
         return LoadResult(engine, requested, fallback, round((time.monotonic() - started) * 1000), attempts)

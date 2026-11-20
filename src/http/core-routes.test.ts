@@ -71,7 +71,7 @@ beforeEach(async () => {
       instanceId: "00000000-0000-4000-8000-000000000000",
       probe: async (conn): Promise<ProbeResult> => {
         probed.push(conn);
-        return { ok: false, error: "unreachable" };
+        return { ok: false, error: "unreachable", errorMsg: { code: "raw", params: { text: "unreachable" } }, stream: "main" };
       },
       system: async (): Promise<SystemDto> => ({
         workers: [],
@@ -80,7 +80,7 @@ beforeEach(async () => {
         usage: [],
         elsewhere: [],
         logs: ["hello"],
-        decode: { requested: "cpu", cameras: [], warning: null },
+        decode: { requested: "cpu", cameras: [], warning: null, warningMsg: null },
       }),
       diagnostics: async (only) => {
         diagnosed.push(only);
@@ -191,7 +191,7 @@ describe("路由與錯誤", () => {
     const boom = await call("/boom");
     console.error = orig;
     expect(boom.status).toBe(500);
-    expect(await boom.json()).toEqual({ error: expect.any(String) });
+    expect(await boom.json()).toEqual({ error: expect.any(String), code: "internal" });
   });
 
   test("變更類請求有 body 時只接受 application/json，沒有 body 的可以", async () => {
@@ -448,7 +448,7 @@ describe("攝影機", () => {
 
   test("測試連線走注入的 probe", async () => {
     const res = await call("/api/cameras/test", { method: "POST", ...as(adminCookie), json: tapo.connection });
-    expect(await res.json()).toEqual({ ok: false, error: "unreachable" });
+    expect(await res.json()).toEqual({ ok: false, error: "unreachable", errorMsg: { code: "raw", params: { text: "unreachable" } }, stream: "main" });
     expect(probed).toEqual([tapo.connection]);
     expect((await call("/api/cameras/test", { method: "POST", ...as(adminCookie), json: { type: "x" } })).status).toBe(
       400,

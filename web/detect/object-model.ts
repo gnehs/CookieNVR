@@ -5,6 +5,7 @@ import type { InferenceDeviceDto, ObjectLabelsDto, ObjectsDto, ObjectsStatusDto 
 import { LIMITS } from "../../src/detect/config.ts";
 import { labelName } from "./label-names.ts";
 import { OBJECT_FPS_CHOICES, type ObjectMode } from "../../src/types.ts";
+import { serverText } from "../server-text.ts";
 
 export const AUTO_DEVICE = "auto";
 
@@ -52,13 +53,13 @@ export function deviceHint(current: string, devices: readonly InferenceDeviceDto
 }
 
 /** 某類裝置不能用的原因：使用者指定了那類裝置時直接顯示，其餘收起來，免得每台機器都堆著用不到的說明 */
-export function unavailableNotes(unavailable: ObjectsDto["unavailable"], current: string): { inline: string[]; folded: string[] } {
+export function unavailableNotes(unavailable: ObjectsDto["unavailable"], current: string, unavailableMsg?: ObjectsDto["unavailableMsg"]): { inline: string[]; folded: string[] } {
   const inline: string[] = [];
   const folded: string[] = [];
   for (const kind of ["intel", "nvidia"] as const) {
     const reason = unavailable[kind];
     if (!reason) continue;
-    (current.startsWith(`${kind}:`) ? inline : folded).push(reason);
+    (current.startsWith(`${kind}:`) ? inline : folded).push(serverText(unavailableMsg?.[kind], reason));
   }
   return { inline, folded };
 }
@@ -223,12 +224,12 @@ export function objectsView(status: ObjectsStatusDto): ObjectsView {
     case "loading":
       return { tone: "busy", title: t`Loading model…`, note: t`The first time a graphics card is used, this can take about a minute.`, warnings: [] };
     case "error":
-      return { tone: "bad", title: t`Model unavailable`, note: status.error ?? t`Try a different model.`, warnings: [] };
+      return { tone: "bad", title: t`Model unavailable`, note: status.error === null ? t`Try a different model.` : serverText(status.errorMsg, status.error), warnings: [] };
     case "ready": {
       if (status.paused === "benchmark") return { tone: "busy", title: t`Benchmarking, detection paused`, note: t`Events are still recorded and detection resumes when the test finishes.`, warnings: [] };
       const share = cpuShareNote(status.cpuShare);
       const deviceName = status.device ? tidyName(status.device.name) : t`CPU`;
-      const warnings = [status.fallback?.reason, share?.tone === "warn" ? sentence(share.text) : null, status.warning].filter((w): w is string => !!w);
+      const warnings = [status.fallback ? serverText(status.fallback.reasonMsg, status.fallback.reason) : null, share?.tone === "warn" ? sentence(share.text) : null, status.warning === null ? null : serverText(status.warningMsg, status.warning)].filter((w): w is string => !!w);
       const note = joinClauses([speedText(status), share?.tone === "ok" ? share.text : null].filter((x): x is string => !!x));
       return {
         tone: warnings.length ? "warn" : "ok",

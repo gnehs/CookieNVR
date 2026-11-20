@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ObjectsStatusDto } from "../../src/api-types.ts";
+import { msg } from "../../src/messages/index.ts";
 import { LIMITS } from "../../src/detect/config.ts";
 import { deviceHint, deviceOptions, eventLabelOptions, labelGroups, labelsProblem, objectsView, objectSummary, posToScore, rateClause, scoreToPos, speedText, strictnessOf, unavailableNotes } from "./object-model.ts";
 
@@ -14,6 +15,7 @@ const status = (o: Partial<ObjectsStatusDto> = {}): ObjectsStatusDto => ({
   fallback: null,
   cpuShare: null,
   error: null,
+  errorMsg: null,
   model: { id: "builtin", name: "內建", format: "yolo", input: [640, 640] },
   latencyMs: null,
   processed: 0,
@@ -22,6 +24,7 @@ const status = (o: Partial<ObjectsStatusDto> = {}): ObjectsStatusDto => ({
   dropRatio: null,
   paused: null,
   warning: null,
+  warningMsg: null,
   gpu: null,
   ...o,
 });
@@ -57,9 +60,9 @@ describe("物件辨識狀態", () => {
   });
 
   test("退回別的裝置時是警告，帶使用者看得懂的原因，不帶技術細節", () => {
-    const v = objectsView(status({ device: CPU, fallback: { reason: "找不到 Nvidia 顯卡，改用 CPU。", detail: "CUDAExecutionProvider missing" } }));
+    const v = objectsView(status({ device: CPU, fallback: { reason: "找不到 Nvidia 顯卡，改用 CPU。", reasonMsg: msg("detector.noNvidiaGpu"), detail: "CUDAExecutionProvider missing" } }));
     expect(v.tone).toBe("warn");
-    expect(v.warnings).toEqual(["找不到 Nvidia 顯卡，改用 CPU。"]);
+    expect(v.warnings).toEqual(["No Nvidia graphics card is visible in the container. Make sure the NVIDIA Container Toolkit is installed on the host, and start the container with --gpus all or runtime: nvidia"]);
     expect(JSON.stringify(v)).not.toContain("CUDA");
   });
 
@@ -74,9 +77,9 @@ describe("物件辨識狀態", () => {
   });
 
   test("負載提醒也算警告，與退回的原因並列", () => {
-    const v = objectsView(status({ warning: "最近有 23% 的畫面來不及辨識。", fallback: { reason: "改用 CPU。", detail: "" } }));
+    const v = objectsView(status({ warning: "最近有 23% 的畫面來不及辨識。", warningMsg: msg("objects.dropWarning", { percent: 23 }), fallback: { reason: "改用 CPU。", reasonMsg: msg("detector.loadFailed", { device: "GTX" }), detail: "" } }));
     expect(v.tone).toBe("warn");
-    expect(v.warnings).toEqual(["改用 CPU。", "最近有 23% 的畫面來不及辨識。"]);
+    expect(v.warnings).toEqual(["GTX failed to load the model. Switched to another device", "23% of recent frames were too late to analyze. Lower the detection rate or switch to a faster device."]);
   });
 
   test("測速中說明辨識暫停，不重複顯示警告", () => {
@@ -134,6 +137,8 @@ describe("推論裝置選單", () => {
     expect(unavailableNotes(un, "auto")).toEqual({ inline: [], folded: ["沒有 /dev/dri。", "映像沒有 Nvidia 元件。"] });
     expect(unavailableNotes(un, "nvidia:GPU-x")).toEqual({ inline: ["映像沒有 Nvidia 元件。"], folded: ["沒有 /dev/dri。"] });
     expect(unavailableNotes({ intel: null, nvidia: null }, "auto")).toEqual({ inline: [], folded: [] });
+    const unMsg = { intel: msg("detector.noDri"), nvidia: msg("detector.noNvidiaRuntime") };
+    expect(unavailableNotes(un, "auto", unMsg).folded).toEqual(["No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings", "This image has no Nvidia inference components. Use the latest-nvidia image"]);
   });
 });
 

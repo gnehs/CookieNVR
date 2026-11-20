@@ -209,7 +209,7 @@ describe("狀態感應器", () => {
     images: { pending: 0, labeled: [] },
     trainable: false,
     job: null,
-    problem: code ? { code, message: code === "worker" ? "狀態辨識程序無法啟動：缺少模型檔" : "m" } : null,
+    problem: code ? { code, message: code === "worker" ? "狀態辨識程序無法啟動：缺少模型檔" : "m", msg: code === "worker" ? { code: "states.problemWorkerFailed", params: { text: "缺少模型檔" } } : { code: "states.problemPaused" } } : null,
     createdAt: 0,
   });
 
@@ -237,10 +237,10 @@ describe("狀態感應器", () => {
     ]);
   });
 
-  test("辨識程序的問題只列一次，說明用後端給的白話", () => {
+  test("辨識程序的問題只列一次，說明用後端給的訊息", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "車庫")], stateSensors: [sensor("s1", "a", "worker"), sensor("s2", "a", "worker")] });
     expect(h.issues).toHaveLength(1);
-    expect(h.issues[0]).toMatchObject({ kind: "stateWorker", title: "State recognition isn't working properly", detail: "狀態辨識程序無法啟動：缺少模型檔" });
+    expect(h.issues[0]).toMatchObject({ kind: "stateWorker", title: "State recognition isn't working properly", detail: "The classifier couldn't start: 缺少模型檔" });
     const crashed = assessHealth({ ...healthy, workers: [worker("restream"), worker("classifier", { kind: "classifier", state: "backoff" })], cams: [], stateSensors: [] });
     expect(crashed.issues.map((i) => i.kind)).toEqual(["stateWorker"]);
   });

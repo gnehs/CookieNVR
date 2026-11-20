@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { msg } from "../../../src/messages/index.ts";
 import type { CameraConfig } from "../../../src/types.ts";
 import { connKey, detectSummary, draftOf, editReducer, errorCard, invalidFields, planSave, probeFailure, sectionChanged, validate, type SectionEdit, type SectionKey } from "./form-model.ts";
 
@@ -132,14 +133,14 @@ describe("editReducer", () => {
 
 describe("probeFailure", () => {
   test("wrong Tapo credentials mark the password and the account", () => {
-    const e = probeFailure({ type: "tapo", host: "h", username: "u", password: "p" }, "帳號或密碼錯誤（401）");
+    const e = probeFailure({ type: "tapo", host: "h", username: "u", password: "p" }, { ok: false, error: "主碼流：帳號或密碼錯誤", errorMsg: msg("probe.badCredentials"), stream: "main" });
     expect(invalidFields(e)).toEqual(["tapoPass", "tapoUser"]);
     expect(e.summary).toBe("Couldn't reach this camera, so nothing was saved");
     expect(e.copy).not.toContain("p\n");
   });
 
   test("ffprobe 原文只出現在複製內容裡", () => {
-    const e = probeFailure({ type: "tapo", host: "h", username: "u", password: "p" }, "主碼流：攝影機有回應，但沒有送出影像，可能是同時連線數已達上限", "Failed reading RTSP data: Operation timed out");
+    const e = probeFailure({ type: "tapo", host: "h", username: "u", password: "p" }, { ok: false, error: "主碼流：攝影機有回應，但沒有送出影像，可能是同時連線數已達上限", errorMsg: msg("probe.noVideo"), stream: "main", detail: "Failed reading RTSP data: Operation timed out" });
     expect(e.copy).toContain("ffprobe output:\nFailed reading RTSP data: Operation timed out");
     expect(e.field?.message).not.toContain("Failed");
   });

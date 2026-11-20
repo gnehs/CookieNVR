@@ -1,5 +1,7 @@
+import { msg, type Msg } from "../messages/index.ts";
+import type { HwParams } from "../messages/detection.ts";
 import type { DeviceRef } from "../types.ts";
-import { CODEC_LABEL, type CodecName, type HwApi, type HwFailure } from "./commands.ts";
+import { CODEC_LABEL, hwFailure, type CodecName, type HwApi, type HwFailure } from "./commands.ts";
 import type { ProbedDevice } from "./probe.ts";
 
 /** detect worker 用哪張卡解碼；worker 由環境變數收到這份，啟動失敗時自己退回 CPU */
@@ -26,6 +28,9 @@ const AUTO_ORDER = ["nvidia", "intel", "apple"] as const;
 const use = (d: ProbedDevice, codec: CodecName, note: HwFailure | null = null): DecodePlan => ({ hw: { deviceId: d.id, name: d.name, codec, api: d.api }, note });
 const CPU: DecodePlan = { hw: null, note: null };
 
+/** 原因（hw.* 訊息）再補上顯示卡名稱或影像格式 */
+const extend = (m: Msg, extra: HwParams): Msg => ({ ...m, params: { ...(m.params as HwParams | undefined), ...extra } }) as Msg;
+
 /**
  * @param devices 試跑結果；null 表示還沒跑完，先用 CPU（跑完後 worker 規格改變，自動重啟）
  * @param codec 這台 detect 碼流的影像格式；還不知道時當作 H.264（最常見），真的不支援時 worker 會自己退回
@@ -41,12 +46,12 @@ export function planDecode(requested: DeviceRef, devices: ProbedDevice[] | null,
     // 有卡但每張都不能用：使用者大概以為有在用顯示卡，說明原因
     const first = ordered[0];
     const check = first?.decode[c];
-    return check && !check.ok ? { hw: null, note: { reason: `${first.name}：${check.reason}`, detail: check.detail } } : CPU;
+    return check && !check.ok ? { hw: null, note: hwFailure(extend(check.reasonMsg, { device: first.name }), check.detail) } : CPU;
   };
   if (requested === "auto") return auto(null);
   const chosen = devices.find((d) => d.id === requested);
-  if (!chosen) return auto({ reason: "找不到設定的顯示卡（可能拔掉或換了），已改用自動選擇", detail: `requested ${requested}; found ${devices.map((d) => d.id).join(", ") || "none"}` });
+  if (!chosen) return auto(hwFailure(msg("hw.deviceGone", {}), `requested ${requested}; found ${devices.map((d) => d.id).join(", ") || "none"}`));
   const check = chosen.decode[c];
   if (check.ok) return use(chosen, c);
-  return { hw: null, note: { reason: check.reason.includes(CODEC_LABEL[c]) ? check.reason : `${check.reason}（${CODEC_LABEL[c]}）`, detail: check.detail } };
+  return { hw: null, note: hwFailure(check.reason.includes(CODEC_LABEL[c]) ? check.reasonMsg : extend(check.reasonMsg, { forCodec: CODEC_LABEL[c] }), check.detail) };
 }

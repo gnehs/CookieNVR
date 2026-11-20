@@ -7,6 +7,7 @@
  */
 import { listDrmCards } from "../metrics/gpu.ts";
 import type { MetricsIo } from "../metrics/io.ts";
+import { msg, type Msg } from "../messages/index.ts";
 import { normalizePciId } from "../metrics/parse.ts";
 import type { DeviceRef } from "../types.ts";
 import type { HwApi } from "./commands.ts";
@@ -21,7 +22,7 @@ export interface VideoDevice {
   pci: string | null;
   api: HwApi;
   /** 找得到卡但容器裡用不了的原因（例如沒掛 /dev/dri），不必試跑就知道結果 */
-  blocked: string | null;
+  blocked: Msg | null;
 }
 
 const NVIDIA_QUERY = ["nvidia-smi", "--query-gpu=index,uuid,pci.bus_id,name", "--format=csv,noheader"];
@@ -64,7 +65,7 @@ async function intelDevices(io: MetricsIo): Promise<VideoDevice[]> {
       name: c.pdev.endsWith(":00:02.0") ? "Intel 內顯" : "Intel 顯示卡",
       pci: c.pdev,
       api: { type: "vaapi", node },
-      blocked: present ? null : `主機有這張 Intel 顯示卡，但容器裡沒有 ${node}：請在容器設定掛入 /dev/dri`,
+      blocked: present ? null : msg("hw.nodeMissing", { node }),
     });
   }
   return out;

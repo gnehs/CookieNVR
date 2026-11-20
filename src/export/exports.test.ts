@@ -172,6 +172,7 @@ describe("export manager", () => {
     const done = await finished(exports, job.id, 5_000);
     expect(done.state).toBe("failed");
     expect(done.error).toContain("逾時");
+    expect(done.errorMsg).toEqual({ code: "export.timedOut" });
     expect(exports.activePid()).toBeNull();
     const alive = (() => {
       try {
@@ -198,6 +199,7 @@ describe("export manager", () => {
     exports.killForMemory();
     const done = await finished(exports, a.id, 5_000);
     expect(done.error).toContain("記憶體");
+    expect(done.errorMsg).toEqual({ code: "export.memory" });
 
     const c = await exports.create({ cameraId: CAM, startMs: T, endMs: T + 20_000 });
     await Bun.sleep(100);

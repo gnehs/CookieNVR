@@ -44,7 +44,7 @@ test("a missing asset is a 404, not the page", async () => {
 test("API paths never fall through to the page", async () => {
   const res = await get("/api/nope");
   expect(res.status).toBe(404);
-  expect(await res.json()).toEqual({ error: "找不到資源" });
+  expect(await res.json()).toEqual({ error: "找不到資源", code: "http.notFound" });
 });
 
 test("paths cannot escape the build directory", async () => {

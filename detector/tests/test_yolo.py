@@ -66,6 +66,14 @@ class LayoutTest(unittest.TestCase):
         with self.assertRaisesRegex(yolo.ModelFormatError, "輸入"):
             yolo.detect_layout([1, 10], (1, 84, 8400))
 
+    def test_errors_carry_a_code_and_params_for_translation(self):
+        with self.assertRaises(yolo.ModelFormatError) as cm:
+            yolo.detect_layout([1, 3, 640, 640], (1, 7, 8400))
+        self.assertEqual((cm.exception.code, cm.exception.params), ("detector.modelNoClassNames", {"count": 3}))
+        with self.assertRaises(yolo.ModelFormatError) as cm:
+            yolo.detect_layout([1, 10], (1, 84, 8400))
+        self.assertEqual((cm.exception.code, cm.exception.params), ("detector.modelInputShape", {"shape": "[1, 10]"}))
+
 
 class PreprocessTest(unittest.TestCase):
     def setUp(self):
@@ -170,6 +178,11 @@ class DeviceChoiceTest(unittest.TestCase):
         self.assertIn("/dev/dri", eng.unavailable_reason("intel", fake_probe(openvino_plugin="/x.so")).reason)
         no_perm = fake_probe(openvino_plugin="/x.so", dri_nodes=["/dev/dri/renderD128"])
         self.assertIn("render", eng.unavailable_reason("intel", no_perm).reason)
+
+    def test_reasons_carry_a_code_for_translation(self):
+        self.assertEqual(eng.unavailable_reason("intel", fake_probe()).to_json()["code"], "detector.noIntelRuntime")
+        self.assertEqual(eng.resolve("nvidia:GPU-gone", gpu_probe())[1].to_json()["code"], "detector.deviceGone")
+        self.assertNotIn("code", eng.Fallback("x", "y").to_json())
 
     def test_nvidia_reasons(self):
         self.assertIn("latest-nvidia", eng.unavailable_reason("nvidia", fake_probe()).reason)

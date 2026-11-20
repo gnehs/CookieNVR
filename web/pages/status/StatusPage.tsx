@@ -17,6 +17,7 @@ import { ErrorBox, Spinner } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
 import { explain, SYSTEM_ICON, type Action, type Restart, type Snapshot } from "./explain.ts";
+import { serverText } from "../../server-text.ts";
 import { ResourcesCard } from "./ResourcesCard.tsx";
 
 const POLL_MS = 5_000;
@@ -91,7 +92,7 @@ function useLoadWarning(enabled: boolean): string | null {
   const data = q.data;
   useEffect(() => {
     if (!enabled || q.isError) setWarning(null);
-    else if (data && !data.status.paused) setWarning(data.status.warning);
+    else if (data && !data.status.paused) setWarning(data.status.warning === null ? null : serverText(data.status.warningMsg, data.status.warning));
   }, [enabled, q.isError, data]);
   return enabled ? warning : null;
 }

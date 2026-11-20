@@ -6,6 +6,7 @@ import builtinModel from "../../detector/builtin-model.json";
 import type {
   BenchmarkDto,
   BenchmarkResultDto,
+  GpuDto,
   GpuUsageDto,
   InferenceDeviceDto,
   ObjectLabelDto,
@@ -20,6 +21,8 @@ import type { Env } from "../env.ts";
 import type { EventTracker } from "../events/tracker.ts";
 import { HttpError } from "../http/errors.ts";
 import { asObject } from "../http/validate.ts";
+import { externalMsg } from "../messages/external.ts";
+import { msg as mk, zh, type Msg } from "../messages/index.ts";
 import { normalizePciId } from "../metrics/parse.ts";
 import type { Camera, CameraId, DeviceRef, ObjectSettings, Route, WorkerSpec } from "../types.ts";
 import { camerasSupported, DROP_WARN_RATIO, loadSample, verdict } from "./capacity.ts";
@@ -49,7 +52,7 @@ type Phase =
   | { tag: "starting" }
   | { tag: "loading"; since: number }
   | { tag: "ready"; info: ReadyInfo }
-  | { tag: "error"; message: string; detail: string | null; probe: unknown };
+  | { tag: "error"; message: string; messageMsg: Msg; detail: string | null; probe: unknown };
 
 /** 測速：sent = 指令已送給 detector；還沒送是在等手上那張推論做完 */
 type Bench = BenchmarkDto & { sent: boolean; devices: string[]; seconds: number };
@@ -111,7 +114,7 @@ export interface ObjectDetection {
   status(): ObjectsStatusDto;
   resources(): DetectorResources;
   /** 系統資源的 GPU 卡片下方要補充的資訊：物件辨識正在用這張卡時回傳推論速率 */
-  gpuExtras(gpu: { id: string; vendor: string }): { label: string; value: string }[];
+  gpuExtras(gpu: { id: string; vendor: string }): GpuDto["extras"];
   diagnostics(): ObjectsDiagnostics;
   routes(): Route[];
   stop(): Promise<void>;
@@ -149,7 +152,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
   const stationary = new Map<CameraId, StationaryFilter>();
   /** 每個模型載入後回報的類別；自備模型沒載入過就不知道 */
   const classesByModel = new Map<string, { classes: string[]; titles: string[] }>();
-  let deviceCache: { at: number; devices: InferenceDeviceDto[]; unavailable: ObjectsDto["unavailable"] } | null = null;
+  let deviceCache: { at: number; devices: InferenceDeviceDto[]; unavailable: ObjectsDto["unavailable"]; unavailableMsg: ObjectsDto["unavailableMsg"] } | null = null;
   let deviceProbe: Promise<void> | null = null;
   let bench: Bench | null = loadBench();
   const dec = new TextDecoder();
@@ -167,7 +170,9 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
   function loadBench(): Bench | null {
     try {
       const saved = JSON.parse(readFileSync(benchFile, "utf8")) as BenchmarkDto;
-      return { ...saved, state: saved.state === "running" ? "failed" : saved.state, sent: true, devices: [], seconds: 0 };
+      // 舊版存的檔沒有 errorMsg
+      const errorMsg = saved.errorMsg ?? (saved.error ? mk("raw", { text: saved.error }) : null);
+      return { ...saved, state: saved.state === "running" ? "failed" : saved.state, error: saved.error, errorMsg, sent: true, devices: [], seconds: 0 };
     } catch {
       return null;
     }
@@ -182,13 +187,14 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       .catch(report);
   }
 
-  function finishBench(state: BenchmarkDto["state"], error: string | null, results?: BenchmarkResultDto[]): void {
+  function finishBench(state: BenchmarkDto["state"], error: Msg | null, results?: BenchmarkResultDto[]): void {
     if (!bench) return;
     const fps = bench.perCameraFps;
     bench = {
       ...bench,
       state,
-      error,
+      error: error && zh(error),
+      errorMsg: error,
       finishedAt: now(),
       progress: null,
       results: (results ?? bench.results).map((r) => (r.ok && r.fps ? { ...r, cameras: camerasSupported(r.fps, r.kind, fps) } : r)),
@@ -272,7 +278,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
         pump();
         break;
       case "error":
-        phase = { tag: "error", message: msg.error, detail: msg.detail, probe: msg.probe };
+        phase = { tag: "error", message: msg.error, messageMsg: msg.errorMsg, detail: msg.detail, probe: msg.probe };
         queue.clear();
         break;
       case "heartbeat":
@@ -305,7 +311,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
     queue.clear();
     reader = new MsgReader();
     phase = enabled() ? { tag: "starting" } : { tag: "off" };
-    if (benchRunning()) finishBench("failed", "推論程序重新啟動，測速中斷");
+    if (benchRunning()) finishBench("failed", mk("objects.benchInterrupted"));
   }
 
   function ensureListener(): void {
@@ -381,16 +387,20 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       const proc = Bun.spawn([opts.env.detectorPython, DETECTOR_SCRIPT, "--list-devices"], { stdout: "pipe", stderr: "pipe" });
       const timer = setTimeout(() => proc.kill(), 30_000);
       try {
-        const out = JSON.parse(await new Response(proc.stdout).text()) as { devices?: unknown[]; unavailable?: Record<string, { reason?: string } | null> };
+        const out = JSON.parse(await new Response(proc.stdout).text()) as { devices?: unknown[]; unavailable?: Record<string, { reason?: string; code?: string; params?: unknown } | null> };
         const devices = (out.devices ?? []).flatMap((d) => {
           const v = d as Partial<InferenceDeviceDto>;
           return typeof v.id === "string" && (v.kind === "cpu" || v.kind === "intel" || v.kind === "nvidia") ? [{ id: v.id, kind: v.kind, name: String(v.name ?? v.id), pci: typeof v.pci === "string" ? v.pci : null }] : [];
         });
         const reason = (k: string) => out.unavailable?.[k]?.reason ?? null;
-        deviceCache = { at: now(), devices, unavailable: { intel: reason("intel"), nvidia: reason("nvidia") } };
+        const reasonMsg = (k: string) => {
+          const u = out.unavailable?.[k];
+          return u?.reason ? externalMsg(u.code, u.params, u.reason) : null;
+        };
+        deviceCache = { at: now(), devices, unavailable: { intel: reason("intel"), nvidia: reason("nvidia") }, unavailableMsg: { intel: reasonMsg("intel"), nvidia: reasonMsg("nvidia") } };
       } catch (e) {
         report(e);
-        deviceCache = { at: now(), devices: [{ id: "cpu", kind: "cpu", name: "CPU", pci: null }], unavailable: { intel: null, nvidia: null } };
+        deviceCache = { at: now(), devices: [{ id: "cpu", kind: "cpu", name: "CPU", pci: null }], unavailable: { intel: null, nvidia: null }, unavailableMsg: { intel: null, nvidia: null } };
       } finally {
         clearTimeout(timer);
         deviceProbe = null;
@@ -399,10 +409,10 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
     return deviceProbe;
   }
 
-  async function devices(): Promise<{ devices: InferenceDeviceDto[]; unavailable: ObjectsDto["unavailable"] }> {
+  async function devices(): Promise<{ devices: InferenceDeviceDto[]; unavailable: ObjectsDto["unavailable"]; unavailableMsg: ObjectsDto["unavailableMsg"] }> {
     if (!deviceCache || now() - deviceCache.at > DEVICE_CACHE_MS) await probeDevices();
     const live = phase.tag === "ready" ? phase.info.devices : null;
-    return { devices: live?.length ? live : deviceCache!.devices, unavailable: deviceCache!.unavailable };
+    return { devices: live?.length ? live : deviceCache!.devices, unavailable: deviceCache!.unavailable, unavailableMsg: deviceCache!.unavailableMsg };
   }
 
   function listModels(): ObjectModelDto[] {
@@ -447,13 +457,9 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
     return { ...dto, stale, verdict: v && mine ? { device: mine.device, ...v } : null };
   }
 
-  function warningOf(dropRatio: number | null, b: BenchmarkDto | null): string | null {
-    if (dropRatio !== null && dropRatio >= DROP_WARN_RATIO) {
-      return `最近有 ${Math.round(dropRatio * 100)}% 的畫面來不及辨識。可以降低辨識頻率，或改用更快的裝置。`;
-    }
-    if (b && !b.stale && b.verdict?.state === "partial") {
-      return `開了物件辨識的 ${b.verdict.cameras} 台攝影機同時有動作時會來不及，這台機器大約能同時處理 ${b.verdict.supported} 台。可以降低辨識頻率，或改用更快的裝置。`;
-    }
+  function warningOf(dropRatio: number | null, b: BenchmarkDto | null): Msg | null {
+    if (dropRatio !== null && dropRatio >= DROP_WARN_RATIO) return mk("objects.dropWarning", { percent: Math.round(dropRatio * 100) });
+    if (b && !b.stale && b.verdict?.state === "partial") return mk("objects.capacityWarning", { cameras: b.verdict.cameras, supported: b.verdict.supported });
     return null;
   }
 
@@ -462,6 +468,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
     const ready = phase.tag === "ready" ? phase.info : null;
     const avg = latencies.length ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
     const load = loadSample(processedAt, droppedAt, now());
+    const warningMsg = s.objects.enabled && phase.tag === "ready" ? warningOf(load.dropRatio, benchDto()) : null;
     return {
       state: s.objects.enabled ? phase.tag : "off",
       requested: s.devices.objects,
@@ -469,6 +476,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       fallback: ready?.fallback ?? null,
       cpuShare: ready ? cpuShareOf(ready.device.kind, ready.placement) : null,
       error: phase.tag === "error" ? phase.message : null,
+      errorMsg: phase.tag === "error" ? phase.messageMsg : null,
       model: {
         id: s.objects.model,
         name: s.objects.model === BUILTIN_ID ? builtinModel.name : s.objects.model,
@@ -481,19 +489,20 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       rateFps: load.rateFps,
       dropRatio: load.dropRatio,
       paused: benchRunning() ? "benchmark" : null,
-      warning: s.objects.enabled && phase.tag === "ready" ? warningOf(load.dropRatio, benchDto()) : null,
+      warning: warningMsg && zh(warningMsg),
+      warningMsg,
       gpu,
     };
   }
 
   function startBench(body: unknown): BenchmarkDto {
-    if (phase.tag !== "ready") throw new HttpError(409, "物件辨識還沒準備好，開啟並等它載入完成後再測速");
-    if (benchRunning()) throw new HttpError(409, "測速正在進行中");
+    if (phase.tag !== "ready") throw new HttpError(409, mk("objects.notReady"));
+    if (benchRunning()) throw new HttpError(409, mk("objects.benchRunning"));
     const o = body === undefined || body === null ? {} : asObject(body);
     const known = phase.info.devices.map((d) => d.id);
     const wanted = Array.isArray(o.devices) ? o.devices.filter((d): d is string => typeof d === "string") : [];
     const unknown = wanted.filter((d) => !known.includes(d));
-    if (unknown.length) throw new HttpError(400, `找不到這些裝置：${unknown.join("、")}`);
+    if (unknown.length) throw new HttpError(400, mk("objects.unknownDevices", { devices: unknown }));
     const seconds = typeof o.seconds === "number" && Number.isFinite(o.seconds) ? Math.min(60, Math.max(3, o.seconds)) : 10;
     bench = {
       state: "running",
@@ -504,6 +513,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       progress: null,
       results: [],
       error: null,
+      errorMsg: null,
       stale: false,
       verdict: null,
       sent: false,
@@ -528,7 +538,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       access: "admin",
       async handler() {
         const d = await devices();
-        return Response.json({ status: status(), models: listModels(), modelsDir, devices: d.devices, unavailable: d.unavailable, benchmark: benchDto() } satisfies ObjectsDto);
+        return Response.json({ status: status(), models: listModels(), modelsDir, devices: d.devices, unavailable: d.unavailable, unavailableMsg: d.unavailableMsg, benchmark: benchDto() } satisfies ObjectsDto);
       },
     },
     { method: "GET", path: "/api/objects/labels", access: "user", handler: () => Response.json(labels()) },
@@ -542,7 +552,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
         try {
           body = text ? JSON.parse(text) : undefined;
         } catch {
-          throw new HttpError(400, "請求內容不是 JSON");
+          throw new HttpError(400, mk("http.invalidJson"));
         }
         return Response.json(startBench(body), { status: 202 });
       },
@@ -586,7 +596,9 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       // 沒有 PCI 位址（多顆 Intel 內顯）時對不上是哪一張，寧可不標
       if (!d.pci || normalizePciId(d.pci) !== normalizePciId(pci)) return [];
       const st = status();
-      return [{ label: "物件辨識", value: st.paused ? "測速中" : `每秒 ${st.rateFps} 張` }];
+      const label = mk("objects.gpuLabel");
+      const value = st.paused ? mk("objects.gpuBenchmarking") : mk("objects.gpuRate", { fps: st.rateFps });
+      return [{ label: zh(label), value: zh(value), labelMsg: label, valueMsg: value }];
     },
     diagnostics: () => ({
       settings: cfg(),

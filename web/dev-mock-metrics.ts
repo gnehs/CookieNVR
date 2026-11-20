@@ -29,7 +29,7 @@ const nvAt = (t: number) => wave(t, 3, 34, 18, 45);
 const intelAt = (t: number) => wave(t, 4, 14, 8, 35);
 
 function gpusAt(t: number): Omit<GpuDto, "extras">[] {
-  const intel: Omit<GpuDto, "extras"> = { id: "intel:0000:00:02.0", vendor: "intel", name: "Intel 內顯", utilPct: intelAt(t), memory: null, temperatureC: null, note: null };
+  const intel: Omit<GpuDto, "extras"> = { id: "intel:0000:00:02.0", vendor: "intel", name: "Intel 內顯", utilPct: intelAt(t), memory: null, temperatureC: null, note: null, noteMsg: null };
   const nvidia: Omit<GpuDto, "extras"> = {
     id: "nvidia:0000:01:00.0",
     vendor: "nvidia",
@@ -38,6 +38,7 @@ function gpusAt(t: number): Omit<GpuDto, "extras">[] {
     memory: { usedBytes: Math.round((1.6 + nvAt(t) / 60) * GB), totalBytes: 12 * GB },
     temperatureC: Math.round(48 + nvAt(t) / 6),
     note: null,
+    noteMsg: null,
   };
   return mockMetricsMode.gpu === "two" ? [intel, nvidia] : mockMetricsMode.gpu === "one" ? [intel] : [];
 }

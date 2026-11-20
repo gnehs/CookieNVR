@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { assessHealth, type Health } from "../health.ts";
+import { serverText } from "../server-text.ts";
 import { statesQuery } from "../states/queries.ts";
 import { camerasQuery, metricsQuery, settingsQuery, systemQuery, workersQuery } from "./queries.ts";
 
@@ -28,7 +29,7 @@ export function useHealth(admin: boolean): Health | null {
       dataDisk: sys.dataDisk,
       minFreeBytes: settings.retention.minFreeBytes,
       resources: metrics?.history,
-      decodeWarning: sys.decode?.warning ?? null,
+      decodeWarning: sys.decode?.warning ? serverText(sys.decode.warningMsg, sys.decode.warning) : null,
       stateSensors,
     });
   }, [sys, settings, metrics, cams, workers, stateSensors]);

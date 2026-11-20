@@ -1,4 +1,6 @@
 import type { BenchmarkResultDto, GpuUsageDto, InferenceDeviceDto, InferenceDeviceKind } from "../api-types.ts";
+import { msg, type Msg } from "../messages/index.ts";
+import { externalMsg, msgOrRaw } from "../messages/external.ts";
 import type { Detection } from "./hits.ts";
 
 /** detector 與主程序之間的 Unix socket：「1 位元組種類＋4 位元組長度＋內容」，見 detector/main.py */
@@ -9,7 +11,7 @@ export interface ReadyInfo {
   device: InferenceDeviceDto;
   /** 這個環境偵測到的所有裝置 */
   devices: InferenceDeviceDto[];
-  fallback: { reason: string; detail: string } | null;
+  fallback: { reason: string; detail: string; reasonMsg: Msg } | null;
   /** classes 是類別鍵、titles 是模型裡的原名，一一對應 */
   model: { file: string; format: string; input: [number, number]; classes: string[]; titles: string[] };
   loadMs: number;
@@ -25,7 +27,7 @@ export interface ReadyInfo {
 export type DetectorMsg =
   | { type: "loading" }
   | { type: "ready"; info: ReadyInfo }
-  | { type: "error"; error: string; detail: string | null; probe: unknown }
+  | { type: "error"; error: string; errorMsg: Msg; detail: string | null; probe: unknown }
   | { type: "heartbeat"; busyMs: number | null; bench: boolean; gpu: GpuUsageDto | null }
   | { type: "result"; id: number; ms: number; detections: Detection[] }
   | { type: "result-error"; id: number; error: string }
@@ -79,8 +81,15 @@ function benchResult(v: unknown): BenchmarkResultDto | null {
   if (!isObj(v) || typeof v.device !== "string") return null;
   const kind = DEVICES.has(v.kind as InferenceDeviceKind) ? (v.kind as InferenceDeviceKind) : "cpu";
   const out: BenchmarkResultDto = { device: v.device, kind, name: text(v.name, v.device), ok: v.ok === true };
-  if (typeof v.reason === "string") out.reason = v.reason;
-  if (typeof v.error === "string") out.error = v.error;
+  if (typeof v.reason === "string") {
+    out.reason = v.reason;
+    out.reasonMsg = msgOrRaw(v.reasonMsg, v.reason);
+  }
+  if (typeof v.error === "string") {
+    out.error = v.error;
+    // 技術訊息多半沒有 code；只有 detector 自己說得出的原因（例如找不到裝置）才有
+    if (isObj(v.errorMsg)) out.errorMsg = msgOrRaw(v.errorMsg, v.error);
+  }
   for (const k of ["loadMs", "frames", "fps", "msMean", "msP90"] as const) {
     const n = num(v[k]);
     if (n !== null) out[k] = n;
@@ -96,7 +105,7 @@ function ready(v: Obj): ReadyInfo | null {
   if (!DEVICES.has(kind) || !model) return null;
   const id = typeof v.deviceId === "string" ? v.deviceId : kind;
   const input = Array.isArray(model.input) && model.input.length === 2 ? (model.input.map((n) => num(n) ?? 0) as [number, number]) : ([0, 0] as [number, number]);
-  const fb = isObj(v.fallback) ? { reason: text(v.fallback.reason), detail: text(v.fallback.detail) } : null;
+  const fb = isObj(v.fallback) ? { reason: text(v.fallback.reason), detail: text(v.fallback.detail), reasonMsg: externalMsg(v.fallback.code, v.fallback.params, text(v.fallback.reason)) } : null;
   const devices = Array.isArray(v.devices) ? v.devices.map(device).filter((d): d is InferenceDeviceDto => d !== null) : [];
   const classes = strings(model.classes);
   const titles = strings(model.titles);
@@ -126,7 +135,11 @@ export function parseDetectorMsg(raw: string): DetectorMsg | null {
   switch (v.type) {
     case "status":
       if (v.state === "loading") return { type: "loading" };
-      if (v.state === "error") return { type: "error", error: text(v.error, "模型載入失敗"), detail: typeof v.detail === "string" ? v.detail : null, probe: v.probe ?? null };
+      if (v.state === "error") {
+        const error = text(v.error, "模型載入失敗");
+        const errorMsg = typeof v.error === "string" ? externalMsg(v.code, v.params, error) : msg("detector.modelLoadFailed");
+        return { type: "error", error, errorMsg, detail: typeof v.detail === "string" ? v.detail : null, probe: v.probe ?? null };
+      }
       if (v.state === "ready") {
         const info = ready(v);
         return info && { type: "ready", info };

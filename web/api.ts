@@ -40,14 +40,24 @@ import type {
   StateSensorDto,
 } from "../src/api-types.ts";
 import type { CameraConfig, CameraConnection, ObjectSettings, Role, Settings } from "../src/types.ts";
+import { serverText } from "./server-text.ts";
 
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** 伺服器回的訊息 code；前端判斷錯誤種類用 */
+    readonly code: string | null = null,
   ) {
     super(message);
   }
+}
+
+/** 錯誤回應（ErrorDto）換成 ApiError，訊息依目前語言；讀不到內容時用 fallback */
+function errorOf(status: number, data: any, fallback: string): ApiError {
+  const code = typeof data?.code === "string" ? data.code : null;
+  const text = typeof data?.error === "string" ? data.error : fallback;
+  return new ApiError(status, code ? serverText(data, text) : text, code);
 }
 
 let onUnauthorized: () => void = () => {};
@@ -75,7 +85,7 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
   if (!res.ok) {
     if (res.status === 401 && !quiet401) onUnauthorized();
     const status = res.status;
-    throw new ApiError(status, data?.error ?? t`Error ${status}`);
+    throw errorOf(status, data, t`Error ${status}`);
   }
   return data as T;
 }
@@ -177,7 +187,7 @@ export const api = {
     const res = await fetch(`/api/system/diagnostics${camera ? `?camera=${encodeURIComponent(camera)}` : ""}`, { credentials: "same-origin" });
     if (!res.ok) {
       const status = res.status;
-      throw new ApiError(status, ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? t`Error ${status}`);
+      throw errorOf(status, await res.json().catch(() => null), t`Error ${status}`);
     }
     return res.text();
   },
@@ -212,7 +222,7 @@ export const api = {
         if (xhr.status >= 200 && xhr.status < 300) return resolve(data as StateSensorDto);
         if (xhr.status === 401) onUnauthorized();
         const status = xhr.status;
-        reject(new ApiError(status, data?.error ?? (status === 413 ? t`File too large (limit 100 MB)` : t`Error ${status}`)));
+        reject(errorOf(status, data, status === 413 ? t`File too large (limit 100 MB)` : t`Error ${status}`));
       };
       xhr.send(file);
     }),

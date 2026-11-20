@@ -2,6 +2,8 @@ import type { DecodeStatusDto, VideoDeviceDto, VideoDevicesDto } from "../api-ty
 import type { CameraDecode } from "../detect/manager.ts";
 import type { Env } from "../env.ts";
 import { systemIo, type MetricsIo } from "../metrics/io.ts";
+import type { HwParams } from "../messages/detection.ts";
+import { msg, zh, type Msg } from "../messages/index.ts";
 import type { CameraId, DeviceRef, Route } from "../types.ts";
 import { probeVideoDevices, type ProbedDevice, type ProbeReport, type Runner } from "./probe.ts";
 
@@ -63,16 +65,23 @@ export function createVideoCodecs(opts: VideoCodecsOptions): VideoCodecs {
  * 狀態頁的提醒：哪幾台改用 CPU、為什麼。同一個原因只說一次；原因不同時只說第一個，
  * 其餘在診斷資訊。沒有退回時為 null。
  */
-export function decodeWarning(cameras: readonly CameraDecode[], nameOf: (id: CameraId) => string): string | null {
+export function decodeWarningMsg(cameras: readonly CameraDecode[], nameOf: (id: CameraId) => string): Msg | null {
   const fell = cameras.filter((c) => c.fallback && c.device === null);
   const moved = cameras.filter((c) => c.fallback && c.device !== null);
   const first = (fell[0] ?? moved[0])?.fallback;
   if (!first) return null;
-  const who = (list: readonly CameraDecode[]) => (list.length === 1 ? nameOf(list[0]!.cameraId) : `${list.length} 台攝影機`);
-  if (fell.length) return `${who(fell)}改用處理器解碼：${first.reason}`;
-  return `${who(moved)}沒有用設定的顯示卡解碼：${first.reason}`;
+  const who = (list: readonly CameraDecode[]) => (list.length === 1 ? { camera: nameOf(list[0]!.cameraId) } : { count: list.length });
+  // 原因是 hw.* 訊息：code 放進 reason，參數攤平（見 src/messages/detection.ts 的 DecodeWarnParams）
+  const reason = { reason: first.reasonMsg.code, ...(first.reasonMsg.params as HwParams | undefined) };
+  return fell.length ? msg("decode.warningCpu", { ...who(fell), ...reason }) : msg("decode.warningMoved", { ...who(moved), ...reason });
+}
+
+export function decodeWarning(cameras: readonly CameraDecode[], nameOf: (id: CameraId) => string): string | null {
+  const m = decodeWarningMsg(cameras, nameOf);
+  return m && zh(m);
 }
 
 export function decodeStatusDto(requested: DeviceRef, cameras: readonly CameraDecode[], nameOf: (id: CameraId) => string): DecodeStatusDto {
-  return { requested, cameras: [...cameras], warning: decodeWarning(cameras, nameOf) };
+  const warningMsg = decodeWarningMsg(cameras, nameOf);
+  return { requested, cameras: [...cameras], warning: warningMsg && zh(warningMsg), warningMsg };
 }

@@ -28,7 +28,12 @@ MAX_DETECTIONS = 50
 
 
 class ModelFormatError(Exception):
-    """模型格式不合；訊息是給使用者看的中文。"""
+    """模型格式不合；訊息是給使用者看的中文，code 與 params 讓前端換成使用者的語言（見 src/messages/detection.ts）。"""
+
+    def __init__(self, message: str, code: str | None = None, params: dict | None = None):
+        super().__init__(message)
+        self.code = code
+        self.params = params or {}
 
 
 def label_key(name: str, index: int) -> str:
@@ -83,11 +88,11 @@ class Detection:
 def input_size(shape: list) -> tuple[int, int]:
     """模型輸入 [1, 3, H, W]；動態維度用 640。回傳 (寬, 高)。"""
     if len(shape) != 4 or (isinstance(shape[1], int) and shape[1] != 3):
-        raise ModelFormatError(f"模型的輸入應該是 [1, 3, 高, 寬] 的影像，這個模型是 {list(shape)}")
+        raise ModelFormatError(f"模型的輸入應該是 [1, 3, 高, 寬] 的影像，這個模型是 {list(shape)}", "detector.modelInputShape", {"shape": str(list(shape))})
     h = shape[2] if isinstance(shape[2], int) and shape[2] > 0 else DEFAULT_SIZE
     w = shape[3] if isinstance(shape[3], int) and shape[3] > 0 else DEFAULT_SIZE
     if h % 32 or w % 32:
-        raise ModelFormatError(f"模型的輸入尺寸 {w}×{h} 不是 32 的倍數，看起來不是 YOLO 模型")
+        raise ModelFormatError(f"模型的輸入尺寸 {w}×{h} 不是 32 的倍數，看起來不是 YOLO 模型", "detector.modelInputSize", {"width": w, "height": h})
     return w, h
 
 
@@ -117,7 +122,9 @@ def _class_names(count: int, metadata: dict[str, str]) -> tuple[str, ...]:
         return names
     if count == len(COCO_NAMES):
         return COCO_NAMES
-    raise ModelFormatError(f"模型有 {count} 個類別，但沒有附類別名稱；目前只支援 COCO 80 類或在 metadata 帶 names 的模型")
+    raise ModelFormatError(
+        f"模型有 {count} 個類別，但沒有附類別名稱；目前只支援 COCO 80 類或在 metadata 帶 names 的模型", "detector.modelNoClassNames", {"count": count}
+    )
 
 
 def detect_layout(input_shape: list, output_shape: tuple[int, ...], metadata: dict[str, str] | None = None) -> Layout:
@@ -128,7 +135,7 @@ def detect_layout(input_shape: list, output_shape: tuple[int, ...], metadata: di
     shape = tuple(output_shape)
     hint = "支援 YOLOX（[1, N, 85]）、Ultralytics YOLOv8 / 11（[1, 84, N]）與內含 NMS 的 [1, K, 6]"
     if len(shape) != 3 or shape[0] != 1:
-        raise ModelFormatError(f"看不懂模型的輸出形狀 {list(shape)}；{hint}")
+        raise ModelFormatError(f"看不懂模型的輸出形狀 {list(shape)}；{hint}", "detector.modelOutputShape", {"shape": str(list(shape))})
     _, a, b = shape
     if a == expected and b > 5:
         return Layout("yolox", width, height, _class_names(b - 5, metadata))
@@ -137,7 +144,11 @@ def detect_layout(input_shape: list, output_shape: tuple[int, ...], metadata: di
     if b == 6 and a <= 1000:
         names = parse_names(metadata) or COCO_NAMES
         return Layout("end2end", width, height, names)
-    raise ModelFormatError(f"看不懂模型的輸出形狀 {list(shape)}（輸入 {width}×{height}，格點應有 {expected} 個）；{hint}")
+    raise ModelFormatError(
+        f"看不懂模型的輸出形狀 {list(shape)}（輸入 {width}×{height}，格點應有 {expected} 個）；{hint}",
+        "detector.modelOutputGrid",
+        {"shape": str(list(shape)), "width": width, "height": height, "expected": expected},
+    )
 
 
 @dataclass(frozen=True)

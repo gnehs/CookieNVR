@@ -2,6 +2,7 @@ import { joinClauses } from "../format.ts";
 import type { MessageDescriptor } from "@lingui/core";
 import { msg, plural, t } from "@lingui/core/macro";
 import type { BenchmarkDto, BenchmarkResultDto, InferenceDeviceDto, ObjectModelDto } from "../../src/api-types.ts";
+import { serverText } from "../server-text.ts";
 import { cpuShareNote, rateClause, rateText, tidyName } from "./object-model.ts";
 
 /** 換算的假設，一句話；數字對應 src/objects/capacity.ts 的 HEADROOM */
@@ -42,8 +43,11 @@ const okResults = (b: BenchmarkDto): Good[] => b.results.filter((r): r is Good =
 
 const rowText = (cameras: number) => (cameras > 0 ? plural(cameras, { one: "About # camera", other: "About # cameras" }) : t`Too slow to handle even 1 camera`);
 
+/** 失敗原因（白話）：有 reasonMsg 就換成目前語言 */
+const reasonOf = (r: BenchmarkResultDto): string | undefined => (r.reason ? serverText(r.reasonMsg, r.reason) : undefined);
+
 function detailOf(r: BenchmarkResultDto): string | null {
-  if (!r.ok) return [r.reason, r.error].filter(Boolean).join("; ") || null;
+  if (!r.ok) return [reasonOf(r), r.error ? serverText(r.errorMsg, r.error) : undefined].filter(Boolean).join("; ") || null;
   const parts: string[] = [];
   if (r.fps !== undefined) {
     const fps = r.fps.toFixed(1);
@@ -69,7 +73,7 @@ export function headlineOf(b: BenchmarkDto, currentDevice: string | null): Bench
   const ok = okResults(b);
   if (ok.length === 0) {
     const failed = b.results.find((r) => r.reason);
-    return failed?.reason ? { tone: "bad", text: sentence(failed.reason) } : null;
+    return failed?.reason ? { tone: "bad", text: sentence(reasonOf(failed)!) } : null;
   }
   const pick = ok.find((r) => r.device === currentDevice) ?? ok.reduce((a, r) => (r.cameras > a.cameras || (r.cameras === a.cameras && r.fps > a.fps) ? r : a));
   const rate = rateText(b.perCameraFps);
@@ -113,7 +117,7 @@ export function benchmarkView(b: BenchmarkDto, opts: { currentDevice: string | n
     name: tidyName(r.name),
     text: r.ok && r.cameras !== undefined ? rowText(r.cameras) : r.reason ? t`Unavailable` : t`Can't be benchmarked`,
     tone: !r.ok ? "bad" : (r.cameras ?? 0) <= 0 ? "bad" : cpuShareNote(r.cpuShare)?.tone === "warn" ? "warn" : "ok",
-    note: r.ok ? cpuShareNote(r.cpuShare) : r.reason ? { tone: "warn", text: r.reason } : null,
+    note: r.ok ? cpuShareNote(r.cpuShare) : r.reason ? { tone: "warn", text: reasonOf(r)! } : null,
     current: r.device === opts.currentDevice,
     best: ok.length > 1 && r.ok && r.cameras === top && r.fps === topFps,
     detail: detailOf(r),
@@ -153,7 +157,7 @@ export function progressOf(b: BenchmarkDto, devices: readonly InferenceDeviceDto
 /** 結束但沒有結果的狀態說明 */
 export function endedText(b: BenchmarkDto): { tone: Tone; text: string } | null {
   if (b.state === "cancelled") return { tone: "warn", text: t`Benchmark cancelled.` };
-  if (b.state === "failed") return { tone: "bad", text: b.error ?? t`The benchmark didn't finish. Please try again later.` };
+  if (b.state === "failed") return { tone: "bad", text: b.error === null ? t`The benchmark didn't finish. Please try again later.` : serverText(b.errorMsg, b.error) };
   return null;
 }
 

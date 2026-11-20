@@ -8,6 +8,7 @@ import type { CameraDto, CropBox, StateSensorDto } from "../../../src/api-types.
 import { api } from "../../api.ts";
 import { camerasQuery } from "../../data/queries.ts";
 import { errMsg, formatDateTime } from "../../format.ts";
+import { serverText } from "../../server-text.ts";
 import { JobBar, StateLine, useNow } from "../../states/bits.tsx";
 import { ClassesEditor } from "../../states/ClassesEditor.tsx";
 import { CropEditor } from "../../states/CropEditor.tsx";
@@ -86,12 +87,12 @@ function Hero({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
       {recentJob?.state === "done" ? (
         <p className="callout ok">
           <Icon name="check-circle" size={16} />
-          <span>{recentJob.message}</span>
+          <span>{serverText(recentJob.msg, recentJob.message)}</span>
         </p>
       ) : recentJob?.state === "failed" ? (
         <p className="callout bad">
           <Icon name="alert" size={16} />
-          <span>{recentJob.error}</span>
+          <span>{serverText(recentJob.errorMsg, recentJob.error)}</span>
         </p>
       ) : null}
     </section>
@@ -124,7 +125,7 @@ function TrainCard({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) 
   const job = sensor.job;
   const training = job?.kind === "train" && (job.state === "queued" || job.state === "running") ? job : null;
   const failed = job?.kind === "train" && job.state === "failed" ? job : null;
-  const failedError = failed?.error ?? "";
+  const failedError = failed ? serverText(failed.errorMsg, failed.error) : "";
   const needs = needsText(sensor);
   const m = sensor.model;
   const result = m ? resultSummary(m) : null;

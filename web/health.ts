@@ -3,6 +3,7 @@ import { msg, plural, t } from "@lingui/core/macro";
 import type { CameraDto, DetectFrameState, MetricsPointDto, StateSensorDto } from "../src/api-types.ts";
 import type { CameraId, WorkerStatus } from "../src/types.ts";
 import { joinList } from "./format.ts";
+import { serverText } from "./server-text.ts";
 
 export type CameraStatusKind = "recording" | "unstable" | "notRecording" | "offline" | "viewOnly" | "disabled";
 export type StatusTone = "ok" | "warn" | "bad" | "muted";
@@ -243,7 +244,7 @@ function stateIssues(input: HealthInput, statuses: Map<CameraId, CameraStatus>, 
   const brokenWorker = classifier && (classifier.state === "backoff" || classifier.state === "stopped" || classifier.unstable);
   const workerSensors = sensors.filter((s) => s.problem!.code === "worker");
   if (workerSensors.length || brokenWorker) {
-    issues.push({ kind: "stateWorker", tone: "warn", cameras: [], title: t`State recognition isn't working properly`, short: t`State recognition stopped`, sensors: workerSensors.map(ref), ...(workerSensors[0] ? { detail: workerSensors[0].problem!.message } : {}) });
+    issues.push({ kind: "stateWorker", tone: "warn", cameras: [], title: t`State recognition isn't working properly`, short: t`State recognition stopped`, sensors: workerSensors.map(ref), ...(workerSensors[0] ? { detail: serverText(workerSensors[0].problem!.msg, workerSensors[0].problem!.message) } : {}) });
   }
   for (const g of STATE_ISSUES) {
     const list = sensors.filter((s) => {

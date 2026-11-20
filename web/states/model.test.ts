@@ -64,9 +64,13 @@ describe("目前狀態", () => {
     expect(stateText(sensorView(sensor()), now)).toBe("Confirming…");
   });
   test("問題優先於狀態，暫停不算問題", () => {
-    expect(sensorView(sensor({ problem: { code: "untrained", message: "m" } }))).toMatchObject({ kind: "problem", code: "untrained" });
-    expect(sensorView(sensor({ problem: { code: "disabled", message: "m" } }))).toMatchObject({ kind: "paused" });
-    expect(sensorView(sensor({ problem: { code: "paused", message: "鏡頭移動中" } }))).toEqual({ kind: "paused", message: "鏡頭移動中" });
+    expect(sensorView(sensor({ problem: { code: "untrained", message: "m", msg: { code: "states.problemUntrained" } } }))).toMatchObject({ kind: "problem", code: "untrained" });
+    expect(sensorView(sensor({ problem: { code: "disabled", message: "m", msg: { code: "states.problemDisabled" } } }))).toMatchObject({ kind: "paused" });
+    expect(sensorView(sensor({ problem: { code: "paused", message: "鏡頭移動中", msg: { code: "states.problemPaused" } } }))).toEqual({
+      kind: "paused",
+      message: "Detection paused: the camera is moving or the brightness changed suddenly",
+    });
+    expect(sensorView(sensor({ problem: { code: "paused", message: "鏡頭移動中" } as never }))).toEqual({ kind: "paused", message: "鏡頭移動中" });
   });
   test("時間的說法", () => {
     expect(sinceText(now - 30_000, now)).toBe("Just now");
@@ -87,7 +91,7 @@ describe("訓練", () => {
     expect(trainStatus(sensor())).toBe("untrained");
     expect(trainStatus(sensor({ model: m, images: { pending: 0, labeled: [{ label: "關", count: 3 }, { label: "開", count: 3 }] } }))).toBe("current");
     expect(trainStatus(sensor({ model: m, images: { pending: 0, labeled: [{ label: "關", count: 4 }, { label: "開", count: 3 }] } }))).toBe("outdated");
-    expect(trainStatus(sensor({ model: m, problem: { code: "stale-model", message: "" } }))).toBe("stale");
+    expect(trainStatus(sensor({ model: m, problem: { code: "stale-model", message: "", msg: { code: "states.problemStaleModel" } } }))).toBe("stale");
   });
   test("結果用白話：總共答對幾張、各類答對率、看錯的組合", () => {
     const r = resultSummary(model());

@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import type { GpuDto } from "../api-types.ts";
+import { msg, zh } from "../messages/index.ts";
 import type { MetricsIo } from "./io.ts";
 import { type DrmClient, drmUtilization, NVIDIA_QUERY, parseDrmFdinfo, parseIoregAccelerator, parseNvidiaSmi } from "./parse.ts";
 
@@ -57,7 +58,8 @@ export async function probeNvidia(io: MetricsIo): Promise<ProbeOutcome> {
     state: "ok",
     detail: `${list.length} 張`,
     gpus: list.map((g) => {
-      const missing = [g.utilPct === null && "使用率", g.memTotalBytes === null && "顯示記憶體", g.temperatureC === null && "溫度"].filter(Boolean);
+      const missing = [g.utilPct === null && "utilization", g.memTotalBytes === null && "memory", g.temperatureC === null && "temperature"].filter((x): x is string => !!x);
+      const noteMsg = missing.length ? msg("gpu.notProvided", { items: missing }) : null;
       return {
         id: `nvidia:${g.pciBusId}`,
         vendor: "nvidia",
@@ -65,7 +67,8 @@ export async function probeNvidia(io: MetricsIo): Promise<ProbeOutcome> {
         utilPct: g.utilPct,
         memory: g.memUsedBytes !== null && g.memTotalBytes !== null ? { usedBytes: g.memUsedBytes, totalBytes: g.memTotalBytes } : null,
         temperatureC: g.temperatureC,
-        note: missing.length ? `這張顯示卡不提供${missing.join("、")}` : null,
+        note: noteMsg && zh(noteMsg),
+        noteMsg,
         detail: `nvidia-smi index ${g.index}，PCI ${g.pciBusId}`,
       };
     }),
@@ -177,6 +180,7 @@ export function createIntelProbe(): IntelProbe {
           memory: null,
           temperatureC: temp,
           note: null,
+          noteMsg: null,
           detail: `${c.card}（/dev/dri/${c.renderNode}），PCI ${c.pdev}，裝置 ${c.device}，驅動 ${c.driver}，${mine.length} 個使用中的程式（只計入容器內看得到的程序）`,
         });
       }
@@ -205,7 +209,8 @@ export async function probeApple(io: MetricsIo): Promise<ProbeOutcome> {
       utilPct: g.utilPct,
       memory: null,
       temperatureC: null,
-      note: g.utilPct === null ? "這個 GPU 不提供使用率" : null,
+      note: g.utilPct === null ? zh(msg("gpu.noUtilization")) : null,
+      noteMsg: g.utilPct === null ? msg("gpu.noUtilization") : null,
       detail: "ioreg IOAccelerator PerformanceStatistics",
     })),
   };

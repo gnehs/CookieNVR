@@ -1,4 +1,5 @@
 import type { DetectFrameState } from "../api-types.ts";
+import type { Msg } from "../messages/index.ts";
 import type { MaskPolygon } from "../types.ts";
 
 /**
@@ -47,7 +48,7 @@ export const enum MsgKind {
 }
 
 /** hw：第一張畫面已經由顯示卡解出；cpu：顯示卡啟動失敗，這次執行改用 CPU（reason 是白話，detail 是 ffmpeg 的訊息） */
-export type DecodeReport = { mode: "hw"; deviceId: string } | { mode: "cpu"; reason: string; detail: string };
+export type DecodeReport = { mode: "hw"; deviceId: string } | { mode: "cpu"; reason: string; reasonMsg?: Msg; detail: string };
 
 export interface FrameResult {
   at: number;

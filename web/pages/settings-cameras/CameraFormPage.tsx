@@ -129,7 +129,7 @@ function NewCameraForm({ welcome, onAgain }: { welcome: boolean; onAgain: () => 
     setPhase({ kind: "testing" });
     try {
       const probe = await api.testCamera(r.conn);
-      if (!probe.ok) return setError(probeFailure(r.conn, probe.error, probe.detail));
+      if (!probe.ok) return setError(probeFailure(r.conn, probe));
       setPhase({ kind: "saving" });
       const cam = await api.createCamera(r.config);
       putCamera(qc, cam);

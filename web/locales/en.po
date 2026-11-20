@@ -7,6 +7,11 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: en\n"
 
+#: web/server-messages/requests.ts
+msgctxt "alternatives separator"
+msgid " or "
+msgstr " or "
+
 #: web/format.ts
 #: web/pages/events/EventsPage.tsx
 msgctxt "clause separator"
@@ -21,6 +26,10 @@ msgstr ", "
 #: web/states/bits.tsx
 msgid ", may change to “{candidate}”"
 msgstr ", may change to “{candidate}”"
+
+#: web/server-messages/states.ts
+msgid "; "
+msgstr "; "
 
 #: web/pages/storage/StoragePage.tsx
 msgid ". There's no day limit; when space runs low, the oldest recordings are deleted first."
@@ -100,6 +109,14 @@ msgstr "{base} ({rel})"
 msgid "{br} on {os}"
 msgstr "{br} on {os}"
 
+#: web/server-messages/detection.ts
+msgid "{camera} isn't decoding on the selected graphics card: {reason}"
+msgstr "{camera} isn't decoding on the selected graphics card: {reason}"
+
+#: web/server-messages/detection.ts
+msgid "{camera} switched to CPU decoding: {reason}"
+msgstr "{camera} switched to CPU decoding: {reason}"
+
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "{cameraCount}, {groupCount}"
 msgstr "{cameraCount}, {groupCount}"
@@ -135,6 +152,14 @@ msgstr "{clock} · {elapsed}"
 #: web/timeline/timeline.ts
 msgid "{clock} · In progress"
 msgstr "{clock} · In progress"
+
+#: web/server-messages/detection.ts
+msgid "{codec} hardware decoding"
+msgstr "{codec} hardware decoding"
+
+#: web/server-messages/detection.ts
+msgid "{codec} hardware encoding"
+msgstr "{codec} hardware encoding"
 
 #: web/states/CropEditor.tsx
 msgid "{corner}, resize with the arrow keys"
@@ -193,6 +218,10 @@ msgstr "{count, plural, one {Delete # picture?} other {Delete # pictures?}}"
 msgid "{count, plural, one {Restart recording for # camera?} other {Restart recording for # cameras?}}"
 msgstr "{count, plural, one {Restart recording for # camera?} other {Restart recording for # cameras?}}"
 
+#: web/server-messages/detection.ts
+msgid "{count} cameras aren't decoding on the selected graphics card: {reason}"
+msgstr "{count} cameras aren't decoding on the selected graphics card: {reason}"
+
 #: web/health.ts
 msgid "{count} cameras not recording: {names}"
 msgstr "{count} cameras not recording: {names}"
@@ -200,6 +229,10 @@ msgstr "{count} cameras not recording: {names}"
 #: web/health.ts
 msgid "{count} cameras offline: {names}"
 msgstr "{count} cameras offline: {names}"
+
+#: web/server-messages/detection.ts
+msgid "{count} cameras switched to CPU decoding: {reason}"
+msgstr "{count} cameras switched to CPU decoding: {reason}"
 
 #: web/health.ts
 msgid "{count} cameras with unstable recording: {names}"
@@ -229,9 +262,29 @@ msgstr "{d, plural, one {Space only fits about # day} other {Space only fits abo
 msgid "{days, plural, one {# day} other {# days}}"
 msgstr "{days, plural, one {# day} other {# days}}"
 
+#: web/server-messages/detection.ts
+msgid "{device} failed to load the model. Switched to another device"
+msgstr "{device} failed to load the model. Switched to another device"
+
+#: web/server-messages/detection.ts
+msgid "{device} isn't actually running this model ({runtime} handed the work back to the CPU). Switched to another device"
+msgstr "{device} isn't actually running this model ({runtime} handed the work back to the CPU). Switched to another device"
+
+#: web/server-messages/detection.ts
+msgid "{device} isn't actually running this model ({runtime} handed the work back to the CPU). This device isn't suitable for detection"
+msgstr "{device} isn't actually running this model ({runtime} handed the work back to the CPU). This device isn't suitable for detection"
+
+#: web/server-messages/detection.ts
+msgid "{device}: {text}"
+msgstr "{device}: {text}"
+
 #: web/pages/recordings/export.tsx
 msgid "{duration} · about {size}"
 msgstr "{duration} · about {size}"
+
+#: web/server-messages/states.ts
+msgid "{field} must be true or false"
+msgstr "{field} must be true or false"
 
 #: web/pages/events/EventsPage.tsx
 msgid "{first} and {others} more"
@@ -252,6 +305,10 @@ msgstr "{first}, {second}, etc. ({total} categories)"
 #: web/detect/benchmark-model.ts
 msgid "{fps} frames per second"
 msgstr "{fps} frames per second"
+
+#: web/server-messages/detection.ts
+msgid "{fps} frames/s"
+msgstr "{fps} frames/s"
 
 #: web/format.ts
 #: web/states/model.ts
@@ -396,6 +453,14 @@ msgstr "{oldCount} old locations ({oldList})"
 msgid "{optLabel}, {optDesc}"
 msgstr "{optLabel}, {optDesc}"
 
+#: web/server-messages/requests.ts
+msgid "{path} is not a settable field"
+msgstr "{path} is not a settable field"
+
+#: web/server-messages/requests.ts
+msgid "{path} only accepts {value}"
+msgstr "{path} only accepts {value}"
+
 #: web/detect/object-model.ts
 msgid "{pct}% of the work runs on the CPU"
 msgstr "{pct}% of the work runs on the CPU"
@@ -403,6 +468,10 @@ msgstr "{pct}% of the work runs on the CPU"
 #: web/pages/settings-cameras/StatesSection.tsx
 msgid "{pending} to label"
 msgstr "{pending} to label"
+
+#: web/server-messages/detection.ts
+msgid "{percent}% of recent frames were too late to analyze. Lower the detection rate or switch to a faster device."
+msgstr "{percent}% of recent frames were too late to analyze. Lower the detection rate or switch to a faster device."
 
 #: web/detect/object-model.ts
 msgid "{perSecond, plural, one {# time per second} other {# times per second}}"
@@ -453,6 +522,10 @@ msgstr "{selected}, up to 2 hours per export"
 msgid "{sensorName}:"
 msgstr "{sensorName}:"
 
+#: web/server-messages/states.ts
+msgid "{skipped} unreadable images skipped"
+msgstr "{skipped} unreadable images skipped"
+
 #: web/pages/states/LabelBoard.tsx
 msgid "{source}: {label}"
 msgstr "{source}: {label}"
@@ -464,6 +537,10 @@ msgstr "{source}: {label} ({percent}%)"
 #: web/pages/states/LabelBoard.tsx
 msgid "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
 msgstr "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
+
+#: web/server-messages/detection.ts
+msgid "{text} ({forCodec})"
+msgstr "{text} ({forCodec})"
 
 #: web/detect/benchmark-model.ts
 #: web/detect/object-model.ts
@@ -598,6 +675,10 @@ msgstr "5 times per second"
 msgid "6 hours"
 msgstr "6 hours"
 
+#: web/server-messages/detection.ts
+msgid "A benchmark is already running"
+msgstr "A benchmark is already running"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "A GPU is present, but its usage can't be read right now. The reason is in “Copy diagnostics”."
 msgstr "A GPU is present, but its usage can't be read right now. The reason is in “Copy diagnostics”."
@@ -625,6 +706,10 @@ msgstr "Accent color"
 #: web/pages/states/LabelBoard.tsx
 msgid "Accept suggestion"
 msgstr "Accept suggestion"
+
+#: web/server-messages/requests.ts
+msgid "Access denied"
+msgstr "Access denied"
 
 #: web/app/Shell.tsx
 msgid "Account"
@@ -713,6 +798,10 @@ msgstr "Added \"{name}\""
 msgid "Added \"{username}\""
 msgstr "Added \"{username}\""
 
+#: web/server-messages/states.ts
+msgid "Added classes: {list}"
+msgstr "Added classes: {list}"
+
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Added group \"{groupName}\". Drag cameras into it."
 msgstr "Added group \"{groupName}\". Drag cameras into it."
@@ -745,6 +834,10 @@ msgstr "Admin account required"
 #: web/pages/settings-users/UsersPage.tsx
 msgid "Administrator"
 msgstr "Administrator"
+
+#: web/server-messages/requests.ts
+msgid "Administrator access required"
+msgstr "Administrator access required"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Advanced"
@@ -903,6 +996,10 @@ msgstr "At least 8 characters"
 msgid "At least 8 characters. Other devices will need to sign in again after you change it."
 msgstr "At least 8 characters. Other devices will need to sign in again after you change it."
 
+#: web/server-messages/requests.ts
+msgid "At least one administrator must remain"
+msgstr "At least one administrator must remain"
+
 #: web/states/model.ts
 msgid "At most {max} classes"
 msgstr "At most {max} classes"
@@ -989,6 +1086,10 @@ msgctxt "object category"
 msgid "Bed"
 msgstr "Bed"
 
+#: web/server-messages/requests.ts
+msgid "before must be integer UTC milliseconds"
+msgstr "before must be integer UTC milliseconds"
+
 #: web/pages/settings-system/SystemPage.tsx
 msgid "Before you use it"
 msgstr "Before you use it"
@@ -1013,6 +1114,10 @@ msgstr "Benchmark progress"
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "Benchmark results per device"
 msgstr "Benchmark results per device"
+
+#: web/server-messages/detection.ts
+msgid "Benchmarking"
+msgstr "Benchmarking"
 
 #: web/detect/object-model.ts
 msgid "Benchmarking, detection paused"
@@ -1131,8 +1236,15 @@ msgstr "Camera IP address"
 #: web/pages/camera/CameraPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/states/NewSensorPage.tsx
+#: web/server-messages/camera.ts
+#: web/server-messages/requests.ts
+#: web/server-messages/states.ts
 msgid "Camera not found"
 msgstr "Camera not found"
+
+#: web/server-messages/requests.ts
+msgid "Camera not found, or it is disabled"
+msgstr "Camera not found, or it is disabled"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Camera password"
@@ -1157,6 +1269,10 @@ msgstr "Camera: {camera}"
 #: web/pages/status/StatusPage.tsx
 msgid "Cameras"
 msgstr "Cameras"
+
+#: web/server-messages/requests.ts
+msgid "cameras must have 1 to {max} entries"
+msgstr "cameras must have 1 to {max} entries"
 
 #: web/pages/settings-system/decode-model.ts
 msgid "Cameras with a sub-stream gain very little. The CPU savings only show when decoding the main stream directly or high-resolution H.265."
@@ -1214,10 +1330,30 @@ msgstr "Can't keep up"
 msgid "Can't load the recording right now. Retrying…"
 msgstr "Can't load the recording right now. Retrying…"
 
+#: web/server-messages/detection.ts
+msgid "Can't make sense of the model's output shape {shape} (input {width}×{height}, expected {expected} grid points). Supported: YOLOX ([1, N, 85]), Ultralytics YOLOv8 / 11 ([1, 84, N]) and models with NMS built in ([1, K, 6])"
+msgstr "Can't make sense of the model's output shape {shape} (input {width}×{height}, expected {expected} grid points). Supported: YOLOX ([1, N, 85]), Ultralytics YOLOv8 / 11 ([1, 84, N]) and models with NMS built in ([1, K, 6])"
+
+#: web/server-messages/detection.ts
+msgid "Can't make sense of the model's output shape {shape}. Supported: YOLOX ([1, N, 85]), Ultralytics YOLOv8 / 11 ([1, 84, N]) and models with NMS built in ([1, K, 6])"
+msgstr "Can't make sense of the model's output shape {shape}. Supported: YOLOX ([1, N, 85]), Ultralytics YOLOv8 / 11 ([1, 84, N]) and models with NMS built in ([1, K, 6])"
+
+#: web/server-messages/detection.ts
+msgid "Can't open the graphics card ({node}). Make sure /dev/dri is mounted in the container and the container has joined the host's render group"
+msgstr "Can't open the graphics card ({node}). Make sure /dev/dri is mounted in the container and the container has joined the host's render group"
+
 #: web/pages/link/LinkPage.tsx
 #: web/ui/states.tsx
 msgid "Can't open this right now"
 msgstr "Can't open this right now"
+
+#: web/server-messages/camera.ts
+msgid "Can't reach the camera's control connection. Check that the camera is on, on the same network as this host, and that the ONVIF address and port are correct"
+msgstr "Can't reach the camera's control connection. Check that the camera is on, on the same network as this host, and that the ONVIF address and port are correct"
+
+#: web/server-messages/camera.ts
+msgid "Can't reach this address. Check that the camera is on and on the same network as this host"
+msgstr "Can't reach this address. Check that the camera is on and on the same network as this host"
 
 #: web/camera-form-logic.ts
 msgid "Can't reach this address. Check that the camera is on and on the same network as this host."
@@ -1231,9 +1367,21 @@ msgstr "Can't read any video. Check that the IP address is correct and the camer
 msgid "Can't read any video. Check that the stream URL is correct and the camera's RTSP feature is turned on."
 msgstr "Can't read any video. Check that the stream URL is correct and the camera's RTSP feature is turned on."
 
+#: web/server-messages/camera.ts
+msgid "Can't read the stream"
+msgstr "Can't read the stream"
+
+#: web/server-messages/camera.ts
+msgid "Can't read the stream: {line}"
+msgstr "Can't read the stream: {line}"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "Can't read this camera's video right now. Turn this on after it connects."
 msgstr "Can't read this camera's video right now. Turn this on after it connects."
+
+#: web/server-messages/camera.ts
+msgid "Can't resolve the hostname. Check the address"
+msgstr "Can't resolve the hostname. Check the address"
 
 #: web/pages/status/explain.ts
 msgid "Can't see the picture"
@@ -1260,6 +1408,14 @@ msgstr "Cancel export {title}"
 #: web/pages/recordings/export.tsx
 msgid "Cancel selection"
 msgstr "Cancel selection"
+
+#: web/server-messages/camera.ts
+msgid "Cancelled"
+msgstr "Cancelled"
+
+#: web/server-messages/requests.ts
+msgid "Cannot read this camera's picture right now. Try again once it is connected"
+msgstr "Cannot read this camera's picture right now. Try again once it is connected"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -1382,6 +1538,18 @@ msgstr "Chosen automatically: currently using {name}. Uses a graphics card if on
 msgid "class {num}"
 msgstr "class {num}"
 
+#: web/server-messages/states.ts
+msgid "Class name can't contain / or a backslash, or start with a dot"
+msgstr "Class name can't contain / or a backslash, or start with a dot"
+
+#: web/server-messages/states.ts
+msgid "Class name must be 1 to 32 characters"
+msgstr "Class name must be 1 to 32 characters"
+
+#: web/server-messages/states.ts
+msgid "Class name must be a string"
+msgstr "Class name must be a string"
+
 #: web/states/model.ts
 msgid "Class names can be at most {max} characters"
 msgstr "Class names can be at most {max} characters"
@@ -1397,6 +1565,10 @@ msgstr "Class names can't contain a slash or backslash"
 #: web/states/model.ts
 msgid "Class names can't start with a dot"
 msgstr "Class names can't start with a dot"
+
+#: web/server-messages/states.ts
+msgid "Class names must be unique"
+msgstr "Class names must be unique"
 
 #: web/pages/states/SensorPage.tsx
 msgid "Classes"
@@ -1471,6 +1643,14 @@ msgstr "Compares changes in the picture. Works with every camera and can exclude
 msgid "Confidence must be between 50% and 99%"
 msgstr "Confidence must be between 50% and 99%"
 
+#: web/server-messages/states.ts
+msgid "Confidence threshold must be a number from {min} to {max}"
+msgstr "Confidence threshold must be a number from {min} to {max}"
+
+#: web/server-messages/states.ts
+msgid "config must be an object"
+msgstr "config must be an object"
+
 #: web/pages/account/PasswordPanel.tsx
 msgid "Confirm new password"
 msgstr "Confirm new password"
@@ -1507,6 +1687,18 @@ msgstr "Connection"
 #: web/pages/link/LinkPage.tsx
 msgid "Connection code"
 msgstr "Connection code"
+
+#: web/server-messages/requests.ts
+msgid "Connection not found"
+msgstr "Connection not found"
+
+#: web/server-messages/camera.ts
+msgid "Connection refused. Check the IP address and port, and that the camera's RTSP feature is turned on"
+msgstr "Connection refused. Check the IP address and port, and that the camera's RTSP feature is turned on"
+
+#: web/server-messages/camera.ts
+msgid "Connection timed out. Check that the IP address is correct, the camera is on, and the network is reachable"
+msgstr "Connection timed out. Check that the IP address is correct, the camera is on, and the network is reachable"
 
 #: web/pages/settings-cameras/DetectSection.tsx
 msgid "Conservative"
@@ -1588,9 +1780,29 @@ msgstr "Couldn't copy. Select the text manually."
 msgid "Couldn't copy. Try again."
 msgstr "Couldn't copy. Try again."
 
+#: web/server-messages/detection.ts
+msgid "Couldn't create a {codec} test clip (this ffmpeg may not have a software encoder)"
+msgstr "Couldn't create a {codec} test clip (this ffmpeg may not have a software encoder)"
+
+#: web/server-messages/states.ts
+msgid "Couldn't get any frames from recordings. The files may still be writing or already removed"
+msgstr "Couldn't get any frames from recordings. The files may still be writing or already removed"
+
 #: web/pages/events/EventsPage.tsx
 msgid "Couldn't load earlier events"
 msgstr "Couldn't load earlier events"
+
+#: web/server-messages/states.ts
+msgid "Couldn't load the image feature model for state classification"
+msgstr "Couldn't load the image feature model for state classification"
+
+#: web/server-messages/detection.ts
+msgid "Couldn't load the model. The file may not be a valid ONNX model"
+msgstr "Couldn't load the model. The file may not be a valid ONNX model"
+
+#: web/server-messages/states.ts
+msgid "Couldn't parse this YAML: {detail}"
+msgstr "Couldn't parse this YAML: {detail}"
 
 #: web/pages/settings-cameras/form-model.ts
 msgid "Couldn't reach this camera, so nothing was saved"
@@ -1872,6 +2084,10 @@ msgstr "Detection area"
 msgid "Detection area. Move it with the arrow keys; hold Shift to move further."
 msgstr "Detection area. Move it with the arrow keys; hold Shift to move further."
 
+#: web/server-messages/states.ts
+msgid "Detection interval must be an integer from {min} to {max}"
+msgstr "Detection interval must be an integer from {min} to {max}"
+
 #: web/states/model.ts
 msgid "Detection isn't running"
 msgstr "Detection isn't running"
@@ -1896,9 +2112,14 @@ msgstr "Detection only looks inside the box. Fit it snugly around the thing to c
 msgid "Detection only runs when there is motion, and the estimate already leaves headroom for recording and decoding (half the CPU, 20% of a graphics card)."
 msgstr "Detection only runs when there is motion, and the estimate already leaves headroom for recording and decoding (half the CPU, 20% of a graphics card)."
 
+#: web/server-messages/states.ts
 #: web/states/model.ts
 msgid "Detection paused"
 msgstr "Detection paused"
+
+#: web/server-messages/states.ts
+msgid "Detection paused: the camera is moving or the brightness changed suddenly"
+msgstr "Detection paused: the camera is moving or the brightness changed suddenly"
 
 #: web/detect/benchmark-model.ts
 msgid "Detection pauses during the test while events keep being recorded (cameras set to \"Filter\" temporarily switch to labeling). Each device takes about ten-odd seconds, and the first run on a graphics card may take longer."
@@ -1919,6 +2140,10 @@ msgstr "Device"
 #: web/detect/benchmark-model.ts
 msgid "Device {current} of {total}"
 msgstr "Device {current} of {total}"
+
+#: web/server-messages/detection.ts
+msgid "Devices not found: {list}"
+msgstr "Devices not found: {list}"
 
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "Devices to test"
@@ -1958,6 +2183,10 @@ msgstr "Discard changes"
 #: web/ui/Dialog.tsx
 msgid "Discard these changes?"
 msgstr "Discard these changes?"
+
+#: web/server-messages/requests.ts
+msgid "Do this directly on the CookieNVR web page"
+msgstr "Do this directly on the CookieNVR web page"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -2036,6 +2265,10 @@ msgstr "e.g. Roller shutter, garage door, window"
 msgid "Each camera's stream URL can be copied under \"Cameras → Edit → Advanced\". When an app such as VLC, Home Assistant or another NVR connects, use your username and password, or create a key (API token) for it under \"Settings → General → Connect other apps\"."
 msgstr "Each camera's stream URL can be copied under \"Cameras → Edit → Advanced\". When an app such as VLC, Home Assistant or another NVR connects, use your username and password, or create a key (API token) for it under \"Settings → General → Connect other apps\"."
 
+#: web/server-messages/states.ts
+msgid "Each class needs at least {min} labeled images before training"
+msgstr "Each class needs at least {min} labeled images before training"
+
 #: web/pages/settings-cameras/PtzPrefs.tsx
 msgid "Each tap turns a small step"
 msgstr "Each tap turns a small step"
@@ -2068,6 +2301,10 @@ msgstr "Enabled"
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Enabled \"{name}\""
 msgstr "Enabled \"{name}\""
+
+#: web/server-messages/requests.ts
+msgid "end must not be before start"
+msgstr "end must not be before start"
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Enter 0 or a larger number for days and space"
@@ -2158,6 +2395,10 @@ msgstr "Event in progress"
 msgid "Event list"
 msgstr "Event list"
 
+#: web/server-messages/requests.ts
+msgid "Event not found"
+msgstr "Event not found"
+
 #: web/app/Shell.tsx
 #: web/pages/events/EventsPage.tsx
 #: web/pages/recordings/Playback.tsx
@@ -2212,6 +2453,10 @@ msgstr "Export"
 msgid "Export failed"
 msgstr "Export failed"
 
+#: web/server-messages/camera.ts
+msgid "Export failed. Please try again later"
+msgstr "Export failed. Please try again later"
+
 #: web/pages/recordings/export.tsx
 msgid "Export finished: {title}"
 msgstr "Export finished: {title}"
@@ -2219,6 +2464,10 @@ msgstr "Export finished: {title}"
 #: web/pages/recordings/export.tsx
 msgid "Export jobs"
 msgstr "Export jobs"
+
+#: web/server-messages/camera.ts
+msgid "Export not found. It may have expired"
+msgstr "Export not found. It may have expired"
 
 #: web/pages/recordings/export.tsx
 msgid "Export progress"
@@ -2257,13 +2506,133 @@ msgstr "Fairly sensitive"
 msgid "Fastest"
 msgstr "Fastest"
 
+#: web/server-messages/camera.ts
+msgid "ffprobe ({bin}) was not found. Make sure it is installed"
+msgstr "ffprobe ({bin}) was not found. Make sure it is installed"
+
 #: web/pages/settings-cameras/form-model.ts
 msgid "ffprobe output:"
 msgstr "ffprobe output:"
 
+#: web/server-messages/camera.ts
+msgid "Field {key} must be a number from {min} to {max}"
+msgstr "Field {key} must be a number from {min} to {max}"
+
+#: web/server-messages/camera.ts
+msgid "Field {key} must be an integer in UTC milliseconds"
+msgstr "Field {key} must be an integer in UTC milliseconds"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} cannot be empty"
+msgstr "Field {path} cannot be empty"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} cannot contain control characters"
+msgstr "Field {path} cannot contain control characters"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} is not a valid host name"
+msgstr "Field {path} is not a valid host name"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} is not a valid URL"
+msgstr "Field {path} is not a valid URL"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} is too long"
+msgstr "Field {path} is too long"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be {list}"
+msgstr "Field {path} must be {list}"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a boolean"
+msgstr "Field {path} must be a boolean"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a number from {min} to {max}"
+msgstr "Field {path} must be a number from {min} to {max}"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a string"
+msgstr "Field {path} must be a string"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be a string or null"
+msgstr "Field {path} must be a string or null"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an absolute path"
+msgstr "Field {path} must be an absolute path"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an array"
+msgstr "Field {path} must be an array"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an array of at most {max} polygons"
+msgstr "Field {path} must be an array of at most {max} polygons"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an array of strings"
+msgstr "Field {path} must be an array of strings"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an integer from {min} to {max}"
+msgstr "Field {path} must be an integer from {min} to {max}"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an object"
+msgstr "Field {path} must be an object"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be an rtsp:// or rtsps:// URL"
+msgstr "Field {path} must be an rtsp:// or rtsps:// URL"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be auto, cpu, or a detected device ID"
+msgstr "Field {path} must be auto, cpu, or a detected device ID"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be one of {list}"
+msgstr "Field {path} must be one of {list}"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be true or false"
+msgstr "Field {path} must be true or false"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must be two numbers from 0 to 1"
+msgstr "Field {path} must be two numbers from 0 to 1"
+
+#: web/server-messages/requests.ts
+msgid "Field {path} must have {min} to {max} points"
+msgstr "Field {path} must have {min} to {max} points"
+
+#: web/server-messages/requests.ts
+msgid "Field detect.labels must be an array of up to 40 label keys (lowercase letters, digits, underscores)"
+msgstr "Field detect.labels must be an array of up to 40 label keys (lowercase letters, digits, underscores)"
+
+#: web/server-messages/camera.ts
+msgid "Field name can't be empty"
+msgstr "Field name can't be empty"
+
+#: web/server-messages/requests.ts
+msgid "Field objects.model must be builtin or an .onnx file name in the models folder"
+msgstr "Field objects.model must be builtin or an .onnx file name in the models folder"
+
+#: web/server-messages/camera.ts
+msgid "Field tz is not a valid time zone"
+msgstr "Field tz is not a valid time zone"
+
 #: web/api.ts
 msgid "File too large (limit 100 MB)"
 msgstr "File too large (limit 100 MB)"
+
+#: web/server-messages/states.ts
+msgid "File too large. The limit is 100 MB"
+msgstr "File too large. The limit is 100 MB"
 
 #: web/detect/object-model.ts
 msgid "Filter"
@@ -2449,6 +2818,10 @@ msgstr "Graphics card"
 msgid "Graphics card information isn't available right now."
 msgstr "Graphics card information isn't available right now."
 
+#: web/server-messages/detection.ts
+msgid "graphics memory"
+msgstr "graphics memory"
+
 #: web/theme.ts
 msgid "Green"
 msgstr "Green"
@@ -2456,6 +2829,10 @@ msgstr "Green"
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Group name"
 msgstr "Group name"
+
+#: web/server-messages/requests.ts
+msgid "Group not found"
+msgstr "Group not found"
 
 #: web/pages/settings-system/decode-model.ts
 msgid "H.264 not supported"
@@ -2551,6 +2928,10 @@ msgstr "How sure it must be"
 msgid "I've saved it"
 msgstr "I've saved it"
 
+#: web/server-messages/states.ts
+msgid "ids must be 1 to 1000 image ids"
+msgstr "ids must be 1 to 1000 image ids"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "If \"Uncertified Accessory\" appears, choose \"Add Anyway\"."
 msgstr "If \"Uncertified Accessory\" appears, choose \"Add Anyway\"."
@@ -2575,6 +2956,10 @@ msgstr "If you didn't just start this in {app}, choose Deny."
 msgid "Ignored"
 msgstr "Ignored"
 
+#: web/server-messages/states.ts
+msgid "Image not found"
+msgstr "Image not found"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "Image recognition"
 msgstr "Image recognition"
@@ -2598,6 +2983,10 @@ msgstr "Import from Frigate settings"
 #: web/pages/states/NewSensorPage.tsx
 msgid "Imported"
 msgstr "Imported"
+
+#: web/server-messages/states.ts
+msgid "Imported {labeled} labeled and {pending} unlabeled images"
+msgstr "Imported {labeled} labeled and {pending} unlabeled images"
 
 #: web/pages/states/NewSensorPage.tsx
 msgid "Imported the area and settings from Frigate “{frigateName}”"
@@ -2644,6 +3033,14 @@ msgstr "Indigo"
 #: web/pages/settings-system/ObjectsGroup.tsx
 msgid "Inference device"
 msgstr "Inference device"
+
+#: web/server-text.ts
+msgid "Internal server error"
+msgstr "Internal server error"
+
+#: web/server-messages/requests.ts
+msgid "Invalid time zone: {tz}"
+msgstr "Invalid time zone: {tz}"
 
 #: web/pages/settings-system/SystemPage.tsx
 msgid "iPhone finds cameras on your home network, so the CookieNVR container needs host networking (or its own LAN IP). To get motion notifications and watch away from home, you need an Apple TV, HomePod or iPad acting as a home hub; to have Apple store motion clips, you also need an iCloud+ plan with HomeKit Secure Video. This is an experimental feature, so video quality and whether recording works depend on real-world use."
@@ -2824,9 +3221,25 @@ msgstr "License plate"
 msgid "Light"
 msgstr "Light"
 
+#: web/server-messages/requests.ts
+msgid "limit must be a positive integer"
+msgstr "limit must be a positive integer"
+
 #: web/pages/camera/PtzPresets.tsx
 msgid "Limit reached ({max}). Delete one first."
 msgstr "Limit reached ({max}). Delete one first."
+
+#: web/server-messages/requests.ts
+msgid "Link request not found. Check the code, or start over in the app"
+msgstr "Link request not found. Check the code, or start over in the app"
+
+#: web/server-messages/requests.ts
+msgid "Link request not found. It may have expired"
+msgstr "Link request not found. It may have expired"
+
+#: web/server-messages/requests.ts
+msgid "Link requests are being created too often. Try again later"
+msgstr "Link requests are being created too often. Try again later"
 
 #: web/health.ts
 msgid "Live changes unavailable"
@@ -2890,6 +3303,7 @@ msgid "Low-quality stream URL copied"
 msgstr "Low-quality stream URL copied"
 
 #: web/camera-form-logic.ts
+#: web/pages/settings-cameras/form-model.ts
 msgid "Low-quality stream: {message}"
 msgstr "Low-quality stream: {message}"
 
@@ -2912,6 +3326,10 @@ msgstr "Make sure the camera is on and connected to the network"
 #: web/pages/link/LinkPage.tsx
 msgid "Make sure this matches the code on the {app} screen"
 msgstr "Make sure this matches the code on the {app} screen"
+
+#: web/server-messages/requests.ts
+msgid "Malformed URL"
+msgstr "Malformed URL"
 
 #: web/pages/status/StatusPage.tsx
 msgid "Manage storage"
@@ -2972,6 +3390,10 @@ msgstr "Minimum free space"
 #: web/pages/settings-system/ObjectsGroup.tsx
 msgid "Model"
 msgstr "Model"
+
+#: web/server-messages/detection.ts
+msgid "Model file {file} not found"
+msgstr "Model file {file} not found"
 
 #: web/detect/object-model.ts
 msgid "Model unavailable"
@@ -3123,6 +3545,14 @@ msgstr "Mute"
 msgid "Name"
 msgstr "Name"
 
+#: web/server-messages/requests.ts
+msgid "Name must be 1 to 100 characters"
+msgstr "Name must be 1 to 100 characters"
+
+#: web/server-messages/states.ts
+msgid "Name must be 1 to 40 characters"
+msgstr "Name must be 1 to 40 characters"
+
 #: web/states/ClassesEditor.tsx
 msgid "Name of class {num}"
 msgstr "Name of class {num}"
@@ -3147,6 +3577,18 @@ msgstr "Never"
 #: web/pages/settings-users/UsersPage.tsx
 msgid "Never signed in"
 msgstr "Never signed in"
+
+#: web/server-messages/states.ts
+msgid "New class name can't contain / or a backslash, or start with a dot"
+msgstr "New class name can't contain / or a backslash, or start with a dot"
+
+#: web/server-messages/states.ts
+msgid "New class name must be 1 to 32 characters"
+msgstr "New class name must be 1 to 32 characters"
+
+#: web/server-messages/states.ts
+msgid "New class name must be a string"
+msgstr "New class name must be a string"
 
 #: web/pages/account/PasswordPanel.tsx
 msgid "New password"
@@ -3232,9 +3674,21 @@ msgstr "No events on this day"
 msgid "No events yet"
 msgstr "No events yet"
 
+#: web/server-messages/states.ts
+msgid "No file received"
+msgstr "No file received"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "No GPU detected."
 msgstr "No GPU detected."
+
+#: web/server-messages/detection.ts
+msgid "No Intel graphics detected"
+msgstr "No Intel graphics detected"
+
+#: web/server-messages/detection.ts
+msgid "No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings"
+msgstr "No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings"
 
 #: web/pages/recordings/Playback.tsx
 msgid "No later events"
@@ -3247,6 +3701,22 @@ msgstr "No location set"
 #: web/health.ts
 msgid "No motion"
 msgstr "No motion"
+
+#: web/server-messages/detection.ts
+msgid "No Nvidia graphics card detected"
+msgstr "No Nvidia graphics card detected"
+
+#: web/server-messages/detection.ts
+msgid "No Nvidia graphics card is visible in the container. Make sure the NVIDIA Container Toolkit is installed on the host, and start the container with --gpus all or runtime: nvidia"
+msgstr "No Nvidia graphics card is visible in the container. Make sure the NVIDIA Container Toolkit is installed on the host, and start the container with --gpus all or runtime: nvidia"
+
+#: web/server-messages/detection.ts
+msgid "No permission to use /dev/dri. Add the container to the host's render group (--group-add)"
+msgstr "No permission to use /dev/dri. Add the container to the host's render group (--group-add)"
+
+#: web/server-messages/detection.ts
+msgid "No permission to use the graphics card ({node}). Add the container to the host's render group"
+msgstr "No permission to use the graphics card ({node}). Add the container to the host's render group"
 
 #: web/health.ts
 msgid "No permission to write to the recording location"
@@ -3284,9 +3754,21 @@ msgstr "No recordings yet."
 msgid "No sound"
 msgstr "No sound"
 
+#: web/server-messages/states.ts
+msgid "No state classification config found (classification.custom.<name>.state_config.cameras.<camera>.crop)"
+msgstr "No state classification config found (classification.custom.<name>.state_config.cameras.<camera>.crop)"
+
+#: web/server-messages/states.ts
+msgid "No thumbnail"
+msgstr "No thumbnail"
+
 #: web/pages/settings-system/decode-model.ts
 msgid "No usable graphics card was detected, so the CPU is decoding."
 msgstr "No usable graphics card was detected, so the CPU is decoding."
+
+#: web/server-messages/states.ts
+msgid "No usable images found in the zip (expected png, jpg or webp under <name>/dataset/<class>/ or <name>/train/)"
+msgstr "No usable images found in the zip (expected png, jpg or webp under <name>/dataset/<class>/ or <name>/train/)"
 
 #: web/pages/status/explain.ts
 msgid "No write permission"
@@ -3304,6 +3786,14 @@ msgstr "Normal speed"
 msgid "Not detected"
 msgstr "Not detected"
 
+#: web/server-messages/camera.ts
+msgid "Not enough disk space to export a video this long"
+msgstr "Not enough disk space to export a video this long"
+
+#: web/server-messages/requests.ts
+msgid "Not found"
+msgstr "Not found"
+
 #: web/health.ts
 #: web/pages/status/explain.ts
 msgid "Not recording"
@@ -3318,15 +3808,24 @@ msgstr "Not set up"
 msgid "Not trained yet"
 msgstr "Not trained yet"
 
+#: web/server-messages/states.ts
+msgid "Not trained yet: label frames for every class, then press Train"
+msgstr "Not trained yet: label frames for every class, then press Train"
+
 #: web/pages/settings-cameras/ObjectSection.tsx
 #: web/pages/settings/SettingsLayout.tsx
 #: web/pages/status/explain.ts
+#: web/server-messages/detection.ts
 msgid "Object detection"
 msgstr "Object detection"
 
 #: web/pages/status/StatusPage.tsx
 msgid "Object detection can't keep up"
 msgstr "Object detection can't keep up"
+
+#: web/server-messages/detection.ts
+msgid "Object detection isn't ready yet. Turn it on and wait for it to finish loading, then run the benchmark"
+msgstr "Object detection isn't ready yet. Turn it on and wait for it to finish loading, then run the benchmark"
 
 #: web/health.ts
 msgid "Object detection isn't working properly"
@@ -3418,6 +3917,10 @@ msgstr "Once you add a camera, detected motion shows up here."
 msgid "Only {free} is left, below the minimum free space you set, and the system is deleting the oldest recordings to free up space."
 msgstr "Only {free} is left, below the minimum free space you set, and the system is deleting the oldest recordings to free up space."
 
+#: web/server-messages/requests.ts
+msgid "Only administrators can allow another app to connect"
+msgstr "Only administrators can allow another app to connect"
+
 #: web/pages/link/LinkPage.tsx
 msgid "Only admins can allow {app} to connect. Sign in with an admin account, then open this page again."
 msgstr "Only admins can allow {app} to connect. Sign in with an admin account, then open this page again."
@@ -3477,6 +3980,10 @@ msgstr "Open the Home app, tap + in the top right, and choose \"Add Accessory\".
 #: web/pages/link/LinkPage.tsx
 msgid "Open this page directly"
 msgstr "Open this page directly"
+
+#: web/server-messages/detection.ts
+msgid "OpenVINO can't see the Intel graphics. The driver may not support this GPU"
+msgstr "OpenVINO can't see the Intel graphics. The driver may not support this GPU"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Optional. If provided, home page previews and motion detection use fewer resources."
@@ -3564,9 +4071,17 @@ msgstr "Parking meter"
 msgid "Password"
 msgstr "Password"
 
+#: web/server-messages/requests.ts
+msgid "Password cannot be longer than {max} characters"
+msgstr "Password cannot be longer than {max} characters"
+
 #: web/pages/account/PasswordPanel.tsx
 msgid "Password changed"
 msgstr "Password changed"
+
+#: web/server-messages/requests.ts
+msgid "Password must be at least {min} characters"
+msgstr "Password must be at least {min} characters"
 
 #: web/pages/auth/AuthPage.tsx
 msgid "Password must be at least 8 characters"
@@ -3609,6 +4124,10 @@ msgstr "Pick from recordings automatically"
 #: web/pages/states/LabelBoard.tsx
 msgid "Pick more from recordings"
 msgstr "Pick more from recordings"
+
+#: web/server-messages/states.ts
+msgid "Picked {count} frames from recordings and added them to unlabeled"
+msgstr "Picked {count} frames from recordings and added them to unlabeled"
 
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Picked up \"{name}\""
@@ -3699,9 +4218,17 @@ msgstr "Playback speed"
 msgid "Player"
 msgstr "Player"
 
+#: web/server-messages/requests.ts
+msgid "Please sign in"
+msgstr "Please sign in"
+
 #: web/detect/mask-editor.ts
 msgid "Point {n}"
 msgstr "Point {n}"
+
+#: web/server-messages/requests.ts
+msgid "Polling too often. Try again later"
+msgstr "Polling too often. Try again later"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Port"
@@ -3733,9 +4260,17 @@ msgstr "Preparing…"
 msgid "Preset name"
 msgstr "Preset name"
 
+#: web/server-messages/camera.ts
+msgid "Preset not found"
+msgstr "Preset not found"
+
 #: web/pages/camera/PtzPresets.tsx
 msgid "Presets"
 msgstr "Presets"
+
+#: web/server-messages/camera.ts
+msgid "Presets are full. This camera supports at most {max}. Delete one first"
+msgstr "Presets are full. This camera supports at most {max}. Delete one first"
 
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 msgid "Press Space or Enter to pick up, use the arrow keys to move, and press again to drop. Press Esc to cancel."
@@ -3756,6 +4291,14 @@ msgstr "Previous day"
 #: web/ui/DatePicker.tsx
 msgid "Previous month"
 msgstr "Previous month"
+
+#: web/server-messages/states.ts
+msgid "Provide {min} to {max} classes"
+msgstr "Provide {min} to {max} classes"
+
+#: web/server-messages/requests.ts
+msgid "Provide at least role or password"
+msgstr "Provide at least role or password"
 
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "QR code for adding to Apple Home"
@@ -3842,6 +4385,14 @@ msgstr "Recording disk space is almost full"
 msgid "Recording disk space is low"
 msgstr "Recording disk space is low"
 
+#: web/server-messages/requests.ts
+msgid "Recording file cannot be read"
+msgstr "Recording file cannot be read"
+
+#: web/server-messages/requests.ts
+msgid "Recording file is missing"
+msgstr "Recording file is missing"
+
 #: web/pages/states/NewSensorPage.tsx
 msgid "Recording is off for this camera, so there’s nothing to pick from"
 msgstr "Recording is off for this camera, so there’s nothing to pick from"
@@ -3869,6 +4420,10 @@ msgstr "Recording on {name} is unstable"
 #: web/pages/status/explain.ts
 msgid "Recording restarted"
 msgstr "Recording restarted"
+
+#: web/server-messages/requests.ts
+msgid "Recording segment not found"
+msgstr "Recording segment not found"
 
 #: web/pages/settings-cameras/CameraFormPage.tsx
 msgid "Recording started"
@@ -3952,9 +4507,21 @@ msgstr "Rename group"
 msgid "Renaming doesn’t need retraining; adding or deleting a class does."
 msgstr "Renaming doesn’t need retraining; adding or deleting a class does."
 
+#: web/server-messages/requests.ts
+msgid "Request body is not valid JSON"
+msgstr "Request body is not valid JSON"
+
+#: web/server-messages/requests.ts
+msgid "Request body must be an object"
+msgstr "Request body must be an object"
+
 #: web/pages/link/LinkPage.tsx
 msgid "Request from <0>{ip}</0>"
 msgstr "Request from <0>{ip}</0>"
+
+#: web/server-messages/requests.ts
+msgid "Request method not supported"
+msgstr "Request method not supported"
 
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "Reset pairing"
@@ -4192,6 +4759,10 @@ msgstr "Settings"
 msgid "Settings tabs"
 msgstr "Settings tabs"
 
+#: web/server-messages/requests.ts
+msgid "Setup is already complete"
+msgstr "Setup is already complete"
+
 #: web/pages/status/ResourcesCard.tsx
 msgid "Shares memory with the system"
 msgstr "Shares memory with the system"
@@ -4233,6 +4804,10 @@ msgstr "Shown on the sign-in page, in the sidebar and in the browser tab title."
 msgid "Sign in"
 msgstr "Sign in"
 
+#: web/server-messages/requests.ts
+msgid "Sign in on the CookieNVR web page to approve"
+msgstr "Sign in on the CookieNVR web page to approve"
+
 #: web/pages/auth/AuthPage.tsx
 msgid "Sign in to approve the connection request."
 msgstr "Sign in to approve the connection request."
@@ -4249,6 +4824,10 @@ msgstr "Sign out “{name}”?"
 #: web/pages/account/SessionsPanel.tsx
 msgid "Signed out that device"
 msgstr "Signed out that device"
+
+#: web/server-messages/requests.ts
+msgid "Signed-in device not found"
+msgstr "Signed-in device not found"
 
 #: web/pages/account/SessionsPanel.tsx
 msgid "Signed-in devices"
@@ -4294,6 +4873,10 @@ msgstr "Sort the unlabeled pictures below into classes."
 msgid "Space"
 msgstr "Space"
 
+#: web/server-messages/camera.ts
+msgid "Specify a direction (at least one of pan, tilt, zoom must be non-zero)"
+msgstr "Specify a direction (at least one of pan, tilt, zoom must be non-zero)"
+
 #: web/pages/camera/PtzPanel.tsx
 msgid "Speed"
 msgstr "Speed"
@@ -4326,6 +4909,10 @@ msgstr "Standard user"
 #: web/pages/status/explain.ts
 msgid "Start again"
 msgstr "Start again"
+
+#: web/server-messages/requests.ts
+msgid "start and end must be integer UTC milliseconds"
+msgstr "start and end must be integer UTC milliseconds"
 
 #: web/pages/status/explain.ts
 msgid "Start recording again and it usually recovers"
@@ -4363,6 +4950,10 @@ msgstr "State recognition stopped"
 #: web/pages/status/explain.ts
 msgid "State recognition uses the same picture as motion detection. When this camera's detection picture is interrupted, it can't tell the state. Check that “Detection” is turned on in the camera settings. If it still doesn't work, use “Copy diagnostics” at the bottom of the page to find the cause."
 msgstr "State recognition uses the same picture as motion detection. When this camera's detection picture is interrupted, it can't tell the state. Check that “Detection” is turned on in the camera settings. If it still doesn't work, use “Copy diagnostics” at the bottom of the page to find the cause."
+
+#: web/server-messages/states.ts
+msgid "State sensor not found"
+msgstr "State sensor not found"
 
 #: web/pages/status/explain.ts
 msgid "States will become unknown first and be checked again after a few seconds. Recording is not affected."
@@ -4423,6 +5014,10 @@ msgstr "Storage space is low"
 #: web/camera-form-logic.ts
 msgid "Stream not found. Check that the path at the end of the URL (for example /stream1) is correct."
 msgstr "Stream not found. Check that the path at the end of the URL (for example /stream1) is correct."
+
+#: web/server-messages/camera.ts
+msgid "Stream not found. Check that the URL path is correct"
+msgstr "Stream not found. Check that the URL path is correct"
 
 #: web/pages/settings-cameras/fields.tsx
 msgid "Stream URL"
@@ -4501,6 +5096,10 @@ msgstr "Teddy bear"
 msgid "Tell what something in the picture looks like right now, such as whether a roller door is open or closed. Draw the area and label a few frames, and it learns on its own."
 msgstr "Tell what something in the picture looks like right now, such as whether a roller door is open or closed. Draw the area and label a few frames, and it learns on its own."
 
+#: web/server-messages/detection.ts
+msgid "temperature"
+msgstr "temperature"
+
 #: web/detect/label-names.ts
 msgctxt "object category"
 msgid "Tennis racket"
@@ -4540,6 +5139,22 @@ msgstr "The biggest user right now is “{category}”. "
 msgid "The built-in model doesn't include packages. To detect packages, add a custom model that has this category."
 msgstr "The built-in model doesn't include packages. To detect packages, add a custom model that has this category."
 
+#: web/server-messages/camera.ts
+msgid "The camera denied access (403). Check the account's permissions"
+msgstr "The camera denied access (403). Check the account's permissions"
+
+#: web/server-messages/camera.ts
+msgid "The camera didn't respond. Please try again later"
+msgstr "The camera didn't respond. Please try again later"
+
+#: web/server-messages/states.ts
+msgid "The camera has no picture"
+msgstr "The camera has no picture"
+
+#: web/server-messages/requests.ts
+msgid "The camera has no picture right now"
+msgstr "The camera has no picture right now"
+
 #: web/pages/states/SensorPage.tsx
 msgid "The camera has no picture. Detection resumes once it connects."
 msgstr "The camera has no picture. Detection resumes once it connects."
@@ -4556,6 +5171,10 @@ msgstr "The camera is moving, detection paused"
 msgid "The camera isn't responding. Check that the IP address is correct and the camera is on."
 msgstr "The camera isn't responding. Check that the IP address is correct and the camera is on."
 
+#: web/server-messages/camera.ts
+msgid "The camera refused the connection, probably because its connection limit is reached. Try again later or close other devices that are reading from it"
+msgstr "The camera refused the connection, probably because its connection limit is reached. Try again later or close other devices that are reading from it"
+
 #: web/camera-form-logic.ts
 msgid "The camera refused the connection. Check that the IP address and port are correct and that the camera's RTSP feature is turned on."
 msgstr "The camera refused the connection. Check that the IP address and port are correct and that the camera's RTSP feature is turned on."
@@ -4563,6 +5182,18 @@ msgstr "The camera refused the connection. Check that the IP address and port ar
 #: web/camera-form-logic.ts
 msgid "The camera refused the connection. Check that the IP address is correct and that you created a camera account in the Tapo app. If Frigate or other software is watching this camera, its connections may also be full."
 msgstr "The camera refused the connection. Check that the IP address is correct and that you created a camera account in the Tapo app. If Frigate or other software is watching this camera, its connections may also be full."
+
+#: web/server-messages/camera.ts
+msgid "The camera rejected the username or password. Check the camera account in settings"
+msgstr "The camera rejected the username or password. Check the camera account in settings"
+
+#: web/server-messages/camera.ts
+msgid "The camera rejected this command. Please try again later"
+msgstr "The camera rejected this command. Please try again later"
+
+#: web/server-messages/camera.ts
+msgid "The camera responded but isn't sending video, probably because its connection limit is reached"
+msgstr "The camera responded but isn't sending video, probably because its connection limit is reached"
 
 #: web/camera-form-logic.ts
 msgid "The camera responded but isn't sending video, usually because its stream connections are full (a Tapo allows only about 1 to 2 per quality). Pause Frigate, Home Assistant, other NVRs, or phone apps that connect to this camera directly, then try again. After adding it, other software can use CookieNVR's stream URL instead (copy it from the camera's \"Advanced\" settings), so it no longer needs to connect to the camera directly."
@@ -4576,13 +5207,45 @@ msgstr "The camera says it can't find a video stream. Make sure this is a Tapo c
 msgid "The camera's codec changed, and this browser can't keep playing."
 msgstr "The camera's codec changed, and this browser can't keep playing."
 
+#: web/server-messages/camera.ts
+msgid "The camera's response wasn't recognized. It may not support lens control"
+msgstr "The camera's response wasn't recognized. It may not support lens control"
+
 #: web/pages/states/SensorPage.tsx
 msgid "The checking pictures weren’t used for learning, so detection saw them for the first time, just like in real use. Trained {trainedAt} on {trainedCount} images. Mistakes are mostly from different lighting or in-between frames; label a few more like them and retrain to improve."
 msgstr "The checking pictures weren’t used for learning, so detection saw them for the first time, just like in real use. Trained {trainedAt} on {trainedCount} images. Mistakes are mostly from different lighting or in-between frames; label a few more like them and retrain to improve."
 
+#: web/server-messages/states.ts
+msgid "The class \"{name}\" already exists"
+msgstr "The class \"{name}\" already exists"
+
 #: web/pages/status/explain.ts
 msgid "The classes changed. It will keep recognizing after you retrain it"
 msgstr "The classes changed. It will keep recognizing after you retrain it"
+
+#: web/server-messages/states.ts
+msgid "The classes changed. Retrain to resume detection"
+msgstr "The classes changed. Retrain to resume detection"
+
+#: web/server-messages/states.ts
+msgid "The classifier couldn't start"
+msgstr "The classifier couldn't start"
+
+#: web/server-messages/states.ts
+msgid "The classifier couldn't start: {text}"
+msgstr "The classifier couldn't start: {text}"
+
+#: web/server-messages/states.ts
+msgid "The classifier couldn't start: failed to load the image feature model"
+msgstr "The classifier couldn't start: failed to load the image feature model"
+
+#: web/server-messages/states.ts
+msgid "The classifier is starting"
+msgstr "The classifier is starting"
+
+#: web/server-messages/states.ts
+msgid "The classifier restarted and the task was interrupted. Try again"
+msgstr "The classifier restarted and the task was interrupted. Try again"
 
 #: web/pages/link/LinkPage.tsx
 msgid "The code is 8 letters"
@@ -4592,6 +5255,18 @@ msgstr "The code is 8 letters"
 msgid "The code is shown on the screen of the app you want to connect, such as Home Assistant."
 msgstr "The code is shown on the screen of the app you want to connect, such as Home Assistant."
 
+#: web/server-messages/detection.ts
+msgid "The container doesn't have the device for this graphics card ({node}). Mount /dev/dri in the container settings"
+msgstr "The container doesn't have the device for this graphics card ({node}). Mount /dev/dri in the container settings"
+
+#: web/server-messages/detection.ts
+msgid "The container has no Nvidia driver. Start it with the NVIDIA Container Toolkit"
+msgstr "The container has no Nvidia driver. Start it with the NVIDIA Container Toolkit"
+
+#: web/server-messages/detection.ts
+msgid "The container hasn't loaded Nvidia's video codec libraries. NVIDIA_DRIVER_CAPABILITIES in the container settings must include video"
+msgstr "The container hasn't loaded Nvidia's video codec libraries. NVIDIA_DRIVER_CAPABILITIES in the container settings must include video"
+
 #: web/health.ts
 msgid "The CPU has been busy for a long time"
 msgstr "The CPU has been busy for a long time"
@@ -4599,6 +5274,10 @@ msgstr "The CPU has been busy for a long time"
 #: web/pages/settings-cameras/ObjectSection.tsx
 msgid "The current model has no package category."
 msgstr "The current model has no package category."
+
+#: web/server-messages/requests.ts
+msgid "The current password is incorrect"
+msgstr "The current password is incorrect"
 
 #: web/pages/settings-cameras/ObjectSection.tsx
 msgid "The custom model hasn't been loaded yet, so the category list is the built-in model's for now. It updates once loaded."
@@ -4611,6 +5290,10 @@ msgstr "The database, event thumbnails and exported videos live on this disk, an
 #: web/pages/storage/StoragePage.tsx
 msgid "The database, thumbnails and exports live on the appdata disk ({dataPath}): {dataFree} free of {dataTotal}."
 msgstr "The database, thumbnails and exports live on the appdata disk ({dataPath}): {dataFree} free of {dataTotal}."
+
+#: web/server-messages/detection.ts
+msgid "The detector restarted, so the benchmark was interrupted"
+msgstr "The detector restarted, so the benchmark was interrupted"
 
 #: web/detect/benchmark-model.ts
 msgid "The device currently in use wasn't tested this time. Run a test on it to find out whether it is enough."
@@ -4628,9 +5311,33 @@ msgstr "The disk holding the recording location <0>{recordPath}</0>"
 msgid "The event is longer than 2 hours. Only the first 2 hours are exported."
 msgstr "The event is longer than 2 hours. Only the first 2 hours are exported."
 
+#: web/server-messages/requests.ts
+msgid "The event is still in progress. You can delete it once it ends"
+msgstr "The event is still in progress. You can delete it once it ends"
+
 #: web/pages/events/EventsPage.tsx
 msgid "The event is still in progress. You can delete it once it ends."
 msgstr "The event is still in progress. You can delete it once it ends."
+
+#: web/server-messages/camera.ts
+msgid "The export isn't finished yet"
+msgstr "The export isn't finished yet"
+
+#: web/server-messages/camera.ts
+msgid "The export queue is full. Wait for earlier exports to finish"
+msgstr "The export queue is full. Wait for earlier exports to finish"
+
+#: web/server-messages/camera.ts
+msgid "The export timed out and was stopped"
+msgstr "The export timed out and was stopped"
+
+#: web/server-messages/camera.ts
+msgid "The export used too much memory and was stopped"
+msgstr "The export used too much memory and was stopped"
+
+#: web/server-messages/camera.ts
+msgid "The exported file can't be played. Please try again later"
+msgstr "The exported file can't be played. Please try again later"
 
 #: web/detect/object-model.ts
 msgid "The first time a graphics card is used, this can take about a minute."
@@ -4644,9 +5351,33 @@ msgstr "The folder where recordings are stored. After you change it, new recordi
 msgid "The further right, the more sensitive."
 msgstr "The further right, the more sensitive."
 
+#: web/server-messages/detection.ts
+msgid "The graphics card didn't complete {w}"
+msgstr "The graphics card didn't complete {w}"
+
+#: web/server-messages/detection.ts
+msgid "The graphics card didn't finish {w} in time"
+msgstr "The graphics card didn't finish {w} in time"
+
+#: web/server-messages/detection.ts
+msgid "The graphics card failed to start {w}"
+msgstr "The graphics card failed to start {w}"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "The Home app couldn't find this camera. Go to Settings → Status and press \"Copy diagnostics\" to see why."
 msgstr "The Home app couldn't find this camera. Go to Settings → Status and press \"Copy diagnostics\" to see why."
+
+#: web/server-messages/detection.ts
+msgid "The host has this Intel graphics card, but {node} isn't in the container. Mount /dev/dri in the container settings"
+msgstr "The host has this Intel graphics card, but {node} isn't in the container. Mount /dev/dri in the container settings"
+
+#: web/server-messages/detection.ts
+msgid "The Intel graphics link in /dev/dri/by-path is missing, so OpenVINO can't find it. Start the container as root (you can drop privileges with PUID/PGID) so CookieNVR can add it automatically"
+msgstr "The Intel graphics link in /dev/dri/by-path is missing, so OpenVINO can't find it. Start the container as root (you can drop privileges with PUID/PGID) so CookieNVR can add it automatically"
+
+#: web/server-messages/detection.ts
+msgid "The Intel video driver (VAAPI) wasn't found. The image may be missing intel-media-va-driver"
+msgstr "The Intel video driver (VAAPI) wasn't found. The image may be missing intel-media-va-driver"
 
 #: web/pages/states/SensorPage.tsx
 msgid "The interval must be a whole number from 0 to 3600 seconds"
@@ -4675,6 +5406,34 @@ msgstr "The low-quality stream URL must start with rtsp://"
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "The main stream has no video, so it can't be added."
 msgstr "The main stream has no video, so it can't be added."
+
+#: web/server-messages/detection.ts
+msgid "The model failed to load"
+msgstr "The model failed to load"
+
+#: web/server-messages/detection.ts
+msgid "The model has {count} classes but no class names. Only COCO 80 classes or models with names in their metadata are supported"
+msgstr "The model has {count} classes but no class names. Only COCO 80 classes or models with names in their metadata are supported"
+
+#: web/server-messages/detection.ts
+msgid "The model should have exactly one image input, but this one has {count}"
+msgstr "The model should have exactly one image input, but this one has {count}"
+
+#: web/server-messages/states.ts
+msgid "The model was trained with a different backbone version. Retrain it"
+msgstr "The model was trained with a different backbone version. Retrain it"
+
+#: web/server-messages/detection.ts
+msgid "The model's input should be an image of shape [1, 3, height, width], but this model's is {shape}"
+msgstr "The model's input should be an image of shape [1, 3, height, width], but this model's is {shape}"
+
+#: web/server-messages/detection.ts
+msgid "The model's input size {width}×{height} isn't a multiple of 32, so it doesn't look like a YOLO model"
+msgstr "The model's input size {width}×{height} isn't a multiple of 32, so it doesn't look like a YOLO model"
+
+#: web/server-messages/detection.ts
+msgid "The model's input type is {type}. Only float32 is supported"
+msgstr "The model's input type is {type}. Only float32 is supported"
 
 #: web/pages/account/PasswordPanel.tsx
 msgid "The new password must be at least 8 characters"
@@ -4716,13 +5475,45 @@ msgstr "The recommended setting for most situations."
 msgid "The recommended value for most setups."
 msgstr "The recommended value for most setups."
 
+#: web/server-messages/states.ts
+msgid "The region is too small, or its top-left corner isn't above and left of the bottom-right"
+msgstr "The region is too small, or its top-left corner isn't above and left of the bottom-right"
+
+#: web/server-messages/states.ts
+msgid "The region must be 4 numbers from 0 to 1: [x1, y1, x2, y2]"
+msgstr "The region must be 4 numbers from 0 to 1: [x1, y1, x2, y2]"
+
+#: web/server-messages/requests.ts
+msgid "The request Content-Type must be {list}"
+msgstr "The request Content-Type must be {list}"
+
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "The result may be out of date (the model or device changed). Running the benchmark again is recommended."
 msgstr "The result may be out of date (the model or device changed). Running the benchmark again is recommended."
 
+#: web/server-messages/detection.ts
+msgid "The selected device wasn't found (it may have been removed or replaced). Switched to automatic selection"
+msgstr "The selected device wasn't found (it may have been removed or replaced). Switched to automatic selection"
+
+#: web/server-messages/detection.ts
+msgid "The selected graphics card wasn't found (it may have been removed or replaced). Switched to automatic selection"
+msgstr "The selected graphics card wasn't found (it may have been removed or replaced). Switched to automatic selection"
+
+#: web/server-messages/camera.ts
+msgid "The selected range is too short. It must be at least 1 second"
+msgstr "The selected range is too short. It must be at least 1 second"
+
+#: web/server-messages/camera.ts
+msgid "The server is shutting down"
+msgstr "The server is shutting down"
+
 #: web/pages/states/NewSensorPage.tsx
 msgid "The settings contain {foundCount} entries; pick the one to use:"
 msgstr "The settings contain {foundCount} entries; pick the one to use:"
+
+#: web/server-messages/camera.ts
+msgid "The stream has no video track"
+msgstr "The stream has no video track"
 
 #: web/pages/status/ResourcesCard.tsx
 msgid "The system itself"
@@ -4748,13 +5539,33 @@ msgstr "The video service isn't working properly"
 msgid "The video service, Apple Home and the system itself are shared by all cameras and are not counted under individual cameras."
 msgstr "The video service, Apple Home and the system itself are shared by all cameras and are not counted under individual cameras."
 
+#: web/server-messages/states.ts
+msgid "The zip has too many files ({count}, limit {max})"
+msgstr "The zip has too many files ({count}, limit {max})"
+
 #: web/pages/states/NewSensorPage.tsx
 msgid "There are several in the settings; pick one"
 msgstr "There are several in the settings; pick one"
 
+#: web/server-messages/requests.ts
+msgid "There are too many link requests right now. Try again later"
+msgstr "There are too many link requests right now. Try again later"
+
+#: web/server-messages/states.ts
+msgid "There is no class \"{name}\""
+msgstr "There is no class \"{name}\""
+
+#: web/server-messages/camera.ts
+msgid "There is no recording in this time range"
+msgstr "There is no recording in this time range"
+
 #: web/pages/storage/StoragePage.tsx
 msgid "These cameras no longer exist. Their recordings will be permanently deleted right away, which can't be undone, freeing {freed}. Recordings of other cameras aren't affected."
 msgstr "These cameras no longer exist. Their recordings will be permanently deleted right away, which can't be undone, freeing {freed}. Recordings of other cameras aren't affected."
+
+#: web/server-messages/states.ts
+msgid "These classes have no usable images: {list}"
+msgstr "These classes have no usable images: {list}"
 
 #: web/pages/settings-users/UsersPage.tsx
 msgid "This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone."
@@ -4797,9 +5608,41 @@ msgstr "This camera can pan and tilt. Control it from the live view."
 msgid "This camera can pan, tilt, and zoom. Control it from the live view."
 msgstr "This camera can pan, tilt, and zoom. Control it from the live view."
 
+#: web/server-messages/camera.ts
+msgid "This camera doesn't support continuous movement. Use fine adjust or auto mode"
+msgstr "This camera doesn't support continuous movement. Use fine adjust or auto mode"
+
+#: web/server-messages/camera.ts
+msgid "This camera doesn't support fine adjust. Use continuous movement or auto mode"
+msgstr "This camera doesn't support fine adjust. Use continuous movement or auto mode"
+
+#: web/server-messages/camera.ts
+msgid "This camera has no lens control"
+msgstr "This camera has no lens control"
+
+#: web/server-messages/requests.ts
+msgid "This camera has no live view"
+msgstr "This camera has no live view"
+
+#: web/server-messages/camera.ts
+msgid "This camera has no ONVIF set up, so its lens can't be controlled"
+msgstr "This camera has no ONVIF set up, so its lens can't be controlled"
+
+#: web/server-messages/states.ts
+msgid "This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset"
+msgstr "This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset"
+
 #: web/pages/recordings/RecordingsPage.tsx
 msgid "This camera has no recordings yet"
 msgstr "This camera has no recordings yet"
+
+#: web/server-messages/camera.ts
+msgid "This camera has no zoom"
+msgstr "This camera has no zoom"
+
+#: web/server-messages/requests.ts
+msgid "This camera has not been added to Apple Home"
+msgstr "This camera has not been added to Apple Home"
 
 #: web/pages/settings-cameras/DetectSection.tsx
 msgid "This camera is disabled"
@@ -4813,6 +5656,10 @@ msgstr "This camera is disabled."
 msgid "This camera is disabled. Enable it and save to see the picture here and draw areas that shouldn't be detected."
 msgstr "This camera is disabled. Enable it and save to see the picture here and draw areas that shouldn't be detected."
 
+#: web/server-messages/requests.ts
+msgid "This camera is disabled. Enable it before adding it to Apple Home"
+msgstr "This camera is disabled. Enable it before adding it to Apple Home"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "This camera sends a full frame (keyframe) only every {keyframeSec} seconds, longer than the 4 seconds Apple requires, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
 msgstr "This camera sends a full frame (keyframe) only every {keyframeSec} seconds, longer than the 4 seconds Apple requires, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
@@ -4825,9 +5672,17 @@ msgstr "This camera will stop working in the Home app. Remove it in the Home app
 msgid "This camera's full-frame (keyframe) interval is longer than 4 seconds, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
 msgstr "This camera's full-frame (keyframe) interval is longer than 4 seconds, so Secure Video may fail. Set the keyframe interval (I-frame) to 4 seconds or less in the camera's settings."
 
+#: web/server-messages/requests.ts
+msgid "This camera's main stream has no video"
+msgstr "This camera's main stream has no video"
+
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "This camera's main stream is {codec}, but the Home app only supports H.264. Change the main stream to H.264 in the camera's app, then you can turn this on."
 msgstr "This camera's main stream is {codec}, but the Home app only supports H.264. Change the main stream to H.264 in the camera's app, then you can turn this on."
+
+#: web/server-messages/requests.ts
+msgid "This camera's main stream is not H.264, which Apple Home does not support"
+msgstr "This camera's main stream is not H.264, which Apple Home does not support"
 
 #: web/pages/account/SessionsPanel.tsx
 msgid "This device"
@@ -4837,29 +5692,73 @@ msgstr "This device"
 msgid "This device is too slow to keep up with even 1 camera detecting {rate}. Try lowering the detection rate or switching to a faster device."
 msgstr "This device is too slow to keep up with even 1 camera detecting {rate}. Try lowering the detection rate or switching to a faster device."
 
+#: web/server-messages/detection.ts
+msgid "This device wasn't found"
+msgstr "This device wasn't found"
+
 #: web/pages/account/SessionsPanel.tsx
 msgid "This device will need to sign in again next time it opens."
 msgstr "This device will need to sign in again next time it opens."
+
+#: web/server-messages/detection.ts
+msgid "This GPU doesn't report utilization"
+msgstr "This GPU doesn't report utilization"
+
+#: web/server-messages/detection.ts
+msgid "This graphics card doesn't report {list}"
+msgstr "This graphics card doesn't report {list}"
+
+#: web/server-messages/detection.ts
+msgid "This graphics card doesn't support {w}"
+msgstr "This graphics card doesn't support {w}"
 
 #: web/camera-form-logic.ts
 msgid "This host is missing the program used to test connections, so it can't test. Copy the error and send it to a technician."
 msgstr "This host is missing the program used to test connections, so it can't test. Copy the error and send it to a technician."
 
+#: web/server-messages/detection.ts
+msgid "This image has no Intel graphics inference components (only the amd64 image does)"
+msgstr "This image has no Intel graphics inference components (only the amd64 image does)"
+
+#: web/server-messages/detection.ts
+msgid "This image has no Nvidia inference components. Use the latest-nvidia image"
+msgstr "This image has no Nvidia inference components. Use the latest-nvidia image"
+
+#: web/server-messages/states.ts
+msgid "This isn't a zip file"
+msgstr "This isn't a zip file"
+
 #: web/pages/recordings/export.tsx
 msgid "This position is too close to the edge. Try another one."
 msgstr "This position is too close to the edge. Try another one."
+
+#: web/server-messages/camera.ts
+msgid "This recording has been deleted"
+msgstr "This recording has been deleted"
 
 #: web/pages/link/LinkPage.tsx
 msgid "This request didn't come from your home network. Unless you're sure about it, choose Deny."
 msgstr "This request didn't come from your home network. Unless you're sure about it, choose Deny."
 
+#: web/server-messages/requests.ts
+msgid "This request has already been handled"
+msgstr "This request has already been handled"
+
 #: web/pages/link/LinkPage.tsx
 msgid "This request has expired"
 msgstr "This request has expired"
 
+#: web/server-messages/requests.ts
+msgid "This request has expired. Start over in the app"
+msgstr "This request has expired. Start over in the app"
+
 #: web/pages/link/LinkPage.tsx
 msgid "This request is already done"
 msgstr "This request is already done"
+
+#: web/server-messages/states.ts
+msgid "This sensor is busy with another task. Wait for it to finish"
+msgstr "This sensor is busy with another task. Wait for it to finish"
 
 #: web/pages/settings-cameras/useDeleteCamera.tsx
 msgid "This stops recording and removes the camera. All of its recordings are also deleted right away and can't be recovered."
@@ -4880,6 +5779,10 @@ msgstr "This stops recording and removes the camera. Existing recordings stay on
 #: web/camera-form-logic.ts
 msgid "This stream has no video. Use the URL of a video stream instead."
 msgstr "This stream has no video. Use the URL of a video stream instead."
+
+#: web/server-messages/requests.ts
+msgid "Thumbnail not found"
+msgstr "Thumbnail not found"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -4928,6 +5831,22 @@ msgctxt "object category"
 msgid "Toilet"
 msgstr "Toilet"
 
+#: web/server-messages/requests.ts
+msgid "Token not found"
+msgstr "Token not found"
+
+#: web/server-messages/requests.ts
+msgid "Too many attempts. Try again later"
+msgstr "Too many attempts. Try again later"
+
+#: web/server-messages/requests.ts
+msgid "Too many failed sign-in attempts. Try again later"
+msgstr "Too many failed sign-in attempts. Try again later"
+
+#: web/server-messages/requests.ts
+msgid "Too many link requests are waiting for approval. Finish them or wait for them to expire"
+msgstr "Too many link requests are waiting for approval. Finish them or wait for them to expire"
+
 #: web/detect/benchmark-model.ts
 msgid "Too slow to handle even 1 camera"
 msgstr "Too slow to handle even 1 camera"
@@ -4966,6 +5885,18 @@ msgstr "Training data exported from Frigate, up to 100 MB"
 #: web/pages/states/SensorPage.tsx
 msgid "Training failed: {failedError}"
 msgstr "Training failed: {failedError}"
+
+#: web/server-messages/states.ts
+msgid "Training finished (each class needs at least 2 images to estimate accuracy)"
+msgstr "Training finished (each class needs at least 2 images to estimate accuracy)"
+
+#: web/server-messages/states.ts
+msgid "Training finished but the model file couldn't be read"
+msgstr "Training finished but the model file couldn't be read"
+
+#: web/server-messages/states.ts
+msgid "Training finished. {accuracy}% correct on the labeled frames"
+msgstr "Training finished. {accuracy}% correct on the labeled frames"
 
 #: web/states/bits.tsx
 msgid "Training, waiting for other sensors to finish…"
@@ -5155,10 +6086,22 @@ msgstr "Use ONVIF"
 msgid "Used for buttons, selections, and navigation."
 msgstr "Used for buttons, selections, and navigation."
 
+#: web/server-messages/requests.ts
+msgid "User not found"
+msgstr "User not found"
+
 #: web/pages/auth/AuthPage.tsx
 #: web/pages/settings-users/UsersPage.tsx
 msgid "Username"
 msgstr "Username"
+
+#: web/server-messages/requests.ts
+msgid "Username already exists"
+msgstr "Username already exists"
+
+#: web/server-messages/requests.ts
+msgid "Username must be 1 to 64 characters with no control characters"
+msgstr "Username must be 1 to 64 characters with no control characters"
 
 #: web/pages/settings/SettingsLayout.tsx
 msgid "Users"
@@ -5183,6 +6126,10 @@ msgstr "Using the CPU"
 #: web/pages/status/explain.ts
 msgid "Usually another surveillance program is running on the same host (for example Frigate or go2rtc, which also use 8554). When the container uses Host networking, set the environment variable RTSP_PORT to a port nobody uses. With bridge networking, set RTSP_PORT and the host-side and container-side ports to the same number. Restart the container afterwards."
 msgstr "Usually another surveillance program is running on the same host (for example Frigate or go2rtc, which also use 8554). When the container uses Host networking, set the environment variable RTSP_PORT to a port nobody uses. With bridge networking, set RTSP_PORT and the host-side and container-side ports to the same number. Restart the container afterwards."
+
+#: web/server-messages/detection.ts
+msgid "utilization"
+msgstr "utilization"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -5324,6 +6271,10 @@ msgstr "When disabled, it neither shows video nor records, but its settings are 
 msgid "When off, labels and training results are kept; detection just pauses."
 msgstr "When off, labels and training results are kept; detection just pauses."
 
+#: web/server-messages/detection.ts
+msgid "When the {cameras} cameras with object detection all see motion at once, it can't keep up. This machine can handle about {supported} at a time. Lower the detection rate or switch to a faster device."
+msgstr "When the {cameras} cameras with object detection all see motion at once, it can't keep up. This machine can handle about {supported} at a time. Lower the detection rate or switch to a faster device."
+
 #: web/pages/storage/StoragePage.tsx
 msgid "When the disk has less free space than this, the oldest recordings are deleted first."
 msgstr "When the disk has less free space than this, the oldest recordings are deleted first."
@@ -5365,6 +6316,10 @@ msgstr "Wine glass"
 msgid "With “On change only”, it checks only when the picture inside the area changes."
 msgstr "With “On change only”, it checks only when the picture inside the area changes."
 
+#: web/server-messages/requests.ts
+msgid "Worker not found"
+msgstr "Worker not found"
+
 #: web/pages/settings-cameras/StatesSection.tsx
 msgid "Working"
 msgstr "Working"
@@ -5377,13 +6332,26 @@ msgstr "Works on every computer, but struggles when detecting objects on several
 msgid "Works with Tapo and any camera that supports RTSP. Once added, it starts recording automatically."
 msgstr "Works with Tapo and any camera that supports RTSP. Once added, it starts recording automatically."
 
+#: web/server-messages/camera.ts
+#: web/server-messages/requests.ts
+msgid "Wrong username or password"
+msgstr "Wrong username or password"
+
 #: web/camera-form-logic.ts
 msgid "Wrong username or password. Check the credentials after rtsp:// in the URL."
 msgstr "Wrong username or password. Check the credentials after rtsp:// in the URL."
 
+#: web/server-messages/camera.ts
+msgid "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account"
+msgstr "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account"
+
 #: web/camera-form-logic.ts
 msgid "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account."
 msgstr "Wrong username or password. Use the credentials you created under \"Advanced settings → Camera account\" in the Tapo app, not your TP-Link cloud account."
+
+#: web/server-messages/states.ts
+msgid "yaml must be a string"
+msgstr "yaml must be a string"
 
 #: web/detect/model.ts
 #: web/pages/recordings/day.ts
@@ -5398,6 +6366,10 @@ msgstr "Yesterday {clock}"
 #: web/pages/settings-users/UsersPage.tsx
 msgid "You"
 msgstr "You"
+
+#: web/server-messages/camera.ts
+msgid "You can export at most 2 hours at a time. Shorten the selected range"
+msgstr "You can export at most 2 hours at a time. Shorten the selected range"
 
 #: web/pages/settings-system/BenchmarkSection.tsx
 msgid "You can run the benchmark once object detection is ready."

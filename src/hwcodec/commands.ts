@@ -6,6 +6,8 @@
  * 才是可以檢查的事實，而不是只看指令有沒有帶參數。
  */
 
+import { msg, zh, type Msg } from "../messages/index.ts";
+
 export type CodecName = "h264" | "hevc";
 export const CODECS: readonly CodecName[] = ["h264", "hevc"];
 export const CODEC_LABEL: Record<CodecName, string> = { h264: "H.264", hevc: "H.265" };
@@ -94,21 +96,33 @@ export function encodeTestCommand(ffmpeg: string, api: HwApi, codec: CodecName):
 export interface HwFailure {
   /** 給使用者看的一句話 */
   reason: string;
+  /** reason 的訊息版本 */
+  reasonMsg: Msg;
   /** ffmpeg 的原始訊息，進診斷資訊 */
   detail: string;
 }
 
+/** 試跑的是哪種格式的哪個動作；用在能力不足與無法判斷的原因（「H.265 硬體解碼」） */
+export interface HwWhat {
+  codec: CodecName;
+  op: "decode" | "encode";
+}
+
+export const hwFailure = (reasonMsg: Msg, detail: string): HwFailure => ({ reason: zh(reasonMsg), reasonMsg, detail });
+const whatParams = (w: HwWhat) => ({ codec: CODEC_LABEL[w.codec], op: w.op });
+const node = (a: HwApi) => (a.type === "vaapi" ? a.node : "");
+
 /** 依 ffmpeg 的錯誤訊息猜最可能的原因；猜不到就說哪一步失敗。順序是先環境（裝置、驅動），再能力不足，最後是解碼器建不起來 */
-const RULES: { api?: HwApi["type"]; test: RegExp; reason: (api: HwApi, what: string) => string }[] = [
-  { api: "vaapi", test: /No such file or directory|Device creation failed: -2\b/i, reason: (a) => `容器裡沒有這張顯示卡的裝置（${a.type === "vaapi" ? a.node : ""}），請在容器設定掛入 /dev/dri` },
+const RULES: { api?: HwApi["type"]; test: RegExp; msg: (api: HwApi, what: HwWhat) => Msg }[] = [
+  { api: "vaapi", test: /No such file or directory|Device creation failed: -2\b/i, msg: (a) => msg("hw.noDriNode", { node: node(a) }) },
   // libva 只說開不了，不說是沒有節點還是沒權限；沒有節點的情況在列裝置時就擋掉了，所以多半是權限
-  { api: "vaapi", test: /No VA display found/i, reason: (a) => `無法開啟顯示卡（${a.type === "vaapi" ? a.node : ""}）：確認容器掛入了 /dev/dri，而且加入了主機的 render 群組` },
-  { api: "vaapi", test: /Permission denied|Device creation failed: -13\b/i, reason: (a) => `沒有權限使用顯示卡（${a.type === "vaapi" ? a.node : ""}），請把容器加入主機的 render 群組` },
-  { api: "vaapi", test: /va_openDriver\(\) returns|vaInitialize failed|Failed to initiali[sz]e VAAPI|libva: .*(not found|init failed)/i, reason: () => "找不到 Intel 的影像驅動程式（VAAPI），映像可能缺少 intel-media-va-driver" },
-  { api: "cuda", test: /Cannot load libnvcuvid|Cannot load libnvidia-encode|nvcuvid|NvEncodeAPI|OpenEncodeSessionEx failed: unsupported device/i, reason: () => "容器沒有載入 Nvidia 的影像編解碼元件，容器設定的 NVIDIA_DRIVER_CAPABILITIES 需要包含 video" },
-  { api: "cuda", test: /Cannot load libcuda|cu->cuInit|CUDA_ERROR_NO_DEVICE|no CUDA-capable device/i, reason: () => "容器裡沒有 Nvidia 驅動程式，請用 NVIDIA Container Toolkit 啟動容器" },
-  { test: /No support for codec|not supported|Unsupported|lacking required capabilities|not within range|No usable encoding profile|does not support/i, reason: (_a, what) => `這張顯示卡不支援 ${what}` },
-  { test: /cuvidCreateDecoder|decode surfaces|hwaccel initiali[sz]ation returned error|Failed setup for format/i, reason: (_a, what) => `顯示卡啟動 ${what}失敗` },
+  { api: "vaapi", test: /No VA display found/i, msg: (a) => msg("hw.cannotOpenGpu", { node: node(a) }) },
+  { api: "vaapi", test: /Permission denied|Device creation failed: -13\b/i, msg: (a) => msg("hw.noPermission", { node: node(a) }) },
+  { api: "vaapi", test: /va_openDriver\(\) returns|vaInitialize failed|Failed to initiali[sz]e VAAPI|libva: .*(not found|init failed)/i, msg: () => msg("hw.noVaDriver", {}) },
+  { api: "cuda", test: /Cannot load libnvcuvid|Cannot load libnvidia-encode|nvcuvid|NvEncodeAPI|OpenEncodeSessionEx failed: unsupported device/i, msg: () => msg("hw.noNvidiaVideo", {}) },
+  { api: "cuda", test: /Cannot load libcuda|cu->cuInit|CUDA_ERROR_NO_DEVICE|no CUDA-capable device/i, msg: () => msg("hw.noNvidiaDriver", {}) },
+  { test: /No support for codec|not supported|Unsupported|lacking required capabilities|not within range|No usable encoding profile|does not support/i, msg: (_a, w) => msg("hw.unsupported", whatParams(w)) },
+  { test: /cuvidCreateDecoder|decode surfaces|hwaccel initiali[sz]ation returned error|Failed setup for format/i, msg: (_a, w) => msg("hw.setupFailed", whatParams(w)) },
 ];
 
 /** stderr 的最後幾行，夠判斷原因也不會把整段日誌塞進診斷資訊 */
@@ -121,12 +135,11 @@ export function stderrTail(stderr: string, lines = 6): string {
     .join("\n");
 }
 
-/** `what` 是「H.265 硬體解碼」這類說法，用在能力不足與無法判斷的情況 */
-export function explainHwFailure(api: HwApi, what: string, stderr: string, opts: { timedOut?: boolean; exitCode?: number | null } = {}): HwFailure {
+export function explainHwFailure(api: HwApi, what: HwWhat, stderr: string, opts: { timedOut?: boolean; exitCode?: number | null } = {}): HwFailure {
   const detail = stderrTail(stderr) || (opts.timedOut ? "timed out" : `exit ${opts.exitCode ?? "?"}`);
-  if (opts.timedOut) return { reason: `顯示卡沒有在時限內完成 ${what}`, detail };
+  if (opts.timedOut) return hwFailure(msg("hw.timeout", whatParams(what)), detail);
   const rule = RULES.find((r) => (!r.api || r.api === api.type) && r.test.test(stderr));
-  return { reason: rule ? rule.reason(api, what) : `顯示卡沒有完成 ${what}`, detail };
+  return hwFailure(rule ? rule.msg(api, what) : msg("hw.failed", whatParams(what)), detail);
 }
 
 const INPUT_FAILURE = /method \w+ failed|Server returned \d|Error opening input|Connection refused|Connection timed out|No route to host|Network is unreachable/i;

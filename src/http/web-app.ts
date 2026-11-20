@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
+import { msg } from "../messages/index.ts";
 import { errorResponse } from "./respond.ts";
 
 /** Vite 輸出的檔名帶內容雜湊，可以永久快取；index.html 每次都要重新驗證，部署新版才拿得到新的雜湊檔名 */
@@ -55,15 +56,15 @@ export function webApp(dir: string): { ready: boolean; handle: (req: Request) =>
 
   async function handle(req: Request): Promise<Response> {
     const { pathname } = new URL(req.url);
-    if (pathname === "/api" || pathname.startsWith("/api/") || pathname.startsWith("/internal/")) return errorResponse(404, "找不到資源");
-    if (req.method !== "GET" && req.method !== "HEAD") return errorResponse(405, "不支援的請求方法", { Allow: "GET, HEAD" });
+    if (pathname === "/api" || pathname.startsWith("/api/") || pathname.startsWith("/internal/")) return errorResponse(404, msg("http.notFound"));
+    if (req.method !== "GET" && req.method !== "HEAD") return errorResponse(405, msg("http.methodNotAllowed"), { Allow: "GET, HEAD" });
     if (!ready) return new Response(MISSING, { status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 
     let file: string | null = null;
     try {
       file = resolve(root, `.${decodeURIComponent(pathname)}`);
     } catch {
-      return errorResponse(400, "網址格式錯誤");
+      return errorResponse(400, msg("http.badUrl"));
     }
     if (file.startsWith(root + sep) && !file.endsWith(`${sep}index.html`)) {
       const f = Bun.file(file);
@@ -72,7 +73,7 @@ export function webApp(dir: string): { ready: boolean; handle: (req: Request) =>
         return serve(req, file, { "cache-control": hashed ? IMMUTABLE : "no-cache" });
       }
     }
-    if (pathname.startsWith("/assets/")) return errorResponse(404, "找不到資源");
+    if (pathname.startsWith("/assets/")) return errorResponse(404, msg("http.notFound"));
     return serve(req, join(root, "index.html"), { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" });
   }
 

@@ -4,11 +4,12 @@
  */
 import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { msg, type Msg } from "../messages/index.ts";
 import type { MetricsIo } from "../metrics/io.ts";
-import { CODEC_LABEL, CODECS, decodeTestCommand, encodeTestCommand, explainHwFailure, hwEnv, sampleCommand, stderrTail, type CodecName } from "./commands.ts";
+import { CODEC_LABEL, CODECS, decodeTestCommand, encodeTestCommand, explainHwFailure, hwEnv, hwFailure, sampleCommand, stderrTail, type CodecName, type HwWhat } from "./commands.ts";
 import { listVideoDevices, type VideoDevice } from "./devices.ts";
 
-export type CodecCheck = { ok: true; ms: number } | { ok: false; reason: string; detail: string };
+export type CodecCheck = { ok: true; ms: number } | { ok: false; reason: string; detail: string; reasonMsg: Msg };
 
 export interface ProbedDevice extends VideoDevice {
   decode: Record<CodecName, CodecCheck>;
@@ -62,12 +63,12 @@ export interface ProbeDeps {
 
 const TIMEOUT_MS = 15_000;
 
-function check(r: RunOutcome, device: VideoDevice, what: string): CodecCheck {
+function check(r: RunOutcome, device: VideoDevice, what: HwWhat): CodecCheck {
   if (r.code === 0 && !r.timedOut) return { ok: true, ms: r.ms };
   return { ok: false, ...explainHwFailure(device.api, what, r.stderr, { timedOut: r.timedOut, exitCode: r.code }) };
 }
 
-const blocked = (reason: string): CodecCheck => ({ ok: false, reason, detail: "device node missing" });
+const blocked = (reasonMsg: Msg): CodecCheck => ({ ok: false, ...hwFailure(reasonMsg, "device node missing") });
 const each = <T>(fn: (c: CodecName) => T) => Object.fromEntries(CODECS.map((c) => [c, fn(c)])) as Record<CodecName, T>;
 
 export async function probeVideoDevices(deps: ProbeDeps): Promise<ProbeReport> {
@@ -84,7 +85,7 @@ export async function probeVideoDevices(deps: ProbeDeps): Promise<ProbeReport> {
       CODECS.map(async (codec) => {
         const path = join(deps.tmpDir, `sample-${codec}.mp4`);
         const r = await run(sampleCommand(deps.ffmpeg, codec, path), {}, timeout);
-        const failure: CodecCheck | null = r.code === 0 ? null : { ok: false, reason: `無法產生 ${CODEC_LABEL[codec]} 的試跑影片（這個 ffmpeg 可能沒有軟體編碼器）`, detail: stderrTail(r.stderr) };
+        const failure: CodecCheck | null = r.code === 0 ? null : { ok: false, ...hwFailure(msg("hw.sampleFailed", { codec: CODEC_LABEL[codec] }), stderrTail(r.stderr)) };
         return [codec, { path, failure }] as const;
       }),
     );
@@ -99,9 +100,9 @@ export async function probeVideoDevices(deps: ProbeDeps): Promise<ProbeReport> {
         const encode = {} as Record<CodecName, CodecCheck>;
         for (const codec of CODECS) {
           const s = sample[codec];
-          decode[codec] = s.failure ?? check(await run(decodeTestCommand(deps.ffmpeg, d.api, s.path), env, timeout), d, `${CODEC_LABEL[codec]} 硬體解碼`);
+          decode[codec] = s.failure ?? check(await run(decodeTestCommand(deps.ffmpeg, d.api, s.path), env, timeout), d, { codec, op: "decode" });
         }
-        for (const codec of CODECS) encode[codec] = check(await run(encodeTestCommand(deps.ffmpeg, d.api, codec), env, timeout), d, `${CODEC_LABEL[codec]} 硬體編碼`);
+        for (const codec of CODECS) encode[codec] = check(await run(encodeTestCommand(deps.ffmpeg, d.api, codec), env, timeout), d, { codec, op: "encode" });
         return { ...d, decode, encode };
       }),
     );

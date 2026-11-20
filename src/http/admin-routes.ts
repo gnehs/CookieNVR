@@ -5,6 +5,7 @@ import { HttpError } from "./errors.ts";
 import { parseSettingsPatch } from "./parse.ts";
 import { json, noContent } from "./respond.ts";
 import { asObject, oneOf, parseIdParam, readJson, str } from "./validate.ts";
+import { msg } from "../messages/index.ts";
 
 export interface AdminDeps {
   auth: Auth;
@@ -17,7 +18,7 @@ export interface AdminDeps {
 
 function userId(raw: string | undefined): number {
   const id = parseIdParam(raw);
-  if (id === null) throw new HttpError(404, "找不到使用者");
+  if (id === null) throw new HttpError(404, msg("auth.userNotFound"));
   return id;
 }
 
@@ -51,7 +52,7 @@ export function adminRoutes({ auth, settings, system, diagnostics, supervisor }:
         if (body.role !== undefined) patch.role = oneOf(body, "role", roles);
         if (body.password !== undefined) patch.password = str(body, "password", { max: 1024, allowEmpty: true });
         if (patch.role === undefined && patch.password === undefined) {
-          throw new HttpError(400, "至少需要提供 role 或 password");
+          throw new HttpError(400, msg("auth.roleOrPassword"));
         }
         return json(await auth.updateUser(id, patch));
       },

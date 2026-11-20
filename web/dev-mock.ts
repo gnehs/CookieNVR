@@ -5,7 +5,7 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { BenchmarkDto, BenchmarkResultDto, CameraDto, CameraGroupDto, HomekitDto, EventDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { BenchmarkDto, BenchmarkResultDto, CameraDto, CameraGroupDto, HomekitDto, EventDto, GpuDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import { detectConfigOf, PREVIEW_THRESHOLDS, usesPixel } from "../src/detect/config.ts";
 import type { CameraConfig, CameraId, GroupId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
@@ -19,6 +19,8 @@ import { planExport } from "../src/export/plan.ts";
 import { encodeFrame, FrameKind } from "../src/live/mux.ts";
 import { createLinkService } from "../src/auth/link.ts";
 import { HttpError } from "../src/http/errors.ts";
+import { errorBody, errorResponse } from "../src/http/respond.ts";
+import { msg, zh, type Msg } from "../src/messages/index.ts";
 import { mockMetrics, setMockMetrics } from "./dev-mock-metrics.ts";
 import { mockDecodeStatus, mockVideoDevices } from "./dev-mock-video.ts";
 import { createMockStates } from "./dev-mock-state.ts";
@@ -137,26 +139,28 @@ const DEVICE_N1: InferenceDeviceDto = { id: "nvidia:GPU-3f6a0c1e", kind: "nvidia
 const DEVICE_N2: InferenceDeviceDto = { id: "nvidia:GPU-9b27d4a8", kind: "nvidia", name: "NVIDIA GeForce RTX 3060", pci: "0000:01:00.0" };
 const DEVICES_SCENARIO = process.env.MOCK_DEVICES ?? "";
 const DEVICES: InferenceDeviceDto[] = DEVICES_SCENARIO === "cpu" ? [DEVICE_CPU] : DEVICES_SCENARIO === "intel" ? [DEVICE_CPU, DEVICE_INTEL] : [DEVICE_CPU, DEVICE_INTEL, DEVICE_N1, DEVICE_N2];
-const DEVICES_UNAVAILABLE: ObjectsDto["unavailable"] = {
-  intel: DEVICES.some((d) => d.kind === "intel") ? null : "找不到 Intel 內顯：容器沒有取得 /dev/dri，請在 Docker 設定裡開放它。",
-  nvidia: DEVICES.some((d) => d.kind === "nvidia") ? null : "這個版本的映像沒有 Nvidia 元件，要用 Nvidia 顯卡請改用 nvidia 版的映像。",
+const DEVICES_UNAVAILABLE_MSG: ObjectsDto["unavailableMsg"] = {
+  intel: DEVICES.some((d) => d.kind === "intel") ? null : msg("detector.noDri"),
+  nvidia: DEVICES.some((d) => d.kind === "nvidia") ? null : msg("detector.noNvidiaRuntime"),
 };
+const DEVICES_UNAVAILABLE: ObjectsDto["unavailable"] = { intel: DEVICES_UNAVAILABLE_MSG.intel && zh(DEVICES_UNAVAILABLE_MSG.intel), nvidia: DEVICES_UNAVAILABLE_MSG.nvidia && zh(DEVICES_UNAVAILABLE_MSG.nvidia) };
 /** 各裝置在假後端的測速表現（每秒幾張、平均每張幾毫秒） */
 const SPEED: Record<string, { fps: number; ms: number }> = { cpu: { fps: 14, ms: 71 }, [DEVICE_INTEL.id]: { fps: 31, ms: 32 }, [DEVICE_N1.id]: { fps: 96, ms: 10.4 }, [DEVICE_N2.id]: { fps: 212, ms: 4.7 } };
 const BENCH_MS_PER_DEVICE = 3_000;
 
 const bestDevice = () => DEVICES.find((d) => d.kind === "nvidia") ?? DEVICES.find((d) => d.kind === "intel") ?? DEVICE_CPU;
 /** 設定的裝置換成實際使用的：auto 選最好的；指定的找不到就退回自動，並附上原因 */
-function resolveDevice(): { device: InferenceDeviceDto; fallback: { reason: string; detail: string } | null } {
-  if (OBJECTS_SCENARIO === "fallback") return { device: DEVICE_CPU, fallback: { reason: "找不到可以使用的 Nvidia 顯卡，已改用 CPU 辨識。", detail: "CUDAExecutionProvider not in ort.get_available_providers(); /dev/nvidiactl missing" } };
+const fallbackOf = (reasonMsg: Msg, detail: string) => ({ reason: zh(reasonMsg), reasonMsg, detail });
+function resolveDevice(): { device: InferenceDeviceDto; fallback: ObjectsStatusDto["fallback"] } {
+  if (OBJECTS_SCENARIO === "fallback") return { device: DEVICE_CPU, fallback: fallbackOf(msg("detector.noNvidiaGpu"), "CUDAExecutionProvider not in ort.get_available_providers(); /dev/nvidiactl missing") };
   if (OBJECTS_SCENARIO === "cpu" || OBJECTS_SCENARIO === "overload") return { device: DEVICE_CPU, fallback: null };
-  if (OBJECTS_SCENARIO === "handback") return { device: DEVICE_CPU, fallback: { reason: "Intel(R) UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器），已改用其他裝置", detail: "NotOnDevice: Intel(R) UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器）；實際執行：CPUExecutionProvider 100%" } };
+  if (OBJECTS_SCENARIO === "handback") return { device: DEVICE_CPU, fallback: fallbackOf(msg("detector.notOnDevice", { device: "Intel(R) UHD Graphics 630", runtime: "OpenVINO" }), "NotOnDevice: Intel(R) UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器）；實際執行：CPUExecutionProvider 100%") };
   if (OBJECTS_SCENARIO === "intel") return { device: DEVICES.find((d) => d.kind === "intel") ?? DEVICE_CPU, fallback: null };
   const want = settings.devices.objects;
   if (want === "auto") return { device: bestDevice(), fallback: null };
   const hit = DEVICES.find((d) => d.id === want);
   if (hit) return { device: hit, fallback: null };
-  return { device: bestDevice(), fallback: { reason: "之前選的裝置現在找不到，已暫時自動選擇。", detail: `${want} not found` } };
+  return { device: bestDevice(), fallback: fallbackOf(msg("detector.deviceGone"), `${want} not found`) };
 }
 
 // ---------- 測速：依開始時間推算進度，不需要計時器；取消與完成都在讀取時定案 ----------
@@ -166,7 +170,7 @@ const camerasOn = () => cams.filter((c) => c.config.enabled && detectConfigOf(c.
 function resultOf(d: InferenceDeviceDto, perCamera: number): BenchmarkResultDto {
   const sp = SPEED[d.id] ?? SPEED.cpu!;
   if (process.env.MOCK_BENCH?.startsWith("handback")) {
-    if (d.kind === "intel") return { device: d.id, kind: d.kind, name: d.name, ok: false, reason: "Intel(R) UHD Graphics 630 沒有實際執行這個模型（OpenVINO 把運算交回處理器），這個裝置不適合用來辨識", error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" };
+    if (d.kind === "intel") return { device: d.id, kind: d.kind, name: d.name, ok: false, reason: zh(msg("detector.notOnDeviceBench", { device: "Intel(R) UHD Graphics 630", runtime: "OpenVINO" })), reasonMsg: msg("detector.notOnDeviceBench", { device: "Intel(R) UHD Graphics 630", runtime: "OpenVINO" }), error: "NotOnDevice: 實際執行 CPUExecutionProvider 100%" };
     if (d.id === DEVICE_N1.id) return { ...resultOf(DEVICE_CPU, perCamera), device: d.id, kind: d.kind, name: d.name, fps: 18, msMean: 55, cameras: camerasSupported(18, d.kind, perCamera), cpuShare: 0.62 };
   }
   return { device: d.id, kind: d.kind, name: d.name, ok: true, loadMs: d.kind === "cpu" ? 900 : 4200, frames: Math.round(sp.fps * 10), fps: sp.fps, msMean: sp.ms, msP90: Math.round(sp.ms * 1.35 * 10) / 10, cameras: camerasSupported(sp.fps, d.kind, perCamera) };
@@ -174,7 +178,7 @@ function resultOf(d: InferenceDeviceDto, perCamera: number): BenchmarkResultDto 
 
 function seedBench() {
   const fps = settings.objects.fps;
-  const mk = (devices: InferenceDeviceDto[], model: string): NonNullable<typeof bench> => ({ state: "done", startedAt: now() - 2 * 3_600_000, finishedAt: now() - 2 * 3_600_000 + 35_000, model, perCameraFps: fps, progress: null, results: devices.map((d) => resultOf(d, fps)), error: null, stale: false, verdict: null, devices: [], seconds: 10 });
+  const mk = (devices: InferenceDeviceDto[], model: string): NonNullable<typeof bench> => ({ state: "done", startedAt: now() - 2 * 3_600_000, finishedAt: now() - 2 * 3_600_000 + 35_000, model, perCameraFps: fps, progress: null, results: devices.map((d) => resultOf(d, fps)), error: null, errorMsg: null, stale: false, verdict: null, devices: [], seconds: 10 });
   const kind = process.env.MOCK_BENCH;
   if (kind === "done") bench = mk(DEVICES, settings.objects.model);
   if (kind === "stale") bench = mk(DEVICES.slice(0, 2), "yolo11s.onnx");
@@ -217,21 +221,17 @@ function objectsStatus(): ObjectsStatusDto {
   tickBench();
   const s = settings.objects;
   const model = { id: s.model, name: s.model === "builtin" ? "內建模型" : s.model, format: null as string | null, input: null as [number, number] | null };
-  const base: Omit<ObjectsStatusDto, "state"> = { requested: settings.devices.objects, device: null, fallback: null, cpuShare: null, error: null, model, latencyMs: null, processed: 0, dropped: 0, rateFps: 0, dropRatio: null, paused: null, warning: null, gpu: null };
+  const base: Omit<ObjectsStatusDto, "state"> = { requested: settings.devices.objects, device: null, fallback: null, cpuShare: null, error: null, model, latencyMs: null, processed: 0, dropped: 0, rateFps: 0, dropRatio: null, paused: null, warning: null, warningMsg: null, errorMsg: null, gpu: null };
   if (!s.enabled) return { ...base, state: "off" };
   const age = now() - objectsOnAt;
   if (age < 1_500 || OBJECTS_SCENARIO === "down") return { ...base, state: "starting" };
   if (age < 4_000 || OBJECTS_SCENARIO === "loading") return { ...base, state: "loading" };
-  if (OBJECTS_SCENARIO === "error" || s.model === "broken.onnx") return { ...base, state: "error", error: "這個檔案不是有效的 ONNX 模型，請換一個模型。" };
+  if (OBJECTS_SCENARIO === "error" || s.model === "broken.onnx") return { ...base, state: "error", error: zh(msg("detector.modelNotOnnx")), errorMsg: msg("detector.modelNotOnnx") };
   const { device, fallback } = resolveDevice();
   const overload = OBJECTS_SCENARIO === "overload";
   const b = benchDto();
   const slow = b && !b.stale && b.verdict?.state === "partial" ? b.verdict : null;
-  const warning = overload
-    ? "最近有 23% 的畫面來不及辨識。可以降低辨識頻率，或改用更快的裝置。"
-    : slow
-      ? `開了物件辨識的 ${slow.cameras} 台攝影機同時有動作時會來不及，這台機器大約能同時處理 ${slow.supported} 台。可以降低辨識頻率，或改用更快的裝置。`
-      : null;
+  const warningMsg = overload ? msg("objects.dropWarning", { percent: 23 }) : slow ? msg("objects.capacityWarning", { cameras: slow.cameras, supported: slow.supported }) : null;
   const latencyMs = device.kind === "cpu" ? { last: 71, avg: 68.4, max: 120 } : { last: 11, avg: 12.4, max: 31 };
   return {
     ...base,
@@ -243,7 +243,8 @@ function objectsStatus(): ObjectsStatusDto {
     rateFps: overload ? 7.4 : 1.2,
     dropRatio: overload ? 0.23 : 0,
     paused: b?.state === "running" ? "benchmark" : null,
-    warning,
+    warning: warningMsg && zh(warningMsg),
+    warningMsg,
     gpu: device.kind === "nvidia" ? { utilPercent: 18, memoryUsedMb: 612, memoryTotalMb: 4096 } : null,
     cpuShare: device.kind === "cpu" ? null : OBJECTS_SCENARIO === "mostlycpu" ? 0.62 : 0.01,
     latencyMs,
@@ -252,10 +253,10 @@ function objectsStatus(): ObjectsStatusDto {
 }
 
 /** 系統資源的 GPU 卡片：正在做物件辨識的那張顯卡帶一行辨識速率（後端以 PCI 位址對應） */
-function objectsGpuExtras(): Record<string, { label: string; value: string }[]> {
+function objectsGpuExtras(): Record<string, GpuDto["extras"]> {
   const st = objectsStatus();
   const d = st.state === "ready" ? st.device : null;
-  return d?.pci ? { [`${d.kind}:${d.pci}`]: [{ label: "物件辨識", value: "每秒 12 張" }] } : {};
+  return d?.pci ? { [`${d.kind}:${d.pci}`]: [{ label: zh(msg("objects.gpuLabel")), value: zh(msg("objects.gpuRate", { fps: 12 })), labelMsg: msg("objects.gpuLabel"), valueMsg: msg("objects.gpuRate", { fps: 12 }) }] } : {};
 }
 
 /** 目前模型的類別：內建與 yolo11s 是 COCO 80 類；parcel.onnx 是自備的，有包裹，也有沒有翻譯的類別 */
@@ -578,7 +579,7 @@ function camDto(c: (typeof cams)[number], admin: boolean): CameraDto {
 }
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
-const err = (status: number, error: string) => Response.json({ error }, { status });
+const err = (status: number, m: Msg) => Response.json(errorBody(m), { status });
 const noContent = () => new Response(null, { status: 204 });
 
 function cookieOf(req: Request, name: string) {
@@ -656,9 +657,9 @@ async function exportApi(req: Request, url: URL, path: string, body: any): Promi
   if (path === "/exports" && m === "GET") return json(exportJobs.map(exportView).reverse());
   if (path === "/exports" && m === "POST") {
     const c = cams.find((x) => x.id === body.cameraId);
-    if (!c) return err(404, "找不到攝影機");
+    if (!c) return errorResponse(404, msg("export.cameraNotFound"));
     const plan = planExport(segmentsIn(c.id, Number(body.startMs) - MIN, Number(body.endMs) + MIN), Number(body.startMs), Number(body.endMs), now());
-    if (!plan.ok) return err(plan.reason === "empty" ? 422 : 400, plan.message);
+    if (!plan.ok) return errorResponse(plan.reason === "empty" ? 422 : 400, plan.msg);
     const id = crypto.randomUUID().slice(0, 16);
     const dto: ExportDto = {
       id,
@@ -674,6 +675,7 @@ async function exportApi(req: Request, url: URL, path: string, body: any): Promi
       ahead: 0,
       sizeBytes: null,
       error: null,
+      errorMsg: null,
       fileName: exportFileName(c.config.name, plan.startMs, String(body.tz ?? "UTC")),
       createdAt: now(),
       finishedAt: null,
@@ -685,9 +687,9 @@ async function exportApi(req: Request, url: URL, path: string, body: any): Promi
   const mm = path.match(/^\/exports\/([\w-]+)(\/file)?$/);
   if (!mm) return null;
   const job = exportJobs.find((j) => j.dto.id === mm[1]);
-  if (!job) return err(404, "找不到這個匯出，可能已經過期");
+  if (!job) return errorResponse(404, msg("export.notFound"));
   if (mm[2] && m === "GET") {
-    if (exportView(job).state !== "done") return err(409, "匯出還沒有完成");
+    if (exportView(job).state !== "done") return errorResponse(409, msg("export.notReady"));
     const name = job.dto.fileName;
     return new Response(Bun.file(segFiles[0]!), { headers: { "content-type": "video/mp4", "content-disposition": `attachment; filename="export.mp4"; filename*=UTF-8''${encodeURIComponent(name)}` } });
   }
@@ -715,7 +717,7 @@ function mockPtzOf(c: (typeof cams)[number]): { kind: "no-onvif" } | { kind: "no
 function onvifProbeOf(conn: any): OnvifProbeDto {
   if (conn.type === "rtsp" && !conn.onvif) return { state: "unconfigured" };
   const host = String(conn.type === "tapo" ? conn.host : conn.onvif.host);
-  if (host.includes("onvifdown")) return { state: "unavailable", kind: "unreachable", message: "連不上相機的控制連線，請確認相機已開機、與本機在同一個網路，且 ONVIF 位址與埠號正確" };
+  if (host.includes("onvifdown")) return { state: "unavailable", kind: "unreachable", message: zh(msg("ptz.onvifUnreachable")), msg: msg("ptz.onvifUnreachable") };
   if (host.includes("noptz")) return { state: "available", ptz: false, zoom: false, maxPresets: null };
   return { state: "available", ptz: true, zoom: true, maxPresets: 8 };
 }
@@ -752,7 +754,7 @@ async function homekitApi(path: string, m: string, body: any): Promise<Response 
   const mm = path.match(/^\/cameras\/([^/]+)\/homekit$/);
   if (!mm) return null;
   const cam = cams.find((c) => c.id === mm[1]);
-  if (!cam) return err(404, "找不到攝影機");
+  if (!cam) return err(404, msg("http.cameraNotFound"));
   if (m === "GET") {
     await Bun.sleep(400);
     return json(homekitDto(cam));
@@ -760,15 +762,15 @@ async function homekitApi(path: string, m: string, body: any): Promise<Response 
   if (m !== "POST") return null;
   const dto = homekitDto(cam);
   if (body.action === "enable") {
-    if (!cam.config.enabled) return err(409, "這台攝影機已停用，先啟用才能加入 Apple 家庭");
-    if (dto.check.state === "blocked") return err(409, "這台的主畫面不是 H.264，Apple 家庭不支援");
+    if (!cam.config.enabled) return err(409, msg("homekit.cameraDisabled"));
+    if (dto.check.state === "blocked") return err(409, msg("homekit.notH264"));
     cam.config = { ...cam.config, homekit: { enabled: true } };
     if (!homekitState.has(cam.id)) homekitState.set(cam.id, newPairing());
   } else if (body.action === "disable") {
     cam.config = { ...cam.config, homekit: { enabled: false } };
   } else if (body.action === "reset") {
     homekitState.set(cam.id, newPairing());
-  } else return err(400, "action 只接受 enable、disable、reset");
+  } else return err(400, msg("field.oneOf", { path: "action", values: ["enable", "disable", "reset"] }));
   return json(homekitDto(cam));
 }
 
@@ -785,50 +787,50 @@ async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): 
   if (!mm) return null;
   const m = req.method;
   const c = cams.find((x) => x.id === mm[1]);
-  if (!c) return err(404, "找不到攝影機");
+  if (!c) return err(404, msg("http.cameraNotFound"));
   const found = mockPtzOf(c);
   if (ptzFault.delay) await Bun.sleep(ptzFault.delay);
   if (!mm[2]) {
     if (m === "GET") {
-      if (ptzFault.down && found.kind === "ok") return err(503, "連不上相機的控制連線，請確認相機已開機，且與本機在同一個網路");
+      if (ptzFault.down && found.kind === "ok") return errorResponse(503, msg("ptz.onvifUnreachable"));
       if (found.kind !== "ok") return json({ supported: false, reason: found.kind } satisfies PtzDto);
       const { continuous, relative, zoom, maxPresets, presets } = found.ptz;
       return json({ supported: true, continuous, relative, zoom, maxPresets, presets, prefs: { mode: c.config.ptz?.mode ?? "auto", speed: c.config.ptz?.speed ?? 0.5 } } satisfies PtzDto);
     }
     if (m !== "POST") return null;
     const b: any = parsed ?? (await req.json().catch(() => ({})));
-    if (found.kind === "no-onvif") return err(409, "這台相機沒有設定 ONVIF，無法控制鏡頭");
-    if (found.kind === "no-ptz") return err(409, "這台相機沒有鏡頭控制功能");
+    if (found.kind === "no-onvif") return errorResponse(409, msg("ptz.noOnvif"));
+    if (found.kind === "no-ptz") return errorResponse(409, msg("ptz.noPtz"));
     if (b.action === "stop") return noContent();
-    if (ptzFault.fail && b.action === "move") return err(502, "相機拒絕了這個指令，請稍後再試");
-    if (b.action === "preset") return found.ptz.presets.some((p) => p.token === b.token) ? noContent() : err(502, "相機拒絕了這個指令，請稍後再試");
-    if (b.action !== "move") return err(400, "欄位 action 必須是 move 或 stop 或 preset");
-    if (Number(b.zoom ?? 0) !== 0 && !found.ptz.zoom) return err(409, "這台相機沒有變焦功能");
+    if (ptzFault.fail && b.action === "move") return errorResponse(502, msg("ptz.onvifFault"));
+    if (b.action === "preset") return found.ptz.presets.some((p) => p.token === b.token) ? noContent() : errorResponse(502, msg("ptz.onvifFault"));
+    if (b.action !== "move") return err(400, msg("field.oneOf", { path: "action", values: ["move", "stop", "preset"] }));
+    if (Number(b.zoom ?? 0) !== 0 && !found.ptz.zoom) return errorResponse(409, msg("ptz.noZoom"));
     const mode = b.mode ?? c.config.ptz?.mode ?? "auto";
-    if (mode === "continuous" && !found.ptz.continuous) return err(409, "這台相機不支援持續移動，請改用微調或自動模式");
+    if (mode === "continuous" && !found.ptz.continuous) return errorResponse(409, msg("ptz.noContinuous"));
     return json({ mode: mode === "auto" ? (found.ptz.continuous ? "continuous" : "relative") : mode });
   }
-  if (!admin) return err(403, "需要管理員權限");
-  if (found.kind !== "ok") return err(409, found.kind === "no-onvif" ? "這台相機沒有設定 ONVIF，無法控制鏡頭" : "這台相機沒有鏡頭控制功能");
+  if (!admin) return err(403, msg("http.adminRequired"));
+  if (found.kind !== "ok") return errorResponse(409, msg(found.kind === "no-onvif" ? "ptz.noOnvif" : "ptz.noPtz"));
   const ptz = found.ptz;
   const b: any = parsed ?? (await req.json().catch(() => ({})));
   if (m === "POST") {
     const name = String(b.name ?? "").trim();
-    if (!name) return err(400, "欄位 name 不能為空");
+    if (!name) return err(400, msg("field.empty", { path: "name" }));
     if (b.token !== undefined) {
       const p = ptz.presets.find((x) => x.token === b.token);
-      if (!p) return err(404, "找不到這個預置點");
+      if (!p) return err(404, msg("ptz.presetNotFound"));
       p.name = name;
       return json({ token: p.token, presets: ptz.presets });
     }
-    if (ptz.presets.length >= ptz.maxPresets) return err(409, `預置點已滿，這台相機最多 ${ptz.maxPresets} 個，請先刪除一個`);
+    if (ptz.presets.length >= ptz.maxPresets) return errorResponse(409, msg("ptz.presetsFull", { max: ptz.maxPresets }));
     const token = String(ptz.nextToken++);
     ptz.presets.push({ token, name });
     return json({ token, presets: ptz.presets }, 201);
   }
   if (m === "DELETE") {
     const i = ptz.presets.findIndex((x) => x.token === b.token);
-    if (i < 0) return err(404, "找不到這個預置點");
+    if (i < 0) return err(404, msg("ptz.presetNotFound"));
     ptz.presets.splice(i, 1);
     return json({ presets: ptz.presets });
   }
@@ -893,7 +895,7 @@ function linkCall(fn: () => unknown, status = 200): Response {
   try {
     return json(fn(), status);
   } catch (e) {
-    if (e instanceof HttpError) return err(e.status, e.message);
+    if (e instanceof HttpError) return err(e.status, e.msg);
     throw e;
   }
 }
@@ -908,19 +910,19 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (path === "/link" && m === "POST") return linkCall(() => links.create({ app: String(body.app ?? "App"), ip: "192.168.1.50", origin: url.origin }), 201);
   if (path === "/link/poll" && m === "POST") return linkCall(() => links.poll(String(body.pollSecret ?? ""), "192.168.1.50"));
   if (path === "/auth/setup" && m === "POST") {
-    if (users.length) return err(409, "已經有帳號了");
-    if (!body.username || String(body.password ?? "").length < 8) return err(400, "密碼至少 8 個字元");
+    if (users.length) return err(409, msg("auth.setupDone"));
+    if (!body.username || String(body.password ?? "").length < 8) return err(400, msg("auth.passwordTooShort", { min: 8 }));
     const u: MockUser = { id: nextUserId++, username: body.username, password: hash(body.password), role: "admin", createdAt: now(), lastLoginAt: null };
     users.push(u);
     return withCookie(json({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
   }
   if (path === "/auth/login" && m === "POST") {
     const key = String(body.username);
-    if ((fails.get(key) ?? 0) >= 5) return err(429, "嘗試次數過多，請稍後再試");
+    if ((fails.get(key) ?? 0) >= 5) return err(429, msg("auth.tooManyLogins"));
     const u = users.find((x) => x.username === body.username && x.password === hash(String(body.password)));
     if (!u) {
       fails.set(key, (fails.get(key) ?? 0) + 1);
-      return err(401, "帳號或密碼錯誤");
+      return err(401, msg("auth.badCredentials"));
     }
     fails.delete(key);
     return withCookie(json({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
@@ -932,17 +934,17 @@ async function route(req: Request, url: URL): Promise<Response> {
   }
 
   const me = principal(req);
-  if (!me) return err(401, "請先登入");
+  if (!me) return err(401, msg("http.loginRequired"));
   const admin = me.role === "admin";
-  const needAdmin = () => (admin ? null : err(403, "需要管理員權限"));
+  const needAdmin = () => (admin ? null : err(403, msg("http.adminRequired")));
   const stateRes = states.handle({ path, method: m, url, body, admin });
   if (stateRes) return stateRes;
 
   if (path === "/me") {
     if (m === "GET") return json({ id: me.id, username: me.username, role: me.role });
     if (m === "PUT") {
-      if (me.password !== hash(String(body.currentPassword))) return err(403, "目前密碼不正確");
-      if (String(body.newPassword ?? "").length < 8) return err(400, "新密碼至少 8 個字元");
+      if (me.password !== hash(String(body.currentPassword))) return err(403, msg("auth.wrongCurrentPassword"));
+      if (String(body.newPassword ?? "").length < 8) return err(400, msg("auth.passwordTooShort", { min: 8 }));
       me.password = hash(body.newPassword);
       const cur = cookieOf(req, "sid");
       for (const [k, s] of sessions) if (s.userId === me.id && k !== cur) sessions.delete(k);
@@ -992,21 +994,21 @@ async function route(req: Request, url: URL): Promise<Response> {
     const body = new ReadableStream<Uint8Array>({ start: (ctl) => ids.forEach((_, i) => ctl.enqueue(encodeFrame(FrameKind.gone, i))) });
     return new Response(body, { headers: { "content-type": "application/octet-stream" } });
   }
-  if (/^\/cameras\/[^/]+\/live\.mp4$/.test(path) && m === "GET") return err(404, "這台攝影機沒有即時畫面");
+  if (/^\/cameras\/[^/]+\/live\.mp4$/.test(path) && m === "GET") return err(404, msg("live.noStream"));
   mm = path.match(/^\/cameras\/([^/]+)\/snapshot\.jpg$/);
   if (mm && m === "GET") {
     const c = cams.find((x) => x.id === mm![1]);
-    if (!c) return err(404, "找不到攝影機");
-    if (!c.config.enabled) return err(404, "這台攝影機已停用");
+    if (!c) return err(404, msg("http.cameraNotFound"));
+    if (!c.config.enabled) return err(404, msg("http.cameraNotFoundOrDisabled"));
     const dto = camDto(c, admin);
-    if (!dto.online || !existsSync(snapFile)) return err(503, "目前沒有快照");
+    if (!dto.online || !existsSync(snapFile)) return err(503, msg("raw", { text: "目前沒有快照" }));
     return new Response(Bun.file(snapFile), { headers: { "content-type": "image/jpeg", "cache-control": "no-store" } });
   }
   mm = path.match(/^\/cameras\/([^/]+)\/motion$/);
   if (mm && m === "GET") {
-    if (!admin) return err(403, "需要管理員權限");
+    if (!admin) return err(403, msg("http.adminRequired"));
     const c = cams.find((x) => x.id === mm![1]);
-    if (!c || !c.config.enabled) return err(404, "找不到攝影機");
+    if (!c || !c.config.enabled) return err(404, msg("http.cameraNotFound"));
     return motionResponse(c);
   }
   mm = path.match(/^\/cameras\/([^/]+)\/days$/);
@@ -1026,11 +1028,11 @@ async function route(req: Request, url: URL): Promise<Response> {
   mm = path.match(/^\/events\/(\d+)$/);
   if (mm) {
     const e = allEvents(null).find((x) => x.id === Number(mm![1]));
-    if (m === "GET") return e ? json(e) : err(404, "找不到這個事件");
+    if (m === "GET") return e ? json(e) : err(404, msg("events.notFound"));
     if (m === "DELETE") {
-      if (!admin) return err(403, "需要管理員權限");
-      if (!e) return err(404, "找不到這個事件");
-      if (e.endMs === null) return err(409, "事件還在進行中，結束後才能刪除");
+      if (!admin) return err(403, msg("http.adminRequired"));
+      if (!e) return err(404, msg("events.notFound"));
+      if (e.endMs === null) return err(409, msg("events.active"));
       deletedEvents.add(e.id);
       return noContent();
     }
@@ -1053,7 +1055,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (path === "/cameras" && m === "POST") return json(camDto(addCam(body), true), 201);
   if (path === "/camera-groups" && m === "POST") {
     const name = String(body?.name ?? "").trim();
-    if (!name) return err(400, "欄位 name 不能為空");
+    if (!name) return err(400, msg("field.empty", { path: "name" }));
     const g = { id: `grp${groupSeq++}` as GroupId, name };
     groups.push(g);
     return json(g, 201);
@@ -1061,10 +1063,10 @@ async function route(req: Request, url: URL): Promise<Response> {
   const gm = path.match(/^\/camera-groups\/([^/]+)$/);
   if (gm) {
     const g = groups.find((x) => x.id === gm[1]);
-    if (!g) return err(404, "找不到這個分區");
+    if (!g) return err(404, msg("http.groupNotFound"));
     if (m === "PUT") {
       const name = String(body?.name ?? "").trim();
-      if (!name) return err(400, "欄位 name 不能為空");
+      if (!name) return err(400, msg("field.empty", { path: "name" }));
       g.name = name;
       return json(g);
     }
@@ -1094,7 +1096,8 @@ async function route(req: Request, url: URL): Promise<Response> {
       : host.includes("stall") ? "[rtsp @ 0x1] Failed reading RTSP data: Operation timed out"
       : host.includes("weird") ? "method DESCRIBE failed: Weird Thing"
       : "";
-    if (stderr || host.includes("timeout")) return json({ ok: false, error: `主碼流：${explainFailure(stderr, !stderr, tapo)}`, ...(stderr ? { detail: stderr } : {}) } satisfies ProbeResult);
+    const errorMsg = explainFailure(stderr, !stderr, tapo);
+    if (stderr || host.includes("timeout")) return json({ ok: false, error: `主碼流：${zh(errorMsg)}`, errorMsg, stream: "main", ...(stderr ? { detail: stderr } : {}) } satisfies ProbeResult);
     return json({
       ok: true,
       main: { videoCodec: "h264", width: 2560, height: 1440, fps: 15, audioCodec: "pcm_alaw" },
@@ -1106,14 +1109,14 @@ async function route(req: Request, url: URL): Promise<Response> {
   mm = path.match(/^\/cameras\/([^/]+)$/);
   if (mm) {
     const c = cams.find((x) => x.id === mm![1]);
-    if (!c) return err(404, "找不到攝影機");
+    if (!c) return err(404, msg("http.cameraNotFound"));
     if (m === "PUT") {
       c.config = body;
       return json(camDto(c, true));
     }
     if (m === "DELETE") {
       const recordings = url.searchParams.get("recordings");
-      if (recordings !== null && recordings !== "delete") return err(400, "recordings 只接受 delete");
+      if (recordings !== null && recordings !== "delete") return err(400, msg("field.onlyValue", { path: "recordings", value: "delete" }));
       cams.splice(cams.indexOf(c), 1);
       if (recordings === "delete") usage.delete(c.id);
       return noContent();
@@ -1123,7 +1126,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (path === "/users") {
     if (m === "GET") return json(users.map(userDto));
     if (m === "POST") {
-      if (users.some((u) => u.username === body.username)) return err(409, "帳號已存在");
+      if (users.some((u) => u.username === body.username)) return err(409, msg("auth.usernameTaken"));
       const u: MockUser = { id: nextUserId++, username: body.username, password: hash(body.password), role: body.role, createdAt: now(), lastLoginAt: null };
       users.push(u);
       return json(userDto(u), 201);
@@ -1132,15 +1135,15 @@ async function route(req: Request, url: URL): Promise<Response> {
   mm = path.match(/^\/users\/(\d+)$/);
   if (mm) {
     const u = users.find((x) => x.id === Number(mm![1]));
-    if (!u) return err(404, "找不到使用者");
+    if (!u) return err(404, msg("auth.userNotFound"));
     if (m === "PUT") {
-      if (body.role && u.role === "admin" && body.role !== "admin" && users.filter((x) => x.role === "admin").length === 1) return err(409, "至少要保留一位管理員");
+      if (body.role && u.role === "admin" && body.role !== "admin" && users.filter((x) => x.role === "admin").length === 1) return err(409, msg("auth.lastAdmin"));
       if (body.role) u.role = body.role;
       if (body.password) u.password = hash(body.password);
       return json(userDto(u));
     }
     if (m === "DELETE") {
-      if (u.id === me.id) return err(409, "不能刪除自己");
+      if (u.id === me.id) return err(409, msg("raw", { text: "不能刪除自己" }));
       users.splice(users.indexOf(u), 1);
       return noContent();
     }
@@ -1157,16 +1160,16 @@ async function route(req: Request, url: URL): Promise<Response> {
     }
   }
   if (path === "/objects" && m === "GET") {
-    return json({ status: objectsStatus(), models: OBJECT_MODELS, modelsDir: "/data/models", devices: DEVICES, unavailable: DEVICES_UNAVAILABLE, benchmark: benchDto() } satisfies ObjectsDto);
+    return json({ status: objectsStatus(), models: OBJECT_MODELS, modelsDir: "/data/models", devices: DEVICES, unavailable: DEVICES_UNAVAILABLE, unavailableMsg: DEVICES_UNAVAILABLE_MSG, benchmark: benchDto() } satisfies ObjectsDto);
   }
   if (path === "/objects/labels" && m === "GET") return json(objectLabels());
   if (path === "/objects/benchmark" && m === "POST") {
-    if (objectsStatus().state !== "ready") return err(409, "物件辨識還沒準備好，等狀態顯示使用中再測速。");
-    if (benchDto()?.state === "running") return err(409, "已經在測速了。");
+    if (objectsStatus().state !== "ready") return err(409, msg("objects.notReady"));
+    if (benchDto()?.state === "running") return err(409, msg("objects.benchRunning"));
     const ids: string[] = Array.isArray(body.devices) && body.devices.length ? body.devices : [resolveDevice().device.id];
     const picked = ids.filter((id) => DEVICES.some((d) => d.id === id));
-    if (picked.length === 0) return err(400, "找不到要測的裝置");
-    bench = { state: "running", startedAt: now(), finishedAt: null, model: settings.objects.model, perCameraFps: settings.objects.fps, progress: { device: picked[0]!, index: 0, total: picked.length, fraction: 0 }, results: [], error: null, stale: false, verdict: null, devices: picked, seconds: Number(body.seconds) || 10 };
+    if (picked.length === 0) return err(400, msg("objects.unknownDevices", { devices: ids }));
+    bench = { state: "running", startedAt: now(), finishedAt: null, model: settings.objects.model, perCameraFps: settings.objects.fps, progress: { device: picked[0]!, index: 0, total: picked.length, fraction: 0 }, results: [], error: null, errorMsg: null, stale: false, verdict: null, devices: picked, seconds: Number(body.seconds) || 10 };
     return json(benchDto(), 202);
   }
   if (path === "/objects/benchmark" && m === "DELETE") {
@@ -1226,7 +1229,7 @@ async function route(req: Request, url: URL): Promise<Response> {
       ));
   if (path === "/system/diagnostics" && m === "GET") {
     const only = url.searchParams.get("camera");
-    if (only && !cams.some((c) => c.id === only)) return err(404, "找不到攝影機");
+    if (only && !cams.some((c) => c.id === only)) return err(404, msg("http.cameraNotFound"));
     const text = buildDiagnostics({
       now: now(),
       version: "0.1.0-mock",
@@ -1248,7 +1251,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   mm = path.match(/^\/system\/workers\/([^/]+)\/restart$/);
   if (mm && m === "POST") {
     const w = workers.find((x) => x.id === decodeURIComponent(mm![1]!));
-    if (!w) return err(404, "找不到 worker");
+    if (!w) return err(404, msg("http.workerNotFound"));
     w.restarts++;
     w.state = "running";
     w.unstable = false;
@@ -1256,7 +1259,7 @@ async function route(req: Request, url: URL): Promise<Response> {
     w.lastRestart = { reason: "manual", at: now(), exitCode: null };
     return noContent();
   }
-  return err(404, "找不到路徑");
+  return err(404, msg("http.notFound"));
 }
 
 Bun.serve({
@@ -1268,10 +1271,10 @@ Bun.serve({
       try {
         return await api(req, url);
       } catch (e) {
-        return err(500, String(e));
+        return err(500, msg("raw", { text: String(e) }));
       }
     }
-    return err(404, "not found");
+    return err(404, msg("http.notFound"));
   },
 });
 console.log(`mock NVR API on http://localhost:${PORT}（網頁：${ORIGIN}）`);

@@ -1,3 +1,5 @@
+import { isMsgCode, msg, type Msg } from "../messages/index.ts";
+
 /** 主程序與狀態辨識 worker（detector/classify.py）之間的訊息，框架同 detector：「1 位元組種類＋4 位元組長度＋內容」 */
 export const KIND_JSON = 1;
 /** 「4 位元組 JSON 長度＋JSON＋二進位」 */
@@ -22,17 +24,17 @@ export type WorkerJob =
 export type Reading =
   | { kind: "ok"; id: number; label: string; score: number; ms: number; crop: Uint8Array }
   | { kind: "skipped"; id: number }
-  | { kind: "error"; id: number; error: string };
+  | { kind: "error"; id: number; error: string; errorMsg: Msg };
 
 export type WorkerMsg =
   | { type: "loading" }
   | { type: "ready"; backbone: string; loadMs: number }
-  | { type: "error"; error: string; detail: string | null }
+  | { type: "error"; error: string; errorMsg: Msg; detail: string | null }
   | { type: "heartbeat"; busyMs: number | null; job: boolean }
   | { type: "reading"; reading: Reading }
   | { type: "job-progress"; job: number; progress: number }
   | { type: "job-result"; job: number; ok: true; result: Record<string, unknown> }
-  | { type: "job-result"; job: number; ok: false; error: string };
+  | { type: "job-result"; job: number; ok: false; error: string; errorMsg: Msg };
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -60,6 +62,11 @@ type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
+/** worker 回報的文字：帶了認得的 code 就用，否則當原文 */
+function workerMsg(v: Obj, text: string): Msg {
+  return isMsgCode(v.code) ? ({ code: v.code, params: isObj(v.params) ? v.params : undefined } as Msg) : msg("raw", { text });
+}
+
 /** 解析 worker 的一則訊息；不認得的回 null */
 export function parseWorkerMsg(kind: number, payload: Uint8Array): WorkerMsg | null {
   let v: unknown;
@@ -80,14 +87,17 @@ export function parseWorkerMsg(kind: number, payload: Uint8Array): WorkerMsg | n
     case "status":
       if (v.state === "loading") return { type: "loading" };
       if (v.state === "ready") return { type: "ready", backbone: String(v.backbone ?? ""), loadMs: num(v.loadMs) ?? 0 };
-      if (v.state === "error") return { type: "error", error: String(v.error ?? "未知錯誤"), detail: typeof v.detail === "string" ? v.detail : null };
+      if (v.state === "error") {
+        const error = String(v.error ?? "未知錯誤");
+        return { type: "error", error, errorMsg: workerMsg(v, error), detail: typeof v.detail === "string" ? v.detail : null };
+      }
       return null;
     case "heartbeat":
       return { type: "heartbeat", busyMs: num(v.busyMs), job: v.job === true };
     case "reading": {
       const id = num(v.id);
       if (id === null) return null;
-      if (typeof v.error === "string") return { type: "reading", reading: { kind: "error", id, error: v.error } };
+      if (typeof v.error === "string") return { type: "reading", reading: { kind: "error", id, error: v.error, errorMsg: workerMsg(v, v.error) } };
       if (v.skipped) return { type: "reading", reading: { kind: "skipped", id } };
       const score = num(v.score);
       if (typeof v.label !== "string" || score === null || !blob) return null;
@@ -102,7 +112,8 @@ export function parseWorkerMsg(kind: number, payload: Uint8Array): WorkerMsg | n
       const job = num(v.job);
       if (job === null) return null;
       if (v.ok === true && isObj(v.result)) return { type: "job-result", job, ok: true, result: v.result };
-      return { type: "job-result", job, ok: false, error: String(v.error ?? "未知錯誤") };
+      const error = String(v.error ?? "未知錯誤");
+      return { type: "job-result", job, ok: false, error, errorMsg: workerMsg(v, error) };
     }
     default:
       return null;

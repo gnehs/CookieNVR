@@ -11,6 +11,7 @@ import type { Range, Timeline } from "../../timeline/timeline.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { toast } from "../../ui/toast.tsx";
+import { serverText } from "../../server-text.ts";
 import { exportsQuery } from "./queries.ts";
 
 const DEFAULT_LENGTH_MS = 60_000;
@@ -59,7 +60,7 @@ export function useExport(o: ExportOptions) {
         const title = jobTitle(j);
         toast(t`Export finished: ${title}`);
       }
-      else if (j.state === "failed") toast(j.error ?? t`Export failed`, "error");
+      else if (j.state === "failed") toast(j.error ? serverText(j.errorMsg, j.error) : t`Export failed`, "error");
     }
     seen.current = new Map(jobsQ.data.map((j) => [j.id, j.state]));
   }, [jobsQ.data]);
@@ -171,7 +172,7 @@ export function ExportPick({ ui }: { ui: ExportUi }) {
   if (!sel || !plan) meta = { cls: "ex-meta hint", text: t`Drag on the timeline to select a range, or play to the spot you want and press “Set start”.` };
   else if (!plan.ok) {
     const selected = formatDuration(sel.end - sel.start);
-    meta = { cls: "ex-meta bad", text: plan.reason === "too-long" ? t`${selected}, up to 2 hours per export` : plan.message };
+    meta = { cls: "ex-meta bad", text: plan.reason === "too-long" ? t`${selected}, up to 2 hours per export` : serverText(plan.msg, plan.message) };
   }
   else {
     const gaps = sel.end - sel.start - plan.durationMs > 1500;
@@ -226,7 +227,7 @@ function JobRow({ job: j, onRemove }: { job: ExportDto; onRemove: (id: string) =
     );
   } else if (j.state === "failed") {
     lead = <Icon name="alert-circle" size={20} />;
-    sub = <span className="ex-job-sub bad">{j.error ?? t`Export failed`}</span>;
+    sub = <span className="ex-job-sub bad">{j.error ? serverText(j.errorMsg, j.error) : t`Export failed`}</span>;
     acts = dismiss;
   } else {
     const pct = Math.round(j.progress * 100);

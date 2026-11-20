@@ -66,7 +66,7 @@ function Status({ data }: { data: ObjectsDto | undefined }) {
 
 function DeviceNotes({ data, device }: { data: ObjectsDto | undefined; device: string }) {
   const { t } = useLingui();
-  const notes = data ? unavailableNotes(data.unavailable, device) : { inline: [], folded: [] };
+  const notes = data ? unavailableNotes(data.unavailable, device, data.unavailableMsg) : { inline: [], folded: [] };
   return (
     <div className="set-block obj-block obj-notes" hidden={notes.inline.length + notes.folded.length === 0}>
       {notes.inline.map((n) => (

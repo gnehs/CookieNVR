@@ -3,6 +3,7 @@ import type { MeDto, SessionDto, TokenDto, UserDto, CreatedTokenDto } from "../a
 import type { Principal, Role } from "../types.ts";
 import { HttpError } from "../http/errors.ts";
 import { createLoginLimiter } from "./rate-limit.ts";
+import { msg } from "../messages/index.ts";
 
 export const SESSION_COOKIE = "cnvr_session";
 export const TOKEN_PREFIX = "cnvr_";
@@ -98,17 +99,17 @@ function toUserDto(row: UserRow): UserDto {
 export function validateUsername(raw: string): string {
   const username = raw.trim();
   if (username.length < 1 || username.length > 64 || /\p{C}/u.test(username)) {
-    throw new HttpError(400, "帳號必須是 1 到 64 個字元，且不能含控制字元");
+    throw new HttpError(400, msg("auth.usernameInvalid"));
   }
   return username;
 }
 
 export function validatePassword(password: string): void {
   if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new HttpError(400, `密碼至少需要 ${MIN_PASSWORD_LENGTH} 個字元`);
+    throw new HttpError(400, msg("auth.passwordTooShort", { min: MIN_PASSWORD_LENGTH }));
   }
   if (password.length > MAX_PASSWORD_LENGTH) {
-    throw new HttpError(400, `密碼不能超過 ${MAX_PASSWORD_LENGTH} 個字元`);
+    throw new HttpError(400, msg("auth.passwordTooLong", { max: MAX_PASSWORD_LENGTH }));
   }
 }
 
@@ -213,14 +214,14 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
       return db.transaction(() => {
         if (onlyIfEmpty) {
           const n = (db.query("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n;
-          if (n > 0) throw new HttpError(409, "已完成初始設定");
+          if (n > 0) throw new HttpError(409, msg("auth.setupDone"));
         }
         return db
           .query("INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, ?) RETURNING *")
           .get(username, passwordHash, role, now()) as UserRow;
       })();
     } catch (err) {
-      if (err instanceof Error && /UNIQUE/i.test(err.message)) throw new HttpError(409, "帳號已存在");
+      if (err instanceof Error && /UNIQUE/i.test(err.message)) throw new HttpError(409, msg("auth.usernameTaken"));
       throw err;
     }
   }
@@ -247,7 +248,7 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
     async setup(rawUsername, password, client) {
       const username = validateUsername(rawUsername);
       validatePassword(password);
-      if (!needsSetup()) throw new HttpError(409, "已完成初始設定");
+      if (!needsSetup()) throw new HttpError(409, msg("auth.setupDone"));
       const user = insertUser(username, await hashPassword(password), "admin", true);
       return startSession(user, client);
     },
@@ -257,14 +258,14 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
       const key = limiterKey(client.ip, username);
       const wait = limiter.retryAfterMs(key);
       if (wait > 0) {
-        throw new HttpError(429, "登入失敗次數過多，請稍後再試", {
+        throw new HttpError(429, msg("auth.tooManyLogins"), {
           "Retry-After": String(Math.ceil(wait / 1000)),
         });
       }
       const user = await checkPassword(username, password);
       if (!user) {
         limiter.recordFailure(key);
-        throw new HttpError(401, "帳號或密碼錯誤");
+        throw new HttpError(401, msg("auth.badCredentials"));
       }
       limiter.recordSuccess(key);
       return startSession(user, client);
@@ -331,7 +332,7 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
       validatePassword(newPassword);
       const user = userById(userId);
       if (!user || !(await Bun.password.verify(currentPassword, user.password_hash).catch(() => false))) {
-        throw new HttpError(403, "目前的密碼不正確");
+        throw new HttpError(403, msg("auth.wrongCurrentPassword"));
       }
       const hash = await hashPassword(newPassword);
       db.transaction(() => {
@@ -374,7 +375,7 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
 
     createToken(userId, rawName) {
       const name = rawName.trim();
-      if (name.length < 1 || name.length > 100) throw new HttpError(400, "名稱必須是 1 到 100 個字元");
+      if (name.length < 1 || name.length > 100) throw new HttpError(400, msg("auth.nameLength"));
       const token = `${TOKEN_PREFIX}${randomToken()}`;
       const prefix = token.slice(0, TOKEN_PREFIX.length + 4);
       const createdAt = now();
@@ -414,9 +415,9 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
       const hash = patch.password === undefined ? null : await hashPassword(patch.password);
       return db.transaction(() => {
         const user = userById(id);
-        if (!user) throw new HttpError(404, "找不到使用者");
+        if (!user) throw new HttpError(404, msg("auth.userNotFound"));
         if (patch.role !== undefined && patch.role !== user.role) {
-          if (user.role === "admin" && adminCount() <= 1) throw new HttpError(409, "至少需要保留一位管理員");
+          if (user.role === "admin" && adminCount() <= 1) throw new HttpError(409, msg("auth.lastAdmin"));
           db.query("UPDATE users SET role = ? WHERE id = ?").run(patch.role, id);
         }
         if (hash !== null) {
@@ -430,8 +431,8 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
     removeUser(id) {
       db.transaction(() => {
         const user = userById(id);
-        if (!user) throw new HttpError(404, "找不到使用者");
-        if (user.role === "admin" && adminCount() <= 1) throw new HttpError(409, "至少需要保留一位管理員");
+        if (!user) throw new HttpError(404, msg("auth.userNotFound"));
+        if (user.role === "admin" && adminCount() <= 1) throw new HttpError(409, msg("auth.lastAdmin"));
         db.query("DELETE FROM users WHERE id = ?").run(id);
       })();
     },

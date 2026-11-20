@@ -3,14 +3,15 @@
 //   broken：有 Intel 內顯但容器沒掛 /dev/dri，選它的攝影機會退回處理器並出現狀態頁提醒。
 // 解碼設定用 MOCK_DECODE（預設 auto），之後在設定頁改。
 import type { CodecCheckDto, DecodeStatusDto, VideoDeviceDto, VideoDevicesDto } from "../src/api-types.ts";
+import { msg, zh, type Msg } from "../src/messages/index.ts";
 import type { CameraId, DeviceRef } from "../src/types.ts";
 
 type MockVideo = "both" | "intel" | "none" | "broken";
 const MODE: MockVideo = (["both", "intel", "none", "broken"] as const).find((v) => v === process.env.MOCK_VIDEO) ?? "both";
 
 const ok = (ms: number): CodecCheckDto => ({ ok: true, ms });
-const no = (reason: string, detail: string): CodecCheckDto => ({ ok: false, reason, detail });
-const MISSING_NODE = no("主機有這張 Intel 顯示卡，但容器裡沒有 /dev/dri/renderD128：請在容器設定掛入 /dev/dri", "device node missing");
+const no = (reasonMsg: Msg, detail: string): CodecCheckDto => ({ ok: false, reason: zh(reasonMsg), reasonMsg, detail });
+const MISSING_NODE = no(msg("hw.nodeMissing", { node: "/dev/dri/renderD128" }), "device node missing");
 
 const INTEL: VideoDeviceDto = {
   id: "intel:GPU.0",
@@ -18,7 +19,7 @@ const INTEL: VideoDeviceDto = {
   name: "Intel 內顯",
   pci: "0000:00:02.0",
   decode: { h264: ok(182), hevc: ok(195) },
-  encode: { h264: ok(240), hevc: no("這張顯示卡不支援 H.265 硬體編碼", "[hevc_vaapi @ 0x55] No usable encoding profile found.") },
+  encode: { h264: ok(240), hevc: no(msg("hw.unsupported", { codec: "H.265", op: "encode" }), "[hevc_vaapi @ 0x55] No usable encoding profile found.") },
 };
 const NVIDIA: VideoDeviceDto = {
   id: "nvidia:GPU-8c6d1a2e-0b4f-4c55-9d1a-2b3c4d5e6f70",
@@ -41,13 +42,17 @@ export function mockDecodeStatus(requested: DeviceRef, cams: { id: CameraId; nam
   const pick = requested === "cpu" ? null : requested === "auto" ? (list.find((d) => d.decode.h264.ok) ?? null) : (list.find((d) => d.id === requested) ?? list.find((d) => d.decode.h264.ok) ?? null);
   const check = pick?.decode.h264;
   const first = list[0]?.decode.h264;
-  const autoNote = !pick && first && !first.ok ? { reason: `${list[0]!.name}：${first.reason}`, detail: first.detail } : null;
+  const fail = (m: Msg, detail: string) => ({ reason: zh(m), reasonMsg: m, detail });
+  const extend = (m: Msg, extra: Record<string, string>): Msg => ({ ...m, params: { ...(m.params as object | undefined), ...extra } }) as Msg;
+  const autoNote = !pick && first && !first.ok ? fail(extend(first.reasonMsg, { device: list[0]!.name }), first.detail) : null;
   const missing = requested !== "cpu" && requested !== "auto" && !list.some((d) => d.id === requested);
-  const fallback = requested === "cpu" ? null : missing ? { reason: "找不到設定的顯示卡（可能拔掉或換了），已改用自動選擇", detail: `requested ${requested}` } : !pick ? autoNote : check && !check.ok ? { reason: check.reason, detail: check.detail } : null;
+  const fallback = requested === "cpu" ? null : missing ? fail(msg("hw.deviceGone", {}), `requested ${requested}`) : !pick ? autoNote : check && !check.ok ? fail(check.reasonMsg, check.detail) : null;
   const device = pick && check?.ok ? pick.id : null;
   const cameras = cams.map((c) => ({ cameraId: c.id, device, confirmed: device !== null, fallback }));
-  const warning = fallback && device === null && cams.length ? `${cams.length === 1 ? cams[0]!.name : `${cams.length} 台攝影機`}改用處理器解碼：${fallback.reason}` : null;
-  return { requested, cameras, warning };
+  const who = cams.length === 1 ? { camera: cams[0]!.name } : { count: cams.length };
+  const warningMsg = fallback && device === null && cams.length ? msg("decode.warningCpu", { ...who, reason: fallback.reasonMsg.code, ...(fallback.reasonMsg.params as object | undefined) }) : null;
+  const warning = warningMsg && zh(warningMsg);
+  return { requested, cameras, warning, warningMsg };
 }
 
 export function mockVideoDevices(requested: DeviceRef, cams: { id: CameraId; name: string }[]): VideoDevicesDto {

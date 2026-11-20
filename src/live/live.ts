@@ -5,6 +5,7 @@ import type { CameraId, Route, StreamName, WorkerSpec } from "../types.ts";
 import { Channel, type Viewer } from "./channel.ts";
 import { encodeFrame, FrameKind } from "./mux.ts";
 import { queuedStream } from "../stream/queued-stream.ts";
+import { msg } from "../messages/index.ts";
 
 export type Quality = "sd" | "hd";
 
@@ -61,7 +62,7 @@ const qualityOf = (stream: StreamName): Quality => (stream === "main" ? "hd" : "
 export function parseQuality(raw: string | null): Quality {
   if (raw === null || raw === "sd") return "sd";
   if (raw === "hd") return "hd";
-  throw new HttpError(400, "quality 只接受 sd 或 hd");
+  throw new HttpError(400, msg("field.oneOf", { path: "quality", values: ["sd", "hd"] }));
 }
 
 export function liveCommand(ffmpegBin: string, url: string): string[] {
@@ -189,11 +190,11 @@ export function createLive(opts: LiveOptions): Live {
         restart: q.abort,
         close: q.abort,
       });
-      if (!w) throw new HttpError(404, "這台攝影機沒有即時畫面");
+      if (!w) throw new HttpError(404, msg("live.noStream"));
       const init = await w.channel.whenInit(AbortSignal.any([ctx.req.signal, AbortSignal.timeout(initTimeoutMs)]));
       if (!init || !q.open) {
         q.abort();
-        throw new HttpError(503, "攝影機目前沒有畫面");
+        throw new HttpError(503, msg("live.noFrame"));
       }
       return new Response(q.stream, {
         headers: { "content-type": "video/mp4", "x-codec": init.codecs.join(","), "cache-control": "no-store" },
@@ -208,7 +209,7 @@ export function createLive(opts: LiveOptions): Live {
     handler(ctx) {
       const quality = parseQuality(ctx.url.searchParams.get("quality"));
       const ids = (ctx.url.searchParams.get("cameras") ?? "").split(",").filter(Boolean);
-      if (ids.length === 0 || ids.length > MAX_MUX_CAMERAS) throw new HttpError(400, `cameras 要有 1 到 ${MAX_MUX_CAMERAS} 台`);
+      if (ids.length === 0 || ids.length > MAX_MUX_CAMERAS) throw new HttpError(400, msg("live.cameraCount", { max: MAX_MUX_CAMERAS }));
       const watches: (Watch | null)[] = [];
       let ping: ReturnType<typeof setInterval> | undefined;
       const stopAll = () => {

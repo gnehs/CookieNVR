@@ -3,6 +3,8 @@
  * Imported by the browser too (for the size estimate before the user starts), so it must stay free of node APIs.
  */
 
+import { msg, zh, type Msg } from "../messages/index.ts";
+
 export const MAX_EXPORT_MS = 2 * 60 * 60_000;
 export const MIN_EXPORT_MS = 1_000;
 
@@ -38,16 +40,16 @@ export type ExportPlan =
       estimatedBytes: number;
       includesRecording: boolean;
     }
-  | { ok: false; reason: "invalid" | "too-long" | "empty"; message: string };
+  | { ok: false; reason: "invalid" | "too-long" | "empty"; message: string; msg: Msg };
+
+function refused(reason: "invalid" | "too-long" | "empty", m: Msg): ExportPlan {
+  return { ok: false, reason, message: zh(m), msg: m };
+}
 
 export function planExport(segments: readonly PlanSegment[], startMs: number, endMs: number, now: number): ExportPlan {
   const end = Math.min(endMs, now);
-  if (!(end - startMs >= MIN_EXPORT_MS)) {
-    return { ok: false, reason: "invalid", message: "選取的範圍太短，至少要 1 秒" };
-  }
-  if (end - startMs > MAX_EXPORT_MS) {
-    return { ok: false, reason: "too-long", message: "一次最多匯出 2 小時，請縮短選取的範圍" };
-  }
+  if (!(end - startMs >= MIN_EXPORT_MS)) return refused("invalid", msg("export.tooShort"));
+  if (end - startMs > MAX_EXPORT_MS) return refused("too-long", msg("export.tooLong"));
   const parts: PlanPart[] = [];
   const sorted = segments.slice().sort((a, b) => a.startMs - b.startMs);
   for (const s of sorted) {
@@ -65,7 +67,7 @@ export function planExport(segments: readonly PlanSegment[], startMs: number, en
       bytes: Math.round((s.size * (hi - lo)) / span),
     });
   }
-  if (parts.length === 0) return { ok: false, reason: "empty", message: "這段時間沒有錄影" };
+  if (parts.length === 0) return refused("empty", msg("export.empty"));
   return {
     ok: true,
     parts,

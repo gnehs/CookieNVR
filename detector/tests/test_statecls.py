@@ -86,15 +86,18 @@ class TrainTest(unittest.TestCase):
     def test_missing_class_is_a_clear_error(self):
         with tempfile.TemporaryDirectory() as d:
             items = write_images(d, [((0, 0, 0), "a"), ((5, 5, 5), "a")])
-            with self.assertRaisesRegex(ValueError, "b"):
+            with self.assertRaisesRegex(ValueError, "b") as cm:
                 sc.train(ColorBackbone(), sc.EmbeddingCache(), items, ["a", "b"], {"id": "fake"}, lambda f: None)
+            self.assertEqual(cm.exception.code, "states.classesWithoutImages")
+            self.assertEqual(cm.exception.params, {"classes": ["b"]})
 
     def test_model_from_another_backbone_is_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "model.json")
             sc.write_json_atomic(path, {"version": sc.MODEL_VERSION, "backbone": {"id": "other"}, "classes": ["a"], "w": [[0]], "b": [0]})
-            with self.assertRaisesRegex(ValueError, "重新訓練"):
+            with self.assertRaisesRegex(ValueError, "重新訓練") as cm:
                 sc.load_model(path, "dinov2-small-int8")
+            self.assertEqual(cm.exception.code, "states.modelBackboneChanged")
 
 
 class DiverseTest(unittest.TestCase):

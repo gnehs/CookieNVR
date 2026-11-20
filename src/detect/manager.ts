@@ -13,6 +13,8 @@ import { HW_DECODE_ENV } from "./command.ts";
 import { detectConfigOf, usesOnvif, usesPixel } from "./config.ts";
 import { createOnvifSources, type OnvifSourceStatus } from "./onvif-source.ts";
 import { chunksOf, MsgKind, MsgReader, type DecodeReport, type DetectControl, type FrameResult } from "./protocol.ts";
+import { msg } from "../messages/index.ts";
+import { msgOrRaw } from "../messages/external.ts";
 
 const WORKER_SCRIPT = join(import.meta.dir, "worker.ts");
 const TICK_MS = 500;
@@ -190,7 +192,7 @@ export function createDetection(opts: DetectionOptions): Detection {
     if (!plan) return null;
     const r = c.decodeReport;
     const cameraId = c.camera.id;
-    if (r?.mode === "cpu") return { cameraId, device: null, confirmed: false, fallback: { reason: r.reason, detail: r.detail } };
+    if (r?.mode === "cpu") return { cameraId, device: null, confirmed: false, fallback: { reason: r.reason, reasonMsg: msgOrRaw(r.reasonMsg, r.reason), detail: r.detail } };
     return { cameraId, device: plan.hw?.deviceId ?? null, confirmed: plan.hw !== null && r?.mode === "hw", fallback: plan.note };
   }
 
@@ -287,7 +289,7 @@ export function createDetection(opts: DetectionOptions): Detection {
 
   const camOf = (raw: string | undefined): CamState => {
     const c = cams.get((raw ?? "") as CameraId);
-    if (!c) throw new HttpError(404, "找不到攝影機，或這台已停用");
+    if (!c) throw new HttpError(404, msg("http.cameraNotFoundOrDisabled"));
     return c;
   };
 

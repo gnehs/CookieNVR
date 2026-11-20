@@ -1,6 +1,7 @@
 import type { PtzCommandDto, PtzRemovePresetDto, PtzSavePresetDto } from "../api-types.ts";
 import { HttpError } from "../http/errors.ts";
 import { asObject, oneOf, str, type JsonObject } from "../http/validate.ts";
+import { msg } from "../messages/index.ts";
 import { MAX_SPEED, MIN_SPEED } from "../onvif/index.ts";
 import type { PtzMode } from "../types.ts";
 
@@ -11,10 +12,10 @@ function num(obj: JsonObject, key: string, min: number, max: number, fallback?: 
   const v = obj[key];
   if (v === undefined || v === null) {
     if (fallback !== undefined) return fallback;
-    throw new HttpError(400, `欄位 ${key} 必須是 ${min} 到 ${max} 的數字`);
+    throw new HttpError(400, msg("ptz.numberRange", { key, min, max }));
   }
   if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) {
-    throw new HttpError(400, `欄位 ${key} 必須是 ${min} 到 ${max} 的數字`);
+    throw new HttpError(400, msg("ptz.numberRange", { key, min, max }));
   }
   return v;
 }
@@ -37,7 +38,7 @@ export function parsePtzCommand(value: unknown): ParsedPtzCommand {
   const pan = num(o, "pan", -1, 1, 0);
   const tilt = num(o, "tilt", -1, 1, 0);
   const zoom = num(o, "zoom", -1, 1, 0);
-  if (pan === 0 && tilt === 0 && zoom === 0) throw new HttpError(400, "請指定移動方向（pan、tilt、zoom 至少一個不為 0）");
+  if (pan === 0 && tilt === 0 && zoom === 0) throw new HttpError(400, msg("ptz.noDirection"));
   const move: ParsedPtzCommand = { action, pan, tilt, zoom, speed: optSpeed(o) };
   if (o.mode !== undefined && o.mode !== null) move.mode = oneOf(o, "mode", PTZ_MODES);
   return move;
@@ -46,7 +47,7 @@ export function parsePtzCommand(value: unknown): ParsedPtzCommand {
 export function parseSavePreset(value: unknown): PtzSavePresetDto {
   const o = asObject(value);
   const name = str(o, "name", { max: MAX_PRESET_NAME }).trim();
-  if (name === "") throw new HttpError(400, "欄位 name 不能為空");
+  if (name === "") throw new HttpError(400, msg("ptz.nameEmpty"));
   if (o.token === undefined || o.token === null) return { name };
   return { name, token: str(o, "token", { max: 128 }) };
 }

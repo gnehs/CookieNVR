@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { explainFailure } from "../src/camera/probe.ts";
+import { msg } from "../src/messages/index.ts";
 import { explainProbe, maskedField, maskUrlPassword } from "./camera-form-logic.ts";
 
 describe("explainProbe", () => {
@@ -17,9 +18,9 @@ describe("explainProbe", () => {
   ];
 
   for (const [stderr, timedOut, tapoField, rtspField] of cases) {
-    test(`後端「${explainFailure(stderr, timedOut, false)}」掛在對的欄位，而且沒有英文原文`, () => {
+    test(`後端 ${explainFailure(stderr, timedOut, false).code} 掛在對的欄位，而且沒有英文原文`, () => {
       for (const type of ["tapo", "rtsp"] as const) {
-        const help = explainProbe(`主碼流：${explainFailure(stderr, timedOut, type === "tapo")}`, type);
+        const help = explainProbe({ errorMsg: explainFailure(stderr, timedOut, type === "tapo"), stream: "main" }, type);
         expect(help.field).toBe(type === "tapo" ? tapoField : rtspField);
         expect(help.message).not.toMatch(/ffmpeg|Operation timed out|Weird Thing|Failed to resolve|0x1/);
         expect(help.message).not.toContain("主碼流");
@@ -28,20 +29,20 @@ describe("explainProbe", () => {
   }
 
   test("低畫質串流的失敗一律掛在低畫質網址欄", () => {
-    const help = explainProbe(`子碼流：${explainFailure("404 Not Found", false, false)}`, "rtsp");
+    const help = explainProbe({ errorMsg: explainFailure("404 Not Found", false, false), stream: "sub" }, "rtsp");
     expect(help).toEqual({ field: "subUrl", message: "Low-quality stream: Stream not found. Check that the path at the end of the URL (for example /stream1) is correct." });
   });
 
   test("連線名額滿時點出其他軟體佔用與改接 CookieNVR 的做法", () => {
     for (const stderr of ["method OPTIONS failed: 453 (Not Enough Bandwidth)", "Failed reading RTSP data: Operation timed out"]) {
-      const help = explainProbe(`主碼流：${explainFailure(stderr, false, true)}`, "tapo");
+      const help = explainProbe({ errorMsg: explainFailure(stderr, false, true), stream: "main" }, "tapo");
       expect(help.message).toContain("Frigate");
       expect(help.message).toContain("CookieNVR's stream URL");
     }
   });
 
   test("主機缺少 ffprobe 時沒有對應欄位", () => {
-    expect(explainProbe("主碼流：找不到 ffprobe（ffprobe），請確認已安裝", "tapo").field).toBeNull();
+    expect(explainProbe({ errorMsg: msg("probe.noFfprobe", { bin: "ffprobe" }), stream: "main" }, "tapo").field).toBeNull();
   });
 });
 

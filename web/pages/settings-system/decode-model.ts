@@ -3,6 +3,7 @@ import type { MessageDescriptor } from "@lingui/core";
 import { msg, t } from "@lingui/core/macro";
 import type { CameraDecodeDto, DecodeStatusDto, InferenceDeviceDto, VideoDeviceDto } from "../../../src/api-types.ts";
 import { indexedName, tidyName } from "../../detect/object-model.ts";
+import { serverText } from "../../server-text.ts";
 
 export interface DecodeOption {
   value: string;
@@ -24,7 +25,7 @@ function nameOf(d: VideoDeviceDto, objectDevices: readonly InferenceDeviceDto[])
 /** 這張卡的解碼限制：兩種都不行回傳原因（選項停用），只有一種不行回傳「不支援 H.265」，都可以回傳 null */
 export function decodeLimit(d: VideoDeviceDto): { usable: boolean; note: string | null } {
   const { h264, hevc } = d.decode;
-  if (!h264.ok && !hevc.ok) return { usable: false, note: h264.reason };
+  if (!h264.ok && !hevc.ok) return { usable: false, note: serverText(h264.reasonMsg, h264.reason) };
   if (!h264.ok) return { usable: true, note: t`H.264 not supported` };
   if (!hevc.ok) return { usable: true, note: t`H.265 not supported` };
   return { usable: true, note: null };
@@ -65,7 +66,7 @@ export function decodeNote(status: DecodeStatusDto | null, devices: readonly Vid
     return d ? nameOf(d, objectDevices) : t`Graphics card`;
   };
   const cams: readonly CameraDecodeDto[] = status.cameras;
-  const reasons = [...new Set(cams.flatMap((c) => (c.fallback ? [c.fallback.reason] : [])))];
+  const reasons = [...new Set(cams.flatMap((c) => (c.fallback ? [serverText(c.fallback.reasonMsg, c.fallback.reason)] : [])))];
   if (reasons.length) return { tone: "warn", text: reasons.join("; ") };
   if (devices.length === 0 && status.requested === DECODE_AUTO) return { tone: "muted", text: t`No usable graphics card was detected, so the CPU is decoding.` };
   if (cams.length === 0) return null;

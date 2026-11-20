@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { msg } from "../messages/index.ts";
 import { metricsReport } from "./report.ts";
 import type { MetricsDiagnostics } from "./sampler.ts";
 
@@ -21,7 +22,7 @@ test("the report names the scope, every GPU source with its failure reason, and 
       intervalMs: 5000,
       cpu: { pct: 42, cores: 2, scope: "container" },
       memory: { usedBytes: GB, totalBytes: 2 * GB, scope: "container" },
-      gpus: [{ id: "intel:0000:00:02.0", vendor: "intel", name: "Intel 內顯", utilPct: 12, memory: null, temperatureC: null, note: null, extras: [{ label: "物件辨識", value: "每秒 8 張" }] }],
+      gpus: [{ id: "intel:0000:00:02.0", vendor: "intel", name: "Intel 內顯", utilPct: 12, memory: null, temperatureC: null, note: null, extras: [{ label: "物件辨識", value: "每秒 8 張", labelMsg: msg("objects.gpuLabel"), valueMsg: msg("objects.gpuRate", { fps: 8 }) }], noteMsg: null }],
       gpuMissing: null,
       usage: [{ category: "record", cpuPct: 10, memBytes: 100 * 1024 ** 2, cameras: [] }],
       other: { cpuPct: 32, memBytes: GB },

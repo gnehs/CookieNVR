@@ -1,13 +1,14 @@
 import { expect, test } from "bun:test";
+import { msg, zh, type Msg } from "../messages/index.ts";
 import { detectCommand, parseHwDecode } from "../detect/command.ts";
 import { fakeIo, ok } from "../metrics/fake-io.ts";
 import { videoCodecOf } from "../restream/restream.ts";
 import type { CameraId } from "../types.ts";
-import { decodeTestCommand, encodeTestCommand, explainHwFailure, hwEnv, inputFailed, sampleCommand, type HwApi } from "./commands.ts";
+import { decodeTestCommand, encodeTestCommand, explainHwFailure, hwEnv, inputFailed, sampleCommand, type HwApi, type HwWhat } from "./commands.ts";
 import { listVideoDevices, parseNvidiaList } from "./devices.ts";
 import { planDecode, type HwDecode } from "./plan.ts";
 import { probeVideoDevices, type CodecCheck, type ProbedDevice, type RunOutcome } from "./probe.ts";
-import { decodeWarning } from "./service.ts";
+import { decodeWarning, decodeWarningMsg } from "./service.ts";
 
 const VAAPI: HwApi = { type: "vaapi", node: "/dev/dri/renderD128" };
 const CUDA: HwApi = { type: "cuda", uuid: "GPU-aaaa-1111", index: 1 };
@@ -83,8 +84,8 @@ const NVDEC_LACKING = `[hevc @ 0x1] Hardware is lacking required capabilities
 Impossible to convert between the formats supported by the filter 'Parsed_fps_0' and the filter 'auto_scale_0'`;
 
 test("失敗原因：NVDEC 的解碼器建不起來是啟動失敗，不是不支援", () => {
-  expect(explainHwFailure(CUDA, "H.264 硬體解碼", NVDEC_SURFACES).reason).toBe("顯示卡啟動 H.264 硬體解碼失敗");
-  expect(explainHwFailure(VAAPI, "H.264 硬體解碼", "[h264 @ 0x1] Failed setup for format vaapi: hwaccel initialisation returned error.").reason).toBe("顯示卡啟動 H.264 硬體解碼失敗");
+  expect(explainHwFailure(CUDA, { codec: "h264", op: "decode" }, NVDEC_SURFACES).reason).toBe("顯示卡啟動 H.264 硬體解碼失敗");
+  expect(explainHwFailure(VAAPI, { codec: "h264", op: "decode" }, "[h264 @ 0x1] Failed setup for format vaapi: hwaccel initialisation returned error.").reason).toBe("顯示卡啟動 H.264 硬體解碼失敗");
 });
 
 test("輸入端打不開不算顯示卡失敗；有任何顯示卡的訊息就算", () => {
@@ -113,7 +114,7 @@ test("試跑短片的參考幀不少於一般攝影機，畫面緩衝不夠的�
 });
 
 test("失敗原因：先認環境問題（裝置、權限、驅動元件），再認能力不足，認不出時說哪一步失敗", () => {
-  const what = "H.265 硬體解碼";
+  const what: HwWhat = { codec: "hevc", op: "decode" };
   expect(explainHwFailure(VAAPI, what, "Failed to open the DRM device /dev/dri/renderD128: No such file or directory").reason).toContain("掛入 /dev/dri");
   expect(explainHwFailure(VAAPI, what, "/dev/dri/renderD128: Permission denied").reason).toContain("render 群組");
   // Debian ffmpeg 7.1.5 在沒有 GPU 的容器裡實際印出的訊息
@@ -155,7 +156,7 @@ test("裝置清單：識別字與物件辨識同一套；Intel 內顯固定是 G
     ["intel:GPU.0", "0000:00:02.0", { type: "vaapi", node: "/dev/dri/renderD129" }, true],
     ["intel:GPU.1", "0000:03:00.0", { type: "vaapi", node: "/dev/dri/renderD128" }, false],
   ]);
-  expect(list[2]!.blocked).toContain("/dev/dri/renderD128");
+  expect(list[2]!.blocked).toEqual(msg("hw.nodeMissing", { node: "/dev/dri/renderD128" }));
 });
 
 test("裝置清單：沒有 nvidia-smi 但有 /dev/nvidia0 時用編號；macOS 只有 VideoToolbox；其他平台沒有", async () => {
@@ -165,13 +166,13 @@ test("裝置清單：沒有 nvidia-smi 但有 /dev/nvidia0 時用編號；macOS 
 });
 
 const yes: CodecCheck = { ok: true, ms: 100 };
-const nope = (reason: string): CodecCheck => ({ ok: false, reason, detail: "ffmpeg said no" });
+const nope = (reasonMsg: Msg): CodecCheck => ({ ok: false, reason: zh(reasonMsg), detail: "ffmpeg said no", reasonMsg });
 function dev(id: string, kind: ProbedDevice["kind"], h264: CodecCheck, hevc: CodecCheck): ProbedDevice {
   const api: HwApi = kind === "nvidia" ? CUDA : kind === "intel" ? VAAPI : { type: "videotoolbox" };
   return { id, kind, name: id, pci: null, api, blocked: null, decode: { h264, hevc }, encode: { h264: yes, hevc: yes } };
 }
 const intel = dev("intel:GPU.0", "intel", yes, yes);
-const oldNvidia = dev("nvidia:GPU-1", "nvidia", yes, nope("這張顯示卡不支援 H.265 硬體解碼"));
+const oldNvidia = dev("nvidia:GPU-1", "nvidia", yes, nope(msg("hw.unsupported", { codec: "H.265", op: "decode" })));
 
 test("規劃：cpu 與還沒試跑完都用 CPU，不算退回", () => {
   expect(planDecode("cpu", [intel], "h264")).toEqual({ hw: null, note: null });
@@ -183,6 +184,12 @@ test("規劃：指定的卡支援這個格式就用它，不支援就用 CPU 並
   const p = planDecode("nvidia:GPU-1", [oldNvidia, intel], "hevc");
   expect(p.hw).toBeNull();
   expect(p.note?.reason).toBe("這張顯示卡不支援 H.265 硬體解碼");
+  expect(p.note?.reasonMsg).toEqual(msg("hw.unsupported", { codec: "H.265", op: "decode" }));
+});
+
+test("規劃：指定的卡不能解這個格式，原因不含格式名稱時補在後面", () => {
+  const p = planDecode("intel:GPU.0", [dev("intel:GPU.0", "intel", yes, nope(msg("hw.noPermission", { node: "/dev/dri/renderD128" })))], "hevc");
+  expect(p.note?.reason).toBe("沒有權限使用顯示卡（/dev/dri/renderD128），請把容器加入主機的 render 群組（H.265）");
 });
 
 test("規劃：自動依序 Nvidia、Intel，跳過不支援這個格式的卡；格式未知時當作 H.264", () => {
@@ -192,8 +199,8 @@ test("規劃：自動依序 Nvidia、Intel，跳過不支援這個格式的卡�
 });
 
 test("規劃：自動模式有卡卻都不能用時要說明；指定的卡不見了改用自動並說明", () => {
-  const broken = dev("intel:GPU.0", "intel", nope("沒有權限使用顯示卡"), nope("沒有權限使用顯示卡"));
-  expect(planDecode("auto", [broken], "h264")).toMatchObject({ hw: null, note: { reason: "intel:GPU.0：沒有權限使用顯示卡" } });
+  const broken = dev("intel:GPU.0", "intel", nope(msg("hw.noPermission", { node: "/dev/dri/renderD128" })), nope(msg("hw.noPermission", { node: "/dev/dri/renderD128" })));
+  expect(planDecode("auto", [broken], "h264")).toMatchObject({ hw: null, note: { reason: "intel:GPU.0：沒有權限使用顯示卡（/dev/dri/renderD128），請把容器加入主機的 render 群組", reasonMsg: { code: "hw.noPermission", params: { node: "/dev/dri/renderD128", device: "intel:GPU.0" } } } });
   const moved = planDecode("nvidia:GPU-gone", [intel], "h264");
   expect(moved.hw?.deviceId).toBe("intel:GPU.0");
   expect(moved.note?.reason).toContain("找不到設定的顯示卡");
@@ -252,12 +259,13 @@ test("MediaMTX 的軌道：新舊兩種格式都認得，還沒連上時不知�
 });
 
 test("狀態頁提醒：一台說名字、多台說台數；改用另一張卡也提醒；沒有退回時沒有提醒", () => {
-  const f = { reason: "沒有權限使用顯示卡", detail: "" };
+  const f = { reason: "沒有權限使用顯示卡", detail: "", reasonMsg: msg("hw.noPermission", { node: "/dev/dri/renderD128" }) };
   const a = "a" as CameraId;
   const b = "b" as CameraId;
   const name = (id: CameraId) => (id === a ? "客廳" : "車庫");
-  expect(decodeWarning([{ cameraId: a, device: null, confirmed: false, fallback: f }], name)).toBe("客廳改用處理器解碼：沒有權限使用顯示卡");
-  expect(decodeWarning([a, b].map((cameraId) => ({ cameraId, device: null, confirmed: false, fallback: f })), name)).toBe("2 台攝影機改用處理器解碼：沒有權限使用顯示卡");
-  expect(decodeWarning([{ cameraId: a, device: "intel:GPU.0", confirmed: true, fallback: f }], name)).toBe("客廳沒有用設定的顯示卡解碼：沒有權限使用顯示卡");
+  expect(decodeWarning([{ cameraId: a, device: null, confirmed: false, fallback: f }], name)).toBe("客廳改用處理器解碼：沒有權限使用顯示卡（/dev/dri/renderD128），請把容器加入主機的 render 群組");
+  expect(decodeWarning([a, b].map((cameraId) => ({ cameraId, device: null, confirmed: false, fallback: f })), name)).toBe("2 台攝影機改用處理器解碼：沒有權限使用顯示卡（/dev/dri/renderD128），請把容器加入主機的 render 群組");
+  expect(decodeWarning([{ cameraId: a, device: "intel:GPU.0", confirmed: true, fallback: f }], name)).toBe("客廳沒有用設定的顯示卡解碼：沒有權限使用顯示卡（/dev/dri/renderD128），請把容器加入主機的 render 群組");
   expect(decodeWarning([{ cameraId: a, device: "intel:GPU.0", confirmed: true, fallback: null }], name)).toBeNull();
+  expect(decodeWarningMsg([{ cameraId: a, device: null, confirmed: false, fallback: f }], name)).toEqual({ code: "decode.warningCpu", params: { camera: "客廳", reason: "hw.noPermission", node: "/dev/dri/renderD128" } });
 });

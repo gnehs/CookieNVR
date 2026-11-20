@@ -1,3 +1,4 @@
+import { msg } from "../messages/index.ts";
 import { HttpError } from "./errors.ts";
 
 export type JsonObject = Record<string, unknown>;
@@ -10,16 +11,15 @@ export async function readJson(req: Request): Promise<unknown> {
   try {
     return await req.json();
   } catch {
-    throw new HttpError(400, "請求內容不是有效的 JSON");
+    throw new HttpError(400, msg("http.invalidJson"));
   }
 }
 
-export function asObject(value: unknown, label = "請求內容"): JsonObject {
-  if (!isObject(value)) throw new HttpError(400, `${label}必須是物件`);
+/** 沒給 path 代表整個請求內容；有 path 代表其中的某個欄位 */
+export function asObject(value: unknown, path?: string): JsonObject {
+  if (!isObject(value)) throw new HttpError(400, path === undefined ? msg("http.bodyNotObject") : msg("field.notObject", { path }));
   return value;
 }
-
-const bad = (path: string, what: string) => new HttpError(400, `欄位 ${path} ${what}`);
 
 export function str(
   obj: JsonObject,
@@ -28,9 +28,9 @@ export function str(
 ): string {
   const path = opts.path ?? key;
   const v = obj[key];
-  if (typeof v !== "string") throw bad(path, "必須是字串");
-  if (!opts.allowEmpty && v.trim() === "") throw bad(path, "不能為空");
-  if (v.length > (opts.max ?? 1024)) throw bad(path, "太長");
+  if (typeof v !== "string") throw new HttpError(400, msg("field.notString", { path }));
+  if (!opts.allowEmpty && v.trim() === "") throw new HttpError(400, msg("field.empty", { path }));
+  if (v.length > (opts.max ?? 1024)) throw new HttpError(400, msg("field.tooLong", { path }));
   return v;
 }
 
@@ -42,14 +42,14 @@ export function optStr(obj: JsonObject, key: string, opts: { path?: string; max?
 
 export function bool(obj: JsonObject, key: string, path = key): boolean {
   const v = obj[key];
-  if (typeof v !== "boolean") throw bad(path, "必須是布林值");
+  if (typeof v !== "boolean") throw new HttpError(400, msg("field.notBool", { path }));
   return v;
 }
 
 export function int(obj: JsonObject, key: string, min: number, max: number, path = key): number {
   const v = obj[key];
   if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max) {
-    throw bad(path, `必須是 ${min} 到 ${max} 的整數`);
+    throw new HttpError(400, msg("field.intRange", { path, min, max }));
   }
   return v;
 }
@@ -57,7 +57,7 @@ export function int(obj: JsonObject, key: string, min: number, max: number, path
 export function oneOf<T extends string>(obj: JsonObject, key: string, values: readonly T[], path = key): T {
   const v = obj[key];
   if (typeof v !== "string" || !(values as readonly string[]).includes(v)) {
-    throw bad(path, `必須是 ${values.join(" 或 ")}`);
+    throw new HttpError(400, msg("field.oneOf", { path, values: [...values] }));
   }
   return v as T;
 }

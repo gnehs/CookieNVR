@@ -1,5 +1,6 @@
 import type { Route, RouteAccess } from "../types.ts";
 import type { Auth } from "../auth/index.ts";
+import { msg } from "../messages/index.ts";
 import { HttpError } from "./errors.ts";
 import { errorResponse, toErrorResponse } from "./respond.ts";
 
@@ -36,7 +37,7 @@ function matchSegments(pattern: string[], actual: string[]): Record<string, stri
       try {
         params[p.slice(1)] = decodeURIComponent(a);
       } catch {
-        throw new HttpError(400, "網址格式錯誤");
+        throw new HttpError(400, msg("http.badUrl"));
       }
     } else if (p !== a) {
       return null;
@@ -70,9 +71,9 @@ export function createRouter(
 
     if (!hit) {
       if (allowed.size > 0) {
-        return errorResponse(405, "不支援的請求方法", { Allow: [...allowed].join(", ") });
+        return errorResponse(405, msg("http.methodNotAllowed"), { Allow: [...allowed].join(", ") });
       }
-      return options.fallback ? options.fallback(req) : errorResponse(404, "找不到資源");
+      return options.fallback ? options.fallback(req) : errorResponse(404, msg("http.notFound"));
     }
 
     const { route } = hit.c;
@@ -82,17 +83,17 @@ export function createRouter(
     if (access === "internal") {
       // 反向代理在本機時對外請求的來源也是 127.0.0.1，靠 forwarding 標頭排除
       const proxied = req.headers.has("x-forwarded-for") || req.headers.has("forwarded");
-      if (!LOOPBACK.has(ip) || proxied) return errorResponse(403, "禁止存取");
+      if (!LOOPBACK.has(ip) || proxied) return errorResponse(403, msg("http.forbidden"));
     }
 
     const principal = access === "user" || access === "admin" ? auth.authenticate(req, url) : null;
-    if ((access === "user" || access === "admin") && !principal) return errorResponse(401, "請先登入");
-    if (access === "admin" && principal?.role !== "admin") return errorResponse(403, "需要管理員權限");
+    if ((access === "user" || access === "admin") && !principal) return errorResponse(401, msg("http.loginRequired"));
+    if (access === "admin" && principal?.role !== "admin") return errorResponse(403, msg("http.adminRequired"));
 
     // HTML 表單送不出 application/json 或 zip：只收這些類型，跨站請求就偽造不了
     const type = contentType(req);
     if (BODY_METHODS.has(req.method) && req.body !== null && type !== "application/json" && !(type && route.accepts?.includes(type))) {
-      return errorResponse(415, `請求的 Content-Type 必須是 ${route.accepts?.join("、") ?? "application/json"}`);
+      return errorResponse(415, msg("http.contentType", { types: route.accepts ? [...route.accepts] : ["application/json"] }));
     }
 
     return route.handler({ req, url, params: hit.params, principal, ip });

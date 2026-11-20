@@ -39,6 +39,15 @@ IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
 Progress = Callable[[float], None]
 
 
+class CodedError(ValueError):
+    """帶訊息 code 的錯誤：str(e) 是中文後備，code 與 params 讓前端換成使用者的語言（同一套見 src/messages/states.ts）"""
+
+    def __init__(self, text: str, code: str, params: dict | None = None):
+        super().__init__(text)
+        self.code = code
+        self.params = params
+
+
 class Backbone:
     def __init__(self, ort, path: str, threads: int = 2):
         opts = ort.SessionOptions()
@@ -213,7 +222,7 @@ def train(backbone: Backbone, cache: EmbeddingCache, items: list[dict], classes:
     counts = np.bincount(y, minlength=len(classes)) if len(y) else np.zeros(len(classes), int)
     missing = [c for c, n in zip(classes, counts) if n == 0]
     if missing:
-        raise ValueError(f"這些類別沒有可用的圖片：{'、'.join(missing)}")
+        raise CodedError("這些類別沒有可用的圖片：" + "、".join(missing), "states.classesWithoutImages", {"classes": missing})
     f = np.stack(feats)
     validation = cross_validate(f, y, classes)
     progress(0.97)
@@ -237,7 +246,7 @@ def load_model(path: str, backbone_id: str) -> Model:
     with open(path, encoding="utf-8") as fh:
         m = json.load(fh)
     if m.get("version") != MODEL_VERSION or m.get("backbone", {}).get("id") != backbone_id:
-        raise ValueError("模型是用不同版本的骨幹訓練的，需要重新訓練")
+        raise CodedError("模型是用不同版本的骨幹訓練的，需要重新訓練", "states.modelBackboneChanged")
     return Model(list(m["classes"]), np.array(m["w"], np.float32), np.array(m["b"], np.float32))
 
 
@@ -305,7 +314,7 @@ def import_zip(path: str, out_dir: str, new_name: Callable[[str], str], progress
     with zipfile.ZipFile(path) as zf:
         members = zf.infolist()
         if len(members) > MAX_MEMBERS:
-            raise ValueError(f"zip 裡的檔案太多（{len(members)} 個，上限 {MAX_MEMBERS}）")
+            raise CodedError(f"zip 裡的檔案太多（{len(members)} 個，上限 {MAX_MEMBERS}）", "states.zipTooManyFiles", {"count": len(members), "max": MAX_MEMBERS})
         for n, info in enumerate(members):
             progress((n + 1) / max(1, len(members)))
             kind = classify_member(info.filename)

@@ -3,6 +3,8 @@
 // 有幾張待標記的圖，用來走標記與訓練的流程。圖片與縮圖都是即時畫的 SVG（用不到 ffmpeg）。
 import type { CameraId, CameraConfig } from "../src/types.ts";
 import { HttpError } from "../src/http/errors.ts";
+import { errorBody } from "../src/http/respond.ts";
+import { msg, zh, type Msg } from "../src/messages/index.ts";
 import { parseClassName, parseFrigateConfig, parseSensorConfig } from "../src/states/config.ts";
 import {
   MAX_PENDING_STATE_IMAGES,
@@ -15,6 +17,7 @@ import {
   type StateJobDto,
   type StateJobKind,
   type StateModelDto,
+  type StateProblemCode,
   type StateSensorConfig,
   type StateSensorDto,
   type StreamMessage,
@@ -69,7 +72,7 @@ interface Change {
   look: number;
 }
 
-type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
+type Parsed<T> = { ok: true; value: T } | { ok: false; error: Msg };
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -79,7 +82,9 @@ const CONFIDENCE_STEPS = 3;
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const json = (data: unknown, status = 200) => Response.json(data, { status });
-const err = (status: number, error: string) => Response.json({ error }, { status });
+const err = (status: number, m: Msg) => Response.json(errorBody(m), { status });
+/** 假後端自己才有的訊息：沒有 code，各語言原文顯示 */
+const raw = (text: string) => msg("raw", { text });
 
 function rng(seed: number) {
   let a = seed >>> 0;
@@ -98,7 +103,7 @@ function attempt<T>(fn: () => T): Parsed<T> {
   try {
     return { ok: true, value: fn() };
   } catch (e) {
-    if (e instanceof HttpError) return { ok: false, error: e.message };
+    if (e instanceof HttpError) return { ok: false, error: e.msg };
     throw e;
   }
 }
@@ -183,11 +188,12 @@ export function createMockStates(deps: MockStatesDeps) {
   const camOf = (id: CameraId) => deps.cameras().find((c) => c.id === id);
 
   function problemOf(s: Sensor): StateSensorDto["problem"] {
-    if (!s.config.enabled) return { code: "disabled", message: "已暫停辨識" };
-    if (!s.model) return { code: "untrained", message: "還沒訓練：先標記每一類的畫面，再按「開始訓練」" };
-    if (s.model.classes.length !== s.config.classes.length || s.model.classes.some((c, i) => c !== s.config.classes[i])) return { code: "stale-model", message: "類別改過了，重新訓練後才會繼續辨識" };
+    const p = (code: StateProblemCode, m: Msg) => ({ code, message: zh(m), msg: m });
+    if (!s.config.enabled) return p("disabled", msg("states.problemDisabled"));
+    if (!s.model) return p("untrained", msg("states.problemUntrained"));
+    if (s.model.classes.length !== s.config.classes.length || s.model.classes.some((c, i) => c !== s.config.classes[i])) return p("stale-model", msg("states.problemStaleModel"));
     const cam = camOf(s.cameraId);
-    if (!cam || !cam.config.enabled) return { code: "camera-off", message: "這台攝影機已停用，沒有畫面可以辨識" };
+    if (!cam || !cam.config.enabled) return p("camera-off", msg("states.problemCameraOff"));
     return null;
   }
 
@@ -301,7 +307,7 @@ export function createMockStates(deps: MockStatesDeps) {
   // ---------- 背景工作 ----------
   const busy = (s: Sensor) => s.job?.state === "queued" || s.job?.state === "running";
 
-  function startJob(s: Sensor, kind: StateJobKind, durationMs: number, finish: () => Parsed<string>) {
+  function startJob(s: Sensor, kind: StateJobKind, durationMs: number, finish: () => Parsed<Msg>) {
     const startedAt = Date.now();
     s.job = { kind, state: "queued", startedAt };
     emitSensor(s);
@@ -328,7 +334,11 @@ export function createMockStates(deps: MockStatesDeps) {
         }
         const result = finish();
         const finishedAt = Date.now();
-        end(result.ok ? { kind, state: "done", startedAt, finishedAt, message: result.value } : { kind, state: "failed", startedAt, finishedAt, error: result.error });
+        end(
+          result.ok
+            ? { kind, state: "done", startedAt, finishedAt, message: zh(result.value), msg: result.value }
+            : { kind, state: "failed", startedAt, finishedAt, error: zh(result.error), errorMsg: result.error },
+        );
       }, 500);
     }, 400);
   }
@@ -336,12 +346,12 @@ export function createMockStates(deps: MockStatesDeps) {
   function runCollect(s: Sensor) {
     startJob(s, "collect", 1800, () => {
       const cam = camOf(s.cameraId);
-      if (!cam?.config.record.enabled) return { ok: false, error: "這台攝影機沒有錄影，沒辦法從錄影抽樣畫面" };
+      if (!cam?.config.record.enabled) return { ok: false, error: msg("states.collectNoRecordings") };
       const r = rng(Date.now());
       for (let i = 0; i < COLLECT_COUNT; i++) {
         s.images.push(newImage(r(), null, "recording", Date.now() - i * 5 * MIN, null));
       }
-      return { ok: true, value: `加入 ${COLLECT_COUNT} 張待標記的畫面` };
+      return { ok: true, value: msg("states.collectDone", { count: COLLECT_COUNT }) };
     });
   }
 
@@ -350,7 +360,7 @@ export function createMockStates(deps: MockStatesDeps) {
       s.model = buildModel(s.config, s.images, 6000);
       resetRecognition(s);
       const pct = Math.round((s.model.validation?.accuracy ?? 0) * 100);
-      return { ok: true, value: s.model.validation ? `訓練完成，用標記的畫面驗證答對 ${pct}%` : "訓練完成" };
+      return { ok: true, value: s.model.validation ? msg("states.trainDone", { accuracy: pct }) : msg("states.trainDoneNoValidation") };
     });
   }
 
@@ -371,7 +381,7 @@ export function createMockStates(deps: MockStatesDeps) {
         const guess = { label: labelAt(classes, look), score: between(r, 0.4, 0.95) };
         s.images.push(newImage(look, null, "import", Date.now() - i * HOUR, guess));
       }
-      return { ok: true, value: `匯入 ${labeled} 張已標記、6 張待標記的圖片，新增類別「半開」` };
+      return { ok: true, value: msg("states.importDone", { labeled, pending: 6, added: ["半開"], skipped: 0 }) };
     });
   }
 
@@ -456,16 +466,16 @@ export function createMockStates(deps: MockStatesDeps) {
     const { path, method, url, body, admin } = req;
     if (!path.startsWith("/states") && !path.startsWith("/state-changes")) return null;
     const mutating = method !== "GET";
-    if (mutating && !admin) return err(403, "需要管理員權限");
+    if (mutating && !admin) return err(403, msg("http.adminRequired"));
 
     if (path === "/states" && method === "GET") {
       const cameraId = url.searchParams.get("cameraId");
       return json([...sensors.values()].filter((s) => !cameraId || s.cameraId === cameraId).map(dto));
     }
     if (path === "/states" && method === "POST") {
-      if (!isRecord(body)) return err(400, "請求格式不正確");
+      if (!isRecord(body)) return err(400, msg("http.bodyNotObject"));
       const cam = typeof body.cameraId === "string" ? camOf(body.cameraId as CameraId) : undefined;
-      if (!cam) return err(400, "找不到這台攝影機");
+      if (!cam) return err(400, msg("states.cameraNotFound"));
       const parsed = parseConfig(body.config, null);
       if (!parsed.ok) return err(400, parsed.error);
       const s = createSensor(cam.id, parsed.value);
@@ -474,7 +484,7 @@ export function createMockStates(deps: MockStatesDeps) {
       return json(dto(s), 201);
     }
     if (path === "/states/frigate-config" && method === "POST") {
-      if (!isRecord(body) || typeof body.yaml !== "string" || !body.yaml.trim()) return err(400, "請貼上 Frigate 設定檔的內容");
+      if (!isRecord(body) || typeof body.yaml !== "string" || !body.yaml.trim()) return err(400, msg("states.yamlNotString"));
       const result = parseFrigate(body.yaml);
       return result.ok ? json(result.value) : err(400, result.error);
     }
@@ -493,13 +503,13 @@ export function createMockStates(deps: MockStatesDeps) {
     const thumb = path.match(/^\/state-changes\/(\d+)\/thumb\.jpg$/);
     if (thumb && method === "GET") {
       const c = changes.find((x) => x.dto.id === Number(thumb[1]));
-      return c ? svgResponse(c.look, c.dto.id * 131) : err(404, "找不到這筆紀錄");
+      return c ? svgResponse(c.look, c.dto.id * 131) : err(404, msg("http.notFound"));
     }
 
     const m = path.match(/^\/states\/([^/]+)(?:\/(.+))?$/);
-    if (!m) return err(404, "找不到路徑");
+    if (!m) return err(404, msg("http.notFound"));
     const s = sensors.get(m[1]!);
-    if (!s) return err(404, "找不到這個感應器");
+    if (!s) return err(404, msg("states.sensorNotFound"));
     const sub = m[2] ?? "";
 
     if (sub === "" && method === "GET") return json(dto(s));
@@ -522,12 +532,12 @@ export function createMockStates(deps: MockStatesDeps) {
     }
 
     if (sub === "classes/rename" && method === "POST") {
-      if (!isRecord(body) || typeof body.from !== "string" || typeof body.to !== "string") return err(400, "請求格式不正確");
+      if (!isRecord(body) || typeof body.from !== "string" || typeof body.to !== "string") return err(400, msg("http.bodyNotObject"));
       const { from, to } = body;
-      if (!s.config.classes.includes(from)) return err(400, `沒有「${from}」這個類別`);
+      if (!s.config.classes.includes(from)) return err(400, msg("states.classNotFound", { name: from }));
       const bad = classNameError(to);
       if (bad) return err(400, bad);
-      if (to !== from && s.config.classes.includes(to)) return err(400, `已經有「${to}」這個類別了`);
+      if (to !== from && s.config.classes.includes(to)) return err(400, msg("states.classExists", { name: to }));
       const swap = (c: string) => (c === from ? to : c);
       s.config = { ...s.config, classes: s.config.classes.map(swap) };
       for (const img of s.images) {
@@ -547,51 +557,51 @@ export function createMockStates(deps: MockStatesDeps) {
     }
 
     if (sub === "collect" && method === "POST") {
-      if (busy(s)) return err(409, "這個感應器正在忙，請等目前的工作完成");
+      if (busy(s)) return err(409, msg("states.jobBusy"));
       runCollect(s);
       return json(dto(s), 202);
     }
     if (sub === "train" && method === "POST") {
-      if (busy(s)) return err(409, "這個感應器正在忙，請等目前的工作完成");
-      if (!dto(s).trainable) return err(400, `每一類至少要有 ${MIN_STATE_IMAGES_PER_CLASS} 張已標記的圖片才能訓練`);
+      if (busy(s)) return err(409, msg("states.jobBusy"));
+      if (!dto(s).trainable) return err(400, msg("states.notTrainable", { min: MIN_STATE_IMAGES_PER_CLASS }));
       runTrain(s);
       return json(dto(s), 202);
     }
     if (sub === "import" && method === "POST") {
-      if (busy(s)) return err(409, "這個感應器正在忙，請等目前的工作完成");
+      if (busy(s)) return err(409, msg("states.jobBusy"));
       runImport(s);
       return json(dto(s), 202);
     }
 
     if (sub === "images" && method === "GET") {
       const label = url.searchParams.get("label") ?? "all";
-      if (label !== "all" && label !== "pending" && !s.config.classes.includes(label)) return err(400, `沒有「${label}」這個類別`);
+      if (label !== "all" && label !== "pending" && !s.config.classes.includes(label)) return err(400, msg("states.classNotFound", { name: label }));
       const list = s.images.filter((i) => (label === "all" ? true : label === "pending" ? i.label === null : i.label === label)).sort((a, b) => b.createdAt - a.createdAt);
       return json({ images: list.map((i) => imageDto(s, i)) });
     }
     const one = sub.match(/^images\/([^/]+)$/);
     if (one && method === "GET") {
       const img = s.images.find((i) => i.id === one[1]);
-      return img ? svgResponse(img.look, img.seed) : err(404, "找不到這張圖片");
+      return img ? svgResponse(img.look, img.seed) : err(404, msg("states.imageNotFound"));
     }
     if (sub === "images/label" && method === "POST") {
-      if (!isRecord(body) || !Array.isArray(body.ids) || !body.ids.every((x) => typeof x === "string")) return err(400, "請求格式不正確");
+      if (!isRecord(body) || !Array.isArray(body.ids) || !body.ids.every((x) => typeof x === "string")) return err(400, msg("http.bodyNotObject"));
       const label = body.label;
-      if (label !== null && (typeof label !== "string" || !s.config.classes.includes(label))) return err(400, "標記的類別不在這個感應器的類別裡");
+      if (label !== null && (typeof label !== "string" || !s.config.classes.includes(label))) return err(400, raw("標記的類別不在這個感應器的類別裡"));
       const targets = s.images.filter((i) => (body.ids as string[]).includes(i.id));
-      if (targets.length !== new Set(body.ids as string[]).size) return err(404, "有些圖片找不到");
+      if (targets.length !== new Set(body.ids as string[]).size) return err(404, msg("states.imageNotFound"));
       for (const img of targets) img.label = label;
       emitSensor(s);
       return json(dto(s));
     }
     if (sub === "images/delete" && method === "POST") {
-      if (!isRecord(body) || !Array.isArray(body.ids) || !body.ids.every((x) => typeof x === "string")) return err(400, "請求格式不正確");
+      if (!isRecord(body) || !Array.isArray(body.ids) || !body.ids.every((x) => typeof x === "string")) return err(400, msg("http.bodyNotObject"));
       const ids = new Set(body.ids as string[]);
       s.images = s.images.filter((i) => !ids.has(i.id));
       emitSensor(s);
       return json(dto(s));
     }
-    return err(404, "找不到路徑");
+    return err(404, msg("http.notFound"));
   }
 
   return { sensors: () => [...sensors.values()].map(dto), handle };

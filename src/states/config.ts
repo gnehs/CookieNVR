@@ -1,62 +1,63 @@
 import type { CropBox, FrigateConfigResultDto, StateSensorConfig } from "../api-types.ts";
 import { HttpError } from "../http/errors.ts";
 import { isObject, type JsonObject } from "../http/validate.ts";
+import { msg, type Msg } from "../messages/index.ts";
 
 export const DEFAULT_THRESHOLD = 0.8;
 export const DEFAULT_INTERVAL_SEC = 10;
 const MAX_CLASSES = 10;
 
-const bad = (message: string) => new HttpError(400, message);
+const bad = (m: Msg) => new HttpError(400, m);
 
 /** 類別名稱同時是資料夾外的標記值與 zip 裡的資料夾名：不可含路徑字元，不可以 . 開頭 */
-export function parseClassName(v: unknown, what = "類別名稱"): string {
-  if (typeof v !== "string") throw bad(`${what}必須是字串`);
+export function parseClassName(v: unknown, renamed = false): string {
+  if (typeof v !== "string") throw bad(msg("states.classNameNotString", { renamed }));
   const s = v.trim();
-  if (s.length < 1 || s.length > 32) throw bad(`${what}要 1 到 32 字`);
-  if (/[/\\]/.test(s) || s.startsWith(".")) throw bad(`${what}不可含 / 或 \\，也不可以 . 開頭`);
+  if (s.length < 1 || s.length > 32) throw bad(msg("states.classNameLength", { renamed }));
+  if (/[/\\]/.test(s) || s.startsWith(".")) throw bad(msg("states.classNameChars", { renamed }));
   return s;
 }
 
 export function parseCrop(v: unknown): CropBox {
   if (!Array.isArray(v) || v.length !== 4 || !v.every((n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1)) {
-    throw bad("區域必須是 4 個 0 到 1 的數字 [x1, y1, x2, y2]");
+    throw bad(msg("states.cropInvalid"));
   }
   const [x1, y1, x2, y2] = v as CropBox;
-  if (x2 - x1 < 0.01 || y2 - y1 < 0.01) throw bad("區域太小，或左上角不在右下角的左上方");
+  if (x2 - x1 < 0.01 || y2 - y1 < 0.01) throw bad(msg("states.cropTooSmall"));
   return [x1, y1, x2, y2];
 }
 
-function number(obj: JsonObject, key: string, min: number, max: number, fallback: number, label: string, integer = false): number {
+function number(obj: JsonObject, key: string, min: number, max: number, fallback: number, bound: "threshold" | "intervalSec"): number {
   const v = obj[key];
   if (v === undefined) return fallback;
-  if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max || (integer && !Number.isInteger(v))) {
-    throw bad(`${label}必須是 ${min} 到 ${max} 的${integer ? "整數" : "數字"}`);
+  if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max || (bound === "intervalSec" && !Number.isInteger(v))) {
+    throw bad(msg(bound === "threshold" ? "states.thresholdRange" : "states.intervalRange", { min, max }));
   }
   return v;
 }
 
-function flag(obj: JsonObject, key: string, fallback: boolean, label: string): boolean {
+function flag(obj: JsonObject, key: string, fallback: boolean): boolean {
   const v = obj[key];
   if (v === undefined) return fallback;
-  if (typeof v !== "boolean") throw bad(`${label}必須是 true 或 false`);
+  if (typeof v !== "boolean") throw bad(msg("states.flagNotBool", { field: key }));
   return v;
 }
 
 /** POST／PUT 的 config：name、classes、crop 必填，其餘省略時取 base（PUT 時是原本的設定）或預設值 */
 export function parseSensorConfig(v: unknown, base?: StateSensorConfig): StateSensorConfig {
-  if (!isObject(v)) throw bad("config 必須是物件");
-  if (typeof v.name !== "string" || v.name.trim().length < 1 || v.name.trim().length > 40) throw bad("名稱要 1 到 40 字");
-  if (!Array.isArray(v.classes) || v.classes.length < 2 || v.classes.length > MAX_CLASSES) throw bad(`類別要 2 到 ${MAX_CLASSES} 個`);
+  if (!isObject(v)) throw bad(msg("states.configNotObject"));
+  if (typeof v.name !== "string" || v.name.trim().length < 1 || v.name.trim().length > 40) throw bad(msg("states.nameLength"));
+  if (!Array.isArray(v.classes) || v.classes.length < 2 || v.classes.length > MAX_CLASSES) throw bad(msg("states.classCount", { min: 2, max: MAX_CLASSES }));
   const classes = v.classes.map((c) => parseClassName(c));
-  if (new Set(classes).size !== classes.length) throw bad("類別名稱不可重複");
+  if (new Set(classes).size !== classes.length) throw bad(msg("states.classDuplicate"));
   return {
     name: v.name.trim(),
     classes,
     crop: parseCrop(v.crop),
-    threshold: number(v, "threshold", 0.5, 0.99, base?.threshold ?? DEFAULT_THRESHOLD, "信心門檻"),
-    intervalSec: number(v, "intervalSec", 0, 3600, base?.intervalSec ?? DEFAULT_INTERVAL_SEC, "辨識間隔", true),
-    onMotion: flag(v, "onMotion", base?.onMotion ?? true, "onMotion"),
-    enabled: flag(v, "enabled", base?.enabled ?? true, "enabled"),
+    threshold: number(v, "threshold", 0.5, 0.99, base?.threshold ?? DEFAULT_THRESHOLD, "threshold"),
+    intervalSec: number(v, "intervalSec", 0, 3600, base?.intervalSec ?? DEFAULT_INTERVAL_SEC, "intervalSec"),
+    onMotion: flag(v, "onMotion", base?.onMotion ?? true),
+    enabled: flag(v, "enabled", base?.enabled ?? true),
   };
 }
 
@@ -83,7 +84,7 @@ export function parseFrigateConfig(yaml: string): FrigateConfigResultDto {
   try {
     doc = Bun.YAML.parse(yaml);
   } catch (e) {
-    throw bad(`看不懂這段 YAML：${e instanceof Error ? e.message : String(e)}`);
+    throw bad(msg("states.yamlParseFailed", { detail: e instanceof Error ? e.message : String(e) }));
   }
   const models = findModels(doc);
   const sensors: FrigateConfigResultDto["sensors"] = [];
@@ -103,7 +104,7 @@ export function parseFrigateConfig(yaml: string): FrigateConfigResultDto {
       sensors.push({ name, camera, crop, threshold, intervalSec: interval, onMotion: state.motion === true });
     }
   }
-  if (sensors.length === 0) throw bad("找不到狀態辨識的設定（classification.custom.<名稱>.state_config.cameras.<攝影機>.crop）");
+  if (sensors.length === 0) throw bad(msg("states.frigateConfigNotFound"));
   return { sensors };
 }
 

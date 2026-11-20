@@ -152,7 +152,7 @@ def run_bench(ch: Channel, ort, cmd: dict, current: eng.Engine, model_path: str,
             device = p.find(device_id)
             base = {"device": device_id, "kind": device.kind if device else device_id.split(":")[0], "name": device.name if device else device_id}
             if device is None:
-                results.append({**base, "ok": False, "error": "找不到這個裝置"})
+                results.append({**base, "ok": False, "error": "找不到這個裝置", "errorMsg": {"code": "detector.benchDeviceMissing"}})
                 continue
             ch.send({"type": "bench-progress", "device": device_id, "fraction": 0, "index": i, "total": len(ids)})
             try:
@@ -165,6 +165,7 @@ def run_bench(ch: Channel, ort, cmd: dict, current: eng.Engine, model_path: str,
                 raise
             except eng.NotOnDevice as e:
                 results.append({**base, "ok": False, "reason": f"{e}，這個裝置不適合用來辨識",
+                                "reasonMsg": {"code": "detector.notOnDeviceBench", "params": e.params},
                                 "error": f"NotOnDevice: 實際執行 {eng.placement_text(e.placement)}", "placement": e.placement})
                 continue
             except Exception as e:  # noqa: BLE001 — 某個裝置不能用只影響它自己的結果
@@ -202,14 +203,18 @@ def main() -> None:
     p = eng.probe(ort)
     try:
         if not os.path.isfile(args.model):
-            raise yolo.ModelFormatError(f"找不到模型檔 {os.path.basename(args.model)}")
+            raise yolo.ModelFormatError(f"找不到模型檔 {os.path.basename(args.model)}", "detector.modelFileMissing", {"file": os.path.basename(args.model)})
         loaded = eng.load(ort, args.model, args.device, p)
     except yolo.ModelFormatError as e:
-        ch.send({"type": "status", "state": "error", "error": str(e), "probe": p.to_json()})
+        err = {"type": "status", "state": "error", "error": str(e), "probe": p.to_json()}
+        if e.code:
+            err["code"] = e.code
+            err["params"] = e.params
+        ch.send(err)
         idle(ch)
         return
     except Exception as e:  # noqa: BLE001 — 檔案壞掉或 ONNX Runtime 讀不了，都是使用者能處理的模型問題
-        ch.send({"type": "status", "state": "error", "error": "無法載入模型，檔案可能不是有效的 ONNX 模型", "detail": f"{type(e).__name__}: {e}"[:600], "probe": p.to_json()})
+        ch.send({"type": "status", "state": "error", "error": "無法載入模型，檔案可能不是有效的 ONNX 模型", "code": "detector.modelNotOnnx", "detail": f"{type(e).__name__}: {e}"[:600], "probe": p.to_json()})
         idle(ch)
         return
 

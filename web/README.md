@@ -36,7 +36,7 @@ Lingui，原始語言是英文，另有繁體中文（`zh-Hant`）與日文（`j
 - 物件類別名稱在 `detect/label-names.ts`，自備模型的類別表裡沒有時顯示模型原名。
 - 改完文字跑 `bun run i18n:extract` 更新 `web/locales/*.po`，再補上繁中與日文的 `msgstr`。可以寫成 `{ "英文": "譯文" }` 的 JSON，用 `bun scripts/i18n-fill.ts <locale> <檔案>` 填空白的項目。`.po` 由 Vite 外掛直接載入，不用另外編譯。
 - 換語言時整個路由樹重掛，所以命令式物件（時間軸、遮罩編輯器）的文字也會跟著換。
-- 伺服器 API 回的錯誤訊息還是中文，還沒翻。
+- 伺服器送到畫面上的文字（錯誤回應、狀態欄位）帶穩定的 code 與 params：中文在 `src/messages/<區>.ts`，翻譯在 `web/server-messages/<區>.ts`，顯示時用 `server-text.ts` 的 `serverText(msg, 中文後備)`；`api.ts` 已經替 API 錯誤換好。DTO 保留原本的中文欄位給舊用戶端，旁邊的 Msg 版本命名為 `message` → `msg`、`x` → `xMsg`。新增訊息時兩邊都要加，型別會檢查缺漏。
 - `bun test` 會先展開 macro 並啟用英文（`scripts/lingui-test-preload.ts`），測試斷言寫英文。
 
 ## 開發

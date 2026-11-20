@@ -4,6 +4,7 @@ import type { Principal, Route, RouteContext } from "../types.ts";
 import { HttpError } from "./errors.ts";
 import { json, noContent } from "./respond.ts";
 import { asObject, parseIdParam, readJson, str } from "./validate.ts";
+import { msg } from "../messages/index.ts";
 
 export function clientOf(ctx: RouteContext): ClientInfo {
   return { ip: ctx.ip, userAgent: ctx.req.headers.get("user-agent") ?? "" };
@@ -14,7 +15,7 @@ export function isSecure(ctx: RouteContext): boolean {
 }
 
 function me(ctx: RouteContext): Principal {
-  if (!ctx.principal) throw new HttpError(401, "請先登入");
+  if (!ctx.principal) throw new HttpError(401, msg("http.loginRequired"));
   return ctx.principal;
 }
 
@@ -103,7 +104,7 @@ export function authRoutes(auth: Auth, version: string, siteName: () => string, 
       path: "/api/me/sessions/:id",
       access: "user",
       handler(ctx) {
-        if (!auth.revokeSession(me(ctx).userId, ctx.params.id ?? "")) throw new HttpError(404, "找不到登入裝置");
+        if (!auth.revokeSession(me(ctx).userId, ctx.params.id ?? "")) throw new HttpError(404, msg("auth.sessionNotFound"));
         const token = auth.sessionTokenOf(ctx.req);
         const revokedCurrent = token !== null && auth.sessionIdOf(token) === ctx.params.id;
         return noContent(revokedCurrent ? { "Set-Cookie": auth.clearSessionCookie(isSecure(ctx)) } : undefined);
@@ -130,7 +131,7 @@ export function authRoutes(auth: Auth, version: string, siteName: () => string, 
       access: "user",
       handler(ctx) {
         const id = parseIdParam(ctx.params.id);
-        if (id === null || !auth.revokeToken(me(ctx).userId, id)) throw new HttpError(404, "找不到 Token");
+        if (id === null || !auth.revokeToken(me(ctx).userId, id)) throw new HttpError(404, msg("auth.tokenNotFound"));
         return noContent();
       },
     },

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { BenchmarkDto, BenchmarkResultDto, InferenceDeviceDto } from "../../src/api-types.ts";
+import { msg } from "../../src/messages/index.ts";
 import { benchmarkView, endedText, headlineOf, progressOf, verdictOf } from "./benchmark-model.ts";
 
 const res = (o: Partial<BenchmarkResultDto>): BenchmarkResultDto => ({ device: "cpu", kind: "cpu", name: "Intel(R) Core(TM) i5", ok: true, fps: 14, msMean: 71.2, msP90: 96.5, loadMs: 900, cameras: 3, ...o });
@@ -12,6 +13,7 @@ const bench = (o: Partial<BenchmarkDto> = {}): BenchmarkDto => ({
   progress: null,
   results: [res({})],
   error: null,
+  errorMsg: null,
   stale: false,
   verdict: { device: "cpu", supported: 3, cameras: 2, state: "enough" },
   ...o,
@@ -127,4 +129,17 @@ test("取消與失敗的說明", () => {
   expect(endedText(bench({ state: "cancelled" }))?.text).toBe("Benchmark cancelled.");
   expect(endedText(bench({ state: "failed", error: "辨識程序中斷了。" }))?.text).toBe("辨識程序中斷了。");
   expect(endedText(bench())).toBeNull();
+});
+
+describe("失敗原因換成目前語言", () => {
+  test("有 reasonMsg 就用它，技術訊息照原文", () => {
+    const failed = res({ ok: false, reason: "中文原因", reasonMsg: msg("detector.notOnDeviceBench", { device: "UHD", runtime: "OpenVINO" }), error: "NotOnDevice: x" });
+    const row = benchmarkView(bench({ results: [failed] }), opts).rows[0]!;
+    expect(row.note?.text).toBe("UHD isn't actually running this model (OpenVINO handed the work back to the CPU). This device isn't suitable for detection");
+    expect(row.detail).toContain("NotOnDevice: x");
+  });
+
+  test("測速失敗的原因", () => {
+    expect(endedText(bench({ state: "failed", error: "推論程序重新啟動，測速中斷", errorMsg: msg("objects.benchInterrupted") }))?.text).toBe("The detector restarted, so the benchmark was interrupted");
+  });
 });

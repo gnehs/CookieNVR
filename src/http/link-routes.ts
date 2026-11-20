@@ -5,6 +5,7 @@ import { isSecure } from "./auth-routes.ts";
 import { HttpError } from "./errors.ts";
 import { json } from "./respond.ts";
 import { asObject, oneOf, readJson, str } from "./validate.ts";
+import { msg } from "../messages/index.ts";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -14,11 +15,11 @@ const NO_STORE = { "Cache-Control": "no-store" };
  */
 function approver(ctx: RouteContext): Principal {
   const p = ctx.principal;
-  if (!p) throw new HttpError(401, "請先登入");
-  if (p.via !== "session") throw new HttpError(403, "請在 CookieNVR 網頁上登入後核准");
+  if (!p) throw new HttpError(401, msg("http.loginRequired"));
+  if (p.via !== "session") throw new HttpError(403, msg("link.useWebLogin"));
   const site = ctx.req.headers.get("sec-fetch-site");
   if (site !== null) {
-    if (site !== "same-origin") throw new HttpError(403, "請直接在 CookieNVR 網頁上操作");
+    if (site !== "same-origin") throw new HttpError(403, msg("link.useWebDirect"));
     return p;
   }
   const origin = ctx.req.headers.get("origin");
@@ -26,7 +27,7 @@ function approver(ctx: RouteContext): Principal {
   try {
     host = origin ? new URL(origin).host : null;
   } catch {}
-  if (host === null || host !== ctx.url.host) throw new HttpError(403, "請直接在 CookieNVR 網頁上操作");
+  if (host === null || host !== ctx.url.host) throw new HttpError(403, msg("link.useWebDirect"));
   return p;
 }
 
@@ -45,7 +46,7 @@ export function linkRoutes(
         const nonce = str(body, "nonce", { max: 128 });
         // 訊息綁上實例識別碼，答案不能拿去冒充別台
         const answer = proof.proveToken(lookup, `${nonce}|${proof.instanceId}`);
-        if (answer === null) throw new HttpError(404, "找不到這個連線");
+        if (answer === null) throw new HttpError(404, msg("link.connectionNotFound"));
         return json({ proof: answer } satisfies LinkProofDto, 200, NO_STORE);
       },
     },
@@ -56,7 +57,7 @@ export function linkRoutes(
       async handler(ctx) {
         const body = asObject(await readJson(ctx.req));
         const app = str(body, "app", { max: 40 }).trim();
-        if (/\p{C}/u.test(app)) throw new HttpError(400, "欄位 app 不能含控制字元");
+        if (/\p{C}/u.test(app)) throw new HttpError(400, msg("field.noControlChars", { path: "app" }));
         const origin = `${isSecure(ctx) ? "https" : "http"}://${ctx.url.host}`;
         // 雙協定堆疊的 socket 會把 IPv4 寫成 ::ffff:a.b.c.d，給人看的名稱用原本的樣子
         const ip = ctx.ip.replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/, "");
@@ -77,7 +78,7 @@ export function linkRoutes(
       path: "/api/link/:code",
       access: "user",
       handler(ctx) {
-        if (!ctx.principal) throw new HttpError(401, "請先登入");
+        if (!ctx.principal) throw new HttpError(401, msg("http.loginRequired"));
         return json(links.view(ctx.params.code ?? "", ctx.principal), 200, NO_STORE);
       },
     },

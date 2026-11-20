@@ -18,6 +18,7 @@ import { isPaired } from "./hap-storage.ts";
 import { allocatePort, createIdentity, setupUri, type HomekitIdentity } from "./identity.ts";
 import { motionByCamera } from "./motion.ts";
 import { encode, LineReader, parseFromWorker, type AccessoryStatus, type StreamSession, type ToWorker } from "./protocol.ts";
+import { msg } from "../messages/index.ts";
 
 const WORKER_SCRIPT = join(import.meta.dir, "worker.ts");
 export const HOMEKIT_WORKER_ID = "homekit";
@@ -412,7 +413,7 @@ export function createHomekit(opts: HomekitOptions): Homekit {
 
   function cameraOr404(id: string): Camera {
     const camera = opts.cameras.get(id as CameraId);
-    if (!camera) throw new HttpError(404, "找不到攝影機");
+    if (!camera) throw new HttpError(404, msg("http.cameraNotFound"));
     return camera;
   }
 
@@ -440,17 +441,17 @@ export function createHomekit(opts: HomekitOptions): Homekit {
       let camera = cameraOr404(ctx.params.id!);
       const action = oneOf(asObject(await readJson(ctx.req)), "action", ["enable", "disable", "reset"] as const);
       if (action === "enable") {
-        if (!camera.config.enabled) throw new HttpError(409, "這台攝影機已停用，先啟用才能加入 Apple 家庭");
+        if (!camera.config.enabled) throw new HttpError(409, msg("homekit.cameraDisabled"));
         const cached = loadCheck(camera);
         const entry = await ensureCheck(camera, !cached || !("result" in cached));
         const dtoCheck = checkDto(entry);
-        if (dtoCheck.state === "unknown") throw new HttpError(409, "目前讀不到這台的畫面，等它連上後再試一次");
-        if (dtoCheck.state === "blocked") throw new HttpError(409, dtoCheck.reason === "not-h264" ? "這台的主畫面不是 H.264，Apple 家庭不支援" : "這台的主畫面沒有影像");
+        if (dtoCheck.state === "unknown") throw new HttpError(409, msg("homekit.noFrame"));
+        if (dtoCheck.state === "blocked") throw new HttpError(409, dtoCheck.reason === "not-h264" ? msg("homekit.notH264") : msg("homekit.noVideo"));
         camera = setEnabled(camera, true);
       } else if (action === "disable") {
         camera = setEnabled(camera, false);
       } else {
-        if (!camera.config.homekit?.enabled) throw new HttpError(409, "這台還沒有加入 Apple 家庭");
+        if (!camera.config.homekit?.enabled) throw new HttpError(409, msg("homekit.notPaired"));
         await forget(camera.id);
         sync();
       }

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { msg } from "../messages/index.ts";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -358,9 +359,18 @@ test("the GPU card in system resources shows the recognition rate when it is the
     model: { file: "yolox_tiny.onnx", format: "yolox", input: [416, 416], classes: ["person"], titles: ["person"] },
   });
   await h.settle();
-  expect(h.objects.gpuExtras({ id: "nvidia:0000:01:00.0", vendor: "nvidia" })).toEqual([{ label: "物件辨識", value: "每秒 0 張" }]);
+  expect(h.objects.gpuExtras({ id: "nvidia:0000:01:00.0", vendor: "nvidia" })).toEqual([{ label: "物件辨識", value: "每秒 0 張", labelMsg: msg("objects.gpuLabel"), valueMsg: msg("objects.gpuRate", { fps: 0 }) }]);
   expect(h.objects.gpuExtras({ id: "nvidia:0000:02:00.0", vendor: "nvidia" })).toEqual([]);
   expect(h.objects.gpuExtras({ id: "intel:0000:00:02.0", vendor: "intel" })).toEqual([]);
   h.client.end();
   await h.objects.stop();
+});
+
+test("detector 的原因帶 code 與 params；不認得的 code 當原文", () => {
+  const err = parseDetectorMsg(JSON.stringify({ type: "status", state: "error", error: "找不到模型檔 a.onnx", code: "detector.modelFileMissing", params: { file: "a.onnx" } }));
+  expect(err).toMatchObject({ type: "error", error: "找不到模型檔 a.onnx", errorMsg: { code: "detector.modelFileMissing", params: { file: "a.onnx" } } });
+  const unknown = parseDetectorMsg(JSON.stringify({ type: "status", state: "error", error: "新的錯誤", code: "detector.fromTheFuture" }));
+  expect(unknown).toMatchObject({ errorMsg: { code: "raw", params: { text: "新的錯誤" } } });
+  const bench = parseDetectorMsg(JSON.stringify({ type: "bench-result", cancelled: false, results: [{ device: "intel:GPU.0", kind: "intel", ok: false, reason: "x", reasonMsg: { code: "detector.notOnDeviceBench", params: { device: "A", runtime: "OpenVINO" } }, error: "找不到這個裝置", errorMsg: { code: "detector.benchDeviceMissing" } }] }));
+  expect(bench).toMatchObject({ results: [{ reasonMsg: { code: "detector.notOnDeviceBench" }, errorMsg: { code: "detector.benchDeviceMissing" } }] });
 });

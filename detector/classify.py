@@ -136,7 +136,14 @@ class Classifier:
             ch.send_blob({"type": "reading", "id": req_id, "label": model.classes[index], "index": index, "score": round(score, 4),
                           "probs": probs, "ms": ms}, sc.encode_jpeg(crop))
         except Exception as e:  # noqa: BLE001 — 一張壞畫面或壞模型只影響這次
-            ch.send({"type": "reading", "id": req_id, "error": f"{type(e).__name__}: {e}"[:300]})
+            ch.send({"type": "reading", "id": req_id, "error": f"{type(e).__name__}: {e}"[:300], **coded(e)})
+
+
+def coded(e: Exception) -> dict:
+    """錯誤若是 CodedError，回傳要附在訊息裡的 code 與 params"""
+    if not isinstance(e, sc.CodedError):
+        return {}
+    return {"code": e.code, **({"params": e.params} if e.params is not None else {})}
 
 
 def new_name(ext: str) -> str:
@@ -203,7 +210,7 @@ def job_worker(ch: Channel, clf: Classifier, jobs: "queue.Queue[dict]") -> None:
             result = run_job(ch, clf, cache, cmd)
             reply = {"type": "job-result", "job": cmd.get("job"), "ok": True, "result": result}
         except (ValueError, KeyError, OSError) as e:
-            reply = {"type": "job-result", "job": cmd.get("job"), "ok": False, "error": str(e)[:400] if isinstance(e, ValueError) else f"{type(e).__name__}: {e}"[:400]}
+            reply = {"type": "job-result", "job": cmd.get("job"), "ok": False, "error": str(e)[:400] if isinstance(e, ValueError) else f"{type(e).__name__}: {e}"[:400], **coded(e)}
         except Exception as e:  # noqa: BLE001 — 背景工作失敗不能讓辨識停下
             reply = {"type": "job-result", "job": cmd.get("job"), "ok": False, "error": f"{type(e).__name__}: {e}"[:400]}
         finally:
@@ -232,7 +239,7 @@ def main() -> None:
         backbone = sc.Backbone(ort, args.backbone, args.threads)
         load_ms = round((time.monotonic() - t0) * 1000)
     except Exception as e:  # noqa: BLE001 — 骨幹模型缺檔或壞掉：回報後只送心跳，免得 supervisor 反覆重啟
-        ch.send({"type": "status", "state": "error", "error": "無法載入狀態辨識用的影像特徵模型", "detail": f"{type(e).__name__}: {e}"[:600]})
+        ch.send({"type": "status", "state": "error", "error": "無法載入狀態辨識用的影像特徵模型", "code": "states.backboneLoadFailed", "detail": f"{type(e).__name__}: {e}"[:600]})
         while ch.recv() is not None:
             pass
         return

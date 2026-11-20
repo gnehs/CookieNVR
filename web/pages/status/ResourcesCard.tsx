@@ -5,6 +5,7 @@ import { useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 import type { CameraDto, GpuDto, MetricsDto, MetricsPointDto, UsageCategory } from "../../../src/api-types.ts";
 import { formatBytes } from "../../format.ts";
+import { serverText } from "../../server-text.ts";
 import { Segmented } from "../../ui/controls.tsx";
 
 /** 「資源花在哪裡」的類別名稱；資源警告也用它說明誰用最多 */
@@ -129,7 +130,7 @@ function gpuTile(g: GpuDto, history: MetricsPointDto[], now: number): TileData {
     parts.push(t`GPU memory ${used} / ${total}`);
   }
   if (g.temperatureC !== null) parts.push(`${g.temperatureC}°C`);
-  if (g.note) parts.push(g.note);
+  if (g.note) parts.push(serverText(g.noteMsg, g.note));
   if (!parts.length) parts.push(g.utilPct === null ? t`Usage unavailable` : g.memory === null ? t`Shares memory with the system` : t`Usage`);
   return {
     key: g.id,
@@ -141,8 +142,8 @@ function gpuTile(g: GpuDto, history: MetricsPointDto[], now: number): TileData {
     series: history.map((p) => ({ at: p.at, v: g.id in p.gpus ? (p.gpus[g.id] ?? null) : null })),
     now,
     extras: g.extras.map((e) => {
-      const label = e.label;
-      const value = e.value;
+      const label = serverText(e.labelMsg, e.label);
+      const value = serverText(e.valueMsg, e.value);
       return t`${label}: ${value}`;
     }),
   };

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { HttpError } from "../http/errors.ts";
 import { samplePoints } from "./collect.ts";
 import { parseFrigateConfig, parseSensorConfig } from "./config.ts";
 import { REQUIRED, step, UNKNOWN, type Consensus } from "./consensus.ts";
@@ -57,6 +58,20 @@ describe("感應器設定", () => {
     [{ ...ok, name: "" }, "名稱"],
   ])("拒絕不合法的設定 %#", (input, message) => {
     expect(() => parseSensorConfig(input)).toThrow(message);
+  });
+
+  test("錯誤帶 code 與參數", () => {
+    const code = (input: unknown) => {
+      try {
+        parseSensorConfig(input);
+      } catch (e) {
+        return e instanceof HttpError ? e.msg : null;
+      }
+      return null;
+    };
+    expect(code({ ...ok, classes: ["關"] })).toEqual({ code: "states.classCount", params: { min: 2, max: 10 } });
+    expect(code({ ...ok, classes: ["關", "../x"] })).toEqual({ code: "states.classNameChars", params: { renamed: false } });
+    expect(code({ ...ok, intervalSec: 2.5 })).toEqual({ code: "states.intervalRange", params: { min: 0, max: 3600 } });
   });
 });
 
@@ -129,5 +144,13 @@ describe("worker 訊息", () => {
     const n = view.getUint32(5);
     expect(JSON.parse(new TextDecoder().decode(bytes.slice(9, 9 + n))).mode).toBe("force");
     expect([...bytes.slice(9 + n)]).toEqual([1, 2]);
+  });
+
+  test("worker 回報的 code：認得的照用，不認得的當原文", () => {
+    const enc = new TextEncoder();
+    const result = (extra: object) => parseWorkerMsg(1, enc.encode(JSON.stringify({ type: "job-result", job: 1, ok: false, error: "中文", ...extra })));
+    expect(result({ code: "states.classesWithoutImages", params: { classes: ["關"] } })).toMatchObject({ errorMsg: { code: "states.classesWithoutImages", params: { classes: ["關"] } } });
+    expect(result({ code: "nope" })).toMatchObject({ errorMsg: { code: "raw", params: { text: "中文" } } });
+    expect(result({})).toMatchObject({ errorMsg: { code: "raw", params: { text: "中文" } } });
   });
 });

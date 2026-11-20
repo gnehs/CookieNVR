@@ -2,6 +2,7 @@ import type { LinkCreatedDto, LinkPollDto, LinkRequestDto, LinkStatus } from "..
 import { HttpError } from "../http/errors.ts";
 import type { Principal } from "../types.ts";
 import type { Auth } from "./auth.ts";
+import { msg, type Msg } from "../messages/index.ts";
 
 /**
  * 授權連結：仿 OAuth 2.0 裝置授權（RFC 8628）。App 建立請求拿到短碼與輪詢憑證，
@@ -116,7 +117,7 @@ function windowLimiter(now: () => number, opts: { limit: number; windowMs: numbe
   };
 }
 
-function tooMany(waitMs: number, message: string): HttpError {
+function tooMany(waitMs: number, message: Msg): HttpError {
   return new HttpError(429, message, { "Retry-After": String(Math.ceil(waitMs / 1000)) });
 }
 
@@ -168,13 +169,13 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
   function lookup(rawCode: string, principal: Principal): LinkRequest {
     const key = String(principal.userId);
     const wait = badCodeLimit.retryAfterMs(key);
-    if (wait > 0) throw tooMany(wait, "嘗試太多次了，請稍後再試");
+    if (wait > 0) throw tooMany(wait, msg("link.tooManyAttempts"));
     prune();
     const code = normalizeCode(rawCode);
     const req = code === null ? undefined : byCode.get(code);
     if (!req) {
       badCodeLimit.record(key);
-      throw new HttpError(404, "找不到這個連結請求，請確認代碼，或回到 App 重新開始");
+      throw new HttpError(404, msg("link.notFoundCheckCode"));
     }
     return req;
   }
@@ -193,12 +194,12 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
     create({ app, ip, origin }) {
       prune();
       const wait = createLimit.retryAfterMs(ip);
-      if (wait > 0) throw tooMany(wait, "建立連結請求太頻繁，請稍後再試");
+      if (wait > 0) throw tooMany(wait, msg("link.createTooFrequent"));
       const pendingFromIp = [...byCode.values()].filter((r) => r.ip === ip && statusOf(r) === "pending").length;
-      if (pendingFromIp >= LIMITS.pendingPerIp) throw tooMany(LINK_TTL_MS, "待核准的連結請求太多，請先完成或等它們過期");
+      if (pendingFromIp >= LIMITS.pendingPerIp) throw tooMany(LINK_TTL_MS, msg("link.tooManyPending"));
       const pendingAll = [...byCode.values()].filter((r) => statusOf(r) === "pending").length;
       if (pendingAll >= LIMITS.pendingTotal || byCode.size >= LIMITS.total) {
-        throw tooMany(RETAIN_MS, "目前有太多連結請求，請稍後再試");
+        throw tooMany(RETAIN_MS, msg("link.tooManyRequests"));
       }
       createLimit.record(ip);
 
@@ -229,13 +230,13 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
 
     poll(pollSecret, ip) {
       const wait = Math.max(pollLimit.retryAfterMs(ip), badPollLimit.retryAfterMs(ip));
-      if (wait > 0) throw tooMany(wait, "輪詢太頻繁，請稍後再試");
+      if (wait > 0) throw tooMany(wait, msg("link.pollTooFrequent"));
       pollLimit.record(ip);
       prune();
       const req = byPoll.get(sha256Hex(pollSecret));
       if (!req) {
         badPollLimit.record(ip);
-        throw new HttpError(404, "找不到這個連結請求，可能已過期");
+        throw new HttpError(404, msg("link.notFoundExpired"));
       }
       const status = statusOf(req);
       if (status === "approved" && req.state.kind === "approved") return claim(req, req.state.userId);
@@ -249,9 +250,9 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
     decide(rawCode, principal, decision) {
       const req = lookup(rawCode, principal);
       const status = statusOf(req);
-      if (status === "expired") throw new HttpError(410, "這個請求已經過期，請回到 App 重新開始");
-      if (status !== "pending") throw new HttpError(409, "這個請求已經處理過了");
-      if (decision === "approve" && principal.role !== "admin") throw new HttpError(403, "只有管理員可以允許其他 App 連線");
+      if (status === "expired") throw new HttpError(410, msg("link.expired"));
+      if (status !== "pending") throw new HttpError(409, msg("link.alreadyHandled"));
+      if (decision === "approve" && principal.role !== "admin") throw new HttpError(403, msg("link.adminOnly"));
       req.state = decision === "approve" ? { kind: "approved", userId: principal.userId } : { kind: "denied" };
       return toDto(req);
     },

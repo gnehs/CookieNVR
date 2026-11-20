@@ -4,6 +4,7 @@ import { HttpError } from "./errors.ts";
 import { parseCameraConfig, parseConnection } from "./parse.ts";
 import { json, noContent } from "./respond.ts";
 import { asObject, readJson, str } from "./validate.ts";
+import { msg } from "../messages/index.ts";
 
 export interface CameraDeps {
   cameras: CameraStore;
@@ -44,14 +45,14 @@ const parseGroupName = (value: unknown): string => str(asObject(value), "name", 
 export function parseArrangement(value: unknown): CameraArrangement {
   const body = asObject(value);
   const { groups, cameras } = body;
-  if (!Array.isArray(groups) || !groups.every((g) => typeof g === "string")) throw new HttpError(400, "欄位 groups 必須是字串陣列");
-  if (!Array.isArray(cameras)) throw new HttpError(400, "欄位 cameras 必須是陣列");
+  if (!Array.isArray(groups) || !groups.every((g) => typeof g === "string")) throw new HttpError(400, msg("field.notStringArray", { path: "groups" }));
+  if (!Array.isArray(cameras)) throw new HttpError(400, msg("field.notArray", { path: "cameras" }));
   return {
     groups: groups as GroupId[],
     cameras: cameras.map((c, i) => {
-      const o = asObject(c, `cameras[${i}] `);
-      if (typeof o.id !== "string") throw new HttpError(400, `欄位 cameras[${i}].id 必須是字串`);
-      if (o.groupId !== null && typeof o.groupId !== "string") throw new HttpError(400, `欄位 cameras[${i}].groupId 必須是字串或 null`);
+      const o = asObject(c, `cameras[${i}]`);
+      if (typeof o.id !== "string") throw new HttpError(400, msg("field.notString", { path: `cameras[${i}].id` }));
+      if (o.groupId !== null && typeof o.groupId !== "string") throw new HttpError(400, msg("field.stringOrNull", { path: `cameras[${i}].groupId` }));
       return { id: o.id as CameraId, groupId: o.groupId as GroupId | null };
     }),
   };
@@ -69,13 +70,13 @@ export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeReco
 
   const find = (raw: string | undefined): Camera => {
     const camera = cameras.get((raw ?? "") as CameraId);
-    if (!camera) throw new HttpError(404, "找不到攝影機");
+    if (!camera) throw new HttpError(404, msg("http.cameraNotFound"));
     return camera;
   };
 
   const findGroup = (raw: string | undefined): CameraGroup => {
     const group = cameras.groups().find((g) => g.id === raw);
-    if (!group) throw new HttpError(404, "找不到這個分區");
+    if (!group) throw new HttpError(404, msg("http.groupNotFound"));
     return group;
   };
 
@@ -165,7 +166,7 @@ export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeReco
       access: "admin",
       handler(ctx) {
         const recordings = ctx.url.searchParams.get("recordings");
-        if (recordings !== null && recordings !== "delete") throw new HttpError(400, "recordings 只接受 delete");
+        if (recordings !== null && recordings !== "delete") throw new HttpError(400, msg("field.onlyValue", { path: "recordings", value: "delete" }));
         const { id } = find(ctx.params.id);
         cameras.remove(id);
         if (recordings === "delete") purgeRecordings(id);

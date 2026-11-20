@@ -1,6 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { i18n } from "@lingui/core";
 import { msg, plural, t } from "@lingui/core/macro";
+import { serverText } from "../server-text.ts";
 import { MIN_STATE_IMAGES_PER_CLASS, type CropBox, type FrigateConfigResultDto, type StateModelDto, type StateSensorDto } from "../../src/api-types.ts";
 
 // 狀態辨識介面的純邏輯：驗證、狀態文字、訓練進度與結果的白話說法、類別編輯的計畫、框選區域的幾何。
@@ -64,8 +65,8 @@ export type SensorView =
 export function sensorView(s: StateSensorDto): SensorView {
   const p = s.problem;
   if (p?.code === "disabled") return { kind: "paused", message: t`Detection paused` };
-  if (p?.code === "paused") return { kind: "paused", message: p.message };
-  if (p) return { kind: "problem", code: p.code, message: p.message };
+  if (p?.code === "paused") return { kind: "paused", message: serverText(p.msg, p.message) };
+  if (p) return { kind: "problem", code: p.code, message: serverText(p.msg, p.message) };
   const candidate = s.candidate && s.candidate.label !== s.state ? s.candidate.label : null;
   if (s.state !== null && s.since !== null) return { kind: "state", label: s.state, since: s.since, candidate };
   return { kind: "confirming", candidate };

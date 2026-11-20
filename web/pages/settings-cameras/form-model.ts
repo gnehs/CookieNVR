@@ -1,8 +1,9 @@
 import { plural, t } from "@lingui/core/macro";
-import type { StreamInfo } from "../../../src/api-types.ts";
+import type { ProbeResult, StreamInfo } from "../../../src/api-types.ts";
 import { detectConfigOf } from "../../../src/detect/config.ts";
 import type { CameraConfig, CameraConnection, DetectConfig, PtzPrefs } from "../../../src/types.ts";
 import { explainProbe, type ProbeField } from "../../camera-form-logic.ts";
+import { serverText } from "../../server-text.ts";
 import { sensitivityOf } from "../../detect/model.ts";
 
 /** 表單上的文字與開關欄位；偵測與鏡頭控制另外放，因為它們是整包存的 */
@@ -289,18 +290,23 @@ export function describeConn(conn: CameraConnection): string {
   return t`RTSP, host ${host}, transport ${transport}` + (extras.length ? `, ${extras.join(", ")}` : "");
 }
 
-function copyText(conn: CameraConnection, error: string, detail?: string): string {
+function copyText(conn: CameraConnection, failure: ProbeFailure): string {
   const camera = describeConn(conn);
+  const { detail } = failure;
+  const message = serverText(failure.errorMsg, failure.error);
+  const error = failure.stream === "sub" ? t`Low-quality stream: ${message}` : message;
   const lines = [t`CookieNVR camera connection test failed`, t`Camera: ${camera}`, t`Error: ${error}`];
   if (detail) lines.push(t`ffprobe output:`, detail);
   lines.push(t`(Username and password omitted)`);
   return lines.join("\n");
 }
 
+type ProbeFailure = Extract<ProbeResult, { ok: false }>;
+
 /** 測試連線失敗：錯誤掛在對應的欄位，原文只放進「複製錯誤內容」 */
-export function probeFailure(conn: CameraConnection, error: string, detail?: string): FormError {
+export function probeFailure(conn: CameraConnection, failure: ProbeFailure): FormError {
   const tapo = conn.type === "tapo";
-  const help = explainProbe(error, conn.type);
+  const help = explainProbe(failure, conn.type);
   const target: Record<NonNullable<ProbeField>, [FieldKey, FieldKey[]]> = {
     host: [tapo ? "tapoHost" : "mainUrl", []],
     url: [tapo ? "tapoHost" : "mainUrl", []],
@@ -311,7 +317,7 @@ export function probeFailure(conn: CameraConnection, error: string, detail?: str
     summary: help.field ? t`Couldn't reach this camera, so nothing was saved` : help.message,
     field: help.field ? { key: target[help.field][0], message: help.message, also: target[help.field][1] } : undefined,
     card: "conn",
-    copy: copyText(conn, error, detail),
+    copy: copyText(conn, failure),
   };
 }
 

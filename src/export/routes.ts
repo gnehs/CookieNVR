@@ -2,6 +2,7 @@ import { contentDisposition, isTimeZone } from "./filename.ts";
 import { ExportError, type Exports } from "./manager.ts";
 import { parseRange } from "../recording/routes.ts";
 import { HttpError } from "../http/errors.ts";
+import { msg } from "../messages/index.ts";
 import { json, noContent } from "../http/respond.ts";
 import { asObject, optStr, readJson, str } from "../http/validate.ts";
 import type { CameraId, Route } from "../types.ts";
@@ -11,7 +12,7 @@ const STATUS = { "not-found": 404, invalid: 400, empty: 422, busy: 429, disk: 50
 function timeMs(obj: Record<string, unknown>, key: string): number {
   const v = obj[key];
   if (typeof v !== "number" || !Number.isSafeInteger(v) || v < 0) {
-    throw new HttpError(400, `欄位 ${key} 必須是 UTC 毫秒的整數`);
+    throw new HttpError(400, msg("export.timeRange", { key }));
   }
   return v;
 }
@@ -19,7 +20,7 @@ function timeMs(obj: Record<string, unknown>, key: string): number {
 export function exportRoutes(exports: Exports): Route[] {
   const find = (id: string | undefined) => {
     const dto = exports.get(id ?? "");
-    if (!dto) throw new HttpError(404, "找不到這個匯出，可能已經過期");
+    if (!dto) throw new HttpError(404, msg("export.notFound"));
     return dto;
   };
   return [
@@ -30,7 +31,7 @@ export function exportRoutes(exports: Exports): Route[] {
       async handler({ req }) {
         const body = asObject(await readJson(req));
         const tz = optStr(body, "tz", { max: 64 }) ?? "UTC";
-        if (!isTimeZone(tz)) throw new HttpError(400, "欄位 tz 不是有效的時區");
+        if (!isTimeZone(tz)) throw new HttpError(400, msg("export.badTimeZone"));
         try {
           const dto = await exports.create({
             cameraId: str(body, "cameraId", { max: 64 }) as CameraId,
@@ -40,7 +41,7 @@ export function exportRoutes(exports: Exports): Route[] {
           });
           return json(dto, 201);
         } catch (e) {
-          if (e instanceof ExportError) throw new HttpError(STATUS[e.kind], e.message);
+          if (e instanceof ExportError) throw new HttpError(STATUS[e.kind], e.msg);
           throw e;
         }
       },
@@ -54,7 +55,7 @@ export function exportRoutes(exports: Exports): Route[] {
       handler({ req, params }) {
         const dto = find(params.id);
         const file = exports.file(dto.id);
-        if (!file) throw new HttpError(409, "匯出還沒有完成");
+        if (!file) throw new HttpError(409, msg("export.notReady"));
         const headers = new Headers({
           "Content-Type": "video/mp4",
           "Content-Disposition": contentDisposition(file.fileName),

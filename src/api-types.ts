@@ -1,11 +1,16 @@
+import type { Msg } from "./messages/index.ts";
 import type { OnvifErrorKind } from "./onvif/errors.ts";
+
+export type { Msg } from "./messages/index.ts";
 import type { CameraConfig, CameraId, DeviceRef, GroupId, PtzMode, PtzPrefs, Role, Settings, WorkerStatus } from "./types.ts";
 
 export const API_VERSION = 1;
 
-export interface ErrorDto {
-  error: string;
-}
+/**
+ * 錯誤回應：error 是中文（舊版用戶端照樣顯示），code 與 params 讓前端換成使用者的語言（見 src/messages/）。
+ * 帶訊息的 DTO 欄位同樣有一個 Msg 版本：`message` 對應 `msg`，其他欄位 `x` 對應 `xMsg`。
+ */
+export type ErrorDto = { error: string } & ({ code?: undefined; params?: undefined } | Msg);
 
 export interface InfoDto {
   version: string;
@@ -128,11 +133,21 @@ export interface StreamInfo {
 export type OnvifProbeDto =
   | { state: "unconfigured" }
   | { state: "available"; ptz: boolean; zoom: boolean; maxPresets: number | null }
-  | { state: "unavailable"; kind: OnvifErrorKind; message: string };
+  /** msg 是 message 的多語版本 */
+  | { state: "unavailable"; kind: OnvifErrorKind; message: string; msg: Msg };
 
 export type ProbeResult =
   | { ok: true; main: StreamInfo; sub: StreamInfo | null; snapshotJpegBase64: string | null; onvif: OnvifProbeDto }
-  | { ok: false; error: string; /** ffmpeg 原文的最後幾行，已遮住帳密 */ detail?: string };
+  | {
+      ok: false;
+      /** 中文，帶「主碼流：」「子碼流：」前綴 */
+      error: string;
+      /** error 的多語版本（不含碼流前綴），stream 說明是哪一路失敗 */
+      errorMsg: Msg;
+      stream: "main" | "sub";
+      /** ffmpeg 原文的最後幾行，已遮住帳密 */
+      detail?: string;
+    };
 
 export interface PtzPresetDto {
   token: string;
@@ -232,7 +247,8 @@ export type VideoCodecName = "h264" | "hevc";
 export type VideoDeviceKind = "intel" | "nvidia" | "apple";
 
 /** 一項試跑：ok 附耗時（毫秒，含啟動 ffmpeg）；失敗附白話原因與 ffmpeg 的訊息（只放診斷資訊） */
-export type CodecCheckDto = { ok: true; ms: number } | { ok: false; reason: string; detail: string };
+/** reasonMsg 是 reason 的訊息版本（見 src/messages/） */
+export type CodecCheckDto = { ok: true; ms: number } | { ok: false; reason: string; detail: string; reasonMsg: Msg };
 
 /**
  * 一張可做影片硬體解碼／編碼的顯示卡。id 和物件辨識的推論裝置同一套（intel:GPU.0、nvidia:GPU-<uuid>），
@@ -254,7 +270,8 @@ export interface CameraDecodeDto {
   cameraId: CameraId;
   device: string | null;
   confirmed: boolean;
-  fallback: { reason: string; detail: string } | null;
+  /** reasonMsg 是 reason 的訊息版本 */
+  fallback: { reason: string; detail: string; reasonMsg: Msg } | null;
 }
 
 export interface DecodeStatusDto {
@@ -263,6 +280,8 @@ export interface DecodeStatusDto {
   cameras: CameraDecodeDto[];
   /** 給狀態頁的一句話（例如「客廳改用處理器解碼：…」）；沒有退回時為 null */
   warning: string | null;
+  /** warning 的訊息版本 */
+  warningMsg: Msg | null;
 }
 
 /** GET /api/video-devices（管理員）；`?refresh=1` 重新試跑。第一次請求會等試跑完成（通常幾秒） */
@@ -295,8 +314,10 @@ export interface GpuDto {
   temperatureC: number | null;
   /** 有數值讀不到時給使用者看的一句話，例如「這張顯示卡不提供溫度」 */
   note: string | null;
-  /** 其他模組補充的資訊（例如物件辨識的推論速率），一行一筆 */
-  extras: { label: string; value: string }[];
+  /** note 的訊息版本 */
+  noteMsg: Msg | null;
+  /** 其他模組補充的資訊（例如物件辨識的推論速率），一行一筆；labelMsg、valueMsg 是 label、value 的訊息版本 */
+  extras: { label: string; value: string; labelMsg: Msg; valueMsg: Msg }[];
 }
 
 /** 沒有任何 GPU 時的原因：none = 沒有偵測到顯示卡；unreadable = 有顯示卡但讀不到（原因在診斷資訊） */
@@ -401,6 +422,8 @@ export interface ExportDto {
   ahead: number | null;
   sizeBytes: number | null;
   error: string | null;
+  /** error 的多語版本 */
+  errorMsg: Msg | null;
   fileName: string;
   createdAt: number;
   finishedAt: number | null;
@@ -516,10 +539,13 @@ export interface ObjectsStatusDto {
   /** 設定的裝置（auto、cpu 或識別字） */
   requested: DeviceRef;
   device: InferenceDeviceDto | null;
-  fallback: { reason: string; detail: string } | null;
+  /** reasonMsg 是 reason 的訊息版本 */
+  fallback: { reason: string; detail: string; reasonMsg: Msg } | null;
   /** 推論時間實際花在處理器上的比例（0 到 1）。顯示卡沒接手的運算會交回處理器；CPU 或量不到時為 null */
   cpuShare: number | null;
   error: string | null;
+  /** error 的訊息版本 */
+  errorMsg: Msg | null;
   /** 選用的模型；format 與 input 在載入後才知道 */
   model: { id: string; name: string; format: string | null; input: [number, number] | null };
   /** 最近 50 張的推論時間（毫秒，含 JPEG 解碼與前後處理）；還沒推論過為 null */
@@ -535,6 +561,8 @@ export interface ObjectsStatusDto {
   paused: "benchmark" | null;
   /** 負載過高的提醒（一般人看得懂的中文）；沒有問題為 null */
   warning: string | null;
+  /** warning 的訊息版本 */
+  warningMsg: Msg | null;
   gpu: GpuUsageDto | null;
 }
 
@@ -546,8 +574,12 @@ export interface BenchmarkResultDto {
   ok: boolean;
   /** 失敗時給使用者看的原因（例如顯示卡沒有實際執行模型）；沒有時只有 error */
   reason?: string;
+  /** reason 的訊息版本 */
+  reasonMsg?: Msg;
   /** 失敗時的技術訊息，只放在「詳細數字」 */
   error?: string;
+  /** error 的訊息版本（只有 detector 自己說得出的原因才有，例如找不到裝置） */
+  errorMsg?: Msg;
   loadMs?: number;
   frames?: number;
   fps?: number;
@@ -570,6 +602,8 @@ export interface BenchmarkDto {
   progress: { device: string; index: number; total: number; fraction: number } | null;
   results: BenchmarkResultDto[];
   error: string | null;
+  /** error 的訊息版本 */
+  errorMsg: Msg | null;
   /** 換了模型、或測過的裝置都不在了：結果可能不準 */
   stale: boolean;
   /** 對照目前設定（實際使用的裝置、目前的辨識頻率、開了物件辨識的攝影機數）：夠不夠用 */
@@ -594,6 +628,8 @@ export interface ObjectsDto {
   devices: InferenceDeviceDto[];
   /** 某一類裝置不能用的原因（例如映像沒有 Nvidia 元件、沒掛 /dev/dri）；可用為 null */
   unavailable: { intel: string | null; nvidia: string | null };
+  /** unavailable 的訊息版本 */
+  unavailableMsg: { intel: Msg | null; nvidia: Msg | null };
   benchmark: BenchmarkDto | null;
 }
 
@@ -716,8 +752,8 @@ export type StateJobKind = "collect" | "import" | "train";
 export type StateJobDto =
   | { kind: StateJobKind; state: "queued"; startedAt: number }
   | { kind: StateJobKind; state: "running"; startedAt: number; /** 0 到 1；不知道時為 null */ progress: number | null }
-  | { kind: StateJobKind; state: "done"; startedAt: number; finishedAt: number; message: string }
-  | { kind: StateJobKind; state: "failed"; startedAt: number; finishedAt: number; error: string };
+  | { kind: StateJobKind; state: "done"; startedAt: number; finishedAt: number; message: string; /** message 的 code 版本，前端依語言顯示 */ msg: Msg }
+  | { kind: StateJobKind; state: "failed"; startedAt: number; finishedAt: number; error: string; /** error 的 code 版本 */ errorMsg: Msg };
 
 /**
  * 感應器目前沒在辨識的原因（前端的白話提示用 message；code 給程式判斷）：
@@ -759,7 +795,8 @@ export interface StateSensorDto {
   trainable: boolean;
   /** 最近一次背景工作；從沒做過為 null */
   job: StateJobDto | null;
-  problem: { code: StateProblemCode; message: string } | null;
+  /** msg 是 message 的 code 版本，前端依語言顯示 */
+  problem: { code: StateProblemCode; message: string; msg: Msg } | null;
   createdAt: number;
 }
 

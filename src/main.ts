@@ -39,6 +39,7 @@ import {
   recordWorkerSpec,
   usageByRoot,
 } from "./recording/index.ts";
+import { msg } from "./messages/index.ts";
 import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore, followRecordingsDefault } from "./stores/index.ts";
@@ -340,7 +341,7 @@ function publishCameraChanges(): void {
 
 async function diagnostics(only: string | null): Promise<string> {
   const list = cameras.list();
-  if (only !== null && !list.some((c) => c.id === only)) throw new HttpError(404, "找不到攝影機");
+  if (only !== null && !list.some((c) => c.id === only)) throw new HttpError(404, msg("http.cameraNotFound"));
   const sys = await system();
   const hk = homekit.diagnostics();
   return buildDiagnostics({
@@ -396,7 +397,7 @@ const routes = [
     mergeConfig: (incoming, existing) => mergeCameraConfig(incoming, existing, settings.get().objects.enabled),
     supervisor: {
       restart(id, reason) {
-        if (!supervisor.status().some((w) => w.id === id)) throw new HttpError(404, "找不到這個 worker");
+        if (!supervisor.status().some((w) => w.id === id)) throw new HttpError(404, msg("http.workerNotFound"));
         supervisor.restart(id, reason);
       },
     },

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { join } from "node:path";
 import { readEnv } from "../env.ts";
+import { msg, zh } from "../messages/index.ts";
 import { explainFailure, probeCamera } from "./probe.ts";
 
 setDefaultTimeout(30_000);
@@ -11,22 +12,24 @@ const PASS = "p@ss#w&rd";
 const hasTools = Boolean(Bun.which(env.ffmpegBin) && Bun.which(env.ffprobeBin) && Bun.which(env.mediamtxBin));
 
 describe("explainFailure", () => {
-  test("把常見的 ffmpeg 錯誤轉成可讀的繁體中文", () => {
-    expect(explainFailure("Server returned 401 Unauthorized (authorization failed)", false, false)).toBe("帳號或密碼錯誤");
-    expect(explainFailure("Server returned 401 Unauthorized", false, true)).toContain("相機帳戶");
-    expect(explainFailure("Connection to tcp://x:554?timeout=0 failed: Connection refused", false, false)).toContain("連線被拒絕");
-    expect(explainFailure("method DESCRIBE failed: 404 Not Found", false, false)).toContain("找不到這個串流");
-    expect(explainFailure("Connection timed out", false, false)).toContain("逾時");
-    expect(explainFailure("", true, false)).toContain("逾時");
-    expect(explainFailure("Connection to tcp://10.0.0.9:554?timeout=0 failed: Operation timed out", false, false)).toContain("逾時");
-    expect(explainFailure("[rtsp @ 0x1] Failed reading RTSP data: Operation timed out", false, true)).toContain("同時連線數已達上限");
-    expect(explainFailure("[rtsp @ 0x1] Failed reading RTSP data: Connection reset by peer", false, true)).toContain("同時連線數已達上限");
+  test("把常見的 ffmpeg 錯誤轉成穩定的 code，中文照舊", () => {
+    expect(explainFailure("Server returned 401 Unauthorized (authorization failed)", false, false)).toEqual(msg("probe.badCredentials"));
+    expect(zh(explainFailure("Server returned 401 Unauthorized (authorization failed)", false, false))).toBe("帳號或密碼錯誤");
+    expect(explainFailure("Server returned 401 Unauthorized", false, true).code).toBe("probe.badCredentialsTapo");
+    expect(zh(explainFailure("Server returned 401 Unauthorized", false, true))).toContain("相機帳戶");
+    expect(explainFailure("Connection to tcp://x:554?timeout=0 failed: Connection refused", false, false).code).toBe("probe.refused");
+    expect(explainFailure("method DESCRIBE failed: 404 Not Found", false, false).code).toBe("probe.notFound");
+    expect(explainFailure("Connection timed out", false, false).code).toBe("probe.timeout");
+    expect(explainFailure("", true, false).code).toBe("probe.timeout");
+    expect(explainFailure("Connection to tcp://10.0.0.9:554?timeout=0 failed: Operation timed out", false, false).code).toBe("probe.timeout");
+    expect(explainFailure("[rtsp @ 0x1] Failed reading RTSP data: Operation timed out", false, true).code).toBe("probe.noVideo");
+    expect(zh(explainFailure("[rtsp @ 0x1] Failed reading RTSP data: Connection reset by peer", false, true))).toContain("同時連線數已達上限");
   });
 
   test("埠號裡的數字不會被當成 HTTP 狀態碼", () => {
-    expect(explainFailure("rtsp://h:4010/x: Invalid data found", false, false)).toBe(
-      "無法讀取串流：rtsp://h:4010/x: Invalid data found",
-    );
+    const m = explainFailure("rtsp://h:4010/x: Invalid data found", false, false);
+    expect(m).toEqual(msg("probe.readFailed", { line: "rtsp://h:4010/x: Invalid data found" }));
+    expect(zh(m)).toBe("無法讀取串流：rtsp://h:4010/x: Invalid data found");
   });
 });
 
@@ -75,7 +78,7 @@ describe.skipIf(!hasTools)("probeCamera（需要 ffmpeg 與 mediamtx）", () => 
 
   test("密碼錯誤回報帳號或密碼錯誤", async () => {
     const result = await probeCamera({ type: "rtsp", transport: "tcp", mainUrl: fakeUrl("/stream1", "wrong") }, env);
-    expect(result).toMatchObject({ ok: false, error: "主碼流：帳號或密碼錯誤" });
+    expect(result).toMatchObject({ ok: false, error: "主碼流：帳號或密碼錯誤", errorMsg: msg("probe.badCredentials"), stream: "main" });
   });
 
   test("通用 RTSP 的子碼流失敗要回報，並標明是子碼流", async () => {
@@ -83,7 +86,7 @@ describe.skipIf(!hasTools)("probeCamera（需要 ffmpeg 與 mediamtx）", () => 
       { type: "rtsp", transport: "tcp", mainUrl: fakeUrl("/stream1"), subUrl: fakeUrl("/nope") },
       env,
     );
-    expect(result).toMatchObject({ ok: false, error: "子碼流：找不到這個串流，請檢查網址路徑是否正確" });
+    expect(result).toMatchObject({ ok: false, error: "子碼流：找不到這個串流，請檢查網址路徑是否正確", errorMsg: msg("probe.notFound"), stream: "sub" });
   });
 
   test("不存在的位址在逾時前就回報連線被拒絕，且不洩漏密碼", async () => {
@@ -94,6 +97,7 @@ describe.skipIf(!hasTools)("probeCamera（需要 ffmpeg 與 mediamtx）", () => 
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toContain("連線被拒絕");
+      expect(result.errorMsg.code).toBe("probe.refused");
       expect(result.error).not.toContain(PASS);
     }
   });
@@ -152,6 +156,9 @@ describe.skipIf(!hasTools)("probeCamera（需要 ffmpeg 與 mediamtx）", () => 
       { ...env, ffprobeBin: "/nonexistent/ffprobe" },
     );
     expect(result).toMatchObject({ ok: false });
-    if (!result.ok) expect(result.error).toContain("找不到 ffprobe");
+    if (!result.ok) {
+      expect(result.error).toContain("找不到 ffprobe");
+      expect(result.errorMsg.code).toBe("probe.noFfprobe");
+    }
   });
 });

@@ -21,6 +21,7 @@ import {
 import { chunksOf, MsgReader } from "../detect/protocol.ts";
 import type { Env } from "../env.ts";
 import { HttpError } from "../http/errors.ts";
+import { msg, type Msg, zh } from "../messages/index.ts";
 import { asObject, readJson } from "../http/validate.ts";
 import type { Camera, CameraId, Route, WorkerSpec } from "../types.ts";
 import { samplePoints } from "./collect.ts";
@@ -59,7 +60,7 @@ type Phase =
   | { tag: "starting" }
   | { tag: "loading"; since: number }
   | { tag: "ready"; backbone: string; loadMs: number }
-  | { tag: "error"; message: string; detail: string | null };
+  | { tag: "error"; message: string; msg: Msg; detail: string | null };
 
 interface Runtime {
   row: SensorRow;
@@ -231,32 +232,32 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   function onMessage(kind: number, payload: Uint8Array): void {
     lastMsgAt = now();
-    const msg = parseWorkerMsg(kind, payload);
-    if (!msg) return;
-    switch (msg.type) {
+    const m = parseWorkerMsg(kind, payload);
+    if (!m) return;
+    switch (m.type) {
       case "loading":
         phase = { tag: "loading", since: now() };
         break;
       case "ready":
-        phase = { tag: "ready", backbone: msg.backbone, loadMs: msg.loadMs };
+        phase = { tag: "ready", backbone: m.backbone, loadMs: m.loadMs };
         refreshProblems();
         pump();
         break;
       case "error":
-        phase = { tag: "error", message: msg.error, detail: msg.detail };
-        failJobs("狀態辨識程序無法啟動");
+        phase = { tag: "error", message: m.error, msg: m.errorMsg, detail: m.detail };
+        failJobs(msg("states.workerStartFailed"));
         refreshProblems();
         break;
       case "heartbeat":
         break;
       case "reading":
-        onReading(msg.reading);
+        onReading(m.reading);
         break;
       case "job-progress":
-        onJobProgress(msg.job, msg.progress);
+        onJobProgress(m.job, m.progress);
         break;
       case "job-result":
-        void onJobResult(msg.job, msg.ok ? { ok: true, result: msg.result } : { ok: false, error: msg.error }).catch(report);
+        void onJobResult(m.job, m.ok ? { ok: true, result: m.result } : { ok: false, error: m.errorMsg }).catch(report);
         break;
     }
   }
@@ -269,7 +270,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     reader = new MsgReader();
     phase = needsWorker() ? { tag: "starting" } : { tag: "off" };
     for (const rt of sensors.values()) {
-      if (rt.jobId !== null && sentJobs.has(rt.jobId)) finishJob(rt, { ok: false, error: "狀態辨識程序重新啟動，工作中斷，請再試一次" });
+      if (rt.jobId !== null && sentJobs.has(rt.jobId)) finishJob(rt, { ok: false, error: msg("states.workerRestarted") });
     }
     sentJobs.clear();
   }
@@ -288,7 +289,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         },
         data(socket, chunk) {
           if (socket !== conn) return;
-          for (const msg of reader.push(chunk)) onMessage(msg.kind, msg.payload);
+          for (const frame of reader.push(chunk)) onMessage(frame.kind, frame.payload);
         },
         drain(socket) {
           if (socket !== conn || !unsent) return;
@@ -337,17 +338,20 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   // ─── 辨識 ───
 
-  function problemOf(rt: Runtime): { code: StateProblemCode; message: string } | null {
+  function problemOf(rt: Runtime): StateSensorDto["problem"] {
+    const p = (code: StateProblemCode, m: Msg) => ({ code, message: zh(m), msg: m });
     const { config } = rt.row;
-    if (!config.enabled) return { code: "disabled", message: "已暫停辨識" };
-    if (!rt.model) return { code: "untrained", message: "還沒訓練：標記每一類的畫面後按「訓練」" };
-    if (!sameSet(rt.model.classes, config.classes)) return { code: "stale-model", message: "類別改過了，要重新訓練才會繼續辨識" };
-    if (phase.tag === "error") return { code: "worker", message: `狀態辨識程序無法啟動：${phase.message}` };
-    if (phase.tag !== "ready") return { code: "worker", message: "狀態辨識程序啟動中" };
+    if (!config.enabled) return p("disabled", msg("states.problemDisabled"));
+    if (!rt.model) return p("untrained", msg("states.problemUntrained"));
+    if (!sameSet(rt.model.classes, config.classes)) return p("stale-model", msg("states.problemStaleModel"));
+    if (phase.tag === "error") {
+      return p("worker", phase.msg.code === "states.backboneLoadFailed" ? msg("states.problemBackboneFailed") : msg("states.problemWorkerFailed", { text: phase.message }));
+    }
+    if (phase.tag !== "ready") return p("worker", msg("states.problemWorkerStarting"));
     const camera = opts.cameras().find((c) => c.id === rt.row.cameraId);
     const seen = lastJpegAt.get(rt.row.cameraId) ?? 0;
-    if (!camera?.config.enabled || now() - seen > FRAME_MAX_AGE_MS) return { code: "camera-off", message: "攝影機沒有畫面" };
-    if (now() - rt.blockedAt < BLOCKED_HOLD_MS) return { code: "paused", message: "鏡頭移動中或畫面亮度突變，暫停辨識" };
+    if (!camera?.config.enabled || now() - seen > FRAME_MAX_AGE_MS) return p("camera-off", msg("states.problemCameraOff"));
+    if (now() - rt.blockedAt < BLOCKED_HOLD_MS) return p("paused", msg("states.problemPaused"));
     return null;
   }
 
@@ -506,7 +510,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
   // ─── 背景工作 ───
 
   function startJob(rt: Runtime, kind: StateJobKind, build: (job: number) => WorkerJob): void {
-    if (jobActive(rt)) throw new HttpError(409, "這個感應器正在進行其他工作，請等它完成");
+    if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
     const job = nextId++;
     rt.job = { kind, state: "queued", startedAt: now() };
     rt.jobId = job;
@@ -517,10 +521,12 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     pump();
   }
 
-  function finishJob(rt: Runtime, result: { ok: true; message: string } | { ok: false; error: string }): void {
+  function finishJob(rt: Runtime, result: { ok: true; msg: Msg } | { ok: false; error: Msg }): void {
     if (!rt.job) return;
     const base = { kind: rt.job.kind, startedAt: rt.job.startedAt, finishedAt: now() };
-    rt.job = result.ok ? { ...base, state: "done", message: result.message } : { ...base, state: "failed", error: result.error };
+    rt.job = result.ok
+      ? { ...base, state: "done", message: zh(result.msg), msg: result.msg }
+      : { ...base, state: "failed", error: zh(result.error), errorMsg: result.error };
     if (rt.jobId !== null) {
       jobOwners.delete(rt.jobId);
       sentJobs.delete(rt.jobId);
@@ -530,7 +536,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     opts.onWorkersChanged();
   }
 
-  function failJobs(error: string): void {
+  function failJobs(error: Msg): void {
     for (const rt of sensors.values()) if (jobActive(rt)) finishJob(rt, { ok: false, error });
     jobQueue.length = 0;
   }
@@ -542,7 +548,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     if (now() - rt.publishedAt >= PROGRESS_PUSH_MS) publishSensor(rt);
   }
 
-  async function onJobResult(job: number, r: { ok: true; result: Record<string, unknown> } | { ok: false; error: string }): Promise<void> {
+  async function onJobResult(job: number, r: { ok: true; result: Record<string, unknown> } | { ok: false; error: Msg }): Promise<void> {
     const sensorId = jobOwners.get(job);
     const rt = sensorId ? sensors.get(sensorId) : undefined;
     if (!rt || rt.jobId !== job || !rt.job) {
@@ -551,22 +557,22 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     }
     if (!r.ok) return finishJob(rt, { ok: false, error: r.error });
     try {
-      finishJob(rt, { ok: true, message: applyJobResult(rt, rt.job.kind, r.result) });
+      finishJob(rt, { ok: true, msg: applyJobResult(rt, rt.job.kind, r.result) });
     } catch (e) {
-      finishJob(rt, { ok: false, error: e instanceof Error ? e.message : String(e) });
+      finishJob(rt, { ok: false, error: e instanceof HttpError ? e.msg : msg("raw", { text: e instanceof Error ? e.message : String(e) }) });
     }
   }
 
-  function applyJobResult(rt: Runtime, kind: StateJobKind, result: Record<string, unknown>): string {
+  function applyJobResult(rt: Runtime, kind: StateJobKind, result: Record<string, unknown>): Msg {
     const sensorId = rt.row.id;
     const at = now();
     if (kind === "train") {
       rt.model = readModel(sensorId);
-      if (!rt.model) throw new Error("訓練完成但讀不到模型檔");
+      if (!rt.model) throw new HttpError(500, msg("states.modelMissing"));
       rt.consensus = UNKNOWN;
       rt.fresh = true;
       const v = rt.model.validation;
-      return v ? `訓練完成，用標記的畫面驗證答對 ${Math.round(v.accuracy * 1000) / 10}%` : "訓練完成（每一類至少要 2 張才能估計準確度）";
+      return v ? msg("states.trainDone", { accuracy: Math.round(v.accuracy * 1000) / 10 }) : msg("states.trainDoneNoValidation");
     }
     if (kind === "collect") {
       const images = (result.images as { file: string; at: number | null }[] | undefined) ?? [];
@@ -574,8 +580,8 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         db,
         images.map((im, i) => ({ id: im.file.replace(/\.[^.]+$/, ""), sensorId, file: im.file, label: null, source: "recording", createdAt: at - i, guess: null })),
       );
-      if (!images.length) throw new Error("從錄影抽不到畫面，錄影檔可能還沒寫完或已被清除");
-      return `從錄影挑了 ${images.length} 張畫面放進待標記`;
+      if (!images.length) throw new HttpError(500, msg("states.collectNoFrames"));
+      return msg("states.collectDone", { count: images.length });
     }
     const labeled = (result.labeled as { file: string; label: string }[] | undefined) ?? [];
     const pendingImages = (result.pending as { file: string; guess: { label: string; score: number } | null }[] | undefined) ?? [];
@@ -591,11 +597,8 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       ...pendingImages.map((p, i) => ({ id: p.file.replace(/\.[^.]+$/, ""), sensorId, file: p.file, label: null, source: "import" as const, createdAt: at - labeled.length - i, guess: p.guess })),
     ];
     store.insertImages(db, rows);
-    if (!rows.length) throw new Error("zip 裡找不到可以用的圖片（需要 <名稱>/dataset/<類別>/ 或 <名稱>/train/ 底下的 png、jpg、webp）");
-    const parts = [`匯入 ${labeled.length} 張已標記、${pendingImages.length} 張待標記的圖片`];
-    if (added.length) parts.push(`新增類別：${added.join("、")}`);
-    if (skipped) parts.push(`${skipped} 張無法讀取已略過`);
-    return parts.join("；");
+    if (!rows.length) throw new HttpError(500, msg("states.importNoImages"));
+    return msg("states.importDone", { labeled: labeled.length, pending: pendingImages.length, added, skipped });
   }
 
   // ─── 設定與圖片 ───
@@ -613,9 +616,9 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   function renameClass(rt: Runtime, from: string, to: string): void {
     const { config } = rt.row;
-    if (!config.classes.includes(from)) throw new HttpError(400, `沒有「${from}」這個類別`);
+    if (!config.classes.includes(from)) throw new HttpError(400, msg("states.classNotFound", { name: from }));
     if (from === to) return;
-    if (config.classes.includes(to)) throw new HttpError(400, `已經有「${to}」這個類別`);
+    if (config.classes.includes(to)) throw new HttpError(400, msg("states.classExists", { name: to }));
     const swap = (c: string) => (c === from ? to : c);
     rt.row = { ...rt.row, config: { ...config, classes: config.classes.map(swap) } };
     db.transaction(() => {
@@ -657,13 +660,13 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   function sensorOf(raw: string | undefined): Runtime {
     const rt = sensors.get((raw ?? "") as SensorId);
-    if (!rt) throw new HttpError(404, "找不到這個狀態感應器");
+    if (!rt) throw new HttpError(404, msg("states.sensorNotFound"));
     return rt;
   }
 
   function idList(v: unknown): string[] {
     if (!Array.isArray(v) || v.length === 0 || v.length > 1000 || !v.every((x) => typeof x === "string" && /^[0-9a-f]{1,32}$/.test(x))) {
-      throw new HttpError(400, "ids 必須是 1 到 1000 個圖片 id");
+      throw new HttpError(400, msg("states.idsInvalid"));
     }
     return v as string[];
   }
@@ -671,7 +674,8 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
   function startCollect(rt: Runtime): void {
     const points = samplePoints(opts.segments(rt.row.cameraId), COLLECT_POINTS);
     if (!points.length) {
-      rt.job = { kind: "collect", state: "failed", startedAt: now(), finishedAt: now(), error: "這台還沒有錄影可以抽樣；等錄一段時間後再試，或匯入資料集" };
+      const noRec = msg("states.collectNoRecordings");
+      rt.job = { kind: "collect", state: "failed", startedAt: now(), finishedAt: now(), error: zh(noRec), errorMsg: noRec };
       publishSensor(rt);
       return;
     }
@@ -681,22 +685,22 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   async function saveUpload(req: Request, path: string): Promise<void> {
     const declared = Number(req.headers.get("content-length") ?? 0);
-    if (declared > MAX_IMPORT_BYTES) throw new HttpError(413, "檔案太大，上限 100 MB");
-    if (!req.body) throw new HttpError(400, "沒有收到檔案");
+    if (declared > MAX_IMPORT_BYTES) throw new HttpError(413, msg("states.fileTooLarge"));
+    if (!req.body) throw new HttpError(400, msg("states.noFile"));
     const sink = Bun.file(path).writer();
     let size = 0;
     try {
       for await (const chunk of chunksOf(req.body)) {
         size += chunk.length;
-        if (size > MAX_IMPORT_BYTES) throw new HttpError(413, "檔案太大，上限 100 MB");
+        if (size > MAX_IMPORT_BYTES) throw new HttpError(413, msg("states.fileTooLarge"));
         sink.write(chunk);
       }
     } finally {
       await sink.end();
     }
-    if (size < 22) throw new HttpError(400, "這不是 zip 檔");
+    if (size < 22) throw new HttpError(400, msg("states.notZip"));
     const head = new Uint8Array(await Bun.file(path).slice(0, 4).arrayBuffer());
-    if (head[0] !== 0x50 || head[1] !== 0x4b) throw new HttpError(400, "這不是 zip 檔");
+    if (head[0] !== 0x50 || head[1] !== 0x4b) throw new HttpError(400, msg("states.notZip"));
   }
 
   function json(data: unknown, status = 200): Response {
@@ -721,7 +725,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         async handler({ req }) {
           const body = asObject(await readJson(req));
           const cameraId = body.cameraId as CameraId;
-          if (typeof cameraId !== "string" || !opts.cameras().some((c) => c.id === cameraId)) throw new HttpError(400, "找不到這台攝影機");
+          if (typeof cameraId !== "string" || !opts.cameras().some((c) => c.id === cameraId)) throw new HttpError(400, msg("states.cameraNotFound"));
           const config = parseSensorConfig(body.config);
           const row: SensorRow = { id: store.newSensorId(), cameraId, config, createdAt: now() };
           store.insertSensor(db, row);
@@ -738,7 +742,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         access: "admin",
         async handler({ req }) {
           const body = asObject(await readJson(req));
-          if (typeof body.yaml !== "string" || body.yaml.length > 200_000) throw new HttpError(400, "yaml 必須是字串");
+          if (typeof body.yaml !== "string" || body.yaml.length > 200_000) throw new HttpError(400, msg("states.yamlNotString"));
           return json(parseFrigateConfig(body.yaml));
         },
       },
@@ -772,7 +776,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         async handler({ req, params }) {
           const rt = sensorOf(params.id);
           const body = asObject(await readJson(req));
-          renameClass(rt, parseClassName(body.from), parseClassName(body.to, "新的類別名稱"));
+          renameClass(rt, parseClassName(body.from), parseClassName(body.to, true));
           publishSensor(rt);
           return json(dto(rt));
         },
@@ -783,7 +787,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         access: "admin",
         handler({ params }) {
           const rt = sensorOf(params.id);
-          if (jobActive(rt)) throw new HttpError(409, "這個感應器正在進行其他工作，請等它完成");
+          if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
           startCollect(rt);
           return json(dto(rt), 202);
         },
@@ -795,7 +799,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         handler({ params }) {
           const rt = sensorOf(params.id);
           const d = dto(rt);
-          if (!d.trainable) throw new HttpError(400, `每一類至少要有 ${MIN_STATE_IMAGES_PER_CLASS} 張已標記的圖片才能訓練`);
+          if (!d.trainable) throw new HttpError(400, msg("states.notTrainable", { min: MIN_STATE_IMAGES_PER_CLASS }));
           const { classes } = rt.row.config;
           const items = store
             .listImages(db, rt.row.id)
@@ -813,7 +817,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         accepts: ["application/zip", "application/x-zip-compressed", "application/octet-stream"],
         async handler({ req, params }) {
           const rt = sensorOf(params.id);
-          if (jobActive(rt)) throw new HttpError(409, "這個感應器正在進行其他工作，請等它完成");
+          if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
           mkdirSync(imagesDir(rt.row.id), { recursive: true });
           const zip = join(sensorDir(rt.row.id), `import-${randomId()}.zip`);
           try {
@@ -851,7 +855,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         handler({ params }) {
           const rt = sensorOf(params.id);
           const im = store.getImage(db, rt.row.id, params.imageId ?? "");
-          if (!im) throw new HttpError(404, "找不到這張圖片");
+          if (!im) throw new HttpError(404, msg("states.imageNotFound"));
           const file = Bun.file(join(imagesDir(rt.row.id), im.file));
           return new Response(file, { headers: { "Content-Type": CONTENT_TYPES[extname(im.file).toLowerCase()] ?? "application/octet-stream", "Cache-Control": "private, max-age=86400, immutable" } });
         },
@@ -865,7 +869,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
           const body = asObject(await readJson(req));
           const ids = idList(body.ids);
           const label = body.label === null ? null : parseClassName(body.label);
-          if (label !== null && !rt.row.config.classes.includes(label)) throw new HttpError(400, `沒有「${label}」這個類別`);
+          if (label !== null && !rt.row.config.classes.includes(label)) throw new HttpError(400, msg("states.classNotFound", { name: label }));
           store.setImageLabels(db, rt.row.id, ids, label);
           publishSensor(rt);
           return json(dto(rt));
@@ -907,7 +911,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         async handler({ params }) {
           const c = /^\d+$/.test(params.id ?? "") ? store.getChange(db, Number(params.id)) : null;
           const file = c?.hasThumb ? Bun.file(thumbPath(c.sensorId, c.id)) : null;
-          if (!file || !(await file.exists())) throw new HttpError(404, "沒有縮圖");
+          if (!file || !(await file.exists())) throw new HttpError(404, msg("states.noThumb"));
           return new Response(file, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=86400, immutable" } });
         },
       },

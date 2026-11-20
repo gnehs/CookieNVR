@@ -2,6 +2,7 @@ import type { OnvifProbeDto } from "../api-types.ts";
 import { isOnvifError, OnvifClient, OnvifError } from "../onvif/index.ts";
 import type { CameraConnection } from "../types.ts";
 import { onvifEndpointOf } from "./config.ts";
+import { zh } from "../messages/index.ts";
 import { describeOnvifError } from "./errors.ts";
 
 export interface OnvifProbeOptions {
@@ -32,7 +33,8 @@ export async function probeOnvif(conn: CameraConnection, opts: OnvifProbeOptions
     };
   } catch (err) {
     const e = isOnvifError(err) ? err : new OnvifError("protocol", "探測失敗", "probe");
-    return { state: "unavailable", kind: e.kind, message: describeOnvifError(e).message };
+    const m = describeOnvifError(e).msg;
+    return { state: "unavailable", kind: e.kind, message: zh(m), msg: m };
   } finally {
     clearTimeout(timer);
   }

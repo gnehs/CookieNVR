@@ -133,7 +133,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
     try {
       if (plan.test) {
         const probe = await api.testCamera(plan.test);
-        if (!probe.ok) return dispatch({ type: "fail", error: probeFailure(plan.test, probe.error, probe.detail) });
+        if (!probe.ok) return dispatch({ type: "fail", error: probeFailure(plan.test, probe) });
         dispatch({ type: "submit", status: "saving" });
       }
       const cam = await api.updateCamera(camera.id, plan.config);

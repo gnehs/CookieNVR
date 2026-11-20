@@ -1,4 +1,5 @@
 import { HttpError } from "../http/errors.ts";
+import { msg } from "../messages/index.ts";
 import {
   getPresets,
   gotoPreset,
@@ -91,8 +92,8 @@ interface Entry {
 
 const keyOf = (e: OnvifEndpoint) => JSON.stringify([e.host, e.port, e.username, e.password]);
 
-const noOnvif = () => new HttpError(409, "這台相機沒有設定 ONVIF，無法控制鏡頭");
-const noPtz = () => new HttpError(409, "這台相機沒有鏡頭控制功能");
+const noOnvif = () => new HttpError(409, msg("ptz.noOnvif"));
+const noPtz = () => new HttpError(409, msg("ptz.noPtz"));
 
 export function createPtzHub(opts: PtzHubOptions): PtzHub {
   const now = opts.now ?? Date.now;
@@ -102,7 +103,7 @@ export function createPtzHub(opts: PtzHubOptions): PtzHub {
 
   function camera(id: CameraId): Camera {
     const c = opts.cameras.get(id);
-    if (!c) throw new HttpError(404, "找不到攝影機");
+    if (!c) throw new HttpError(404, msg("ptz.cameraNotFound"));
     return c;
   }
 
@@ -206,9 +207,9 @@ export function createPtzHub(opts: PtzHubOptions): PtzHub {
       const { c, entry, caps } = await requirePtz(id);
       const prefs = ptzPrefsOf(c.config);
       const mode = move.mode ?? prefs.mode;
-      if (move.zoom !== 0 && !caps.zoom) throw new HttpError(409, "這台相機沒有變焦功能");
-      if (mode === "continuous" && !caps.continuous) throw new HttpError(409, "這台相機不支援持續移動，請改用微調或自動模式");
-      if (mode === "relative" && !caps.relative) throw new HttpError(409, "這台相機不支援微調，請改用持續移動或自動模式");
+      if (move.zoom !== 0 && !caps.zoom) throw new HttpError(409, msg("ptz.noZoom"));
+      if (mode === "continuous" && !caps.continuous) throw new HttpError(409, msg("ptz.noContinuous"));
+      if (mode === "relative" && !caps.relative) throw new HttpError(409, msg("ptz.noRelative"));
       const controller = controllerFor(id, entry, mode);
       const kind = await call(entry, () => controller.move(orientMove(move, prefs), move.speed ?? prefs.speed));
       if (kind === "continuous") motion.continuousMove(id);
@@ -233,9 +234,9 @@ export function createPtzHub(opts: PtzHubOptions): PtzHub {
       const { entry, caps } = await requirePtz(id);
       const existing = await call(entry, () => getPresets(entry.client));
       if (token !== undefined) {
-        if (!existing.some((p) => p.token === token)) throw new HttpError(404, "找不到這個預置點");
+        if (!existing.some((p) => p.token === token)) throw new HttpError(404, msg("ptz.presetNotFound"));
       } else if (caps.maxPresets !== null && existing.length >= caps.maxPresets) {
-        throw new HttpError(409, `預置點已滿，這台相機最多 ${caps.maxPresets} 個，請先刪除一個`);
+        throw new HttpError(409, msg("ptz.presetsFull", { max: caps.maxPresets }));
       }
       const saved = await call(entry, () => setPreset(entry.client, name, token));
       return { token: saved, presets: await call(entry, () => getPresets(entry.client)) };
@@ -244,7 +245,7 @@ export function createPtzHub(opts: PtzHubOptions): PtzHub {
     async removePreset(id, token) {
       const { entry } = await requirePtz(id);
       const existing = await call(entry, () => getPresets(entry.client));
-      if (!existing.some((p) => p.token === token)) throw new HttpError(404, "找不到這個預置點");
+      if (!existing.some((p) => p.token === token)) throw new HttpError(404, msg("ptz.presetNotFound"));
       await call(entry, () => removePreset(entry.client, token));
       return call(entry, () => getPresets(entry.client));
     },
