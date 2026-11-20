@@ -23,6 +23,7 @@ import { Route as AuthedLinkIndexRouteImport } from './routes/_authed/link/index
 import { Route as AuthedLinkCodeRouteImport } from './routes/_authed/link/$code'
 import { Route as AuthedShellCamerasIndexRouteImport } from './routes/_authed/_shell/cameras/index'
 import { Route as AuthedShellCamerasIdRouteImport } from './routes/_authed/_shell/cameras/$id'
+import { Route as AuthedShellSettingsObjectsRouteImport } from './routes/_authed/_shell/settings/objects'
 import { Route as AuthedShellSettingsStatusRouteImport } from './routes/_authed/_shell/settings/status'
 import { Route as AuthedShellSettingsStorageRouteImport } from './routes/_authed/_shell/settings/storage'
 import { Route as AuthedShellSettingsSystemRouteImport } from './routes/_authed/_shell/settings/system'
@@ -102,6 +103,12 @@ const AuthedShellCamerasIdRoute = AuthedShellCamerasIdRouteImport.update({
   path: '/cameras/$id',
   getParentRoute: () => AuthedShellRoute,
 } as any)
+const AuthedShellSettingsObjectsRoute =
+  AuthedShellSettingsObjectsRouteImport.update({
+    id: '/objects',
+    path: '/objects',
+    getParentRoute: () => AuthedShellSettingsRouteRoute,
+  } as any)
 const AuthedShellSettingsStatusRoute =
   AuthedShellSettingsStatusRouteImport.update({
     id: '/status',
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/link/$code': typeof AuthedLinkCodeRoute
   '/link/': typeof AuthedLinkIndexRoute
   '/cameras/$id': typeof AuthedShellCamerasIdRoute
+  '/settings/objects': typeof AuthedShellSettingsObjectsRoute
   '/settings/status': typeof AuthedShellSettingsStatusRoute
   '/settings/storage': typeof AuthedShellSettingsStorageRoute
   '/settings/system': typeof AuthedShellSettingsSystemRoute
@@ -192,6 +200,7 @@ export interface FileRoutesByTo {
   '/link/$code': typeof AuthedLinkCodeRoute
   '/link': typeof AuthedLinkIndexRoute
   '/cameras/$id': typeof AuthedShellCamerasIdRoute
+  '/settings/objects': typeof AuthedShellSettingsObjectsRoute
   '/settings/status': typeof AuthedShellSettingsStatusRoute
   '/settings/storage': typeof AuthedShellSettingsStorageRoute
   '/settings/system': typeof AuthedShellSettingsSystemRoute
@@ -218,6 +227,7 @@ export interface FileRoutesById {
   '/_authed/link/$code': typeof AuthedLinkCodeRoute
   '/_authed/link/': typeof AuthedLinkIndexRoute
   '/_authed/_shell/cameras/$id': typeof AuthedShellCamerasIdRoute
+  '/_authed/_shell/settings/objects': typeof AuthedShellSettingsObjectsRoute
   '/_authed/_shell/settings/status': typeof AuthedShellSettingsStatusRoute
   '/_authed/_shell/settings/storage': typeof AuthedShellSettingsStorageRoute
   '/_authed/_shell/settings/system': typeof AuthedShellSettingsSystemRoute
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/link/$code'
     | '/link/'
     | '/cameras/$id'
+    | '/settings/objects'
     | '/settings/status'
     | '/settings/storage'
     | '/settings/system'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/link/$code'
     | '/link'
     | '/cameras/$id'
+    | '/settings/objects'
     | '/settings/status'
     | '/settings/storage'
     | '/settings/system'
@@ -291,6 +303,7 @@ export interface FileRouteTypes {
     | '/_authed/link/$code'
     | '/_authed/link/'
     | '/_authed/_shell/cameras/$id'
+    | '/_authed/_shell/settings/objects'
     | '/_authed/_shell/settings/status'
     | '/_authed/_shell/settings/storage'
     | '/_authed/_shell/settings/system'
@@ -410,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedShellCamerasIdRouteImport
       parentRoute: typeof AuthedShellRoute
     }
+    '/_authed/_shell/settings/objects': {
+      id: '/_authed/_shell/settings/objects'
+      path: '/objects'
+      fullPath: '/settings/objects'
+      preLoaderRoute: typeof AuthedShellSettingsObjectsRouteImport
+      parentRoute: typeof AuthedShellSettingsRouteRoute
+    }
     '/_authed/_shell/settings/status': {
       id: '/_authed/_shell/settings/status'
       path: '/status'
@@ -477,6 +497,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedShellSettingsRouteRouteChildren {
+  AuthedShellSettingsObjectsRoute: typeof AuthedShellSettingsObjectsRoute
   AuthedShellSettingsStatusRoute: typeof AuthedShellSettingsStatusRoute
   AuthedShellSettingsStorageRoute: typeof AuthedShellSettingsStorageRoute
   AuthedShellSettingsSystemRoute: typeof AuthedShellSettingsSystemRoute
@@ -490,6 +511,7 @@ interface AuthedShellSettingsRouteRouteChildren {
 
 const AuthedShellSettingsRouteRouteChildren: AuthedShellSettingsRouteRouteChildren =
   {
+    AuthedShellSettingsObjectsRoute: AuthedShellSettingsObjectsRoute,
     AuthedShellSettingsStatusRoute: AuthedShellSettingsStatusRoute,
     AuthedShellSettingsStorageRoute: AuthedShellSettingsStorageRoute,
     AuthedShellSettingsSystemRoute: AuthedShellSettingsSystemRoute,

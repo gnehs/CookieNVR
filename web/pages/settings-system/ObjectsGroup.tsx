@@ -81,7 +81,7 @@ function DeviceNotes({ data, device }: { data: ObjectsDto | undefined; device: s
   );
 }
 
-/** 「設定 → 一般」裡的物件辨識：系統層級的開關、推論裝置、辨識頻率、模型與測速。變更立刻生效，狀態每幾秒更新 */
+/** 「設定 → 物件辨識」：系統層級的開關、推論裝置、辨識頻率、模型與測速。變更立刻生效，狀態每幾秒更新 */
 export function ObjectsGroup({ settings }: { settings: Settings }) {
   const qc = useQueryClient();
   const objects = useQuery(objectsQuery(settings.objects.enabled));
@@ -106,7 +106,7 @@ export function ObjectsGroup({ settings }: { settings: Settings }) {
   if (!models.some((o) => o.value === cur.model)) models.push({ value: cur.model, label: `${cur.model}（找不到檔案）` });
 
   return (
-    <SettingsGroup title="物件辨識" className="obj-group">
+    <SettingsGroup className="obj-group">
       <SettingRow
         title="辨識畫面裡的人、車與動物"
         desc="開啟後，每台攝影機可以選擇只在看到人或車時才記錄事件。會多用一些電腦資源。"

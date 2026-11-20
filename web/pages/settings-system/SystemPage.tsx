@@ -14,7 +14,6 @@ import { toast } from "../../ui/toast.tsx";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
 import { ConnectedApps } from "./ConnectedApps.tsx";
 import { DecodeRow } from "./DecodeRow.tsx";
-import { ObjectsGroup } from "./ObjectsGroup.tsx";
 
 function More({ label, children }: { label: string; children: string }) {
   return (
@@ -103,7 +102,7 @@ function GeneralForm({ settings }: { settings: Settings }) {
   );
 }
 
-/** 設定 → 一般：站點名稱、其他 App 與 Apple 家庭的開關、連接其他 App，下面是物件辨識與影像解碼 */
+/** 設定 → 一般：站點名稱、其他 App 與 Apple 家庭的開關、連接其他 App 與影像解碼 */
 export function SystemPage() {
   const settings = useQuery(settingsQuery);
   let body;
@@ -114,10 +113,7 @@ export function SystemPage() {
       <div className="stack">
         <GeneralForm settings={settings.data} />
         <ConnectedApps />
-        <div>
-          <ObjectsGroup settings={settings.data} />
-          <DecodeRow settings={settings.data} />
-        </div>
+        <DecodeRow settings={settings.data} />
       </div>
     );
   return <SettingsLayout active="system">{body}</SettingsLayout>;

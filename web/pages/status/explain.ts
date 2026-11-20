@@ -5,7 +5,7 @@ import type { IconName } from "../../ui/icons.ts";
 import { CATEGORY_LABEL } from "./ResourcesCard.tsx";
 
 export type IssueTarget =
-  | { to: "/settings/system" | "/settings/storage" | "/settings/cameras" }
+  | { to: "/settings/system" | "/settings/objects" | "/settings/storage" | "/settings/cameras" }
   | { to: "/settings/cameras/$id"; params: { id: string } }
   | { to: "/settings/cameras/$id/states/$sensorId"; params: { id: string; sensorId: string } };
 
@@ -108,7 +108,7 @@ export function explain(issue: Issue, snap: Snapshot): Explained {
         who: "物件辨識",
         pill: { label: "已停止", tone: "warn" },
         next: "重新啟動，通常就會恢復辨識",
-        why: "物件辨識停下來時，錄影與動作偵測不受影響，只是事件不會標上看到的東西；設成「過濾」的攝影機會改成照一般動作建立事件。重新啟動後仍然停止，請用頁面下方的「複製診斷資訊」找原因，也可以到「設定 → 一般」換一個辨識模型或推論裝置。",
+        why: "物件辨識停下來時，錄影與動作偵測不受影響，只是事件不會標上看到的東西；設成「過濾」的攝影機會改成照一般動作建立事件。重新啟動後仍然停止，請用頁面下方的「複製診斷資訊」找原因，也可以到「設定 → 物件辨識」換一個辨識模型或推論裝置。",
         action: { label: "重新啟動", restart: { ids: ["detector"], title: "重新啟動物件辨識？", message: "辨識會中斷幾秒鐘，錄影不受影響。", done: "已重新啟動物件辨識" } },
       };
     case "objectsLoad":
@@ -117,7 +117,7 @@ export function explain(issue: Issue, snap: Snapshot): Explained {
         pill: { label: "跟不上", tone: "warn" },
         next: issue.title,
         why: "辨識跟不上時，多出來的畫面會被略過。錄影與動作偵測不受影響，但事件可能漏標上看到的東西。降低辨識頻率、改用更快的裝置，或到設定裡測速看看這台機器的能力，都能改善。",
-        action: { label: "調整設定", to: "/settings/system" },
+        action: { label: "調整設定", to: "/settings/objects" },
       };
     case "decode":
       return {

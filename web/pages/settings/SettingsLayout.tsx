@@ -7,6 +7,7 @@ import { PageHeader } from "../../ui/Panel.tsx";
 export const SETTINGS_TABS = [
   ["cameras", "攝影機"],
   ["storage", "錄影與儲存"],
+  ["objects", "物件辨識"],
   ["system", "一般"],
   ["users", "使用者"],
   ["status", "狀態"],
