@@ -154,7 +154,7 @@ button, a, summary, label { touch-action: manipulation; }
   [data-sidebar="collapsed"] .sidebar-toggle:focus-visible { opacity: 1; background: var(--fill); color: var(--text); }
   [data-sidebar="collapsed"] .brand:hover .brand-mark,
   [data-sidebar="collapsed"] .brand:has(.sidebar-toggle:focus-visible) .brand-mark { opacity: 0; }
-  [data-sidebar="collapsed"] .user-btn { position: relative; padding: 5px; border-color: transparent; background: transparent; overflow: hidden; }
+  [data-sidebar="collapsed"] .user-btn { position: relative; padding: 6px; overflow: hidden; }
   /* 名字兩行比頭像高，不拿出排版的話收合後按鈕會被撐高 */
   [data-sidebar="collapsed"] .user-btn .who, [data-sidebar="collapsed"] .user-btn > .icon { position: absolute; left: 52px; }
   [data-sidebar="collapsed"] .user-btn[data-current] { background: var(--surface); }
@@ -186,13 +186,14 @@ button, a, summary, label { touch-action: manipulation; }
 /* 側欄底部的使用者卡片：點開是帳號、設定與登出的選單 */
 .sidebar-foot { margin-top: auto; display: flex; min-width: 0; }
 .user-btn {
-  flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px; min-width: 0; text-align: left; cursor: pointer;
-  border-radius: 14px; background: transparent; border: 1px solid var(--border); color: var(--text);
+  /* 左邊 6px：32px 的頭像中心跟上面導覽列 20px 圖示（左內距 12px）的中心對齊 */
+  flex: 1; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; min-width: 0; text-align: left; cursor: pointer;
+  border-radius: 12px; background: transparent; border: 0; color: var(--text);
   transition: background-color 150ms ease, border-color 150ms ease, transform var(--dur-1) var(--ease-out);
 }
 @media (hover: hover) { .user-btn:hover { background: var(--fill); } }
 .user-btn:active { transform: scale(0.98); }
-.user-btn[aria-expanded="true"] { border-color: var(--border-strong); }
+.user-btn[aria-expanded="true"] { background: var(--fill); }
 /* 目前在設定或帳號頁：跟主導覽的選中樣式一致 */
 .user-btn[data-current] { background: var(--surface); box-shadow: var(--shadow-sm), 0 0 0 1px var(--border); }
 .user-btn .who { flex: 1; min-width: 0; line-height: 1.3; }
