@@ -968,6 +968,8 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (path === "/tokens") {
     if (m === "GET") return json(tokens.filter((t) => t.userId === me.id));
     if (m === "POST") {
+      const denied = needAdmin();
+      if (denied) return denied;
       const raw = `cnvr_${crypto.randomUUID().replaceAll("-", "")}`;
       const t = { id: nextTokenId++, userId: me.id, name: String(body.name), prefix: raw.slice(0, 9), createdAt: now(), lastUsedAt: null };
       tokens.push(t);

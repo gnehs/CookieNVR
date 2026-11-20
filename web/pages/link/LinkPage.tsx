@@ -128,7 +128,6 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
     setError("");
     decide.mutate(d);
   };
-  const isAdmin = me.role === "admin";
   return (
     <Frame>
       <header>
@@ -157,17 +156,10 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
             <Icon name="crosshair" size={16} />
             轉動可以轉的鏡頭
           </li>
-          {isAdmin ? (
-            <li>
-              <Icon name="settings" size={16} />
-              開關錄影與偵測，也能變更所有設定（和你的管理員帳號一樣）
-            </li>
-          ) : (
-            <li className="link-grant-no">
-              <Icon name="lock" size={16} />
-              錄影與偵測開關不會出現（需要管理員帳號）
-            </li>
-          )}
+          <li>
+            <Icon name="settings" size={16} />
+            開關錄影與偵測，也能變更所有設定（和你的管理員帳號一樣）
+          </li>
         </ul>
       </div>
       <p className="link-source">
@@ -203,6 +195,7 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
 }
 
 function Request({ code }: { code: string }) {
+  const me = useMe();
   const q = useQuery({
     queryKey: ["link", code],
     queryFn: () => api.linkRequest(code),
@@ -236,6 +229,7 @@ function Request({ code }: { code: string }) {
   const state: View | "ask" = view ?? (req.status === "pending" ? "ask" : req.status === "denied" ? "denied" : req.status === "expired" ? "expired" : "used");
   switch (state) {
     case "ask":
+      if (me.role !== "admin") return <Outcome tone="muted" icon="lock" title="需要管理員帳號" body={`只有管理員可以允許 ${req.app} 連線，請改用管理員帳號登入後再開啟這個頁面。`} />;
       return <Ask code={code} app={req.app} ip={req.ip} expiresIn={req.expiresIn} onDone={setView} />;
     case "approved":
       return <Outcome tone="ok" icon="check" title="已允許" body={`回到 ${req.app}，它會自動完成設定。之後可以在「設定 → 一般 → 連接其他 App」隨時撤銷。`} />;

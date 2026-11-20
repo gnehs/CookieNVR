@@ -182,8 +182,8 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
   function claim(req: LinkRequest, userId: number): LinkPollDto {
     req.state = { kind: "claimed" };
     const user = opts.tokens.getUser(userId);
-    // 核准後、取走前帳號被刪除：不發 token
-    if (!user) return { status: "denied" };
+    // 核准後、取走前帳號被刪除或降為一般使用者：不發 token
+    if (user?.role !== "admin") return { status: "denied" };
     const day = new Date(req.createdAt).toISOString().slice(0, 10);
     const created = opts.tokens.createToken(user.id, `${req.app}（${req.ip}，${day}）`);
     return { status: "approved", token: created.token, username: user.username, role: user.role };
@@ -251,6 +251,7 @@ export function createLinkService(opts: { tokens: LinkTokens; now?: () => number
       const status = statusOf(req);
       if (status === "expired") throw new HttpError(410, "這個請求已經過期，請回到 App 重新開始");
       if (status !== "pending") throw new HttpError(409, "這個請求已經處理過了");
+      if (decision === "approve" && principal.role !== "admin") throw new HttpError(403, "只有管理員可以允許其他 App 連線");
       req.state = decision === "approve" ? { kind: "approved", userId: principal.userId } : { kind: "denied" };
       return toDto(req);
     },

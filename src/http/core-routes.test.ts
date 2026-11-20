@@ -124,6 +124,7 @@ describe("權限矩陣", () => {
     { method: "GET", path: "/api/me", access: "user" },
     { method: "GET", path: "/api/me/sessions", access: "user" },
     { method: "GET", path: "/api/tokens", access: "user" },
+    { method: "POST", path: "/api/tokens", json: { name: "tv" }, access: "admin" },
     { method: "GET", path: "/api/cameras", access: "user" },
     { method: "GET", path: "/api/users", access: "admin" },
     { method: "GET", path: "/api/settings", access: "admin" },
@@ -309,7 +310,7 @@ describe("認證流程", () => {
 
 describe("API token", () => {
   test("建立、Bearer 與 ?token= 使用、列表、撤銷；只能看到自己的", async () => {
-    const created = await call("/api/tokens", { method: "POST", ...as(userCookie), json: { name: "tv" } });
+    const created = await call("/api/tokens", { method: "POST", ...as(adminCookie), json: { name: "tv" } });
     expect(created.status).toBe(201);
     const { id, token } = (await created.json()) as { id: number; token: string };
     expect(token).toStartWith("cnvr_");
@@ -317,22 +318,19 @@ describe("API token", () => {
     expect((await call("/api/me", { headers: { authorization: `Bearer ${token}` } })).status).toBe(200);
     expect((await call(`/api/cameras?token=${token}`)).status).toBe(200);
 
-    const mine = (await (await call("/api/tokens", as(userCookie))).json()) as { lastUsedAt: number | null }[];
+    const mine = (await (await call("/api/tokens", as(adminCookie))).json()) as { lastUsedAt: number | null }[];
     expect(mine).toHaveLength(1);
     expect(mine[0]?.lastUsedAt).not.toBeNull();
     expect(JSON.stringify(mine)).not.toContain(token);
-    expect(await (await call("/api/tokens", as(adminCookie))).json()).toEqual([]);
+    expect(await (await call("/api/tokens", as(userCookie))).json()).toEqual([]);
 
-    expect((await call(`/api/tokens/${id}`, { method: "DELETE", ...as(adminCookie) })).status).toBe(404);
-    expect((await call(`/api/tokens/${id}`, { method: "DELETE", ...as(userCookie) })).status).toBe(204);
+    expect((await call(`/api/tokens/${id}`, { method: "DELETE", ...as(userCookie) })).status).toBe(404);
+    expect((await call(`/api/tokens/${id}`, { method: "DELETE", ...as(adminCookie) })).status).toBe(204);
     expect((await call("/api/me", { headers: { authorization: `Bearer ${token}` } })).status).toBe(401);
   });
 
-  test("一般使用者的 token 不能做管理員的事", async () => {
-    const { token } = (await (
-      await call("/api/tokens", { method: "POST", ...as(userCookie), json: { name: "tv" } })
-    ).json()) as { token: string };
-    expect((await call("/api/users", { headers: { authorization: `Bearer ${token}` } })).status).toBe(403);
+  test("一般使用者不能建立 token", async () => {
+    expect((await call("/api/tokens", { method: "POST", ...as(userCookie), json: { name: "tv" } })).status).toBe(403);
   });
 });
 

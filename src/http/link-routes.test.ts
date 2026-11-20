@@ -68,20 +68,20 @@ describe("link request lifecycle", () => {
     expect(view.status).toBe(200);
     expect((await view.json()) as LinkRequestDto).toMatchObject({ code: link.code, app: "Home Assistant", ip: "10.0.0.9", status: "pending" });
 
-    const approved = await decide(link.code, "approve", { cookie: userCookie });
+    const approved = await decide(link.code, "approve");
     expect(approved.status).toBe(200);
     expect((await approved.json()).status).toBe("approved");
 
     const got = await pollBody(link.pollSecret);
-    expect(got).toMatchObject({ status: "approved", username: "viewer", role: "user" });
+    expect(got).toMatchObject({ status: "approved", username: "admin", role: "admin" });
     const token = (got as { token: string }).token;
     expect(token.startsWith("cnvr_")).toBe(true);
     const me = await handler(new Request("http://nvr.lan/api/me", { headers: { authorization: `Bearer ${token}` } }));
-    expect(await me.json()).toMatchObject({ username: "viewer", role: "user" });
+    expect(await me.json()).toMatchObject({ username: "admin", role: "admin" });
 
     expect(await pollBody(link.pollSecret)).toEqual({ status: "claimed" });
-    const viewer = auth.listUsers().find((u) => u.username === "viewer")!;
-    expect(auth.listTokens(viewer.id).map((t) => t.name)).toEqual(["Home Assistant（10.0.0.9，2023-11-14）"]);
+    const admin = auth.listUsers().find((u) => u.username === "admin")!;
+    expect(auth.listTokens(admin.id).map((t) => t.name)).toEqual(["Home Assistant（10.0.0.9，2023-11-14）"]);
   });
 
   test("a token is only minted when collected, so an approved but abandoned request leaves nothing behind", async () => {
@@ -126,16 +126,19 @@ describe("link request lifecycle", () => {
     expect((await pollBody(link.pollSecret)).status).toBe("approved");
   });
 
-  test("an admin's approval gives an admin token", async () => {
+  test("only an admin can approve; a regular user can still deny", async () => {
     const link = await start();
-    await decide(link.code, "approve");
-    expect(await pollBody(link.pollSecret)).toMatchObject({ status: "approved", username: "admin", role: "admin" });
+    expect((await decide(link.code, "approve", { cookie: userCookie })).status).toBe(403);
+    expect(await pollBody(link.pollSecret)).toEqual({ status: "pending" });
+    expect((await (await decide(link.code, "deny", { cookie: userCookie })).json()).status).toBe("denied");
   });
 
-  test("an approver deleted before collection gets no token", async () => {
+  test("an approver demoted before collection gets no token", async () => {
+    await auth.createUser("second", "password1", "admin");
+    const second = cookieOf(await call("/api/auth/login", { json: { username: "second", password: "password1" } }));
     const link = await start();
-    await decide(link.code, "approve", { cookie: userCookie });
-    auth.removeUser(auth.listUsers().find((u) => u.username === "viewer")!.id);
+    await decide(link.code, "approve", { cookie: second });
+    await auth.updateUser(auth.listUsers().find((u) => u.username === "second")!.id, { role: "user" });
     expect(await pollBody(link.pollSecret)).toEqual({ status: "denied" });
   });
 });

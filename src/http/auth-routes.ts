@@ -118,7 +118,7 @@ export function authRoutes(auth: Auth, version: string, siteName: () => string, 
     {
       method: "POST",
       path: "/api/tokens",
-      access: "user",
+      access: "admin",
       async handler(ctx) {
         const body = asObject(await readJson(ctx.req));
         return json(auth.createToken(me(ctx).userId, str(body, "name", { max: 1024 })), 201);

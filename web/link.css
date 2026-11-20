@@ -8,8 +8,6 @@
 .link-grants ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .link-grants li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.4; }
 .link-grants li .icon { color: var(--accent-text); flex: none; margin-top: 1px; }
-.link-grants li.link-grant-no { color: var(--muted); }
-.link-grants li.link-grant-no .icon { color: var(--muted); }
 .link-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .link-actions .btn { min-height: 46px; justify-content: center; font-size: 15px; }
 .link-meta { color: var(--muted); font-size: 12.5px; text-align: center; line-height: 1.6; text-wrap: balance; }
