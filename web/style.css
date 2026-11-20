@@ -102,27 +102,84 @@ button, a, summary, label { touch-action: manipulation; }
 .icon svg { display: block; }
 .muted { color: var(--muted); }
 
+/* 滑動底色（ui/indicator.ts）：一塊方塊跟著目前項目移動，取代每一項各自的選中底色。
+   容器要 position: relative，項目要 position: relative 才會疊在方塊上面 */
+.ind {
+  --ind-dur: var(--dur-3);
+  position: absolute; top: 0; left: 0; width: var(--w, 0); height: var(--h, 0);
+  transform: translate(var(--x, 0), var(--y, 0)); opacity: 0; pointer-events: none;
+  transition: transform var(--ind-dur) var(--ease-out), width var(--ind-dur) var(--ease-out), height var(--ind-dur) var(--ease-out), background-color var(--ind-dur) ease, opacity var(--dur-1) ease;
+}
+.ind[data-shown] { opacity: 1; }
+.ind[data-instant] { transition: opacity var(--dur-1) ease; }
+
 /* ---------- shell ---------- */
-.shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100dvh; }
+.shell {
+  --sidebar-w: 240px;
+  display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100dvh;
+  transition: grid-template-columns var(--dur-3) var(--ease-drawer);
+}
 .sidebar {
   position: sticky; top: 0; height: 100dvh; padding: 18px 14px;
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
 }
-.brand { display: flex; align-items: center; gap: 10px; padding: 6px 10px 22px; font-weight: 700; font-size: 16px; letter-spacing: 0.01em; min-width: 0; }
-.brand > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.brand-mark { width: 30px; height: 30px; flex: none; display: block; }
+.brand { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 0 22px 7px; font-weight: 700; font-size: 16px; letter-spacing: 0.01em; min-width: 0; }
+.brand-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity var(--dur-2) ease; }
+.brand-mark { width: 30px; height: 30px; flex: none; display: block; transition: opacity var(--dur-1) ease; }
+.sidebar-toggle {
+  flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 9px; cursor: pointer;
+  background: transparent; color: var(--muted); transition: background-color 150ms ease, color 150ms ease, opacity var(--dur-1) ease;
+}
+@media (hover: hover) { .sidebar-toggle:hover { background: var(--fill); color: var(--text); } }
+.sidebar-toggle:active { background: var(--fill-2); }
 .nav-link {
-  display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 12px;
+  position: relative; display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 12px; overflow: hidden; white-space: nowrap;
   color: var(--text-2); text-decoration: none; font-weight: 550;
   transition: background-color 150ms ease, color 150ms ease;
 }
+.nav-label { transition: opacity var(--dur-2) ease; }
+
+/* 收合：只剩圖示。標籤與名稱淡出、被欄寬裁掉；Logo 滑過或聚焦時換成展開鈕 */
+@media (min-width: 761px) {
+  [data-sidebar="collapsed"] .shell { --sidebar-w: 72px; }
+  [data-sidebar="collapsed"] .nav-label,
+  [data-sidebar="collapsed"] .brand-name,
+  [data-sidebar="collapsed"] .user-btn .who,
+  [data-sidebar="collapsed"] .user-btn > .icon { opacity: 0; pointer-events: none; }
+  [data-sidebar="collapsed"] .brand { padding-left: 7px; }
+  [data-sidebar="collapsed"] .sidebar-toggle { position: absolute; left: 6px; top: 5px; opacity: 0; }
+  [data-sidebar="collapsed"] .brand:hover .sidebar-toggle,
+  [data-sidebar="collapsed"] .sidebar-toggle:focus-visible { opacity: 1; background: var(--fill); color: var(--text); }
+  [data-sidebar="collapsed"] .brand:hover .brand-mark,
+  [data-sidebar="collapsed"] .brand:has(.sidebar-toggle:focus-visible) .brand-mark { opacity: 0; }
+  [data-sidebar="collapsed"] .user-btn { position: relative; padding: 5px; border-color: transparent; background: transparent; overflow: hidden; }
+  /* 名字兩行比頭像高，不拿出排版的話收合後按鈕會被撐高 */
+  [data-sidebar="collapsed"] .user-btn .who, [data-sidebar="collapsed"] .user-btn > .icon { position: absolute; left: 52px; }
+  [data-sidebar="collapsed"] .user-btn[data-current] { background: var(--surface); }
+}
+@media (min-width: 761px) and (prefers-reduced-motion: reduce) {
+  .shell { transition: none; }
+}
+
+/* 提示泡泡：深底淺字，快進快出 */
+.tip-pos { z-index: 60; }
+.tip {
+  display: flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 8px;
+  background: var(--text); color: var(--bg); font-size: 13px; font-weight: 550; line-height: 1.3; box-shadow: var(--shadow);
+  transition: opacity var(--dur-1) ease, transform var(--dur-1) var(--ease-out); transform-origin: var(--transform-origin);
+}
+.tip[data-starting-style], .tip[data-ending-style] { opacity: 0; transform: scale(0.96); }
+.tip[data-instant] { transition: none; }
+.tip-keys .kbd { background: color-mix(in srgb, var(--text) 82%, var(--bg)); border-color: color-mix(in srgb, var(--text) 60%, var(--bg)); color: var(--bg); }
+@media (hover: none) { .tip-pos { display: none; } }
 .nav-link .icon { color: var(--muted); transition: color 150ms ease; }
 .nav-ico { position: relative; display: inline-flex; flex: none; }
 /* 設定有問題時的提示點；外圈用導覽列的底色切開圖示 */
 .nav-dot { position: absolute; top: -2px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--nav-bg, var(--bg)); }
 .nav-link[aria-current="page"] { --nav-bg: var(--surface); }
-@media (hover: hover) { .nav-link:hover { background: var(--fill); color: var(--text); } }
-.nav-link[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm), 0 0 0 1px var(--border); }
+@media (hover: hover) { .nav-link:not([aria-current]):hover { background: var(--fill); color: var(--text); } }
+.nav-link[aria-current="page"] { color: var(--text); }
+.nav-ind { border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm), 0 0 0 1px var(--border); }
 .nav-link[aria-current="page"] .icon { color: var(--accent); }
 /* 側欄底部的使用者卡片：點開是帳號、設定與登出的選單 */
 .sidebar-foot { margin-top: auto; display: flex; min-width: 0; }
@@ -166,12 +223,13 @@ button, a, summary, label { touch-action: manipulation; }
   .user-btn .avatar { width: 22px; height: 22px; font-size: 11px; }
   .user-btn .who, .user-btn > .icon { display: none; }
   .user-btn .user-label { display: block; }
-  .user-btn[data-current] { background: var(--accent-soft); box-shadow: none; color: var(--accent-text); --nav-bg: var(--accent-soft); }
+  .user-btn[data-current] { background: transparent; box-shadow: none; color: var(--accent-text); --nav-bg: var(--accent-soft); }
   .user-btn[data-current] .avatar { background: var(--surface); }
   .sidebar { --nav-bg: var(--surface); }
   .nav-link[aria-current="page"] { --nav-bg: var(--accent-soft); }
   .nav-link { flex: 1; flex-direction: column; gap: 2px; padding: 7px 4px 6px; font-size: 12px; border-radius: 16px; align-items: center; min-width: 0; }
-  .nav-link[aria-current="page"] { background: var(--accent-soft); box-shadow: none; color: var(--accent-text); }
+  .nav-link[aria-current="page"] { color: var(--accent-text); }
+  .nav-ind { border-radius: 16px; background: var(--accent-soft); box-shadow: none; }
   .main { padding: 20px 16px calc(104px + env(safe-area-inset-bottom)); }
 }
 
@@ -181,15 +239,15 @@ button, a, summary, label { touch-action: manipulation; }
 .page-head p { color: var(--muted); font-size: 14px; margin-top: 2px; }
 @media (max-width: 760px) { .page-head { margin-bottom: 16px; } .page-head h1 { font-size: 23px; } }
 
-/* 換頁淡入：只用 opacity 與 transform，減少動態效果時只剩淡入 */
-.page-enter { animation: page-in var(--dur-3) var(--ease-out) both; }
-@keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
+/* 換頁只淡入、不位移 */
+.page-enter { animation: page-in var(--dur-2) ease both; }
+@keyframes page-in { from { opacity: 0; } }
 .page-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .stack { display: grid; gap: 20px; }
 
 /* 膠囊狀分段導覽（設定分頁） */
 .pill-nav {
-  display: flex; gap: 2px; padding: 4px; margin: -6px 0 22px; width: fit-content; max-width: 100%;
+  position: relative; display: flex; gap: 2px; padding: 4px; margin: -6px 0 22px; width: fit-content; max-width: 100%;
   overflow-x: auto; scrollbar-width: none; border-radius: 14px; background: var(--fill-2);
 }
 .pill-nav::-webkit-scrollbar { display: none; }
@@ -199,7 +257,9 @@ button, a, summary, label { touch-action: manipulation; }
   font-size: 14px; font-weight: 550; transition: background-color 150ms ease, color 150ms ease;
 }
 @media (hover: hover) { .pill-nav a:hover { color: var(--text); } }
-.pill-nav a[aria-current="page"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.pill-nav a { position: relative; }
+.pill-nav a[aria-current="page"] { color: var(--text); }
+.pill-ind { border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); }
 /* 手機上五個分頁平分整列，不需要橫向捲動才看得到「狀態」 */
 @media (max-width: 560px) {
   .pill-nav { width: 100%; margin-bottom: 16px; }
@@ -309,12 +369,13 @@ button, a, summary, label { touch-action: manipulation; }
 
 /* 分段控制：radio 群組的膠囊外觀
    <div class="segmented" role="radiogroup" aria-label="…"><label><input type="radio" name="…"><span>文字</span></label>…</div> */
-.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--fill-2); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.segmented { position: relative; display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--fill-2); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .segmented label { position: relative; cursor: pointer; flex: none; }
 .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .segmented span { display: block; padding: 5px 13px; border-radius: 9px; font-size: 13.5px; font-weight: 550; color: var(--text-2); white-space: nowrap; transition: background-color 150ms ease, color 150ms ease; }
 @media (hover: hover) { .segmented label:hover span { color: var(--text); } }
-.segmented input:checked + span { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.segmented input:checked + span { color: var(--text); }
+.seg-ind { border-radius: 9px; background: var(--surface); box-shadow: var(--shadow-sm); }
 .segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ---------- callout / empty / loading ---------- */
@@ -874,16 +935,8 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .menu-item { position: relative; z-index: 1; }
 .menu-item:focus-visible { outline: none; }
 .menu-item.danger, .menu-item.danger .icon { color: var(--bad-text); }
-/* 高亮底色是一塊共用的方塊，跟著被標的項目滑動（見 Menu.tsx useHighlightBlock） */
 .menu { position: relative; }
-.menu-hl {
-  position: absolute; top: 0; left: 0; width: var(--w, 0); height: var(--h, 0); border-radius: 9px;
-  background: var(--fill-2); opacity: 0; pointer-events: none;
-  transform: translate(var(--x, 0), var(--y, 0));
-  transition: transform var(--dur-2) var(--ease-out), width var(--dur-2) var(--ease-out), height var(--dur-2) var(--ease-out), background-color var(--dur-2) ease, opacity var(--dur-1) ease;
-}
-.menu-hl[data-shown] { opacity: 1; }
-.menu-hl[data-instant] { transition: opacity var(--dur-1) ease; }
+.menu-hl { --ind-dur: var(--dur-2); border-radius: 9px; background: var(--fill-2); }
 .menu-hl[data-danger] { background: color-mix(in srgb, var(--bad) 14%, var(--overlay)); }
 
 /* ---------- 收合區塊（進階設定） ---------- */
@@ -1024,7 +1077,6 @@ a.menu-item { text-decoration: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-property: opacity, background-color, border-color, color, box-shadow !important; }
-  .page-enter { animation-name: fade-in; }
   .copy-btn[data-state] .copy-face { animation-name: fade-in; }
   .spin { animation-duration: 2s; }
   .dlg, .toast, .menu { @starting-style { transform: none; opacity: 0; } }

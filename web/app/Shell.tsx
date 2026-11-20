@@ -1,11 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { infoQuery, logout, useMe } from "../data/session.ts";
 import { useHealth } from "../data/use-health.ts";
 import { Icon } from "../ui/Icon.tsx";
 import type { IconName } from "../ui/icons.ts";
 import { Menu } from "../ui/Menu.tsx";
 import { BrandMark } from "../ui/Panel.tsx";
+import { useIndicator } from "../ui/indicator.ts";
+import { useMedia } from "../ui/useMedia.ts";
+import { Tooltip, TooltipGroup } from "../ui/Tooltip.tsx";
+import { getSidebarCollapsed, setSidebarCollapsed } from "../theme.ts";
 
 type Section = "cameras" | "events" | "recordings" | "settings" | "account";
 
@@ -24,22 +29,45 @@ export function Shell() {
   const shown = useRouterState({ select: (s) => s.matches.at(-1)?.pathname });
   const active = sectionOf(path);
   const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+  const [collapsed, setCollapsed] = useSidebarCollapsed();
+  const toggleLabel = collapsed ? "展開側欄" : "收合側欄";
+  const tabBar = useMedia(TAB_BAR);
+  const nav = useIndicator<HTMLElement>(tabBar ? `${NAV_CURRENT}, .user-btn[data-current]` : NAV_CURRENT, active);
   return (
     <div className="shell">
-      <nav className="sidebar" aria-label="主選單">
-        <div className="brand">
-          <BrandMark />
-          <span>{siteName}</span>
-        </div>
-        {NAV.map((n) => (
-          <Link key={n.section} className="nav-link" to={n.to} aria-current={n.section === active ? "page" : undefined}>
-            <span className="nav-ico">
-              <Icon name={n.icon} size={20} />
-            </span>
-            {n.label}
-          </Link>
-        ))}
-        <UserMenu active={active} path={path} />
+      <nav className="sidebar" aria-label="主選單" ref={nav.container}>
+        <div className="ind nav-ind" ref={nav.block} aria-hidden="true" />
+        <TooltipGroup>
+          <div className="brand">
+            <BrandMark />
+            <span className="brand-name">{siteName}</span>
+            <Tooltip
+              label={toggleLabel}
+              keys={["["]}
+              trigger={
+                <button className="sidebar-toggle" type="button" aria-label={toggleLabel} aria-keyshortcuts="[" onClick={() => setCollapsed(!collapsed)}>
+                  <Icon name="sidebar" size={18} />
+                </button>
+              }
+            />
+          </div>
+          {NAV.map((n) => (
+            <Tooltip
+              key={n.section}
+              label={n.label}
+              disabled={!collapsed}
+              trigger={
+                <Link className="nav-link" to={n.to} aria-current={n.section === active ? "page" : undefined}>
+                  <span className="nav-ico">
+                    <Icon name={n.icon} size={20} />
+                  </span>
+                  <span className="nav-label">{n.label}</span>
+                </Link>
+              }
+            />
+          ))}
+        </TooltipGroup>
+        <UserMenu active={active} />
       </nav>
       <main className="main" id="main" tabIndex={-1}>
         <div key={shown} className="page-enter">
@@ -50,8 +78,29 @@ export function Shell() {
   );
 }
 
+// 手機底部列的「我的」也是一格，在設定或帳號時底色滑到它上面；桌面側欄的使用者卡片在底部、另有自己的樣式
+const NAV_CURRENT = '.nav-link[aria-current="page"]';
+const TAB_BAR = "(max-width: 760px)";
+
+const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+
+/** 側欄收合狀態；按 [ 切換（在輸入框裡打字時不算） */
+function useSidebarCollapsed() {
+  const [collapsed, setCollapsed] = useState(getSidebarCollapsed);
+  useEffect(() => setSidebarCollapsed(collapsed), [collapsed]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "[" || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented || isTyping(e.target)) return;
+      setCollapsed((c) => !c);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+  return [collapsed, setCollapsed] as const;
+}
+
 /** 帳號、設定與登出收在側欄底部（手機是底部列的「我的」）的使用者選單；問題提示點掛在這裡 */
-function UserMenu({ active, path }: { active: Section | undefined; path: string }) {
+function UserMenu({ active }: { active: Section | undefined }) {
   const me = useMe();
   const isAdmin = me.role === "admin";
   const issues = useHealth(isAdmin)?.issues.length ?? 0;

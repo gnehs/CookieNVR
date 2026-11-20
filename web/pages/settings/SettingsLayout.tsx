@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Icon } from "../../ui/Icon.tsx";
+import { useIndicator } from "../../ui/indicator.ts";
 import { PageHeader } from "../../ui/Panel.tsx";
 
 export const SETTINGS_TABS = [
@@ -15,10 +16,12 @@ export type SettingsTab = (typeof SETTINGS_TABS)[number][0];
 
 /** 設定的分頁：標題「設定」加上分頁列 */
 export function SettingsLayout({ active, children }: { active: SettingsTab; children?: ReactNode }) {
+  const tabs = useIndicator<HTMLElement>('a[aria-current="page"]', active, "settings-tabs");
   return (
     <div className="form-page">
       <PageHeader title="設定" />
-      <nav className="pill-nav" aria-label="設定分頁">
+      <nav className="pill-nav" aria-label="設定分頁" ref={tabs.container}>
+        <div className="ind pill-ind" ref={tabs.block} aria-hidden="true" />
         {SETTINGS_TABS.map(([key, label]) => (
           <Link key={key} to={`/settings/${key}`} aria-current={key === active ? "page" : undefined}>
             {label}

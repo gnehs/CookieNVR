@@ -1,6 +1,7 @@
 // index.html 的 inline script 在首次繪製前用同樣的 key 套用偏好，兩邊要一起改
 const MODE_KEY = "cookienvr.color-scheme";
 const ACCENT_KEY = "cookienvr.accent";
+const SIDEBAR_KEY = "cookienvr.sidebar";
 
 export type ColorMode = "light" | "dark" | "system";
 
@@ -60,6 +61,17 @@ export function setMode(mode: ColorMode) {
 export function setAccent(accent: Accent) {
   write(ACCENT_KEY, accent === "blue" ? null : accent);
   applyAccent(accent);
+}
+
+/** 桌面側欄收合成只剩圖示；狀態掛在 <html data-sidebar>，首次繪製前由 index.html 套用 */
+export function getSidebarCollapsed(): boolean {
+  return document.documentElement.dataset.sidebar === "collapsed";
+}
+
+export function setSidebarCollapsed(collapsed: boolean) {
+  write(SIDEBAR_KEY, collapsed ? "collapsed" : null);
+  if (collapsed) document.documentElement.dataset.sidebar = "collapsed";
+  else delete document.documentElement.dataset.sidebar;
 }
 
 export const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)");

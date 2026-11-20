@@ -2,6 +2,7 @@ import { Menu as Base } from "@base-ui/react/menu";
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { type ReactElement, useRef } from "react";
 import { Icon } from "./Icon.tsx";
+import { moveIndicator } from "./indicator.ts";
 import type { IconName } from "./icons.ts";
 
 export interface MenuItem {
@@ -51,8 +52,8 @@ function Item({ it }: { it: MenuItem }) {
 }
 
 /**
- * 一塊高亮底色跟著 Base UI 標的 data-highlighted（滑鼠或方向鍵）在項目間滑動。
- * 剛出現時直接落在該項、只淡入，之後換項才滑過去；沒有項目被標時淡出。
+ * 一塊高亮底色跟著 Base UI 標的 data-highlighted（滑鼠或方向鍵）在項目間滑動；
+ * 高亮由 Base UI 管，所以盯著屬性變化，而不是跟著 React 的 state。
  */
 function useHighlightBlock() {
   const block = useRef<HTMLDivElement>(null);
@@ -62,21 +63,8 @@ function useHighlightBlock() {
       const b = block.current;
       if (!b) return;
       const it = popup.querySelector<HTMLElement>(".menu-item[data-highlighted]");
-      if (!it) {
-        delete b.dataset.shown;
-        return;
-      }
-      b.style.setProperty("--x", `${it.offsetLeft}px`);
-      b.style.setProperty("--y", `${it.offsetTop}px`);
-      b.style.setProperty("--w", `${it.offsetWidth}px`);
-      b.style.setProperty("--h", `${it.offsetHeight}px`);
-      b.toggleAttribute("data-danger", it.classList.contains("danger"));
-      if (b.dataset.shown === undefined) {
-        b.dataset.instant = "";
-        void b.offsetWidth;
-        b.dataset.shown = "";
-        delete b.dataset.instant;
-      }
+      moveIndicator(b, it);
+      b.toggleAttribute("data-danger", !!it?.classList.contains("danger"));
     };
     const mo = new MutationObserver(sync);
     mo.observe(popup, { subtree: true, attributes: true, attributeFilter: ["data-highlighted"] });
@@ -99,7 +87,7 @@ export function Menu({ trigger, label, entries, align = "end", side = "bottom" }
         <Base.Backdrop className="sheet-backdrop" data-sheet="menu" />
         <Base.Positioner className="menu-pos" side={side} align={align} sideOffset={6} collisionPadding={8}>
           <Base.Popup ref={popupRef} className="menu" aria-label={label}>
-            <div ref={block} className="menu-hl" aria-hidden="true" />
+            <div ref={block} className="ind menu-hl" aria-hidden="true" />
             <div className="menu-title" aria-hidden="true">
               {label}
             </div>

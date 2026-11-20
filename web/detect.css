@@ -35,7 +35,9 @@
   border-radius: 12px; background: var(--fill); border: 1px solid var(--border);
   transition: border-color var(--dur-2) ease, box-shadow var(--dur-2) ease;
 }
-.ev-card-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--dur-3) var(--ease-out); }
+.ev-card-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--dur-3) var(--ease-out), opacity var(--dur-3) ease; }
+/* 縮圖是捲到才載入，載好再淡入，不要一張一張「啪」地跳出來 */
+.ev-card-thumb img:not([data-loaded]) { opacity: 0; }
 @media (hover: hover) { .ev-card-link:hover .ev-card-thumb img { transform: scale(1.03); } }
 .ev-card-link:active .ev-card-thumb { transform: scale(0.985); transition: transform var(--dur-1) var(--ease-out); }
 /* 縮圖角落的長度，像影片長度那樣；疊在畫面上，底色固定是深色 */

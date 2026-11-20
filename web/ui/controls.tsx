@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { Icon } from "./Icon.tsx";
 import type { IconName } from "./icons.ts";
+import { useIndicator } from "./indicator.ts";
 
 /** 開關：role="switch" 的原生 checkbox（`.switch`），表單與鍵盤行為都是瀏覽器內建的 */
 export function Switch({ checked, onChange, ...rest }: { checked: boolean; onChange?: (v: boolean) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, "checked" | "onChange" | "type">) {
@@ -53,8 +54,10 @@ export function Tiles<V extends string>({ label, options, value, onChange }: { l
 /** 膠囊分段控制，適合 2–5 個短選項（例如時間軸的縮放級距） */
 export function Segmented<V extends string>({ label, options, value, onChange }: { label: string; options: { value: V; label: string }[]; value: V; onChange: (v: V) => void }) {
   const name = useId();
+  const ind = useIndicator<HTMLDivElement>("label:has(input:checked)", value);
   return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
+    <div className="segmented" role="radiogroup" aria-label={label} ref={ind.container}>
+      <div className="ind seg-ind" ref={ind.block} aria-hidden="true" />
       {options.map((o) => (
         <label key={o.value}>
           <input type="radio" name={name} value={o.value} checked={o.value === value} onChange={(e) => e.currentTarget.checked && onChange(o.value)} />

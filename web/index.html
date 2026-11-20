@@ -10,6 +10,7 @@
         if (m === "light" || m === "dark") document.querySelector('meta[name="color-scheme"]').content = m;
         var a = localStorage.getItem("cookienvr.accent");
         if (a) document.documentElement.dataset.accent = a;
+        if (localStorage.getItem("cookienvr.sidebar") === "collapsed") document.documentElement.dataset.sidebar = "collapsed";
       } catch (e) {}
     </script>
     <title>CookieNVR</title>

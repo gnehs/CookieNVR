@@ -335,7 +335,7 @@ function EventCard({ e, now, name, admin, onRemove }: { e: EventDto; now: number
       >
         <span className="ev-card-thumb">
           {e.hasThumb ? (
-            <img src={api.eventThumbUrl(e.id)} alt="" loading="lazy" decoding="async" width="320" height="180" />
+            <img src={api.eventThumbUrl(e.id)} alt="" loading="lazy" decoding="async" width="320" height="180" onLoad={(ev) => ev.currentTarget.setAttribute("data-loaded", "")} />
           ) : (
             <span className="cam-ph">
               <Icon name="activity" size={22} />
