@@ -1147,7 +1147,7 @@ details.disclosure:not([open])::details-content { block-size: 0; }
 }
 
 /* 收合成一張卡（帳號頁「連接其他 App」） */
-details.card.disclosure { border-top: 1px solid var(--border); }
+details.card.disclosure { border-top-color: transparent; }
 details.card.disclosure > summary { border-radius: var(--r-xl); padding: 18px 22px; }
 details.card.disclosure[open] > summary { border-radius: var(--r-xl) var(--r-xl) 0 0; }
 .card-inset { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
