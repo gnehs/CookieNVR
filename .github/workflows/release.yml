@@ -33,11 +33,14 @@ jobs:
       - uses: actions/checkout@v7
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
-      # Docker image names must be lowercase (the repository is gnehs/CookieNVR). SOURCE_DATE_EPOCH is the
-      # commit time: it becomes the image's creation date and the clamp for file times in rebuilt layers.
+      # Docker image names must be lowercase (the repository is gnehs/CookieNVR).
+      # SOURCE_DATE_EPOCH must stay constant: rewrite-timestamp clamps file times to it on every export, cached
+      # layers included, so a per-commit value (tried first) gave the 2 GB Python layer a new digest on every
+      # push. Fixed, the same content always exports to the same digest. The image's creation date shows this
+      # date; the real build time is in the org.opencontainers.image.created label.
       - run: |
           echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-          echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=1767225600" >> "$GITHUB_ENV"
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -68,5 +71,5 @@ jobs:
           # pull the 2 GB Python environment again after unrelated changes.
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.variant }}
           cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache-${{ matrix.variant }},mode=max,image-manifest=true,oci-mediatypes=true
-          # File times in rebuilt layers are clamped to SOURCE_DATE_EPOCH instead of the build time.
+          # File times are clamped to the fixed SOURCE_DATE_EPOCH, so equal content means an equal layer digest.
           outputs: type=image,push=true,rewrite-timestamp=true
