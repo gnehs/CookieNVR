@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { KeyHints } from "../../ui/Kbd.tsx";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { CameraDto, EventDto, SegmentDto } from "../../../src/api-types.ts";
@@ -495,9 +496,15 @@ export function Playback({ cam, days, daysReady, date, camPick }: PlaybackProps)
                 <i className="sw ev" />
                 事件
               </span>
-              <p className="pb-legend-keys hint" id="tl-keys">
-                空白鍵播放／暫停・← → 前後 10 秒・[ ] 上／下一個事件
-              </p>
+              <KeyHints
+                className="pb-legend-keys"
+                id="tl-keys"
+                hints={[
+                  { keys: ["空白鍵"], label: "播放／暫停" },
+                  { keys: ["←", "→"], label: "前後 10 秒" },
+                  { keys: ["[", "]"], label: "上／下一個事件" },
+                ]}
+              />
             </div>
             <ExportJobs ui={exp} />
           </div>

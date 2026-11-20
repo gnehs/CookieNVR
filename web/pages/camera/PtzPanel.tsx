@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { KeyHints } from "../../ui/Kbd.tsx";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CameraDto, PtzDto } from "../../../src/api-types.ts";
 import { ptzQuery } from "../../data/queries.ts";
@@ -232,7 +233,7 @@ function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: b
       </label>
       <p className="ptz-hint ptz-keys">
         {plan.hold ? "按住持續轉動，點一下微調。" : "點一下移動一步。"}
-        <span className="ptz-kbd">也可以用方向鍵。</span>
+        <KeyHints className="ptz-kbd" hints={[{ keys: ["↑", "↓", "←", "→"], label: "轉動鏡頭" }]} />
       </p>
       <PtzPresets cameraId={cam.id} initial={caps.presets} max={caps.maxPresets} admin={admin} speed={() => speedRef.current} beforeGo={() => driverRef.current?.cancel()} say={say} />
     </section>

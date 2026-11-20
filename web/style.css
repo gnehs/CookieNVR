@@ -1051,8 +1051,6 @@ a.menu-item { text-decoration: none; }
 .ptz-speed output { text-align: right; color: var(--muted); font-weight: 550; }
 .ptz-hint { margin: 0; color: var(--muted); font-size: 13px; text-wrap: balance; }
 .ptz-keys { margin-top: -4px; }
-.ptz-kbd { display: block; }
-@media (hover: none) { .ptz-kbd { display: none; } }
 .ptz-section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
 .ptz-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
 .ptz-sub h3 { font-size: 13.5px; font-weight: 650; color: var(--text-2); }
@@ -1100,3 +1098,18 @@ a.menu-item { text-decoration: none; }
   .ptz-preset-go { min-height: 44px; }
   .ptz-sub .btn.small, .ptz-note .btn.small { min-height: 36px; }
 }
+
+/* 鍵帽：實色邊框加稍深的底邊，像一顆按鍵；不用透明度（常設指令第 3 條） */
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.75em; height: 1.75em; padding: 0 0.45em; box-sizing: border-box;
+  border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px;
+  background: var(--surface); color: var(--text-2);
+  font: inherit; font-size: 0.82em; font-weight: 600; line-height: 1; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.key-hints { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: 0; color: var(--muted); font-size: 12.5px; }
+.key-hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.key-hint-keys { display: inline-flex; gap: 3px; }
+.key-hints-sep { width: 3px; height: 3px; margin: 0 6px; border-radius: 50%; background: var(--border-strong); }
+@media (hover: none) { .key-hints-fine { display: none; } }

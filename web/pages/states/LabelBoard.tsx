@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { KeyHints } from "../../ui/Kbd.tsx";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { StateImageDto, StateSensorDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
@@ -310,7 +311,19 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
         </div>
       )}
 
-      {fine && images.length > 0 ? <p className="lb-keys hint">鍵盤：方向鍵移動・數字鍵標記・Enter 採用預選・空白鍵選取・Delete 刪除</p> : null}
+      {fine && images.length > 0 ? (
+        <KeyHints
+          className="lb-keys"
+          always
+          hints={[
+            { keys: ["←", "→"], label: "移動" },
+            { keys: classes.length <= 3 ? classes.map((_, i) => String(i + 1)) : ["1", "…", String(Math.min(classes.length, 10) % 10)], label: "標記" },
+            { keys: ["Enter"], label: "採用預選" },
+            { keys: ["空白鍵"], label: "選取" },
+            { keys: ["Delete"], label: "刪除" },
+          ]}
+        />
+      ) : null}
 
       {chosen.length > 0 ? (
         <div className="lb-bar" role="toolbar" aria-label={`已選取 ${chosen.length} 張`}>
