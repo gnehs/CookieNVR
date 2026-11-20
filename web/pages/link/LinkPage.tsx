@@ -238,7 +238,7 @@ function Request({ code }: { code: string }) {
     case "ask":
       return <Ask code={code} app={req.app} ip={req.ip} expiresIn={req.expiresIn} onDone={setView} />;
     case "approved":
-      return <Outcome tone="ok" icon="check" title="已允許" body={`回到 ${req.app}，它會自動完成設定。之後可以在「帳號 → 連接其他 App」隨時撤銷。`} />;
+      return <Outcome tone="ok" icon="check" title="已允許" body={`回到 ${req.app}，它會自動完成設定。之後可以在「設定 → 一般 → 連接其他 App」隨時撤銷。`} />;
     case "denied":
       return <Outcome tone="muted" icon="x" title="已拒絕" body={`${req.app} 不會連線到 CookieNVR。`} />;
     case "used":

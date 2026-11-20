@@ -1,6 +1,5 @@
 import { useMe } from "../../data/session.ts";
 import { Appearance } from "./Appearance.tsx";
-import { ConnectedApps } from "./ConnectedApps.tsx";
 import { PasswordPanel } from "./PasswordPanel.tsx";
 import { SessionsPanel } from "./SessionsPanel.tsx";
 
@@ -23,7 +22,6 @@ export function AccountPage() {
         <Appearance />
         <PasswordPanel />
         <SessionsPanel />
-        <ConnectedApps />
       </div>
     </div>
   );

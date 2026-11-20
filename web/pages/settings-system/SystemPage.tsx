@@ -12,6 +12,7 @@ import { ErrorBox, Spinner } from "../../ui/states.tsx";
 import { Switch } from "../../ui/controls.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
+import { ConnectedApps } from "./ConnectedApps.tsx";
 import { DecodeRow } from "./DecodeRow.tsx";
 import { ObjectsGroup } from "./ObjectsGroup.tsx";
 
@@ -78,7 +79,7 @@ function GeneralForm({ settings }: { settings: Settings }) {
             <>
               開啟後，家裡其他裝置上的影音或智慧家庭 App 也能看到即時畫面。不影響錄影。
               <More label="怎麼使用？">
-                每台攝影機的串流網址在「攝影機 → 編輯 → 進階設定」裡可以複製。像 VLC、Home Assistant 或另一套 NVR 這類 App 連線時，用你的帳號密碼，或在「帳號 → 連接其他 App」為它建立一組密鑰（API Token）。
+                每台攝影機的串流網址在「攝影機 → 編輯 → 進階設定」裡可以複製。像 VLC、Home Assistant 或另一套 NVR 這類 App 連線時，用你的帳號密碼，或在「設定 → 一般 → 連接其他 App」為它建立一組密鑰（API Token）。
               </More>
             </>
           }
@@ -102,7 +103,7 @@ function GeneralForm({ settings }: { settings: Settings }) {
   );
 }
 
-/** 設定 → 一般：站點名稱、其他 App 與 Apple 家庭的開關，下面是物件辨識與影像解碼 */
+/** 設定 → 一般：站點名稱、其他 App 與 Apple 家庭的開關、連接其他 App，下面是物件辨識與影像解碼 */
 export function SystemPage() {
   const settings = useQuery(settingsQuery);
   let body;
@@ -112,6 +113,7 @@ export function SystemPage() {
     body = (
       <div className="stack">
         <GeneralForm settings={settings.data} />
+        <ConnectedApps />
         <div>
           <ObjectsGroup settings={settings.data} />
           <DecodeRow settings={settings.data} />
