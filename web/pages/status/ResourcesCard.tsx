@@ -1,19 +1,25 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { i18n } from "@lingui/core";
+import { msg, plural, t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useState } from "react";
 import type { CameraDto, GpuDto, MetricsDto, MetricsPointDto, UsageCategory } from "../../../src/api-types.ts";
 import { formatBytes } from "../../format.ts";
 import { Segmented } from "../../ui/controls.tsx";
 
 /** 「資源花在哪裡」的類別名稱；資源警告也用它說明誰用最多 */
-export const CATEGORY_LABEL: Record<UsageCategory, string> = {
-  record: "錄影",
-  detect: "動作偵測",
-  detector: "影像辨識",
-  live: "即時觀看",
-  restream: "影像服務",
-  homekit: "Apple 家庭",
-  export: "匯出影片",
-  system: "系統本身",
+const CATEGORY_LABEL: Record<UsageCategory, MessageDescriptor> = {
+  record: msg({ message: "Recording", context: "resource usage" }),
+  detect: msg`Motion detection`,
+  detector: msg`Image recognition`,
+  live: msg`Live viewing`,
+  restream: msg`Video service`,
+  homekit: msg`Apple Home`,
+  export: msg`Video export`,
+  system: msg`The system itself`,
 };
+
+export const categoryLabel = (c: UsageCategory): string => i18n._(CATEGORY_LABEL[c]);
 
 /** 量表變黃的門檻；跟首頁提醒的門檻（health.ts 的 PRESSURE）一樣，但這裡看的是當下 */
 const HIGH_PCT = 90;
@@ -63,12 +69,15 @@ function sparkPath(series: Series, now: number): { line: string; area: string } 
 
 function trendText(label: string, series: Series): string {
   const v = series.map((p) => p.v).filter((n): n is number => n !== null);
-  if (v.length < 2) return `${label}的近期走勢：還在收集`;
-  const avg = v.reduce((a, b) => a + b, 0) / v.length;
-  return `${label}最近 10 分鐘：平均 ${Math.round(avg)}%，最高 ${Math.round(Math.max(...v))}%`;
+  if (v.length < 2) return t`${label} recent trend: still collecting data`;
+  const avg = Math.round(v.reduce((a, b) => a + b, 0) / v.length);
+  const peak = Math.round(Math.max(...v));
+  return t`${label} over the last 10 minutes: average ${avg}%, peak ${peak}%`;
 }
 
 function Tile({ d }: { d: TileData }) {
+  const { t } = useLingui();
+  const label = d.label;
   const p = d.pct === null ? 0 : Math.min(100, Math.max(0, d.pct));
   const path = sparkPath(d.series, d.now);
   return (
@@ -76,7 +85,7 @@ function Tile({ d }: { d: TileData }) {
       <span className="res-label" title={d.label}>
         {d.label}
       </span>
-      <b className="res-value num" role="meter" aria-valuemin={0} aria-valuemax={100} aria-label={`${d.label}使用率`} aria-valuenow={Math.round(p)} aria-valuetext={d.value}>
+      <b className="res-value num" role="meter" aria-valuemin={0} aria-valuemax={100} aria-label={t`${label} usage`} aria-valuenow={Math.round(p)} aria-valuetext={d.value}>
         {d.value}
       </b>
       <span className="res-sub num">
@@ -114,10 +123,14 @@ function Row({ label, share, text, muted }: { label: string; share: number; text
 
 function gpuTile(g: GpuDto, history: MetricsPointDto[], now: number): TileData {
   const parts: string[] = [];
-  if (g.memory) parts.push(`顯示記憶體 ${formatBytes(g.memory.usedBytes)} / ${formatBytes(g.memory.totalBytes)}`);
+  if (g.memory) {
+    const used = formatBytes(g.memory.usedBytes);
+    const total = formatBytes(g.memory.totalBytes);
+    parts.push(t`GPU memory ${used} / ${total}`);
+  }
   if (g.temperatureC !== null) parts.push(`${g.temperatureC}°C`);
   if (g.note) parts.push(g.note);
-  if (!parts.length) parts.push(g.utilPct === null ? "使用率無法取得" : g.memory === null ? "與系統共用記憶體" : "使用率");
+  if (!parts.length) parts.push(g.utilPct === null ? t`Usage unavailable` : g.memory === null ? t`Shares memory with the system` : t`Usage`);
   return {
     key: g.id,
     // 卡片很窄，「NVIDIA GeForce RTX 3060」留型號就好；完整名稱在 title
@@ -127,31 +140,37 @@ function gpuTile(g: GpuDto, history: MetricsPointDto[], now: number): TileData {
     sub: parts,
     series: history.map((p) => ({ at: p.at, v: g.id in p.gpus ? (p.gpus[g.id] ?? null) : null })),
     now,
-    extras: g.extras.map((e) => `${e.label}：${e.value}`),
+    extras: g.extras.map((e) => {
+      const label = e.label;
+      const value = e.value;
+      return t`${label}: ${value}`;
+    }),
   };
 }
 
 function tilesOf(m: MetricsDto): TileData[] {
   const now = m.at;
   const memPct = m.memory.totalBytes ? (m.memory.usedBytes / m.memory.totalBytes) * 100 : null;
+  const memUsed = formatBytes(m.memory.usedBytes);
+  const memTotal = formatBytes(m.memory.totalBytes);
   const limited = (scope: string) => scope === "container";
-  const cpuCores = Number.isInteger(m.cpu.cores) ? m.cpu.cores : m.cpu.cores.toFixed(1);
+  const cpuCores = Number(m.cpu.cores.toFixed(1));
   return [
     {
       key: "cpu",
-      label: "處理器",
+      label: t`CPU`,
       value: pctText(m.cpu.pct),
       pct: m.cpu.pct,
-      sub: [limited(m.cpu.scope) ? `上限 ${cpuCores} 核心` : `共 ${cpuCores} 核心`],
+      sub: [limited(m.cpu.scope) ? plural(cpuCores, { one: "Limit # core", other: "Limit # cores" }) : plural(cpuCores, { one: "# core total", other: "# cores total" })],
       series: m.history.map((p) => ({ at: p.at, v: p.cpuPct })),
       now,
     },
     {
       key: "memory",
-      label: "記憶體",
+      label: t`Memory`,
       value: pctText(memPct),
       pct: memPct,
-      sub: [`${formatBytes(m.memory.usedBytes)} / ${limited(m.memory.scope) ? "上限 " : ""}${formatBytes(m.memory.totalBytes)}`],
+      sub: [limited(m.memory.scope) ? t`${memUsed} / limit ${memTotal}` : t`${memUsed} / ${memTotal}`],
       series: m.history.map((p) => ({ at: p.at, v: p.memPct })),
       now,
     },
@@ -160,6 +179,7 @@ function tilesOf(m: MetricsDto): TileData[] {
 }
 
 function Usage({ m, cams }: { m: MetricsDto; cams: CameraDto[] }) {
+  const { t } = useLingui();
   const [mode, setMode] = useState<Mode>("cpu");
   const value = (u: { cpuPct: number; memBytes: number }) => (mode === "cpu" ? u.cpuPct : u.memBytes);
   const text = (v: number) => (mode === "cpu" ? (v > 0 && v < 1 ? "<1%" : `${Math.round(v)}%`) : formatBytes(v));
@@ -168,12 +188,12 @@ function Usage({ m, cams }: { m: MetricsDto; cams: CameraDto[] }) {
   let entries: { key: string; label: string; v: number; muted: boolean }[] = [];
   let camEntries: { key: string; label: string; v: number }[] = [];
   if (!m.usage) {
-    hint = "正在計算…";
+    hint = t`Calculating…`;
   } else {
-    hint = mode === "cpu" ? `以${m.cpu.scope === "container" ? "可用的" : "整台機器的"}處理器為 100%` : "各項工作占用的記憶體";
+    hint = mode === "cpu" ? (m.cpu.scope === "container" ? t`100% is all the CPU available to it` : t`100% is the CPU of the whole machine`) : t`Memory used by each task`;
     const list = m.usage.filter((u) => value(u) > 0 && (mode === "memory" || u.cpuPct >= 0.05));
-    const otherLabel = m.memory.scope === "host" || m.cpu.scope === "host" ? (mode === "cpu" ? "其他程式" : "其他程式與快取") : "其他";
-    entries = list.map((u) => ({ key: u.category as string, label: CATEGORY_LABEL[u.category], v: value(u), muted: false }));
+    const otherLabel = m.memory.scope === "host" || m.cpu.scope === "host" ? (mode === "cpu" ? t`Other programs` : t`Other programs and cache`) : t`Other`;
+    entries = list.map((u) => ({ key: u.category as string, label: categoryLabel(u.category), v: value(u), muted: false }));
     if (m.other && value(m.other) > 0) entries.push({ key: "other", label: otherLabel, v: value(m.other), muted: true });
     const perCam = new Map<string, number>();
     for (const u of m.usage) for (const c of u.cameras) perCam.set(c.cameraId, (perCam.get(c.cameraId) ?? 0) + value(c));
@@ -185,12 +205,12 @@ function Usage({ m, cams }: { m: MetricsDto; cams: CameraDto[] }) {
   return (
     <div className="res-usage">
       <div className="res-usage-head">
-        <h3>資源花在哪裡</h3>
+        <h3>{t`Where resources go`}</h3>
         <Segmented
-          label="用量依"
+          label={t`Usage by`}
           options={[
-            { value: "cpu", label: "處理器" },
-            { value: "memory", label: "記憶體" },
+            { value: "cpu", label: t`CPU` },
+            { value: "memory", label: t`Memory` },
           ]}
           value={mode}
           onChange={setMode}
@@ -203,13 +223,13 @@ function Usage({ m, cams }: { m: MetricsDto; cams: CameraDto[] }) {
         ))}
       </div>
       <details className="more res-cams" hidden={camEntries.length === 0}>
-        <summary>依攝影機查看</summary>
+        <summary>{t`View by camera`}</summary>
         <div className="res-rows">
           {camEntries.map((e) => (
             <Row key={e.key} label={e.label} share={e.v / camMax} text={text(e.v)} />
           ))}
         </div>
-        <p className="res-note">影像服務、Apple 家庭與系統本身由所有攝影機共用，沒有算在個別攝影機裡。</p>
+        <p className="res-note">{t`The video service, Apple Home and the system itself are shared by all cameras and are not counted under individual cameras.`}</p>
       </details>
     </div>
   );
@@ -217,11 +237,12 @@ function Usage({ m, cams }: { m: MetricsDto; cams: CameraDto[] }) {
 
 /** 狀態頁的「系統資源」卡：CPU、記憶體、每張 GPU 一格，下面是依類別的用量 */
 export function ResourcesCard({ metrics, cams }: { metrics: MetricsDto; cams: CameraDto[] }) {
+  const { t } = useLingui();
   const tiles = tilesOf(metrics);
-  const gpuNote = metrics.gpus.length > 0 || metrics.gpuMissing === null ? "" : metrics.gpuMissing === "unreadable" ? "有顯示卡，但目前讀不到它的使用情況；原因寫在「複製診斷資訊」裡。" : "沒有偵測到顯示卡。";
+  const gpuNote = metrics.gpus.length > 0 || metrics.gpuMissing === null ? "" : metrics.gpuMissing === "unreadable" ? t`A GPU is present, but its usage can't be read right now. The reason is in “Copy diagnostics”.` : t`No GPU detected.`;
   return (
-    <section className="card" aria-label="系統資源">
-      <h2 className="card-title">系統資源</h2>
+    <section className="card" aria-label={t`System resources`}>
+      <h2 className="card-title">{t`System resources`}</h2>
       <div className="card-body res-body">
         <div className="res-grid" data-count={tiles.length}>
           {tiles.map((t) => (

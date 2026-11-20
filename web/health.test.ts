@@ -24,7 +24,7 @@ const healthy = { workers: [worker("restream")], disk: { totalBytes: 2 * TB, fre
 
 describe("cameraStatus", () => {
   test("開了錄影卻沒在錄是問題，用紅色", () => {
-    expect(cameraStatus(cam("a", "前門", { recording: false }))).toMatchObject({ kind: "notRecording", label: "沒在錄影", tone: "bad", problem: true });
+    expect(cameraStatus(cam("a", "前門", { recording: false }))).toMatchObject({ kind: "notRecording", label: "Not recording", tone: "bad", problem: true });
   });
 
   test("使用者自己關掉錄影不是問題，中性且首頁不標出", () => {
@@ -32,15 +32,15 @@ describe("cameraStatus", () => {
   });
 
   test("連不上是問題，即使錄影設定是關的", () => {
-    expect(cameraStatus(cam("a", "前門", { online: false, record: false }))).toMatchObject({ kind: "offline", label: "連不上", tone: "bad", problem: true });
+    expect(cameraStatus(cam("a", "前門", { online: false, record: false }))).toMatchObject({ kind: "offline", label: "Offline", tone: "bad", problem: true });
   });
 
   test("已停用是中性，不管其他欄位", () => {
-    expect(cameraStatus(cam("a", "前門", { enabled: false, online: false, recording: false }))).toMatchObject({ kind: "disabled", label: "已停用", tone: "muted", problem: false });
+    expect(cameraStatus(cam("a", "前門", { enabled: false, online: false, recording: false }))).toMatchObject({ kind: "disabled", label: "Disabled", tone: "muted", problem: false });
   });
 
   test("正常錄影是平靜的綠色，不是紅色", () => {
-    expect(cameraStatus(cam("a", "前門"))).toMatchObject({ kind: "recording", label: "錄影中", tone: "ok", problem: false });
+    expect(cameraStatus(cam("a", "前門"))).toMatchObject({ kind: "recording", label: "Recording", tone: "ok", problem: false });
   });
 
   test("錄影中但 worker 不穩定是警告", () => {
@@ -52,13 +52,13 @@ describe("assessHealth", () => {
   test("同類問題合併成一筆，名稱依原順序列出", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "前門", { recording: false }), cam("b", "客廳"), cam("c", "車道", { recording: false }), cam("d", "後院", { recording: false })] });
     expect(h.issues).toHaveLength(1);
-    expect(h.issues[0]).toMatchObject({ kind: "notRecording", title: "3 台沒在錄影：前門、車道、後院", short: "3 台沒在錄影" });
+    expect(h.issues[0]).toMatchObject({ kind: "notRecording", title: "3 cameras not recording: 前門, 車道, 後院", short: "3 cameras not recording" });
     expect(h.issues[0]!.cameras.map((c) => c.id)).toEqual(["a", "c", "d"] as CameraId[]);
   });
 
   test("只有一台時標題直接用名稱", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "前門", { online: false })] });
-    expect(h.issues.map((i) => i.title)).toEqual(["前門連不上"]);
+    expect(h.issues.map((i) => i.title)).toEqual(["前門 is offline"]);
   });
 
   test("停用與只看畫面的攝影機不算問題", () => {
@@ -76,7 +76,7 @@ describe("assessHealth", () => {
       cams: [cam("a", "前門", { online: false }), cam("b", "客廳"), cam("c", "車道", { recording: false })],
     });
     expect(h.issues.map((i) => i.kind)).toEqual(["offline", "notRecording", "unstable", "diskFull"]);
-    expect(alertSummary(h.issues)).toBe("1 台連不上、1 台沒在錄影、1 台錄影不穩定、儲存空間快滿了");
+    expect(alertSummary(h.issues)).toBe("1 camera offline, 1 camera not recording, 1 camera with unstable recording, Storage space is almost full");
   });
 
   test("影像服務停止與空間不足是系統層級的問題", () => {
@@ -90,10 +90,10 @@ describe("assessHealth", () => {
     const plain = assessHealth({ ...base, workers: [worker("restream"), worker("record:a", { state: "backoff" })] });
     const denied = assessHealth({ ...base, workers: [worker("restream"), worker("record:a", { state: "backoff", stderrTail: ["[out#0/segment @ 0x1] Could not write header: Permission denied"] })] });
     expect(plain.issues.map((i) => [i.kind, i.detail])).toEqual([["notRecording", undefined]]);
-    expect(denied.issues.map((i) => [i.kind, i.detail])).toEqual([["notRecording", "沒有權限寫入錄影位置"]]);
+    expect(denied.issues.map((i) => [i.kind, i.detail])).toEqual([["notRecording", "No permission to write to the recording location"]]);
     // 同時有一般的沒在錄影時分開列，不會被一起說成權限問題
     const mixed = assessHealth({ ...healthy, cams: [cam("a", "前門", { recording: false }), cam("b", "車道", { recording: false })], workers: denied.issues.length ? [worker("restream"), worker("record:a", { state: "backoff", stderrTail: ["Permission denied"] })] : [] });
-    expect(mixed.issues.map((i) => [i.title, i.detail])).toEqual([["前門沒在錄影", "沒有權限寫入錄影位置"], ["車道沒在錄影", undefined]]);
+    expect(mixed.issues.map((i) => [i.title, i.detail])).toEqual([["前門 is not recording", "No permission to write to the recording location"], ["車道 is not recording", undefined]]);
   });
 
   test("RTSP port 被佔用時說出原因，一般的停止沒有說明", () => {
@@ -133,7 +133,7 @@ describe("資源吃緊", () => {
   test("資源警告排在紅色問題後面，首頁提醒用一般說法", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "前門", { online: false })], resources: points(6, () => 99) });
     expect(h.issues.map((i) => i.kind)).toEqual(["offline", "cpuBusy"]);
-    expect(alertSummary(h.issues)).toBe("1 台連不上、處理器長時間忙碌");
+    expect(alertSummary(h.issues)).toBe("1 camera offline, The CPU has been busy for a long time");
   });
 });
 
@@ -147,7 +147,7 @@ describe("物件辨識 detector", () => {
 
   test("detector 一直重啟是警告，不影響攝影機與錄影的問題", () => {
     const h = assessHealth({ ...healthy, workers: [worker("restream"), detector({ state: "backoff" })], cams: [] });
-    expect(h.issues).toMatchObject([{ kind: "objects", tone: "warn", short: "物件辨識停止" }]);
+    expect(h.issues).toMatchObject([{ kind: "objects", tone: "warn", short: "Object detection stopped" }]);
   });
 });
 
@@ -156,7 +156,7 @@ describe("影像解碼退回處理器", () => {
 
   test("解碼有警告時多一筆黃色問題，帶著後端的說明", () => {
     const h = assessHealth({ ...healthy, cams: [], decodeWarning: warning });
-    expect(h.issues).toEqual([{ kind: "decode", tone: "warn", cameras: [], title: "影像解碼改用處理器", short: "影像解碼改用處理器", detail: warning }]);
+    expect(h.issues).toEqual([{ kind: "decode", tone: "warn", cameras: [], title: "Video decoding fell back to the CPU", short: "Video decoding fell back to the CPU", detail: warning }]);
   });
 
   test("沒有警告或讀不到時不提醒", () => {
@@ -167,7 +167,7 @@ describe("影像解碼退回處理器", () => {
   test("排在紅色問題後面，首頁提醒合成一句", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "前門", { online: false })], decodeWarning: warning });
     expect(h.issues.map((i) => i.kind)).toEqual(["offline", "decode"]);
-    expect(alertSummary(h.issues)).toBe("1 台連不上、影像解碼改用處理器");
+    expect(alertSummary(h.issues)).toBe("1 camera offline, Video decoding fell back to the CPU");
   });
 });
 
@@ -182,8 +182,8 @@ describe("appdata 硬碟", () => {
     expect(warn.dataDisk).toEqual({ free: 4 * GB, total: 500 * GB, tone: "warn" });
     const bad = assessHealth({ ...healthy, cams: [], dataDisk: data(0.5), disk: { totalBytes: 100, freeBytes: 5 }, minFreeBytes: 0 });
     expect(bad.issues.map((i) => [i.kind, i.tone, i.title])).toEqual([
-      ["dataDiskLow", "bad", "appdata 硬碟的空間不足"],
-      ["diskFull", "warn", "錄影硬碟的空間快滿了"],
+      ["dataDiskLow", "bad", "appdata disk space is low"],
+      ["diskFull", "warn", "Recording disk space is almost full"],
     ]);
   });
 
@@ -216,8 +216,8 @@ describe("狀態感應器", () => {
   test("暫停與正常的不是問題；還沒訓練、要重新訓練各一張卡，帶著感應器", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "車庫")], stateSensors: [sensor("s1", "a", null), sensor("s2", "a", "disabled"), sensor("s3", "a", "paused"), sensor("s4", "a", "untrained", "車庫門"), sensor("s5", "a", "stale-model")] });
     expect(h.issues.map((i) => [i.kind, i.title])).toEqual([
-      ["stateStale", "「鐵捲門」要重新訓練"],
-      ["stateUntrained", "「車庫門」還沒訓練"],
+      ["stateStale", "“鐵捲門” needs retraining"],
+      ["stateUntrained", "“車庫門” isn't trained yet"],
     ]);
     expect(h.issues[1]!.sensors).toEqual([{ id: "s4", cameraId: "a" as CameraId, name: "車庫門" }]);
     expect(h.issues[1]!.cameras).toEqual([{ id: "a" as CameraId, name: "車庫" }]);
@@ -225,7 +225,7 @@ describe("狀態感應器", () => {
 
   test("同類合併", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "車庫"), cam("b", "後院")], stateSensors: [sensor("s1", "a", "untrained"), sensor("s2", "b", "untrained", "窗戶")] });
-    expect(h.issues.map((i) => i.short)).toEqual(["2 個狀態感應器還沒訓練"]);
+    expect(h.issues.map((i) => i.short)).toEqual(["2 state sensors aren't trained yet"]);
     expect(h.issues[0]!.cameras.map((c) => c.id)).toEqual(["a", "b"] as CameraId[]);
   });
 
@@ -240,7 +240,7 @@ describe("狀態感應器", () => {
   test("辨識程序的問題只列一次，說明用後端給的白話", () => {
     const h = assessHealth({ ...healthy, cams: [cam("a", "車庫")], stateSensors: [sensor("s1", "a", "worker"), sensor("s2", "a", "worker")] });
     expect(h.issues).toHaveLength(1);
-    expect(h.issues[0]).toMatchObject({ kind: "stateWorker", title: "狀態辨識沒有正常運作", detail: "狀態辨識程序無法啟動：缺少模型檔" });
+    expect(h.issues[0]).toMatchObject({ kind: "stateWorker", title: "State recognition isn't working properly", detail: "狀態辨識程序無法啟動：缺少模型檔" });
     const crashed = assessHealth({ ...healthy, workers: [worker("restream"), worker("classifier", { kind: "classifier", state: "backoff" })], cams: [], stateSensors: [] });
     expect(crashed.issues.map((i) => i.kind)).toEqual(["stateWorker"]);
   });

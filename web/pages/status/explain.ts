@@ -1,8 +1,9 @@
+import { plural, t } from "@lingui/core/macro";
 import type { MetricsDto } from "../../../src/api-types.ts";
-import { formatBytes } from "../../format.ts";
+import { formatBytes, joinList } from "../../format.ts";
 import type { Health, Issue } from "../../health.ts";
 import type { IconName } from "../../ui/icons.ts";
-import { CATEGORY_LABEL } from "./ResourcesCard.tsx";
+import { categoryLabel } from "./ResourcesCard.tsx";
 
 export type IssueTarget =
   | { to: "/settings/system" | "/settings/objects" | "/settings/storage" | "/settings/cameras" }
@@ -37,7 +38,9 @@ export interface Snapshot {
 /** 「目前最花處理器的是錄影」；還沒算出各類用量時是空字串 */
 function topUser(snap: Snapshot, by: "cpuPct" | "memBytes"): string {
   const top = [...(snap.metrics?.usage ?? [])].sort((a, b) => b[by] - a[by])[0];
-  return top && top[by] > 0 ? `目前用最多的是「${CATEGORY_LABEL[top.category]}」。` : "";
+  if (!top || top[by] <= 0) return "";
+  const category = categoryLabel(top.category);
+  return t`The biggest user right now is “${category}”. `;
 }
 
 export const SYSTEM_ICON: Partial<Record<Issue["kind"], IconName>> = { restream: "server", objects: "server", objectsLoad: "server", decode: "server", stateWorker: "server", cpuBusy: "activity", memoryHigh: "activity" };
@@ -45,162 +48,190 @@ export const SYSTEM_ICON: Partial<Record<Issue["kind"], IconName>> = { restream:
 /** 每一類問題只寫一次：一句下一步、收起來的原因、一個最可能有用的動作 */
 export function explain(issue: Issue, snap: Snapshot): Explained {
   const one = issue.cameras.length === 1;
-  const names = issue.cameras.map((c) => c.name).join("、");
+  const names = joinList(issue.cameras.map((c) => c.name));
   const sensors = issue.sensors ?? [];
   const camOf = (id: string) => issue.cameras.find((c) => c.id === id)?.name ?? "";
-  const sensorWho = sensors.map((s) => `${camOf(s.cameraId)}的「${s.name}」`).join("、");
+  const sensorWho = joinList(
+    sensors.map((s) => {
+      const camera = camOf(s.cameraId);
+      const sensor = s.name;
+      return t`“${sensor}” on ${camera}`;
+    }),
+  );
   const sensorAction = (label: string): Action =>
     sensors.length === 1
       ? { label, to: "/settings/cameras/$id/states/$sensorId", params: { id: sensors[0]!.cameraId, sensorId: sensors[0]!.id } }
       : issue.cameras.length === 1
         ? { label, to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } }
         : { label, to: "/settings/cameras" };
+  const restartLabel = t`Restart`;
+  const checkSettings = t`Check settings`;
+  const adjustSettings = t`Adjust settings`;
+  const adjustRetention = t`Adjust retention`;
+  const lowSpace = t`Low on space`;
+  const almostFull = t`Almost full`;
+  const stopped = t`Stopped`;
   switch (issue.kind) {
     case "stateUntrained":
       return {
         who: sensorWho,
-        pill: { label: "還沒訓練", tone: "warn" },
-        next: "標記每一類的畫面後按「開始訓練」",
-        why: "狀態感應器要先看過每一種樣子（例如門開著、關著的畫面）才會判斷。標記好之後訓練只要幾秒到幾十秒。不需要了也可以直接刪除它。",
-        action: sensorAction("去標記"),
+        pill: { label: t`Not trained yet`, tone: "warn" },
+        next: t`Label each class of picture, then press “Start training”`,
+        why: t`A state sensor has to see each look first (for example, a door open and a door closed) before it can tell them apart. Once you have labeled the pictures, training takes only a few seconds to a few dozen seconds. If you no longer need it, you can also just delete it.`,
+        action: sensorAction(t`Go label`),
       };
     case "stateStale":
       return {
         who: sensorWho,
-        pill: { label: "要重新訓練", tone: "warn" },
-        next: "類別改過了，重新訓練後才會繼續辨識",
-        why: "新增或刪除類別後，之前學到的已經對不上新的類別，所以暫停判斷。新增的類別要先標記幾張畫面，再按「重新訓練」。",
-        action: sensorAction("重新訓練"),
+        pill: { label: t`Needs retraining`, tone: "warn" },
+        next: t`The classes changed. It will keep recognizing after you retrain it`,
+        why: t`After you add or delete a class, what was learned before no longer matches the new classes, so recognition is paused. Label a few pictures for each new class, then press “Retrain”.`,
+        action: sensorAction(t`Retrain`),
       };
     case "stateNoFrames":
       return {
         who: sensorWho,
-        pill: { label: "看不到畫面", tone: "warn" },
-        next: "攝影機有連上，但狀態辨識收不到畫面",
-        why: "狀態辨識跟動作偵測用同一份畫面；這台的偵測畫面中斷時就沒辦法判斷。到攝影機設定確認「偵測」有開啟，仍然不行時，用頁面下方的「複製診斷資訊」找原因。",
-        action: issue.cameras.length === 1 ? { label: "檢查設定", to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } } : { label: "檢查設定", to: "/settings/cameras" },
+        pill: { label: t`Can't see the picture`, tone: "warn" },
+        next: t`The camera is connected, but state recognition isn't receiving any picture`,
+        why: t`State recognition uses the same picture as motion detection. When this camera's detection picture is interrupted, it can't tell the state. Check that “Detection” is turned on in the camera settings. If it still doesn't work, use “Copy diagnostics” at the bottom of the page to find the cause.`,
+        action: issue.cameras.length === 1 ? { label: checkSettings, to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } } : { label: checkSettings, to: "/settings/cameras" },
       };
     case "stateWorker":
       return {
-        who: "狀態辨識",
-        pill: { label: "已停止", tone: "warn" },
-        next: issue.detail ?? "重新啟動，通常就會恢復",
-        why: "負責判斷畫面狀態的程序沒有在運作，所有狀態感應器都會停在「未知」。錄影與動作偵測不受影響。剛開機時會先啟動一下子；一直沒有恢復時重新啟動它，仍然不行請用頁面下方的「複製診斷資訊」找原因。",
-        action: { label: "重新啟動", restart: { ids: ["classifier"], title: "重新啟動狀態辨識？", message: "狀態會先變成未知，幾秒後重新確認。錄影不受影響。", done: "已重新啟動狀態辨識" } },
+        who: t`State recognition`,
+        pill: { label: stopped, tone: "warn" },
+        next: issue.detail ?? t`Restart it and it usually recovers`,
+        why: t`The process that judges the state of the picture isn't running, so every state sensor stays at “Unknown”. Recording and motion detection are not affected. Right after boot it takes a moment to start. If it doesn't recover, restart it. If that still doesn't help, use “Copy diagnostics” at the bottom of the page to find the cause.`,
+        action: { label: restartLabel, restart: { ids: ["classifier"], title: t`Restart state recognition?`, message: t`States will become unknown first and be checked again after a few seconds. Recording is not affected.`, done: t`State recognition restarted` } },
       };
     case "restream":
       if (issue.detail)
         return {
-          who: "影像服務",
-          pill: { label: "port 被佔用", tone: "bad" },
+          who: t`Video service`,
+          pill: { label: t`Port in use`, tone: "bad" },
           next: issue.detail,
-          why: "通常是同一台主機上還跑著其他監視器軟體（例如 Frigate、go2rtc 也用 8554）。容器用 Host 網路時，設定環境變數 RTSP_PORT 換一個沒人用的 port；用 bridge 網路時，把 RTSP_PORT 和主機、容器兩側的 port 改成同一個數字。改完重新啟動容器。",
+          why: t`Usually another surveillance program is running on the same host (for example Frigate or go2rtc, which also use 8554). When the container uses Host networking, set the environment variable RTSP_PORT to a port nobody uses. With bridge networking, set RTSP_PORT and the host-side and container-side ports to the same number. Restart the container afterwards.`,
         };
       return {
-        who: "影像服務",
-        pill: { label: "已停止", tone: "bad" },
-        next: "重新啟動就會恢復畫面與錄影",
-        why: "所有攝影機的畫面都會經過這個服務，它停下來時畫面與錄影都會中斷。重新啟動期間會中斷幾秒。",
-        action: { label: "重新啟動", restart: { ids: ["restream"], title: "重新啟動影像服務？", message: "所有攝影機的畫面與錄影會中斷幾秒鐘。", done: "已重新啟動影像服務" } },
+        who: t`Video service`,
+        pill: { label: stopped, tone: "bad" },
+        next: t`Restart it to bring back the picture and recording`,
+        why: t`Every camera's picture goes through this service, so when it stops, the picture and recording are interrupted. A restart interrupts them for a few seconds.`,
+        action: { label: restartLabel, restart: { ids: ["restream"], title: t`Restart the video service?`, message: t`The picture and recording of every camera will be interrupted for a few seconds.`, done: t`Video service restarted` } },
       };
     case "objects":
       return {
-        who: "物件辨識",
-        pill: { label: "已停止", tone: "warn" },
-        next: "重新啟動，通常就會恢復辨識",
-        why: "物件辨識停下來時，錄影與動作偵測不受影響，只是事件不會標上看到的東西；設成「過濾」的攝影機會改成照一般動作建立事件。重新啟動後仍然停止，請用頁面下方的「複製診斷資訊」找原因，也可以到「設定 → 物件辨識」換一個辨識模型或推論裝置。",
-        action: { label: "重新啟動", restart: { ids: ["detector"], title: "重新啟動物件辨識？", message: "辨識會中斷幾秒鐘，錄影不受影響。", done: "已重新啟動物件辨識" } },
+        who: t`Object detection`,
+        pill: { label: stopped, tone: "warn" },
+        next: t`Restart it and detection usually recovers`,
+        why: t`While object detection is stopped, recording and motion detection are not affected, but events won't be tagged with what was seen. Cameras set to “Filter” create events from ordinary motion instead. If it is still stopped after a restart, use “Copy diagnostics” at the bottom of the page to find the cause, or go to “Settings → Object detection” to switch the model or inference device.`,
+        action: { label: restartLabel, restart: { ids: ["detector"], title: t`Restart object detection?`, message: t`Detection will be interrupted for a few seconds. Recording is not affected.`, done: t`Object detection restarted` } },
       };
     case "objectsLoad":
       return {
-        who: "物件辨識",
-        pill: { label: "跟不上", tone: "warn" },
+        who: t`Object detection`,
+        pill: { label: t`Can't keep up`, tone: "warn" },
         next: issue.title,
-        why: "辨識跟不上時，多出來的畫面會被略過。錄影與動作偵測不受影響，但事件可能漏標上看到的東西。降低辨識頻率、改用更快的裝置，或到設定裡測速看看這台機器的能力，都能改善。",
-        action: { label: "調整設定", to: "/settings/objects" },
+        why: t`When detection can't keep up, the extra frames are skipped. Recording and motion detection are not affected, but events may miss what was seen. Lowering the detection rate, using a faster device, or running the speed test in settings to see what this machine can do will all help.`,
+        action: { label: adjustSettings, to: "/settings/objects" },
       };
     case "decode":
       return {
-        who: "影像解碼",
-        pill: { label: "改用處理器", tone: "warn" },
+        who: t`Video decoding`,
+        pill: { label: t`Using the CPU`, tone: "warn" },
         next: issue.detail ?? issue.title,
-        why: "顯示卡無法解碼時，影像會改由處理器解碼，錄影與動作偵測仍然正常，只是會多吃一些處理器。可以到「設定 → 一般」換一張顯示卡，或改回自動；原因寫在「複製診斷資訊」裡。",
-        action: { label: "調整設定", to: "/settings/system" },
+        why: t`When the graphics card can't decode, video is decoded by the CPU instead. Recording and motion detection still work, but the CPU does some extra work. You can pick another graphics card or switch back to automatic in “Settings → General”. The reason is written in “Copy diagnostics”.`,
+        action: { label: adjustSettings, to: "/settings/system" },
       };
     case "offline":
       return {
         who: names,
-        pill: { label: "連不上", tone: "bad" },
-        next: "確認相機有開機並連上網路",
-        why: "收不到畫面，所以也沒辦法錄影。常見原因是相機斷電、Wi-Fi 斷線，或 IP 位址變了；如果最近換過路由器，到攝影機設定更新 IP。相機能同時提供的串流連線很少，Frigate 等其他軟體也在直接連這台相機時，名額可能被佔滿，請讓它們改接 CookieNVR 的串流網址。",
-        action: one ? { label: "檢查設定", to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } } : { label: "檢查設定", to: "/settings/cameras" },
+        pill: { label: t`Can't connect`, tone: "bad" },
+        next: t`Make sure the camera is on and connected to the network`,
+        why: t`No picture is coming in, so nothing can be recorded either. Common causes are the camera losing power, Wi-Fi dropping, or the IP address changing. If you changed routers recently, update the IP in the camera settings. A camera can only serve a few stream connections at once. If other software such as Frigate also connects to this camera directly, the slots can run out, so point them at CookieNVR's stream URL instead.`,
+        action: one ? { label: checkSettings, to: "/settings/cameras/$id", params: { id: issue.cameras[0]!.id } } : { label: checkSettings, to: "/settings/cameras" },
       };
     case "notRecording":
       if (issue.detail)
         return {
           who: names,
-          pill: { label: "沒有寫入權限", tone: "bad" },
-          next: "錄影寫不進儲存位置，重新啟動容器通常會自動修正",
-          why: "CookieNVR 以 PUID／PGID 設定的使用者執行，錄影資料夾裡卻有它不能寫的資料夾，多半是之前以 root 執行（沒設 PUID）時建立的。重新啟動容器時會自動把資料夾交給這個使用者；仍然不行時，在主機上把錄影與 appdata 的資料夾交給 PUID:PGID（例如 chown -R 99:100 <主機上的路徑>），再重新啟動容器。",
+          pill: { label: t`No write permission`, tone: "bad" },
+          next: t`Recording can't be written to storage. Restarting the container usually fixes it`,
+          why: t`CookieNVR runs as the user set by PUID/PGID, but the recording folder contains folders it can't write to, usually created earlier when it ran as root (PUID not set). Restarting the container hands the folders to this user automatically. If it still doesn't work, give the recording and appdata folders to PUID:PGID on the host (for example chown -R 99:100 <path on the host>), then restart the container.`,
         };
+      const cameraName = issue.cameras[0]?.name ?? "";
       return {
         who: names,
-        pill: { label: "沒在錄影", tone: "bad" },
-        next: "重新開始錄影，通常就會恢復",
-        why: "畫面正常，但錄影一直無法開始，常見原因是儲存空間不足或寫不進儲存位置。重新開始後仍然沒有錄影，請用頁面下方的「複製診斷資訊」找原因。",
+        pill: { label: t`Not recording`, tone: "bad" },
+        next: t`Start recording again and it usually recovers`,
+        why: t`The picture is fine, but recording won't start. Common causes are low storage space or being unable to write to the storage location. If it still isn't recording after starting again, use “Copy diagnostics” at the bottom of the page to find the cause.`,
         action: {
-          label: "重新開始",
+          label: t`Start again`,
           restart: {
             ids: issue.cameras.map((c) => `record:${c.id}`),
-            title: one ? `重新開始「${issue.cameras[0]!.name}」的錄影？` : `重新開始 ${issue.cameras.length} 台的錄影？`,
-            message: "錄影會中斷幾秒鐘。",
-            done: "已重新開始錄影",
+            title: one ? t`Restart recording for “${cameraName}”?` : restartRecordingTitle(issue.cameras.length),
+            message: t`Recording will be interrupted for a few seconds.`,
+            done: t`Recording restarted`,
           },
         },
       };
     case "unstable":
       return {
         who: names,
-        pill: { label: "錄影不穩定", tone: "warn" },
-        next: "把相機移近路由器或改用有線",
-        why: "最近 10 分鐘內錄影中斷又自動恢復了很多次，常見原因是網路訊號不穩。",
+        pill: { label: t`Recording unstable`, tone: "warn" },
+        next: t`Move the camera closer to the router or use a wired connection`,
+        why: t`In the last 10 minutes recording was interrupted and recovered on its own many times. A common cause is an unstable network signal.`,
       };
-    case "diskLow":
+    case "diskLow": {
+      const free = formatBytes(snap.health.disk.free);
       return {
-        who: "儲存空間",
-        pill: { label: "空間不足", tone: "bad" },
-        next: "縮短保留天數或換更大的硬碟",
-        why: `剩下 ${formatBytes(snap.health.disk.free)}，低於設定的最低剩餘空間，系統正在刪除最舊的錄影來騰出空間。`,
-        action: { label: "調整保留", to: "/settings/storage" },
+        who: t`Storage`,
+        pill: { label: lowSpace, tone: "bad" },
+        next: t`Shorten the retention period or get a bigger disk`,
+        why: t`Only ${free} is left, below the minimum free space you set, and the system is deleting the oldest recordings to free up space.`,
+        action: { label: adjustRetention, to: "/settings/storage" },
       };
-    case "diskFull":
+    }
+    case "diskFull": {
+      const used = snap.health.disk.usedPct.toFixed(0);
       return {
-        who: "儲存空間",
-        pill: { label: "快滿了", tone: "warn" },
-        next: "可以先縮短保留天數",
-        why: `已用 ${snap.health.disk.usedPct.toFixed(0)}%。空間用完前會自動刪除最舊的錄影，縮短保留天數可以避免重要片段被刪掉。`,
-        action: { label: "調整保留", to: "/settings/storage" },
+        who: t`Storage`,
+        pill: { label: almostFull, tone: "warn" },
+        next: t`You can shorten the retention period first`,
+        why: t`${used}% is used. The oldest recordings are deleted automatically before space runs out, and a shorter retention period keeps important clips from being deleted.`,
+        action: { label: adjustRetention, to: "/settings/storage" },
       };
-    case "dataDiskLow":
+    }
+    case "dataDiskLow": {
+      const free = formatBytes(snap.health.dataDisk?.free ?? 0);
       return {
-        who: "appdata 硬碟",
-        pill: issue.tone === "bad" ? { label: "空間不足", tone: "bad" } : { label: "快滿了", tone: "warn" },
-        next: "清出 appdata 那顆硬碟的空間",
-        why: `資料庫、事件縮圖與匯出的影片放在這顆，只剩 ${formatBytes(snap.health.dataDisk?.free ?? 0)}。這裡不會自動清理，空間用完時匯出會失敗，事件與設定也可能存不進去。刪掉同一顆上其他用不到的檔案（例如其他容器的資料），或把 /data 換到空間較大的硬碟。`,
+        who: t`appdata disk`,
+        pill: issue.tone === "bad" ? { label: lowSpace, tone: "bad" } : { label: almostFull, tone: "warn" },
+        next: t`Free up space on the appdata disk`,
+        why: t`The database, event thumbnails and exported videos live on this disk, and only ${free} is left. Nothing here is cleaned up automatically. When the space runs out, exports fail and events and settings may not be saved. Delete other files on the same disk that you don't need (for example data from other containers), or move /data to a larger disk.`,
       };
-    case "cpuBusy":
+    }
+    case "cpuBusy": {
+      const topCpu = topUser(snap, "cpuPct");
       return {
-        who: "處理器",
-        pill: { label: "長時間忙碌", tone: "warn" },
-        next: "減少同時進行的工作，或換效能更好的主機",
-        why: `過去 5 分鐘處理器幾乎一直在 90% 以上，畫面可能延遲、錄影可能掉格。${topUser(snap, "cpuPct")}可以關掉不需要的動作偵測、少開幾個即時畫面，或讓攝影機改用解析度較低的子碼流偵測。`,
+        who: t`CPU`,
+        pill: { label: t`Busy for a long time`, tone: "warn" },
+        next: t`Reduce the work running at once, or move to a more powerful machine`,
+        why: t`For the past 5 minutes the CPU has been above 90% almost the whole time, so video may lag and recording may drop frames. ${topCpu} You can turn off motion detection you don't need, open fewer live views, or have cameras detect on a lower-resolution substream.`,
       };
-    case "memoryHigh":
+    }
+    case "memoryHigh": {
+      const topMem = topUser(snap, "memBytes");
       return {
-        who: "記憶體",
-        pill: { label: "快不夠了", tone: "warn" },
-        next: "減少攝影機的工作，或增加記憶體",
-        why: `過去 5 分鐘記憶體幾乎一直用到 90% 以上；用完時系統會強制結束程式，錄影可能中斷。${topUser(snap, "memBytes")}如果 CookieNVR 跑在 Docker 裡並設了記憶體上限，可以把上限調高。`,
+        who: t`Memory`,
+        pill: { label: t`Running low`, tone: "warn" },
+        next: t`Reduce what the cameras are doing, or add memory`,
+        why: t`For the past 5 minutes memory has been above 90% almost the whole time. When it runs out, the system force-quits programs and recording may be interrupted. ${topMem} If CookieNVR runs in Docker with a memory limit, you can raise the limit.`,
       };
+    }
   }
+}
+
+function restartRecordingTitle(count: number): string {
+  return plural(count, { one: "Restart recording for # camera?", other: "Restart recording for # cameras?" });
 }

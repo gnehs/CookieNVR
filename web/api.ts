@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import type {
   CameraDto,
   CameraGroupDto,
@@ -64,7 +65,7 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, "無法連線到伺服器");
+    throw new ApiError(0, t`Unable to connect to the server`);
   }
   if (res.status === 204) return undefined as T;
   let data: any = null;
@@ -73,7 +74,8 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
   } catch {}
   if (!res.ok) {
     if (res.status === 401 && !quiet401) onUnauthorized();
-    throw new ApiError(res.status, data?.error ?? `錯誤 ${res.status}`);
+    const status = res.status;
+    throw new ApiError(status, data?.error ?? t`Error ${status}`);
   }
   return data as T;
 }
@@ -173,7 +175,10 @@ export const api = {
   metrics: (watch: boolean) => get<MetricsDto>(`/system/metrics${watch ? "?watch=1" : ""}`),
   diagnostics: async (camera?: string): Promise<string> => {
     const res = await fetch(`/api/system/diagnostics${camera ? `?camera=${encodeURIComponent(camera)}` : ""}`, { credentials: "same-origin" });
-    if (!res.ok) throw new ApiError(res.status, ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? `錯誤 ${res.status}`);
+    if (!res.ok) {
+      const status = res.status;
+      throw new ApiError(status, ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? t`Error ${status}`);
+    }
     return res.text();
   },
   restartWorker: (id: string) => post<void>(`/system/workers/${encodeURIComponent(id)}/restart`),
@@ -198,7 +203,7 @@ export const api = {
       xhr.open("POST", `/api/states/${encodeURIComponent(id)}/import`);
       xhr.setRequestHeader("content-type", "application/zip");
       xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-      xhr.onerror = () => reject(new ApiError(0, "無法連線到伺服器"));
+      xhr.onerror = () => reject(new ApiError(0, t`Unable to connect to the server`));
       xhr.onload = () => {
         let data: any = null;
         try {
@@ -206,7 +211,8 @@ export const api = {
         } catch {}
         if (xhr.status >= 200 && xhr.status < 300) return resolve(data as StateSensorDto);
         if (xhr.status === 401) onUnauthorized();
-        reject(new ApiError(xhr.status, data?.error ?? (xhr.status === 413 ? "檔案太大，上限 100 MB" : `錯誤 ${xhr.status}`)));
+        const status = xhr.status;
+        reject(new ApiError(status, data?.error ?? (status === 413 ? t`File too large (limit 100 MB)` : t`Error ${status}`)));
       };
       xhr.send(file);
     }),

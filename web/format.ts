@@ -1,3 +1,5 @@
+import { plural, t } from "@lingui/core/macro";
+
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   const units = ["KB", "MB", "GB", "TB"];
@@ -24,22 +26,36 @@ export function formatDateTime(ms: number): string {
 
 export function formatDuration(ms: number): string {
   const s = Math.max(0, Math.round(ms / 1000));
-  const d = Math.floor(s / 86400);
-  const hh = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d} 天 ${hh} 小時`;
-  if (hh > 0) return `${hh} 小時 ${m} 分`;
-  if (m > 0) return `${m} 分 ${s % 60} 秒`;
-  return `${s} 秒`;
+  const days = Math.floor(s / 86400);
+  const hours = Math.floor((s % 86400) / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  const d = plural(days, { one: "# day", other: "# days" });
+  const h = plural(hours, { one: "# hour", other: "# hours" });
+  if (days > 0) return `${d} ${h}`;
+  if (hours > 0) return `${h} ${t`${minutes} min`}`;
+  if (minutes > 0) return `${t`${minutes} min`} ${t`${seconds} sec`}`;
+  return t`${seconds} sec`;
 }
 
 export function formatAgo(ms: number | null): string {
-  if (ms == null) return "從未";
+  if (ms == null) return t`Never`;
   const diff = Date.now() - ms;
-  if (diff < 60_000) return "剛剛";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分鐘前`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小時前`;
+  if (diff < 60_000) return t`Just now`;
+  if (diff < 3_600_000) {
+    const minutes = Math.floor(diff / 60_000);
+    return plural(minutes, { one: "# minute ago", other: "# minutes ago" });
+  }
+  if (diff < 86_400_000) {
+    const hours = Math.floor(diff / 3_600_000);
+    return plural(hours, { one: "# hour ago", other: "# hours ago" });
+  }
   return formatDateTime(ms).slice(0, 10);
+}
+
+/** 名稱清單的分隔：英文「, 」，中日文「、」 */
+export function joinList(items: string[]): string {
+  return items.join(t({ message: ", ", context: "list separator" }));
 }
 
 export function errMsg(e: unknown): string {

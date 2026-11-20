@@ -1,3 +1,5 @@
+import { plural } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -53,6 +55,7 @@ function IssueAction({ action, onRestart }: { action: Action; onRestart: (a: Res
 }
 
 function IssueRow({ issue, snap, onRestart }: { issue: Issue; snap: Snapshot; onRestart: (a: Restart) => void }) {
+  const { t } = useLingui();
   const e = explain(issue, snap);
   return (
     <article className="issue-row" data-tone={issue.tone} aria-label={issue.title}>
@@ -72,7 +75,7 @@ function IssueRow({ issue, snap, onRestart }: { issue: Issue; snap: Snapshot; on
         </h3>
         <p className="issue-next">{e.next}</p>
         <details className="issue-why">
-          <summary>可能的原因</summary>
+          <summary>{t`Possible causes`}</summary>
           <p>{e.why}</p>
         </details>
       </div>
@@ -95,6 +98,7 @@ function useLoadWarning(enabled: boolean): string | null {
 
 /** 設定 → 狀態 */
 export function StatusPage() {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const health = useHealth(true);
   const sys = useQuery(systemQuery);
@@ -120,7 +124,7 @@ export function StatusPage() {
     },
   });
   const onRestart = async (r: Restart) => {
-    if (await confirmDialog(r.title, r.message, { confirmLabel: "繼續" })) restart.mutate(r);
+    if (await confirmDialog(r.title, r.message, { confirmLabel: t`Continue` })) restart.mutate(r);
   };
 
   const failed = [sys, settings, cams].find((q) => q.isError);
@@ -128,9 +132,9 @@ export function StatusPage() {
   const view = useMemo(() => {
     if (!health || !list) return null;
     // 辨識程序已經停止時，說的是更根本的問題，不重複提醒負載
-    const extra: Issue[] = loadWarning && !health.issues.some((i) => i.kind === "objects") ? [{ kind: "objectsLoad", tone: "warn", cameras: [], title: loadWarning, short: "物件辨識跟不上" }] : [];
+    const extra: Issue[] = loadWarning && !health.issues.some((i) => i.kind === "objects") ? [{ kind: "objectsLoad", tone: "warn", cameras: [], title: loadWarning, short: t`Object detection can't keep up` }] : [];
     return { issues: [...health.issues, ...extra].sort(byTone) };
-  }, [health, list, loadWarning]);
+  }, [health, list, loadWarning, t]);
 
   return (
     <SettingsLayout active="status">
@@ -146,6 +150,7 @@ export function StatusPage() {
 }
 
 function Body({ issues, snap, cams, at, onRestart }: { issues: Issue[]; snap: Snapshot; cams: CameraDto[]; at: number; onRestart: (a: Restart) => void }) {
+  const { t } = useLingui();
   const hl = snap.health;
   // 問題已經在上面的卡片說過，下面只列沒事的攝影機
   const fine = cams.filter((c) => !hl.statuses.get(c.id)!.problem);
@@ -154,13 +159,26 @@ function Body({ issues, snap, cams, at, onRestart }: { issues: Issue[]; snap: Sn
   const recording = fine.filter((c) => hl.statuses.get(c.id)!.kind === "recording").length;
   const tone = n === 0 ? "ok" : issues.some((i) => i.tone === "bad") ? "bad" : "warn";
   const d = hl.disk;
+  const total = formatBytes(d.total);
+  const usedPct = d.usedPct.toFixed(0);
+  const dataFree = formatBytes(hl.dataDisk?.free ?? 0);
+  const dataTotal = formatBytes(hl.dataDisk?.total ?? 0);
+  const updatedAt = formatClock(at);
   return (
     <div className="stack">
-      <section className="card health" data-tone={tone} aria-label="整體狀態">
+      <section className="card health" data-tone={tone} aria-label={t`Overall status`}>
         <header className="health-head">
           <i className="health-dot" aria-hidden="true" />
-          <h2>{n === 0 ? "一切正常" : `有 ${n} 件事需要處理`}</h2>
-          {n === 0 ? <p>{active === 0 ? "還沒有啟用中的攝影機。" : recording === active ? `${active} 台攝影機都在錄影。` : `${active} 台攝影機都已連線。`}</p> : null}
+          <h2>{n === 0 ? t`Everything is fine` : plural(n, { one: "# thing needs attention", other: "# things need attention" })}</h2>
+          {n === 0 ? (
+            <p>
+              {active === 0
+                ? t`No cameras are enabled yet.`
+                : recording === active
+                  ? plural(active, { one: "# camera is recording.", other: "All # cameras are recording." })
+                  : plural(active, { one: "# camera is connected.", other: "All # cameras are connected." })}
+            </p>
+          ) : null}
         </header>
         {n ? (
           <div className="issue-list" aria-live="polite">
@@ -172,7 +190,7 @@ function Body({ issues, snap, cams, at, onRestart }: { issues: Issue[]; snap: Sn
       </section>
 
       <section className="card" hidden={cams.length > 0 && fine.length === 0}>
-        <h2 className="card-title">{n > 0 ? "其他攝影機" : "攝影機"}</h2>
+        <h2 className="card-title">{n > 0 ? t`Other cameras` : t`Cameras`}</h2>
         <div className="status-list">
           {cams.length ? (
             fine.map((c) => {
@@ -186,9 +204,9 @@ function Body({ issues, snap, cams, at, onRestart }: { issues: Issue[]; snap: Sn
             })
           ) : (
             <div className="state bare">
-              <p>還沒有攝影機。</p>
+              <p>{t`No cameras yet.`}</p>
               <ButtonLink to="/settings/cameras/new" small icon="plus" iconSize={15}>
-                新增攝影機
+                {t`Add camera`}
               </ButtonLink>
             </div>
           )}
@@ -196,22 +214,22 @@ function Body({ issues, snap, cams, at, onRestart }: { issues: Issue[]; snap: Sn
       </section>
 
       <section className="card">
-        <h2 className="card-title">儲存空間</h2>
+        <h2 className="card-title">{t`Storage`}</h2>
         <div className="card-body">
           <div className="disk">
             <div className="disk-big">
               <b>{formatBytes(d.free)}</b>
-              <span className="muted">{`可用，共 ${formatBytes(d.total)}`}</span>
+              <span className="muted">{t`available, ${total} total`}</span>
             </div>
-            <div className={`bar${d.tone === "bad" ? " bad" : d.tone === "warn" ? " warn" : ""}`} role="img" aria-label={`已用 ${d.usedPct.toFixed(0)}%`}>
+            <div className={`bar${d.tone === "bad" ? " bad" : d.tone === "warn" ? " warn" : ""}`} role="img" aria-label={t`${usedPct}% used`}>
               <i style={{ width: `${d.usedPct.toFixed(1)}%` }} />
             </div>
             <div className="disk-nums">
-              <span className="num">{hl.dataDisk ? `錄影硬碟已用 ${d.usedPct.toFixed(0)}%` : `已用 ${d.usedPct.toFixed(0)}%`}</span>
-              <Link to="/settings/storage">管理儲存空間</Link>
+              <span className="num">{hl.dataDisk ? t`Recording disk ${usedPct}% used` : t`${usedPct}% used`}</span>
+              <Link to="/settings/storage">{t`Manage storage`}</Link>
             </div>
             {hl.dataDisk ? (
-              <p className="disk-sub num" data-tone={hl.dataDisk.tone}>{`appdata 硬碟：可用 ${formatBytes(hl.dataDisk.free)}，共 ${formatBytes(hl.dataDisk.total)}`}</p>
+              <p className="disk-sub num" data-tone={hl.dataDisk.tone}>{t`appdata disk: ${dataFree} free, ${dataTotal} total`}</p>
             ) : null}
           </div>
         </div>
@@ -220,10 +238,10 @@ function Body({ issues, snap, cams, at, onRestart }: { issues: Issue[]; snap: Sn
       {snap.metrics ? <ResourcesCard metrics={snap.metrics} cams={cams} /> : null}
 
       <footer className="status-foot">
-        <span>遇到問題時，可以複製診斷資訊貼給 AI 或技術人員，密碼等資料會自動遮蔽。</span>
+        <span>{t`If something goes wrong, copy the diagnostics and paste them to an AI or a technician. Passwords and similar data are masked automatically.`}</span>
         <div className="form-actions">
-          <span className="num">{`每 5 秒自動更新・上次 ${formatClock(at)}`}</span>
-          <CopyButton label="複製診斷資訊" className="small" getText={() => api.diagnostics()} done="已複製診斷資訊，可以貼給 AI 或技術人員" />
+          <span className="num">{t`Refreshes every 5 seconds · last at ${updatedAt}`}</span>
+          <CopyButton label={t`Copy diagnostics`} className="small" getText={() => api.diagnostics()} done={t`Diagnostics copied. You can paste them to an AI or a technician.`} />
         </div>
       </footer>
     </div>
