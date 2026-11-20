@@ -1,9 +1,15 @@
 # syntax=docker/dockerfile:1
 
-ARG BUN_VERSION=1
+# Exact version, not "1": a floating tag changes the base layer, and every layer above it, whenever Bun
+# ships a 1.x release, which makes users pull the whole image again (about 2 GB for -nvidia).
+ARG BUN_VERSION=1.4.5
 ARG MEDIAMTX_VERSION=1.21.4
 # default：CPU 推論，amd64 另含 Intel 內顯（OpenVINO）；nvidia：CPU、Intel 內顯與 Nvidia（CUDA 12），只有 amd64。
 ARG VARIANT=default
+# Layer order in the final stage goes from rarely to often changing, so a code change only ships the last
+# few small layers: system packages, MediaMTX, the Python environment (the big one), models, production
+# node_modules, then scripts, detector code, src and the web build. CI builds with rewrite-timestamp, so file
+# times inside rebuilt layers are clamped instead of being the build time.
 
 # Own stage so curl and the archive never reach the final image.
 FROM debian:bookworm-slim AS mediamtx
@@ -22,16 +28,17 @@ RUN set -eux; \
     grep "[ *]${file}\$" checksums.sha256 | sha256sum -c -; \
     tar -xzf "${file}" mediamtx
 
-# The detector's Python environment, the built-in YOLOX model and the state classification backbone (DINOv2-small). Same base image as the final stage, so the
-# venv's bin/python symlink resolves to the same /usr/bin/python3 (3.13) there.
-FROM oven/bun:${BUN_VERSION}-slim AS detector
+# The detector's Python environment. Same base image as the final stage, so the venv's bin/python symlink
+# resolves to the same /usr/bin/python3 (3.13) there. Only the requirements files go in: changing a model or
+# the fetch script must not rebuild this stage, whose layer is about 2 GB in the -nvidia variant.
+FROM oven/bun:${BUN_VERSION}-slim AS pyenv
 ARG VARIANT
 # CUDA 13 instead of the pinned CUDA 12 set, e.g. "onnxruntime-gpu[cuda,cudnn]==1.32.0" (needs driver 580+, Turing or newer).
 ARG ONNXRUNTIME_GPU=
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3-venv ca-certificates \
  && rm -rf /var/lib/apt/lists/*
-COPY detector/requirements.txt detector/requirements-nvidia.txt detector/builtin-model.json detector/backbone-model.json detector/fetch_model.py /src/
+COPY detector/requirements.txt detector/requirements-nvidia.txt /src/
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     case "$VARIANT" in \
@@ -49,9 +56,16 @@ RUN set -eux; \
       *) echo "VARIANT 只能是 default 或 nvidia，收到 ${VARIANT}" >&2; exit 1 ;; \
     esac; \
     python3 -m venv /opt/detector; \
-    /opt/detector/bin/pip install --no-cache-dir --disable-pip-version-check -r "$req"; \
-    /opt/detector/bin/pip uninstall -y --disable-pip-version-check pip; \
-    python3 /src/fetch_model.py /models
+    # PEP 552: with SOURCE_DATE_EPOCH set, the bytecode pip compiles is hash-checked and embeds no timestamp,
+    # so the same wheels always give the same bytes. A constant here, not a build arg, so the per-commit
+    # value CI uses for file times does not invalidate this step's cache.
+    SOURCE_DATE_EPOCH=0 /opt/detector/bin/pip install --no-cache-dir --disable-pip-version-check -r "$req"; \
+    /opt/detector/bin/pip uninstall -y --disable-pip-version-check pip
+
+# The built-in YOLOX model and the state classification backbone (DINOv2-small), pinned by sha256.
+FROM pyenv AS models
+COPY detector/builtin-model.json detector/backbone-model.json detector/fetch_model.py /src/
+RUN python3 /src/fetch_model.py /models
 
 # The web UI (React, built by Vite). Only dist/web reaches the final image, not the frontend packages.
 FROM oven/bun:${BUN_VERSION}-slim AS web
@@ -118,14 +132,15 @@ RUN set -eux; \
     if [ -n "$va" ]; then test -f /usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so; test -f /usr/lib/x86_64-linux-gnu/dri/i965_drv_video.so; fi; \
     rm -rf /var/lib/apt/lists/*
 COPY --from=mediamtx /dl/mediamtx /usr/local/bin/mediamtx
-COPY --from=detector /opt/detector /opt/detector
+COPY --from=pyenv /opt/detector /opt/detector
 RUN /opt/detector/bin/python -B -c "import onnxruntime, numpy, PIL; print('onnxruntime', onnxruntime.__version__, onnxruntime.get_available_providers())"
 
 WORKDIR /app
-COPY package.json bun.lock tsconfig.json ./
+COPY --from=models /models ./detector/models
+COPY package.json bun.lock ./
 RUN bun install --production --frozen-lockfile
+COPY tsconfig.json ./
 COPY detector ./detector
-COPY --from=detector /models ./detector/models
 COPY scripts/detector-selftest scripts/video-selftest scripts/video-selftest.ts scripts/docker-entrypoint ./scripts/
 RUN chmod +x scripts/detector-selftest scripts/video-selftest scripts/docker-entrypoint \
  && ln -s /app/scripts/detector-selftest /usr/local/bin/detector-selftest \
