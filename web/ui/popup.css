@@ -22,9 +22,12 @@
     transform-origin: bottom center; transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-3) var(--ease-drawer);
     @starting-style { opacity: 1; transform: translateY(100%); }
   }
+  /* 點遮罩或選完關閉時也往下滑出去，跟拉下來關閉是同一個方向 */
+  .popup[data-ending-style] { transform: translateY(100%); }
   .popup-title { display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .popup { @starting-style { transform: none; opacity: 0; } }
+  .popup[data-ending-style] { transform: none; opacity: 0; }
 }

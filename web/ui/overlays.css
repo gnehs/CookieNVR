@@ -13,3 +13,15 @@
   .popup-pos { position: fixed !important; inset: auto 0 0 0 !important; transform: none !important; width: auto !important; }
   .sheet-backdrop[data-sheet="popup"] { background: rgb(8 8 12 / 0.45); }
 }
+
+/* 底部面板的遮罩跟面板一起淡入淡出；往下拉時由 ui/sheet-swipe.ts 直接設 opacity */
+.sheet-backdrop { transition: opacity var(--dur-3) var(--ease-drawer); @starting-style { opacity: 0; } }
+.sheet-backdrop[data-ending-style] { opacity: 0; }
+
+/* 面板頂端的把手：提示可以往下拉關閉（拖面板任何地方都可以） */
+@media (max-width: 560px) {
+  .menu::before { content: ""; display: block; width: 36px; height: 5px; margin: 0 auto 4px; border-radius: 99px; background: var(--border-strong); }
+}
+@media (max-width: 560px), (pointer: coarse) and (max-height: 500px) {
+  .popup::before { content: ""; display: block; width: 36px; height: 5px; margin: 0 auto 4px; border-radius: 99px; background: var(--border-strong); }
+}

@@ -1,6 +1,8 @@
 import { Popover } from "@base-ui/react/popover";
 import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "./Icon.tsx";
+import { useSheetSwipe } from "./sheet-swipe.ts";
+import { SHEET_POPUP } from "./useMedia.ts";
 import {
   addMonths,
   clampDay,
@@ -54,6 +56,7 @@ export function DatePicker(props: DatePickerProps) {
   const valueId = useId();
   const titleId = useId();
   const [open, setOpen] = useState(false);
+  const swipe = useSheetSwipe(SHEET_POPUP, () => setOpen(false));
   const [instant, setInstant] = useState(false);
   const today = dayOf(Date.now());
   const [focusKey, setFocusKey] = useState<DayKey>(value ?? today);
@@ -148,6 +151,7 @@ export function DatePicker(props: DatePickerProps) {
             <Popover.Backdrop className="sheet-backdrop" data-sheet="popup" />
             <Popover.Positioner className="popup-pos" side="bottom" align="start" sideOffset={6} collisionPadding={8}>
               <Popover.Popup
+                ref={swipe}
                 className="popup dp-pop"
                 aria-label={`選擇${props.label}`}
                 data-instant={instant ? "" : undefined}

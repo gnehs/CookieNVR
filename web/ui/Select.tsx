@@ -1,6 +1,8 @@
 import { Select as Base } from "@base-ui/react/select";
 import { useId, useState } from "react";
 import { Icon } from "./Icon.tsx";
+import { useSheetSwipe } from "./sheet-swipe.ts";
+import { SHEET_POPUP } from "./useMedia.ts";
 import type { IconName } from "./icons.ts";
 
 export interface SelectOption<V extends string> {
@@ -77,12 +79,13 @@ function List<V extends string>({ entries }: { entries: SelectEntry<V>[] }) {
   );
 }
 
-function Pop<V extends string>({ label, entries, instant }: { label: string; entries: SelectEntry<V>[]; instant: boolean }) {
+function Pop<V extends string>({ label, entries, instant, onDismiss }: { label: string; entries: SelectEntry<V>[]; instant: boolean; onDismiss: () => void }) {
+  const swipe = useSheetSwipe(SHEET_POPUP, onDismiss);
   return (
     <Base.Portal>
       <Base.Backdrop className="sheet-backdrop" data-sheet="popup" />
       <Base.Positioner className="popup-pos" alignItemWithTrigger={false} side="bottom" align="start" sideOffset={6} collisionPadding={8}>
-        <Base.Popup className="popup sel-pop" data-instant={instant ? "" : undefined}>
+        <Base.Popup ref={swipe} className="popup sel-pop" data-instant={instant ? "" : undefined}>
           <div className="popup-title" aria-hidden="true">
             {label}
           </div>
@@ -103,6 +106,7 @@ export function Select<V extends string>(props: SelectProps<V>) {
   const valueId = useId();
   // 鍵盤打開的不播動畫：常用的操作要立刻出現
   const [instant, setInstant] = useState(false);
+  const [open, setOpen] = useState(false);
   const options = flatten(entries);
   const selected = options.find((o) => o.value === value) ?? null;
 
@@ -116,7 +120,11 @@ export function Select<V extends string>(props: SelectProps<V>) {
         onValueChange={(v) => {
           if (v !== null && v !== value) onChange(v as V);
         }}
-        onOpenChange={(open, details) => open && setInstant(details.event instanceof KeyboardEvent)}
+        open={open}
+        onOpenChange={(next, details) => {
+          if (next) setInstant(details.event instanceof KeyboardEvent);
+          setOpen(next);
+        }}
         name={props.name}
         disabled={props.disabled}
       >
@@ -136,7 +144,7 @@ export function Select<V extends string>(props: SelectProps<V>) {
             <Icon name="down" size={16} />
           </span>
         </Base.Trigger>
-        <Pop label={label} entries={entries} instant={instant} />
+        <Pop label={label} entries={entries} instant={instant} onDismiss={() => setOpen(false)} />
       </Base.Root>
     </span>
   );
@@ -161,6 +169,7 @@ export function MultiSelect<V extends string>(props: MultiSelectProps<V>) {
   const labelId = useId();
   const valueId = useId();
   const [instant, setInstant] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <span className="sel">
@@ -171,7 +180,11 @@ export function MultiSelect<V extends string>(props: MultiSelectProps<V>) {
         multiple
         value={value}
         onValueChange={(v) => onChange(v as V[])}
-        onOpenChange={(open, details) => open && setInstant(details.event instanceof KeyboardEvent)}
+        open={open}
+        onOpenChange={(next, details) => {
+          if (next) setInstant(details.event instanceof KeyboardEvent);
+          setOpen(next);
+        }}
         disabled={props.disabled}
       >
         <Base.Trigger className={`sel-trigger${props.className ? ` ${props.className}` : ""}`} aria-labelledby={`${labelId} ${valueId}`}>
@@ -183,7 +196,7 @@ export function MultiSelect<V extends string>(props: MultiSelectProps<V>) {
             <Icon name="down" size={16} />
           </span>
         </Base.Trigger>
-        <Pop label={label} entries={entries} instant={instant} />
+        <Pop label={label} entries={entries} instant={instant} onDismiss={() => setOpen(false)} />
       </Base.Root>
     </span>
   );

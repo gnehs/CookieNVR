@@ -1243,6 +1243,7 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
     transform-origin: bottom center; transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-3) var(--ease-drawer);
     @starting-style { opacity: 1; transform: translateY(100%); }
   }
+  .menu[data-ending-style] { transform: translateY(100%); }
   .menu .menu-title { display: block; }
   .menu-item { min-height: 50px; font-size: 15.5px; padding: 0 12px; border-radius: 12px; }
   .menu-hl { border-radius: 12px; }
@@ -1258,6 +1259,7 @@ a.menu-item { text-decoration: none; }
   .copy-btn[data-state] .copy-face { animation-name: fade-in; }
   .spin { animation-duration: 2s; }
   .dlg, .toast, .menu { @starting-style { transform: none; opacity: 0; } }
+  .menu[data-ending-style] { transform: none; opacity: 0; }
   .toast[data-ending-style], .dlg[data-ending-style] { transform: none; opacity: 0; }
   /* 面板仍跟著手指走（那是使用者自己的動作），但進出場只淡入淡出、不滑動 */
   .sheet[data-starting-style] { transform: none; opacity: 0; }

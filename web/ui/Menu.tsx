@@ -1,9 +1,11 @@
 import { Menu as Base } from "@base-ui/react/menu";
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { type ReactElement, useRef } from "react";
+import { type ReactElement, useRef, useState } from "react";
 import { Icon } from "./Icon.tsx";
 import { moveIndicator } from "./indicator.ts";
 import type { IconName } from "./icons.ts";
+import { useSheetSwipe } from "./sheet-swipe.ts";
+import { PHONE } from "./useMedia.ts";
 
 export interface MenuItem {
   label: string;
@@ -80,13 +82,26 @@ function useHighlightBlock() {
  */
 export function Menu({ trigger, label, entries, align = "end", side = "bottom" }: { trigger: ReactElement; label: string; entries: MenuEntry[]; align?: "start" | "end"; side?: "bottom" | "top" }) {
   const { block, popupRef } = useHighlightBlock();
+  const [open, setOpen] = useState(false);
+  const swipe = useSheetSwipe(PHONE, () => setOpen(false));
   return (
-    <Base.Root>
+    <Base.Root open={open} onOpenChange={setOpen}>
       <Base.Trigger render={trigger} />
       <Base.Portal>
         <Base.Backdrop className="sheet-backdrop" data-sheet="menu" />
         <Base.Positioner className="menu-pos" side={side} align={align} sideOffset={6} collisionPadding={8}>
-          <Base.Popup ref={popupRef} className="menu" aria-label={label}>
+          <Base.Popup
+            ref={(el) => {
+              const a = popupRef(el);
+              const b = swipe(el);
+              return () => {
+                a?.();
+                b?.();
+              };
+            }}
+            className="menu"
+            aria-label={label}
+          >
             <div ref={block} className="ind menu-hl" aria-hidden="true" />
             <div className="menu-title" aria-hidden="true">
               {label}
