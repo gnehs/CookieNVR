@@ -203,6 +203,18 @@ def intel_pci_addresses() -> list[str]:
     return out
 
 
+def missing_by_path(pcis: list[str], by_path: str = "/dev/dri/by-path") -> list[str]:
+    """
+    Intel 的 OpenCL 驅動只從 /dev/dri/by-path 找顯示卡（資料夾存在時不掃 renderD*）。NVIDIA Container Toolkit
+    建立的 by-path 只有 Nvidia 的卡；entrypoint 會補上，但以非 root 啟動時補不了。回傳缺連結的 PCI 位址。
+    """
+    try:
+        names = os.listdir(by_path)
+    except OSError:
+        return []
+    return [pci for pci in pcis if f"pci-{pci}-render" not in names]
+
+
 def _nvidia_devices(p: Probe) -> list[Device]:
     out = sh(["nvidia-smi", "--query-gpu=index,uuid,pci.bus_id,name", "--format=csv,noheader"])
     if out:
@@ -243,7 +255,11 @@ def probe(ort) -> Probe:
         try:
             intel = _intel_devices(ort, p)
             if not intel:
-                p.enum_errors["intel"] = "OpenVINO 沒有列出任何 GPU 裝置"
+                missing = missing_by_path(intel_pci_addresses())
+                p.enum_errors["intel"] = (
+                    f"/dev/dri/by-path 沒有 Intel 內顯（{', '.join(missing)}），Intel OpenCL 驅動因此找不到它"
+                    if missing else "OpenVINO 沒有列出任何 GPU 裝置"
+                )
             p.devices.extend(intel)
         except Exception as e:  # noqa: BLE001
             p.enum_errors["intel"] = f"{type(e).__name__}: {e}"[:400]
@@ -261,6 +277,8 @@ def unavailable_reason(kind: str, p: Probe) -> Fallback | None:
         if not p.dri_accessible:
             return Fallback("沒有權限使用 /dev/dri，請把容器加入主機 render 群組（--group-add）", f"{p.dri_nodes} not readable/writable")
         if p.devices and not p.of_kind("intel") and "intel" in p.enum_errors:
+            if "/dev/dri/by-path" in p.enum_errors["intel"]:
+                return Fallback("Intel 內顯缺少 /dev/dri/by-path 連結，OpenVINO 找不到它；請以 root 啟動容器（可用 PUID／PGID 降權）讓 CookieNVR 自動補上", p.enum_errors["intel"])
             return Fallback("OpenVINO 看不到 Intel 內顯，可能是驅動不支援這顆內顯", p.enum_errors["intel"])
     if kind == "nvidia":
         if not p.has_cuda:

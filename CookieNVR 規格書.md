@@ -298,7 +298,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 - 指定或自動選到的 GPU 載入失敗時改用下一個（最後是 CPU）；指定的裝置不見了（拔卡、換卡）改用自動。實際使用的裝置與原因回報給主程序，顯示在設定頁（「使用中：Intel UHD Graphics 630」與警示）與診斷資訊。
 - **實際在哪裡執行**：EP 建得起來不代表模型在 GPU 上跑。EP 不支援的節點會交給 CPU EP，`get_providers()` 照樣列著它（例如 OpenVINO 看得到內顯卻編譯不了這個模型）。所以載入時開 ONNX Runtime profiling 跑兩次空白畫面，從第二次的節點事件（`args.provider`、`dur`）算各 provider 佔的推論時間，然後 `end_profiling()`（之後不再記錄）並刪掉檔案。GPU 的 EP 佔不到一成：視為這個裝置不能跑這個模型，改用下一個，原因寫「<型號>沒有實際執行這個模型（OpenVINO 把運算交回處理器）」；CUDA 把形狀計算放在 CPU 只佔約 1%，不受影響。一成以上照常使用，處理器佔一成以上時設定頁寫出比例（過半用警示色：「實際上大多在處理器上執行」）。各 provider 的比例進診斷資訊。
 - 分成兩個映像：官方文件說同一個環境只能裝一種 ONNX Runtime 套件（OpenVINO plugin EP 不算，它是載入 ONNX Runtime 的外掛），而且 Nvidia 的 CUDA／cuDNN 函式庫壓縮後就有約 1.7 GB。-nvidia 釘在 CUDA 12（`onnxruntime-gpu` 1.26.0、cuDNN 9.11），涵蓋 Maxwell 以後的卡（家用常見的 Pascal，例如 P400、GTX 10 系列）；cuDNN 9.12 起只支援 Turing 以後，所以不升級。要 CUDA 13 可用 build arg `ONNXRUNTIME_GPU`。TensorRT 需要另外數 GB 的函式庫與建引擎時間，不放。
-- Intel 內顯需要容器內的 OpenCL 驅動：Debian trixie 沒有打包，映像內並裝 Intel compute-runtime 26.40（Gen12 以後）與 24.35 的 legacy1 套件（Gen8 到 Gen11，例如 8 到 10 代 Core 的 UHD 630、J4125），下載時驗 SHA-256。
+- Intel 內顯需要容器內的 OpenCL 驅動：Debian trixie 沒有打包，映像內並裝 Intel compute-runtime 26.40（Gen12 以後）與 24.35 的 legacy1 套件（Gen8 到 Gen11，例如 8 到 10 代 Core 的 UHD 630、J4125），下載時驗 SHA-256。Intel 的 OpenCL 驅動只從 `/dev/dri/by-path` 找顯示卡，這個資料夾存在時不掃 `renderD*`；NVIDIA Container Toolkit 建立的 by-path 只有 Nvidia 的卡，同機的內顯會被漏掉（VAAPI 不受影響）。entrypoint 以 root 執行時替每個沒有連結的 `card*`／`renderD*` 依 `/sys/dev/char` 的 PCI 位址補上；補不了時 detector 的錯誤訊息直接指出缺連結，而不是「驅動不支援」。
 - Nvidia 卡的使用率與顯示記憶體由 detector 每 10 秒以 nvidia-smi 讀取，主程序以 `ObjectDetection.resources()` 匯出給狀態頁；Intel 內顯沒有便宜的讀法，不提供。
 
 ### 模型

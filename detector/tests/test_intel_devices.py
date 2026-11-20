@@ -4,7 +4,23 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from engine import INTEL_VENDOR, is_intel_gpu  # noqa: E402
+import tempfile  # noqa: E402
+
+from engine import INTEL_VENDOR, is_intel_gpu, missing_by_path  # noqa: E402
+
+
+class ByPathTest(unittest.TestCase):
+    def test_nvidia_only_by_path_hides_the_intel_igpu(self):
+        # 實機：NVIDIA Container Toolkit 建的 by-path 只有 Nvidia 的卡
+        with tempfile.TemporaryDirectory() as d:
+            open(os.path.join(d, "pci-0000:01:00.0-render"), "w").close()
+            self.assertEqual(missing_by_path(["0000:00:02.0"], d), ["0000:00:02.0"])
+            open(os.path.join(d, "pci-0000:00:02.0-render"), "w").close()
+            self.assertEqual(missing_by_path(["0000:00:02.0"], d), [])
+
+    def test_no_by_path_directory_is_fine(self):
+        # 沒有 by-path 時驅動改掃 renderD*
+        self.assertEqual(missing_by_path(["0000:00:02.0"], "/nonexistent/by-path"), [])
 
 
 class IntelGpuTest(unittest.TestCase):

@@ -71,6 +71,10 @@ def hints(device: str, error: str, p: eng.Probe) -> list[str]:
                     "主機上先確認 `ls -l /dev/dri` 有 renderD128；Unraid 需要載入 i915（或新平台的 xe）驅動，例如安裝 Intel GPU TOP 外掛。"]
         if not p.dri_accessible:
             return ["容器內的使用者沒有 /dev/dri 的讀寫權限：加上 `--group-add $(stat -c %g /dev/dri/renderD128)`。"]
+        if "/dev/dri/by-path" in p.enum_errors.get("intel", ""):
+            return ["Intel 的 OpenCL 驅動只從 /dev/dri/by-path 找顯示卡，這裡只有別張卡（通常是 NVIDIA Container Toolkit 建立的）。",
+                    "以 root 啟動容器（可用 PUID／PGID 降權）時，entrypoint 會自動補上；`docker exec` 跑自我檢查前先重啟容器。",
+                    f"原始錯誤：{error[:300]}"]
         return ["OpenVINO 看不到 GPU：多半是容器內的 Intel 運算驅動（Gen12 以後用 intel-opencl-icd，Gen8 到 11 用 intel-opencl-icd-legacy1）不支援這顆內顯，或主機核心驅動沒載入。",
                 "請附上 `ls -l /dev/dri`、`uname -r`、本摘要裡的 Intel GPU PCI id 回報。",
                 f"原始錯誤：{error[:300]}"]

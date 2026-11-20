@@ -34,6 +34,30 @@ pgid=$(id_value PGID "${PGID:-}")
 [ -n "$puid" ] || puid=$pgid
 [ -n "$pgid" ] || pgid=$puid
 
+# Intel 的 OpenCL 驅動（OpenVINO 的 GPU 外掛靠它）只從 /dev/dri/by-path 找顯示卡，這個資料夾存在時不會再掃
+# renderD*。NVIDIA Container Toolkit 會建立 by-path，但只放 Nvidia 自己的卡，於是同時掛入的 Intel 內顯
+# 就被漏掉（VAAPI 直接開 renderD*，不受影響）。替每個沒有連結的節點補上，名稱照 udev 的格式。
+link_dri_by_path() {
+  [ -d /dev/dri/by-path ] || return 0
+  for node in /dev/dri/card* /dev/dri/renderD*; do
+    [ -c "$node" ] || continue
+    name=${node##*/}
+    case "$name" in card*) kind=card ;; *) kind=render ;; esac
+    set -- $(stat -c '%t %T' "$node")
+    pci=$(readlink -f "/sys/dev/char/$((0x$1)):$((0x$2))/device" 2>/dev/null) || continue
+    pci=${pci##*/}
+    case "$pci" in ????:??:??.?) ;; *) continue ;; esac
+    link=/dev/dri/by-path/pci-$pci-$kind
+    [ -e "$link" ] && continue
+    if ln -s "../$name" "$link" 2>/dev/null; then
+      log "補上 $link -> ../$name（Intel OpenCL 驅動才找得到這張卡）"
+    else
+      log "無法建立 $link：Intel 內顯可能無法用於物件辨識；請以 root 啟動容器，或在主機上補上這個連結"
+    fi
+  done
+}
+link_dri_by_path
+
 data_dir=${DATA_DIR:-/data}
 owner_file="$data_dir/.cookienvr-owner"
 
