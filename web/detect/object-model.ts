@@ -1,3 +1,5 @@
+import { i18n, type MessageDescriptor } from "@lingui/core";
+import { msg, plural, t } from "@lingui/core/macro";
 import type { InferenceDeviceDto, ObjectLabelsDto, ObjectsDto, ObjectsStatusDto } from "../../src/api-types.ts";
 import { LIMITS } from "../../src/detect/config.ts";
 import { labelName } from "../../src/objects/labels.ts";
@@ -11,7 +13,7 @@ export const tidyName = (name: string): string => name.replace(/\((?:R|TM|tm|r)\
 /** 選單上的一個裝置：型號；CPU 加上前綴，讓人一眼知道是處理器 */
 export function deviceLabel(d: InferenceDeviceDto): string {
   const name = tidyName(d.name);
-  return d.kind === "cpu" && !/cpu|處理器/i.test(name) ? `處理器：${name}` : name;
+  return d.kind === "cpu" && !/cpu|處理器/i.test(name) ? t`CPU: ${name}` : name;
 }
 
 export interface DeviceOption {
@@ -20,23 +22,32 @@ export interface DeviceOption {
 }
 
 /** 推論裝置選單：自動、偵測到的每個裝置；設定的裝置不在清單裡時補一項說明，免得選單顯示成別的東西 */
+/** 同型號的卡用編號區分 */
+export const indexedName = (name: string, index: number): string => t`${name} (${index})`;
+
 export function deviceOptions(devices: readonly InferenceDeviceDto[], current: string): DeviceOption[] {
   const names = devices.map(deviceLabel);
-  const options: DeviceOption[] = [{ value: AUTO_DEVICE, label: "自動（建議）" }];
+  const options: DeviceOption[] = [{ value: AUTO_DEVICE, label: t`Auto (recommended)` }];
   devices.forEach((d, i) => {
     const same = names.filter((n) => n === names[i]).length > 1;
-    options.push({ value: d.id, label: same ? `${names[i]}（${names.slice(0, i + 1).filter((n) => n === names[i]).length}）` : names[i]! });
+    options.push({ value: d.id, label: same ? indexedName(names[i]!, names.slice(0, i + 1).filter((n) => n === names[i]).length) : names[i]! });
   });
-  if (current !== AUTO_DEVICE && !devices.some((d) => d.id === current)) options.push({ value: current, label: "（目前找不到，暫時自動選擇）" });
+  if (current !== AUTO_DEVICE && !devices.some((d) => d.id === current)) options.push({ value: current, label: t`(not found right now, choosing automatically)` });
   return options;
 }
 
 export function deviceHint(current: string, devices: readonly InferenceDeviceDto[], active: InferenceDeviceDto | null): string {
-  if (current === AUTO_DEVICE) return active ? `自動選擇：目前用的是 ${tidyName(active.name)}。有可用的顯卡就用顯卡，沒有就用處理器。` : "有可用的顯卡就用顯卡，沒有就用處理器。大多數情況選這個就好。";
+  if (current === AUTO_DEVICE) {
+    if (active) {
+      const name = tidyName(active.name);
+      return t`Chosen automatically: currently using ${name}. Uses a graphics card if one is available, otherwise the CPU.`;
+    }
+    return t`Uses a graphics card if one is available, otherwise the CPU. This is fine for most setups.`;
+  }
   const d = devices.find((x) => x.id === current);
-  if (!d) return "之前選的裝置現在偵測不到，暫時由系統自動選擇。裝置回來後會自動改回去。";
-  if (d.kind === "cpu") return "每台電腦都能用，但同時辨識多台攝影機時會比較吃力。";
-  return "顯卡辨識得比較快，也不太佔用處理器。";
+  if (!d) return t`The device you picked earlier can't be detected right now, so the system is choosing automatically. It switches back once the device returns.`;
+  if (d.kind === "cpu") return t`Works on every computer, but struggles when detecting objects on several cameras at once.`;
+  return t`A graphics card is faster at detecting objects and puts little load on the CPU.`;
 }
 
 /** 某類裝置不能用的原因：使用者指定了那類裝置時直接顯示，其餘收起來，免得每台機器都堆著用不到的說明 */
@@ -51,23 +62,70 @@ export function unavailableNotes(unavailable: ObjectsDto["unavailable"], current
   return { inline, folded };
 }
 
-const FPS_LABEL: Record<(typeof OBJECT_FPS_CHOICES)[number], string> = { 0.5: "每 2 秒 1 次", 1: "每秒 1 次", 2: "每秒 2 次（建議）", 3: "每秒 3 次", 5: "每秒 5 次" };
+const FPS_LABEL: Record<(typeof OBJECT_FPS_CHOICES)[number], MessageDescriptor> = {
+  0.5: msg`Every 2 seconds`,
+  1: msg`Once per second`,
+  2: msg`Twice per second (recommended)`,
+  3: msg`3 times per second`,
+  5: msg`5 times per second`,
+};
 
-export const FPS_OPTIONS: { value: number; label: string }[] = OBJECT_FPS_CHOICES.map((v) => ({ value: v, label: FPS_LABEL[v] }));
+export const FPS_OPTIONS: { value: number; label: string }[] = OBJECT_FPS_CHOICES.map((v) => ({
+  value: v,
+  get label() {
+    return i18n._(FPS_LABEL[v]);
+  },
+}));
 
 /** 頻率越高，確認得越快，但越吃資源 */
-export const FPS_HINT = "次數越多，越快確認畫面裡是什麼，但也越吃電腦資源。大多數情況維持建議值就好。";
+export const FPS_HINT: MessageDescriptor = msg`More checks per second confirm what's in the picture sooner, but use more computer resources. The recommended value is fine for most setups.`;
 
-/** 「每秒 2 次」「每 2 秒 1 次」，給句子裡用 */
-export const rateText = (perSecond: number): string => (perSecond < 1 ? `每 ${Math.round(1 / perSecond)} 秒 1 次` : `每秒 ${perSecond} 次`);
+/** 「每 2 秒 1 次」「每秒 2 次」，給句子裡用 */
+export const rateText = (perSecond: number): string => {
+  if (perSecond < 1) {
+    const seconds = Math.round(1 / perSecond);
+    return t`once every ${seconds} seconds`;
+  }
+  return plural(perSecond, { one: "# time per second", other: "# times per second" });
+};
 
 /** 「每秒辨識 2 次」「每 2 秒辨識 1 次」 */
-export const rateClause = (perSecond: number): string => (perSecond < 1 ? `每 ${Math.round(1 / perSecond)} 秒辨識 1 次` : `每秒辨識 ${perSecond} 次`);
+export const rateClause = (perSecond: number): string => {
+  if (perSecond < 1) {
+    const seconds = Math.round(1 / perSecond);
+    return t`detecting once every ${seconds} seconds`;
+  }
+  return plural(perSecond, { one: "detecting # time per second", other: "detecting # times per second" });
+};
 
 export const OBJECT_MODES: { value: ObjectMode; label: string; desc: string }[] = [
-  { value: "off", label: "不辨識", desc: "只偵測有沒有動作，不判斷畫面裡是什麼。" },
-  { value: "annotate", label: "標註", desc: "事件照常記錄，並標上看到了什麼，例如「人」或「汽車」。" },
-  { value: "filter", label: "過濾", desc: "只在看到勾選的東西時才記錄事件與通知，樹影、光線和小蟲都不會吵你。" },
+  {
+    value: "off",
+    get label() {
+      return t`Off`;
+    },
+    get desc() {
+      return t`Only detects whether there is motion, without working out what is in the picture.`;
+    },
+  },
+  {
+    value: "annotate",
+    get label() {
+      return t`Label`;
+    },
+    get desc() {
+      return t`Events are recorded as usual and labeled with what was seen, such as "Person" or "Car".`;
+    },
+  },
+  {
+    value: "filter",
+    get label() {
+      return t`Filter`;
+    },
+    get desc() {
+      return t`Only records events and sends notifications when a checked object is seen, so shadows, light changes and bugs won't bother you.`;
+    },
+  },
 ];
 
 export const modeOf = (v: string): ObjectMode => OBJECT_MODES.find((m) => m.value === v)?.value ?? "annotate";
@@ -89,17 +147,31 @@ export function strictnessOf(score: number): Strictness {
   return "veryStrict";
 }
 
-export const STRICTNESS: Record<Strictness, { word: string; hint: string }> = {
-  loose: { word: "寬鬆", hint: "不太確定的也算，比較不會漏掉，但可能多一些誤判。" },
-  normal: { word: "標準", hint: "大多數情況的建議值。" },
-  strict: { word: "嚴格", hint: "要很確定才算，誤判比較少，但看不清楚的可能會漏掉。" },
-  veryStrict: { word: "非常嚴格", hint: "幾乎要看得一清二楚才算，常常會漏掉遠處或被擋住的。" },
+const STRICTNESS_TEXT: Record<Strictness, { word: MessageDescriptor; hint: MessageDescriptor }> = {
+  loose: { word: msg`Loose`, hint: msg`Counts detections it isn't very sure about. Fewer misses, but more false alarms.` },
+  normal: { word: msg`Standard`, hint: msg`The recommended value for most setups.` },
+  strict: { word: msg`Strict`, hint: msg`Only counts what it is quite sure about. Fewer false alarms, but unclear objects may be missed.` },
+  veryStrict: { word: msg`Very strict`, hint: msg`Needs an almost perfectly clear view. Distant or partly hidden objects are often missed.` },
 };
+
+export const STRICTNESS: Record<Strictness, { word: string; hint: string }> = Object.fromEntries(
+  (Object.keys(STRICTNESS_TEXT) as Strictness[]).map((k) => [
+    k,
+    {
+      get word() {
+        return i18n._(STRICTNESS_TEXT[k].word);
+      },
+      get hint() {
+        return i18n._(STRICTNESS_TEXT[k].hint);
+      },
+    },
+  ]),
+) as Record<Strictness, { word: string; hint: string }>;
 
 /** 沒有勾任何類別時，過濾模式什麼事件都不會建立；標註模式則不會標上任何類別 */
 export function labelsProblem(mode: ObjectMode, labels: readonly string[]): string | null {
   if (mode === "off" || labels.length > 0) return null;
-  return mode === "filter" ? "還沒有勾選任何類別，這台不會記錄任何事件。" : "還沒有勾選任何類別，事件不會標上看到的東西。";
+  return mode === "filter" ? t`No categories are checked, so this camera won't record any events.` : t`No categories are checked, so events won't be labeled with what was seen.`;
 }
 
 export type ObjectsTone = "ok" | "warn" | "bad" | "busy";
@@ -111,8 +183,14 @@ export type ObjectsTone = "ok" | "warn" | "bad" | "busy";
 export function cpuShareNote(share: number | null | undefined): { tone: "ok" | "warn"; text: string } | null {
   if (share === null || share === undefined || share < 0.1) return null;
   const pct = Math.round(share * 100);
-  return share >= 0.5 ? { tone: "warn", text: `實際上大多在處理器上執行（約 ${pct}% 的運算），顯示卡幫助不大` } : { tone: "ok", text: `約 ${pct}% 的運算在處理器上執行` };
+  return share >= 0.5 ? { tone: "warn", text: t`Mostly runs on the CPU in practice (about ${pct}% of the work), so the graphics card helps little` } : { tone: "ok", text: t`${pct}% of the work runs on the CPU` };
 }
+
+/** 一句話裡幾段之間的分隔：「，」 */
+export const listSeparator = (): string => t({ message: ", ", context: "clause separator" });
+
+/** 句尾加句號 */
+const sentence = (text: string): string => t`${text}.`;
 
 export interface ObjectsView {
   tone: ObjectsTone;
@@ -128,7 +206,9 @@ export interface ObjectsView {
 export function speedText(status: Pick<ObjectsStatusDto, "latencyMs">): string | null {
   const ms = status.latencyMs?.avg;
   if (ms === undefined || !Number.isFinite(ms) || ms <= 0) return null;
-  return ms < 1 ? "每張不到 1 毫秒" : `每張約 ${Math.round(ms)} 毫秒`;
+  if (ms < 1) return t`Under 1 ms per frame on average`;
+  const rounded = Math.round(ms);
+  return t`${rounded} ms per frame on average`;
 }
 
 /**
@@ -139,19 +219,20 @@ export function objectsView(status: ObjectsStatusDto): ObjectsView {
   switch (status.state) {
     case "off":
     case "starting":
-      return { tone: "busy", title: "啟動中…", note: null, warnings: [] };
+      return { tone: "busy", title: t`Starting…`, note: null, warnings: [] };
     case "loading":
-      return { tone: "busy", title: "載入模型中…", note: "第一次使用顯卡時，可能需要等一分鐘左右。", warnings: [] };
+      return { tone: "busy", title: t`Loading model…`, note: t`The first time a graphics card is used, this can take about a minute.`, warnings: [] };
     case "error":
-      return { tone: "bad", title: "模型無法使用", note: status.error ?? "請換一個模型試試。", warnings: [] };
+      return { tone: "bad", title: t`Model unavailable`, note: status.error ?? t`Try a different model.`, warnings: [] };
     case "ready": {
-      if (status.paused === "benchmark") return { tone: "busy", title: "測速中，暫停辨識", note: "事件照常記錄，測完會自動恢復。", warnings: [] };
+      if (status.paused === "benchmark") return { tone: "busy", title: t`Benchmarking, detection paused`, note: t`Events are still recorded and detection resumes when the test finishes.`, warnings: [] };
       const share = cpuShareNote(status.cpuShare);
-      const warnings = [status.fallback?.reason, share?.tone === "warn" ? `${share.text}。` : null, status.warning].filter((w): w is string => !!w);
-      const note = [speedText(status), share?.tone === "ok" ? share.text : null].filter(Boolean).join("，");
+      const deviceName = status.device ? tidyName(status.device.name) : t`CPU`;
+      const warnings = [status.fallback?.reason, share?.tone === "warn" ? sentence(share.text) : null, status.warning].filter((w): w is string => !!w);
+      const note = [speedText(status), share?.tone === "ok" ? share.text : null].filter(Boolean).join(listSeparator());
       return {
         tone: warnings.length ? "warn" : "ok",
-        title: `使用中：${status.device ? tidyName(status.device.name) : "處理器"}`,
+        title: t`In use: ${deviceName}`,
         note: note || null,
         warnings,
       };
@@ -205,7 +286,22 @@ export function eventLabelOptions(catalog: Pick<ObjectLabelsDto, "labels"> | nul
 export function objectSummary(mode: ObjectMode, labels: readonly string[]): string | null {
   if (mode === "off") return null;
   const names = [...new Set(labels.map(labelName))];
-  if (names.length === 0) return mode === "filter" ? "未選類別，不記錄事件" : "辨識物件";
-  const list = names.length <= 3 ? (names.length === 1 ? names[0]! : `${names.slice(0, -1).join("、")}與${names.at(-1)}`) : `${names.slice(0, 2).join("、")}等 ${names.length} 類`;
-  return `${mode === "filter" ? "只記錄" : "辨識"}${list}`;
+  if (names.length === 0) return mode === "filter" ? t`No categories selected, no events recorded` : t`Detect objects`;
+  const list = names.length <= 3 ? listNames(names) : etcNames(names);
+  return mode === "filter" ? t`Only record ${list}` : t`Detect ${list}`;
+}
+
+/** 「人」「人與汽車」「人、汽車與狗」 */
+function listNames(names: readonly string[]): string {
+  const [first, second, third] = names as [string, string?, string?];
+  if (second === undefined) return first;
+  if (third === undefined) return t`${first} and ${second}`;
+  return t`${first}, ${second} and ${third}`;
+}
+
+/** 「人、汽車等 4 類」 */
+function etcNames(names: readonly string[]): string {
+  const [first, second] = names as [string, string];
+  const total = names.length;
+  return t`${first}, ${second}, etc. (${total} categories)`;
 }

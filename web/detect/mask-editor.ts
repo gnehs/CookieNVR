@@ -1,3 +1,4 @@
+import { plural, t } from "@lingui/core/macro";
 import { LIMITS } from "../../src/detect/config.ts";
 import type { MaskPolygon } from "../../src/types.ts";
 import { h, icon } from "../dom.ts";
@@ -35,10 +36,16 @@ export interface MaskCopy {
 }
 
 export const MOTION_MASK_COPY: MaskCopy = {
-  tag: "不偵測",
-  empty: "畫出不需要偵測的範圍，例如馬路、搖動的樹或時間浮水印。",
-  some: (n) => `${n} 個排除區域，裡面的變化不會觸發事件。點一下區域可以調整或刪除。`,
-  add: "新增排除區域",
+  get tag() {
+    return t`Ignored`;
+  },
+  get empty() {
+    return t`Draw the areas that don't need detection, such as a road, swaying trees or a timestamp watermark.`;
+  },
+  some: (n) => plural(n, { one: "# excluded area. Changes inside it won't trigger events. Tap an area to adjust or delete it.", other: "# excluded areas. Changes inside them won't trigger events. Tap an area to adjust or delete one." }),
+  get add() {
+    return t`Add excluded area`;
+  },
 };
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -51,6 +58,9 @@ const svg = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
 /** 手指或滑鼠移動超過這麼多 px 就不算點一下 */
 const TAP_SLOP = 10;
 let patternSeq = 0;
+
+const pointLabel = (n: number): string => t`Point ${n}`;
+const vertexLabel = (n: number): string => t`Vertex ${n}, move with the arrow keys`;
 
 export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon[]) => void, copy: MaskCopy = MOTION_MASK_COPY): MaskEditor {
   const masks: Pt[][] = initial.map((m) => m.points.map(([x, y]) => [x, y] as Pt));
@@ -146,7 +156,7 @@ export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon
     } else if (mode.kind === "drawing") {
       handleEls = mode.points.map((_, j) => {
         const first = j === 0;
-        const b = h("button", { type: "button", class: `mask-handle draft${first ? " first" : ""}`, tabindex: first ? "0" : "-1", "aria-label": first ? "回到第一點，完成這個區域" : `第 ${j + 1} 點` });
+        const b = h("button", { type: "button", class: `mask-handle draft${first ? " first" : ""}`, tabindex: first ? "0" : "-1", "aria-label": first ? t`Back to the first point to finish this area` : pointLabel(j + 1) });
         if (first) {
           b.addEventListener("pointerdown", (e) => e.stopPropagation());
           b.addEventListener("click", (e) => {
@@ -199,7 +209,7 @@ export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon
   }
 
   function vertexHandle(i: number, j: number): HTMLButtonElement {
-    const b = h("button", { type: "button", class: "mask-handle", "aria-label": `第 ${j + 1} 個頂點，用方向鍵移動` });
+    const b = h("button", { type: "button", class: "mask-handle", "aria-label": vertexLabel(j + 1) });
     let drag: { id: number } | null = null;
     b.addEventListener("pointerdown", (e) => {
       e.stopPropagation();
@@ -241,35 +251,39 @@ export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon
       h("button", { class: cls, type: "button", onclick }, iconName ? icon(iconName, 15) : null, label);
     if (mode.kind === "drawing") {
       const n = mode.points.length;
-      hint.textContent = n === 0 ? "在畫面上點出要排除的範圍，一點一個角。" : canClose(mode.points) ? "點回第一點，或按「完成」收合。" : `再點 ${LIMITS.points.min - n} 個點以上就能收合。`;
-      const done = btn("完成", "check", finishDrawing, "btn small primary");
+      const more = LIMITS.points.min - n;
+      hint.textContent = n === 0 ? t`Tap the screen to mark the area to exclude, one corner per tap.` : canClose(mode.points) ? t`Tap the first point again or press "Done" to close the area.` : plural(more, { one: "Add at least # more point to close it.", other: "Add at least # more points to close it." });
+      const done = btn(t`Done`, "check", finishDrawing, "btn small primary");
       done.disabled = !canClose(mode.points);
-      const undo = btn("復原", null, () => {
+      const undo = btn(t`Undo`, null, () => {
         if (mode.kind !== "drawing") return;
         mode.points.pop();
         render();
       });
       undo.disabled = n === 0;
-      buttons.replaceChildren(btn("取消", null, () => setMode({ kind: "idle", selected: null }), "btn small ghost"), undo, done);
+      buttons.replaceChildren(btn(t`Cancel`, null, () => setMode({ kind: "idle", selected: null }), "btn small ghost"), undo, done);
       return;
     }
     if (mode.selected !== null) {
       const i = mode.selected;
-      hint.textContent = "拖曳圓點調整形狀。";
+      hint.textContent = t`Drag the dots to adjust the shape.`;
       buttons.replaceChildren(
-        btn("刪除這個區域", "trash", () => {
+        btn(t`Delete this area`, "trash", () => {
           masks.splice(i, 1);
           commit();
           setMode({ kind: "idle", selected: null });
         }, "btn small danger"),
-        btn("完成", "check", () => setMode({ kind: "idle", selected: null }), "btn small primary"),
+        btn(t`Done`, "check", () => setMode({ kind: "idle", selected: null }), "btn small primary"),
       );
       return;
     }
     hint.textContent = masks.length ? copy.some(masks.length) : copy.empty;
     const add = btn(copy.add, "plus", () => setMode({ kind: "drawing", points: [], hover: null }));
     add.disabled = !canAddMask(masks);
-    if (add.disabled) hint.textContent = `最多 ${LIMITS.masks} 個排除區域。`;
+    if (add.disabled) {
+      const max = LIMITS.masks;
+      hint.textContent = t`Up to ${max} excluded areas.`;
+    }
     buttons.replaceChildren(add);
   }
 

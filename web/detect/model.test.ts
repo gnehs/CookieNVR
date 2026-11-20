@@ -61,10 +61,10 @@ describe("事件清單", () => {
 
   test("今天、昨天用口語，其他寫日期與星期", () => {
     const now = at(2026, 11, 19, 9);
-    expect(dayTitle("2026-11-19", now)).toBe("今天");
-    expect(dayTitle("2026-11-18", now)).toBe("昨天");
-    expect(dayTitle("2026-11-16", now)).toBe("11/16 週一");
-    expect(dayTitle("2025-12-31", now)).toBe("2025/12/31 週三");
+    expect(dayTitle("2026-11-19", now)).toBe("Today");
+    expect(dayTitle("2026-11-18", now)).toBe("Yesterday");
+    expect(dayTitle("2026-11-16", now)).toBe("Mon, 11/16");
+    expect(dayTitle("2025-12-31", now)).toBe("Wed, 12/31/2025");
   });
 
   test("點事件從開始前 5 秒回放，日期用瀏覽器時區", () => {

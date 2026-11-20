@@ -1,3 +1,5 @@
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import type { EventDto } from "../../src/api-types.ts";
 import { LIMITS, PREVIEW_THRESHOLDS, SENSITIVITY_PRESETS } from "../../src/detect/config.ts";
 import { EVENT_PREROLL_MS } from "../timeline/model.ts";
@@ -86,7 +88,6 @@ export const canClose = (points: readonly unknown[]) => points.length >= LIMITS.
 export const canAddMask = (masks: readonly unknown[]) => masks.length < LIMITS.masks;
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
 
 /** 瀏覽器時區的 YYYY-MM-DD */
 export function dayKey(ms: number): string {
@@ -100,13 +101,13 @@ export function dayBounds(key: string): [number, number] {
   return [new Date(y, m - 1, d).getTime(), new Date(y, m - 1, d + 1).getTime()];
 }
 
-/** 「今天」「昨天」，其他是「11/17 週二」；不同年份才寫年 */
+/** 「今天」「昨天」，其他是日期加星期（「11/17 週二」）；不同年份才寫年 */
 export function dayTitle(key: string, now: number): string {
-  if (key === dayKey(now)) return "今天";
-  if (key === dayKey(dayBounds(dayKey(now))[0] - 1)) return "昨天";
+  if (key === dayKey(now)) return t`Today`;
+  if (key === dayKey(dayBounds(dayKey(now))[0] - 1)) return t`Yesterday`;
   const [y, m, d] = key.split("-").map(Number) as [number, number, number];
-  const wd = WEEKDAY[new Date(y, m - 1, d).getDay()];
-  return `${y === new Date(now).getFullYear() ? "" : `${y}/`}${m}/${d} 週${wd}`;
+  const sameYear = y === new Date(now).getFullYear();
+  return new Intl.DateTimeFormat(i18n.locale, { ...(sameYear ? {} : { year: "numeric" }), month: "numeric", day: "numeric", weekday: "short" }).format(new Date(y, m - 1, d));
 }
 
 /** 依開始時間由新到舊、去掉重複；同一筆以後來的為準（例如進行中變成已結束） */

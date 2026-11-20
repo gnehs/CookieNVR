@@ -12,7 +12,7 @@ describe("decodeOptions", () => {
   test("auto and cpu come first, then every card", () => {
     const o = decodeOptions([card("intel:GPU.0", "Intel 內顯", ok, ok)], [], "auto");
     expect(o.map((x) => x.value)).toEqual(["auto", "cpu", "intel:GPU.0"]);
-    expect(o[0]!.label).toBe("自動（預設）");
+    expect(o[0]!.label).toBe("Auto (default)");
   });
 
   test("model name from the objects list wins", () => {
@@ -29,25 +29,25 @@ describe("decodeOptions", () => {
   test("one unsupported codec stays selectable with a short note", () => {
     const o = decodeOptions([card("a", "A", ok, no("x"))], [], "auto")[2]!;
     expect(o.disabled).toBe(false);
-    expect(o.desc).toBe("不支援 H.265");
+    expect(o.desc).toBe("H.265 not supported");
   });
 
   test("a saved card that is gone gets a placeholder", () => {
-    expect(decodeOptions([], [], "nvidia:x").at(-1)!.label).toContain("找不到");
+    expect(decodeOptions([], [], "nvidia:x").at(-1)!.label).toContain("not found");
   });
 });
 
 describe("decodeNote", () => {
   const dev = [card("intel:GPU.0", "Intel 內顯", ok, ok)];
   test("confirmed card", () => {
-    expect(decodeNote(status([{ cameraId: "c" as CameraId, device: "intel:GPU.0", confirmed: true, fallback: null }]), dev, [])).toEqual({ tone: "ok", text: "使用中：Intel 內顯" });
+    expect(decodeNote(status([{ cameraId: "c" as CameraId, device: "intel:GPU.0", confirmed: true, fallback: null }]), dev, [])).toEqual({ tone: "ok", text: "In use: Intel 內顯" });
   });
   test("fallback shows the reason only", () => {
     const n = decodeNote(status([{ cameraId: "c" as CameraId, device: null, confirmed: false, fallback: { reason: "這張卡不能解", detail: "secret ffmpeg text" } }]), dev, []);
     expect(n).toEqual({ tone: "warn", text: "這張卡不能解" });
   });
   test("cpu cameras", () => {
-    expect(decodeNote(status([{ cameraId: "c" as CameraId, device: null, confirmed: false, fallback: null }]), dev, [])?.text).toBe("使用中：處理器");
+    expect(decodeNote(status([{ cameraId: "c" as CameraId, device: null, confirmed: false, fallback: null }]), dev, [])?.text).toBe("In use: CPU");
   });
   test("no cards and nothing running", () => {
     expect(decodeNote(status([]), [], [])?.tone).toBe("muted");

@@ -1,5 +1,7 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg, t } from "@lingui/core/macro";
 import type { CameraDecodeDto, DecodeStatusDto, InferenceDeviceDto, VideoDeviceDto } from "../../../src/api-types.ts";
-import { tidyName } from "../../detect/object-model.ts";
+import { indexedName, listSeparator, tidyName } from "../../detect/object-model.ts";
 
 export interface DecodeOption {
   value: string;
@@ -11,7 +13,7 @@ export interface DecodeOption {
 export const DECODE_AUTO = "auto";
 export const DECODE_CPU = "cpu";
 
-export const DECODE_HINT = "有子碼流的攝影機效益很小，直接解主碼流或高解析度 H.265 時才明顯省處理器。";
+export const DECODE_HINT: MessageDescriptor = msg`Cameras with a sub-stream gain very little. The CPU savings only show when decoding the main stream directly or high-resolution H.265.`;
 
 /** 顯示名稱：物件辨識那邊同 id 的型號優先（兩邊的選單才會長一樣），沒有才用試跑拿到的名稱 */
 function nameOf(d: VideoDeviceDto, objectDevices: readonly InferenceDeviceDto[]): string {
@@ -22,8 +24,8 @@ function nameOf(d: VideoDeviceDto, objectDevices: readonly InferenceDeviceDto[])
 export function decodeLimit(d: VideoDeviceDto): { usable: boolean; note: string | null } {
   const { h264, hevc } = d.decode;
   if (!h264.ok && !hevc.ok) return { usable: false, note: h264.reason };
-  if (!h264.ok) return { usable: true, note: "不支援 H.264" };
-  if (!hevc.ok) return { usable: true, note: "不支援 H.265" };
+  if (!h264.ok) return { usable: true, note: t`H.264 not supported` };
+  if (!hevc.ok) return { usable: true, note: t`H.265 not supported` };
   return { usable: true, note: null };
 }
 
@@ -31,20 +33,20 @@ export function decodeLimit(d: VideoDeviceDto): { usable: boolean; note: string 
 export function decodeOptions(devices: readonly VideoDeviceDto[], objectDevices: readonly InferenceDeviceDto[], current: string): DecodeOption[] {
   const names = devices.map((d) => nameOf(d, objectDevices));
   const options: DecodeOption[] = [
-    { value: DECODE_AUTO, label: "自動（預設）" },
-    { value: DECODE_CPU, label: "處理器" },
+    { value: DECODE_AUTO, label: t`Auto (default)` },
+    { value: DECODE_CPU, label: t`CPU` },
   ];
   devices.forEach((d, i) => {
     const same = names.filter((n) => n === names[i]).length > 1;
     const { usable, note } = decodeLimit(d);
     options.push({
       value: d.id,
-      label: same ? `${names[i]}（${names.slice(0, i + 1).filter((n) => n === names[i]).length}）` : names[i]!,
+      label: same ? indexedName(names[i]!, names.slice(0, i + 1).filter((n) => n === names[i]).length) : names[i]!,
       disabled: !usable,
       desc: note ?? undefined,
     });
   });
-  if (current !== DECODE_AUTO && current !== DECODE_CPU && !devices.some((d) => d.id === current)) options.push({ value: current, label: "（目前找不到，暫時自動選擇）" });
+  if (current !== DECODE_AUTO && current !== DECODE_CPU && !devices.some((d) => d.id === current)) options.push({ value: current, label: t`(not found right now, choosing automatically)` });
   return options;
 }
 
@@ -57,18 +59,24 @@ export interface DecodeNote {
 export function decodeNote(status: DecodeStatusDto | null, devices: readonly VideoDeviceDto[], objectDevices: readonly InferenceDeviceDto[]): DecodeNote | null {
   if (!status) return null;
   const label = (device: string | null) => {
-    if (device === null) return "處理器";
+    if (device === null) return t`CPU`;
     const d = devices.find((x) => x.id === device);
-    return d ? nameOf(d, objectDevices) : "顯示卡";
+    return d ? nameOf(d, objectDevices) : t`Graphics card`;
   };
   const cams: readonly CameraDecodeDto[] = status.cameras;
   const reasons = [...new Set(cams.flatMap((c) => (c.fallback ? [c.fallback.reason] : [])))];
-  if (reasons.length) return { tone: "warn", text: reasons.join("；") };
-  if (devices.length === 0 && status.requested === DECODE_AUTO) return { tone: "muted", text: "沒有偵測到可用的顯示卡，用處理器解碼。" };
+  if (reasons.length) return { tone: "warn", text: reasons.join("; ") };
+  if (devices.length === 0 && status.requested === DECODE_AUTO) return { tone: "muted", text: t`No usable graphics card was detected, so the CPU is decoding.` };
   if (cams.length === 0) return null;
   const used = [...new Set(cams.filter((c) => c.device === null || c.confirmed).map((c) => label(c.device)))];
   const waiting = [...new Set(cams.filter((c) => !c.confirmed && c.device !== null).map((c) => label(c.device)))];
-  if (used.length) return { tone: "ok", text: `使用中：${used.join("、")}` };
-  if (waiting.length) return { tone: "muted", text: `準備使用：${waiting.join("、")}` };
+  if (used.length) {
+    const names = used.join(listSeparator());
+    return { tone: "ok", text: t`In use: ${names}` };
+  }
+  if (waiting.length) {
+    const names = waiting.join(listSeparator());
+    return { tone: "muted", text: t`Getting ready to use: ${names}` };
+  }
   return null;
 }

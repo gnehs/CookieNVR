@@ -1,3 +1,5 @@
+import { t as msgT } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import type { CreatedTokenDto } from "../../../src/api-types.ts";
@@ -10,15 +12,21 @@ import { Icon } from "../../ui/Icon.tsx";
 import { ErrorBox, Spinner } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 
+const lastUsed = (ago: string): string => msgT`Last used ${ago}`;
+const createdUnused = (ago: string): string => msgT`Created ${ago}, never used`;
+const revokeTitle = (name: string): string => msgT`Revoke "${name}"?`;
+const shownOnce = (name: string): string => msgT`The key for "${name}" is shown only once`;
+
 export const tokensQuery = queryOptions({ queryKey: ["tokens"], queryFn: api.tokens });
 
 function TokenList() {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const q = useQuery(tokensQuery);
   const revoke = useMutation({
-    mutationFn: (t: { id: number; name: string }) => api.revokeToken(t.id).then(() => t.name),
+    mutationFn: (tok: { id: number; name: string }) => api.revokeToken(tok.id).then(() => tok.name),
     onSuccess: (name) => {
-      toast(`已撤銷「${name}」`);
+      toast(t`Revoked "${name}"`);
       return qc.invalidateQueries({ queryKey: tokensQuery.queryKey });
     },
     onError: (e) => toast(errMsg(e), "error"),
@@ -28,20 +36,20 @@ function TokenList() {
   if (q.data.length === 0)
     return (
       <p className="muted" style={{ padding: "16px 22px" }}>
-        還沒有連接任何 App。
+        {t`No apps are connected yet.`}
       </p>
     );
   return (
     <div className="row-list">
-      {q.data.map((t) => (
-        <div className="row-item" key={t.id}>
+      {q.data.map((tok) => (
+        <div className="row-item" key={tok.id}>
           <div className="row-main">
             <span className="row-ico">
               <Icon name="key" size={18} />
             </span>
             <div className="row-text">
-              <b>{t.name}</b>
-              <small>{t.lastUsedAt ? `上次使用 ${formatAgo(t.lastUsedAt)}` : `${formatAgo(t.createdAt)}建立，還沒用過`}</small>
+              <b>{tok.name}</b>
+              <small>{tok.lastUsedAt ? lastUsed(formatAgo(tok.lastUsedAt)) : createdUnused(formatAgo(tok.createdAt))}</small>
             </div>
           </div>
           <Button
@@ -50,11 +58,11 @@ function TokenList() {
             icon="trash"
             iconSize={15}
             onClick={async () => {
-              if (!(await confirmDialog(`撤銷「${t.name}」？`, "用這組密鑰連線的 App 會立刻無法存取。", { confirmLabel: "撤銷", danger: true }))) return;
-              revoke.mutate({ id: t.id, name: t.name });
+              if (!(await confirmDialog(revokeTitle(tok.name), t`Apps connected with this key lose access immediately.`, { confirmLabel: t`Revoke`, danger: true }))) return;
+              revoke.mutate({ id: tok.id, name: tok.name });
             }}
           >
-            撤銷
+            {t`Revoke`}
           </Button>
         </div>
       ))}
@@ -64,6 +72,7 @@ function TokenList() {
 
 // 大多數人用不到，預設收合；技術名稱（API Token）只出現在說明的最後
 export function ConnectedApps() {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const name = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
@@ -84,7 +93,7 @@ export function ConnectedApps() {
     const n = name.current!.value.trim();
     if (!n) {
       name.current!.focus();
-      return setError("請寫下要連接的 App 名稱");
+      return setError(t`Enter a name for the app you want to connect`);
     }
     create.mutate(n);
   };
@@ -93,25 +102,27 @@ export function ConnectedApps() {
     <details className="card disclosure connect-apps">
       <summary>
         <Icon name="chevron" size={16} />
-        連接其他 App
-        <small>例如 Home Assistant</small>
+        {t`Connect other apps`}
+        <small>{t`For example, Home Assistant`}</small>
       </summary>
       <div className="disclosure-body">
         <p className="hint">
-          Home Assistant 會自己找到 CookieNVR，在它那邊按「增加」後回到這裡按「允許」就好。其他 App 可以在這裡建立一組專用的密鑰，權限和你的帳號相同。下面列出所有連線中的 App，不用時可以隨時撤銷。（技術上稱為 API Token）
+          <Trans>
+            Home Assistant finds CookieNVR on its own: press "Add" there, then come back here and press "Allow". For other apps, you can create a dedicated key here with the same permissions as your account. All connected apps are listed below, and you can revoke one at any time. (Technically this is called an API token.)
+          </Trans>
         </p>
         <div aria-live="polite">
           {created ? (
             <div className="callout warn">
               <Icon name="key" />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <b>「{created.name}」的密鑰只會顯示這一次</b>
-                <p>現在複製起來，貼到那個 App 的設定裡。離開這頁後就看不到完整內容了。</p>
+                <b>{shownOnce(created.name)}</b>
+                <p>{t`Copy it now and paste it into that app's settings. You won't be able to see the full key after leaving this page.`}</p>
                 <div className="secret-box" style={{ marginTop: 8 }}>
                   <code translate="no">{created.token}</code>
-                  <CopyButton label="複製" getText={() => created.token} done="已複製密鑰" className="small" />
+                  <CopyButton label={t`Copy`} getText={() => created.token} done={t`Key copied`} className="small" />
                   <Button small onClick={() => setCreated(null)}>
-                    我已經存好了
+                    {t`I've saved it`}
                   </Button>
                 </div>
               </div>
@@ -121,12 +132,12 @@ export function ConnectedApps() {
         <form className="form" noValidate onSubmit={submit}>
           <div className="form-actions" style={{ alignItems: "end" }}>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <Field label="App 名稱">
-                <input ref={name} type="text" name="tokenName" maxLength={60} placeholder="例如：Home Assistant" autoComplete="off" />
+              <Field label={t`App name`}>
+                <input ref={name} type="text" name="tokenName" maxLength={60} placeholder={t`For example: Home Assistant`} autoComplete="off" />
               </Field>
             </div>
             <Button variant="primary" type="submit" icon="plus" disabled={create.isPending}>
-              建立連線密鑰
+              {t`Create connection key`}
             </Button>
           </div>
           <p className="form-error" role="alert">

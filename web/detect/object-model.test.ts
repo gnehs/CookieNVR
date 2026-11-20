@@ -45,14 +45,14 @@ describe("類別沒勾的提醒", () => {
   test("過濾與標註才提醒，不辨識與有勾類別都不提醒", () => {
     expect(labelsProblem("off", [])).toBeNull();
     expect(labelsProblem("filter", ["person"])).toBeNull();
-    expect(labelsProblem("filter", [])).toContain("不會記錄任何事件");
-    expect(labelsProblem("annotate", [])).toContain("不會標上");
+    expect(labelsProblem("filter", [])).toContain("won't record any events");
+    expect(labelsProblem("annotate", [])).toContain("won't be labeled");
   });
 });
 
 describe("物件辨識狀態", () => {
   test("使用中要說出實際用的裝置型號", () => {
-    expect(objectsView(status({ device: UHD })).title).toBe("使用中：Intel UHD Graphics 630");
+    expect(objectsView(status({ device: UHD })).title).toBe("In use: Intel UHD Graphics 630");
     expect(objectsView(status({ device: GTX })).tone).toBe("ok");
   });
 
@@ -67,10 +67,10 @@ describe("物件辨識狀態", () => {
     expect(objectsView(status({ device: GTX, cpuShare: 0.01 })).note).toBeNull();
     const some = objectsView(status({ device: UHD, cpuShare: 0.3, latencyMs: { last: 30, avg: 30, max: 40 } }));
     expect(some.tone).toBe("ok");
-    expect(some.note).toBe("每張約 30 毫秒，約 30% 的運算在處理器上執行");
+    expect(some.note).toBe("30 ms per frame on average, 30% of the work runs on the CPU");
     const most = objectsView(status({ device: UHD, cpuShare: 0.62 }));
     expect(most.tone).toBe("warn");
-    expect(most.warnings).toEqual(["實際上大多在處理器上執行（約 62% 的運算），顯示卡幫助不大。"]);
+    expect(most.warnings).toEqual(["Mostly runs on the CPU in practice (about 62% of the work), so the graphics card helps little."]);
   });
 
   test("負載提醒也算警告，與退回的原因並列", () => {
@@ -81,13 +81,13 @@ describe("物件辨識狀態", () => {
 
   test("測速中說明辨識暫停，不重複顯示警告", () => {
     const v = objectsView(status({ paused: "benchmark", warning: "x" }));
-    expect(v.title).toContain("暫停");
+    expect(v.title).toContain("paused");
     expect(v.tone).toBe("busy");
     expect(v.warnings).toEqual([]);
   });
 
   test("載入中、啟動中、模型錯誤", () => {
-    expect(objectsView(status({ state: "loading", device: null })).title).toContain("載入");
+    expect(objectsView(status({ state: "loading", device: null })).title).toContain("Loading");
     expect(objectsView(status({ state: "starting", device: null })).tone).toBe("busy");
     expect(objectsView(status({ state: "off", device: null })).tone).toBe("busy");
     const bad = objectsView(status({ state: "error", device: null, error: "這不是 ONNX 模型。" }));
@@ -97,8 +97,8 @@ describe("物件辨識狀態", () => {
 
   test("速度只有一句話，還沒有數字就不顯示", () => {
     expect(speedText(status())).toBeNull();
-    expect(speedText(status({ latencyMs: { last: 10, avg: 12.4, max: 40 } }))).toBe("每張約 12 毫秒");
-    expect(speedText(status({ latencyMs: { last: 0.2, avg: 0.3, max: 1 } }))).toBe("每張不到 1 毫秒");
+    expect(speedText(status({ latencyMs: { last: 10, avg: 12.4, max: 40 } }))).toBe("12 ms per frame on average");
+    expect(speedText(status({ latencyMs: { last: 0.2, avg: 0.3, max: 1 } }))).toBe("Under 1 ms per frame on average");
   });
 });
 
@@ -106,27 +106,27 @@ describe("推論裝置選單", () => {
   test("自動在最前面，接著是每個裝置的型號，CPU 也有型號", () => {
     const o = deviceOptions([CPU, UHD, GTX], "auto");
     expect(o.map((x) => x.value)).toEqual(["auto", "cpu", "intel:GPU.0", "nvidia:GPU-aaa"]);
-    expect(o.map((x) => x.label)).toEqual(["自動（建議）", "Intel Core i5-9400 CPU @ 2.90GHz", "Intel UHD Graphics 630", "NVIDIA GeForce GTX 1650"]);
+    expect(o.map((x) => x.label)).toEqual(["Auto (recommended)", "Intel Core i5-9400 CPU @ 2.90GHz", "Intel UHD Graphics 630", "NVIDIA GeForce GTX 1650"]);
   });
 
   test("型號沒寫 CPU 時加上「處理器」前綴", () => {
-    expect(deviceOptions([{ id: "cpu", kind: "cpu", name: "Apple M2", pci: null }], "auto")[1]!.label).toBe("處理器：Apple M2");
+    expect(deviceOptions([{ id: "cpu", kind: "cpu", name: "Apple M2", pci: null }], "auto")[1]!.label).toBe("CPU: Apple M2");
   });
 
   test("設定的裝置不在清單裡，補一項說明，選單才不會騙人", () => {
     const o = deviceOptions([CPU], "nvidia:GPU-gone");
-    expect(o.at(-1)).toEqual({ value: "nvidia:GPU-gone", label: "（目前找不到，暫時自動選擇）" });
-    expect(deviceOptions([CPU], "cpu").some((x) => x.label.includes("找不到"))).toBe(false);
+    expect(o.at(-1)).toEqual({ value: "nvidia:GPU-gone", label: "(not found right now, choosing automatically)" });
+    expect(deviceOptions([CPU], "cpu").some((x) => x.label.includes("not found"))).toBe(false);
   });
 
   test("兩張同型號的卡用編號區分", () => {
     const twin = { id: "nvidia:GPU-bbb", kind: "nvidia", name: "NVIDIA GeForce GTX 1650", pci: null } as const;
-    expect(deviceOptions([GTX, twin], "auto").map((x) => x.label).slice(1)).toEqual(["NVIDIA GeForce GTX 1650（1）", "NVIDIA GeForce GTX 1650（2）"]);
+    expect(deviceOptions([GTX, twin], "auto").map((x) => x.label).slice(1)).toEqual(["NVIDIA GeForce GTX 1650 (1)", "NVIDIA GeForce GTX 1650 (2)"]);
   });
 
   test("說明依選擇變化；自動時說出實際用的裝置", () => {
     expect(deviceHint("auto", [CPU, GTX], GTX)).toContain("NVIDIA GeForce GTX 1650");
-    expect(deviceHint("nvidia:GPU-gone", [CPU], null)).toContain("偵測不到");
+    expect(deviceHint("nvidia:GPU-gone", [CPU], null)).toContain("can't be detected");
   });
 
   test("不能用的原因只在使用者指定了那一類時直接顯示，其餘收起來", () => {
@@ -138,8 +138,8 @@ describe("推論裝置選單", () => {
 });
 
 test("辨識頻率的說法", () => {
-  expect(rateClause(2)).toBe("每秒辨識 2 次");
-  expect(rateClause(0.5)).toBe("每 2 秒辨識 1 次");
+  expect(rateClause(2)).toBe("detecting 2 times per second");
+  expect(rateClause(0.5)).toBe("detecting once every 2 seconds");
 });
 
 describe("類別清單", () => {
@@ -196,12 +196,12 @@ describe("卡片摘要", () => {
     expect(objectSummary("off", ["person"])).toBeNull();
   });
   test("標註與過濾的說法不同，類別多時收成「等 N 類」", () => {
-    expect(objectSummary("annotate", ["person", "car"])).toBe("辨識人與汽車");
-    expect(objectSummary("filter", ["person"])).toBe("只記錄人");
-    expect(objectSummary("filter", ["person", "car", "dog"])).toBe("只記錄人、汽車與狗");
-    expect(objectSummary("annotate", ["person", "car", "dog", "cat"])).toBe("辨識人、汽車等 4 類");
+    expect(objectSummary("annotate", ["person", "car"])).toBe("Detect 人 and 汽車");
+    expect(objectSummary("filter", ["person"])).toBe("Only record 人");
+    expect(objectSummary("filter", ["person", "car", "dog"])).toBe("Only record 人, 汽車 and 狗");
+    expect(objectSummary("annotate", ["person", "car", "dog", "cat"])).toBe("Detect 人, 汽車, etc. (4 categories)");
   });
   test("過濾模式沒勾類別會提醒不會記錄事件", () => {
-    expect(objectSummary("filter", [])).toBe("未選類別，不記錄事件");
+    expect(objectSummary("filter", [])).toBe("No categories selected, no events recorded");
   });
 });

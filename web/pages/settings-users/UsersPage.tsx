@@ -1,3 +1,6 @@
+import { i18n, type MessageDescriptor } from "@lingui/core";
+import { msg, plural, t as msgT } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import type { UserDto } from "../../../src/api-types.ts";
@@ -14,7 +17,17 @@ import { toast } from "../../ui/toast.tsx";
 import { Tiles } from "../../ui/controls.tsx";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
 
-const ROLE_LABEL: Record<Role, string> = { admin: "管理員", user: "一般使用者" };
+const ROLE_LABEL: Record<Role, MessageDescriptor> = { admin: msg`Administrator`, user: msg`Regular user` };
+const roleLabel = (role: Role): string => i18n._(ROLE_LABEL[role]);
+
+const lastLogin = (ago: string): string => msgT`Last signed in ${ago}`;
+const moreActions = (username: string): string => msgT`More actions for "${username}"`;
+const userAdded = (username: string): string => msgT`Added "${username}"`;
+const passwordReset = (username: string): string => msgT`Reset the password for "${username}"`;
+const roleChanged = (username: string, role: string): string => msgT`"${username}" is now ${role}`;
+const userDeleted = (username: string): string => msgT`Deleted "${username}"`;
+const deleteTitle = (username: string): string => msgT`Delete "${username}"?`;
+const resetTitle = (username: string): string => msgT`Reset password for "${username}"`;
 
 const usersQuery = queryOptions({ queryKey: ["users"], queryFn: api.users });
 
@@ -27,6 +40,7 @@ interface Submitted {
 }
 
 function PasswordForm({ withUsername, onClose, onSubmit }: { withUsername: boolean; onClose: () => void; onSubmit: (v: Submitted) => Promise<void> }) {
+  const { t } = useLingui();
   const username = useRef<HTMLInputElement>(null);
   const password = useRef<HTMLInputElement>(null);
   const [role, setRole] = useState<Role>("user");
@@ -39,11 +53,11 @@ function PasswordForm({ withUsername, onClose, onSubmit }: { withUsername: boole
     const pw = password.current!.value;
     if (withUsername && !name) {
       username.current?.focus();
-      return setError("請填寫帳號");
+      return setError(t`Enter a username`);
     }
     if (pw.length < 8) {
       password.current!.focus();
-      return setError("密碼至少要 8 個字元");
+      return setError(t`The password must be at least 8 characters`);
     }
     setError("");
     setBusy(true);
@@ -58,23 +72,23 @@ function PasswordForm({ withUsername, onClose, onSubmit }: { withUsername: boole
   return (
     <form className="form" noValidate onSubmit={submit}>
       {withUsername ? (
-        <Field label="帳號">
+        <Field label={t`Username`}>
           <input ref={username} type="text" name="username" autoComplete="off" autoCapitalize="off" spellCheck={false} autoFocus />
         </Field>
       ) : null}
-      <Field label="密碼" hint="至少 8 個字元">
+      <Field label={t`Password`} hint={t`At least 8 characters`}>
         <input ref={password} type="password" name="password" autoComplete="new-password" minLength={8} autoFocus={!withUsername} />
       </Field>
       {withUsername ? (
         <div className="field">
-          <span className="legend">角色</span>
+          <span className="legend">{t`Role`}</span>
           <Tiles
-            label="角色"
+            label={t`Role`}
             value={role}
             onChange={setRole}
             options={[
-              { value: "user", label: ROLE_LABEL.user, desc: "可以看畫面與錄影" },
-              { value: "admin", label: ROLE_LABEL.admin, desc: "還可以變更所有設定" },
+              { value: "user", label: roleLabel("user"), desc: t`Can view live video and recordings` },
+              { value: "admin", label: roleLabel("admin"), desc: t`Can also change all settings` },
             ]}
           />
         </div>
@@ -83,9 +97,9 @@ function PasswordForm({ withUsername, onClose, onSubmit }: { withUsername: boole
         {error}
       </p>
       <div className="dlg-actions">
-        <Button onClick={onClose}>取消</Button>
+        <Button onClick={onClose}>{t`Cancel`}</Button>
         <Button variant="primary" type="submit" disabled={busy}>
-          {withUsername ? "新增使用者" : "重設密碼"}
+          {withUsername ? t`Add user` : t`Reset password`}
         </Button>
       </div>
     </form>
@@ -93,8 +107,9 @@ function PasswordForm({ withUsername, onClose, onSubmit }: { withUsername: boole
 }
 
 function UserRow({ user, self, onReset, onRole, onDelete }: { user: UserDto; self: boolean; onReset: () => void; onRole: (role: Role) => void; onDelete: () => void }) {
+  const { t } = useLingui();
   const other: Role = user.role === "admin" ? "user" : "admin";
-  const sub = [self ? "你" : null, ROLE_LABEL[user.role], user.lastLoginAt ? `上次登入 ${formatAgo(user.lastLoginAt)}` : "還沒登入過"].filter(Boolean).join("・");
+  const sub = [self ? t`You` : null, roleLabel(user.role), user.lastLoginAt ? lastLogin(formatAgo(user.lastLoginAt)) : t`Never signed in`].filter(Boolean).join("・");
   return (
     <div className="row-item cam-row" role="listitem">
       <div className="row-main">
@@ -108,11 +123,11 @@ function UserRow({ user, self, onReset, onRole, onDelete }: { user: UserDto; sel
       </div>
       <div className="row-actions">
         <MenuButton
-          label={`「${user.username}」的更多動作`}
+          label={moreActions(user.username)}
           items={[
-            { label: "重設密碼", icon: "key", onSelect: onReset },
-            !self && { label: other === "admin" ? "改成管理員" : "改成一般使用者", icon: "user", onSelect: () => onRole(other) },
-            !self && { label: "刪除", icon: "trash", danger: true, onSelect: onDelete },
+            { label: t`Reset password`, icon: "key", onSelect: onReset },
+            !self && { label: other === "admin" ? t`Make administrator` : t`Make regular user`, icon: "user", onSelect: () => onRole(other) },
+            !self && { label: t`Delete`, icon: "trash", danger: true, onSelect: onDelete },
           ]}
         />
       </div>
@@ -122,6 +137,7 @@ function UserRow({ user, self, onReset, onRole, onDelete }: { user: UserDto; sel
 
 /** 設定 → 使用者：新增、刪除、改角色與重設密碼 */
 export function UsersPage() {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const me = useMe();
   const users = useQuery(usersQuery);
@@ -129,10 +145,10 @@ export function UsersPage() {
   // 關閉動畫期間保留對話框內容
   const [shown, setShown] = useState<Target | null>(null);
   const [round, setRound] = useState(0);
-  const open = (t: Target) => {
+  const open = (next: Target) => {
     setRound((n) => n + 1);
-    setShown(t);
-    setTarget(t);
+    setShown(next);
+    setTarget(next);
   };
   const refresh = () => qc.invalidateQueries({ queryKey: usersQuery.queryKey });
 
@@ -141,42 +157,43 @@ export function UsersPage() {
     // 錯誤由對話框自己顯示
     onError: () => {},
     onSuccess: (_u, v) => {
-      toast(`已新增「${v.username}」`);
+      toast(userAdded(v.username));
       return refresh();
     },
   });
   const reset = useMutation({
     mutationFn: ({ user, password }: { user: UserDto; password: string }) => api.updateUser(user.id, { password }),
     onError: () => {},
-    onSuccess: (_r, { user }) => toast(`已重設「${user.username}」的密碼`),
+    onSuccess: (_r, { user }) => toast(passwordReset(user.username)),
   });
   const setRole = useMutation({
     mutationFn: ({ user, role }: { user: UserDto; role: Role }) => api.updateUser(user.id, { role }),
-    onSuccess: (_r, { user, role }) => toast(`「${user.username}」現在是${ROLE_LABEL[role]}`),
+    onSuccess: (_r, { user, role }) => toast(roleChanged(user.username, roleLabel(role))),
     onSettled: refresh,
   });
   const remove = useMutation({
     mutationFn: (user: UserDto) => api.deleteUser(user.id),
     onSuccess: (_r, user) => {
-      toast(`已刪除「${user.username}」`);
+      toast(userDeleted(user.username));
       return refresh();
     },
   });
 
   const confirmRemove = async (u: UserDto) => {
-    if (await confirmDialog(`刪除「${u.username}」？`, "這個帳號會立刻無法登入，它建立的 API Token 也會失效。無法復原。", { confirmLabel: "刪除", danger: true })) remove.mutate(u);
+    if (await confirmDialog(deleteTitle(u.username), t`This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone.`, { confirmLabel: t`Delete`, danger: true })) remove.mutate(u);
   };
 
   let body;
   if (users.isPending) body = <Spinner />;
   else if (users.isError) body = <ErrorBox error={users.error} onRetry={() => users.refetch()} />;
   else {
+    const count = users.data.length;
     body = (
       <>
         <div className="list-toolbar">
-          <span className="hint">共 {users.data.length} 位</span>
+          <span className="hint">{plural(count, { one: "# user", other: "# users" })}</span>
           <Button variant="primary" small icon="plus" iconSize={15} onClick={() => open({ kind: "create" })}>
-            新增使用者
+            {t`Add user`}
           </Button>
         </div>
         <div className="card row-list" role="list">
@@ -192,7 +209,7 @@ export function UsersPage() {
   return (
     <SettingsLayout active="users">
       <div>{body}</div>
-      <Dialog open={target !== null} onOpenChange={(o) => !o && close()} title={shown?.kind === "reset" ? `重設「${shown.user.username}」的密碼` : "新增使用者"} onClosed={() => setShown(null)}>
+      <Dialog open={target !== null} onOpenChange={(o) => !o && close()} title={shown?.kind === "reset" ? resetTitle(shown.user.username) : t`Add user`} onClosed={() => setShown(null)}>
         {shown ? (
           <PasswordForm
             key={round}

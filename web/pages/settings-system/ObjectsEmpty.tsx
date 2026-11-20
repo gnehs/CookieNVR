@@ -1,14 +1,18 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useId, type CSSProperties } from "react";
 import { Button } from "../../ui/Button.tsx";
 
-const BOXES = [
-  { x: 92, y: 110, w: 40, h: 44, label: "貓 88%" },
-  { x: 150, y: 80, w: 44, h: 74, label: "人 96%" },
-  { x: 206, y: 100, w: 98, h: 58, label: "車 91%" },
+const BOXES: { x: number; y: number; w: number; h: number; label: MessageDescriptor }[] = [
+  { x: 92, y: 110, w: 40, h: 44, label: msg`Cat 88%` },
+  { x: 150, y: 80, w: 44, h: 74, label: msg`Person 96%` },
+  { x: 206, y: 100, w: 98, h: 58, label: msg`Car 91%` },
 ];
 
 /** 監視畫面裡的人、車、貓各被框起來；被風吹動的樹沒有框，表示樹影晃動不會被記成事件。顏色全在 CSS（.obj-empty-art） */
 function Art() {
+  const { i18n } = useLingui();
   const id = useId();
   const sky = `${id}-sky`;
   const frame = `${id}-frame`;
@@ -62,11 +66,11 @@ function Art() {
         </g>
 
         {BOXES.map((b, i) => (
-          <g className="obj-empty-box" style={{ "--i": i } as CSSProperties} key={b.label}>
+          <g className="obj-empty-box" style={{ "--i": i } as CSSProperties} key={b.label.message}>
             <rect className="obj-empty-box-frame" x={b.x} y={b.y} width={b.w} height={b.h} rx="6" />
-            <rect className="obj-empty-box-tag" x={b.x} y={b.y - 16} width="42" height="14" rx="7" />
-            <text className="obj-empty-box-text" x={b.x + 21} y={b.y - 6} textAnchor="middle">
-              {b.label}
+            <rect className="obj-empty-box-tag" x={b.x} y={b.y - 16} width="58" height="14" rx="7" />
+            <text className="obj-empty-box-text" x={b.x + 29} y={b.y - 6} textAnchor="middle">
+              {i18n._(b.label)}
             </text>
           </g>
         ))}
@@ -78,14 +82,17 @@ function Art() {
 
 /** 物件辨識還沒開：插圖、說明與開啟按鈕，取代只有一個開關的卡片 */
 export function ObjectsEmpty({ busy, onEnable }: { busy: boolean; onEnable: () => void }) {
+  const { t } = useLingui();
   return (
     <section className="set-card obj-empty" aria-labelledby="obj-empty-title">
       <Art />
-      <h2 id="obj-empty-title">辨識畫面裡的人、車與動物</h2>
-      <p>開啟後，每台攝影機可以選擇只在看到人、車或動物時才記錄事件，風吹樹葉、光影變化就不會塞滿事件列表。會多用一些電腦資源。</p>
+      <h2 id="obj-empty-title">{t`Recognize people, vehicles and animals in the picture`}</h2>
+      <p>
+        <Trans>Once on, each camera can choose to record events only when it sees a person, vehicle or animal, so wind in the leaves and changing light no longer fill up the event list. It uses some extra computer resources.</Trans>
+      </p>
       <Button variant="primary" disabled={busy} aria-busy={busy || undefined} onClick={onEnable}>
         {busy ? <span className="spin" /> : null}
-        開啟物件辨識
+        {t`Turn on object detection`}
       </Button>
     </section>
   );
