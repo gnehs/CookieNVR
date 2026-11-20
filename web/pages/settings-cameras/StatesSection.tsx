@@ -10,7 +10,7 @@ import { Icon } from "../../ui/Icon.tsx";
 
 export const sensorsOf = (list: StateSensorDto[] | undefined, cameraId: string) => (list ?? []).filter((s) => s.cameraId === cameraId);
 
-/** 收合的卡片上的一句話：「鐵捲門：開」「2 個感應器」「未設定」 */
+/** 設定列上的一句話：「鐵捲門：開」「2 個感應器」「未設定」 */
 export function statesSummary(sensors: StateSensorDto[] | undefined, now = Date.now()): string {
   if (!sensors) return "正在讀取…";
   if (sensors.length === 0) return "未設定";
@@ -18,7 +18,7 @@ export function statesSummary(sensors: StateSensorDto[] | undefined, now = Date.
   return sensors.map((s) => `${s.config.name}：${stateText(sensorView(s), now).split(" · ")[0]}`).join("、");
 }
 
-/** 攝影機表單裡的「狀態辨識」：列出這台的感應器與目前狀態，點進去標記、訓練與調整；新增在另一頁 */
+/** 攝影機設定裡的「狀態辨識」：列出這台的感應器與目前狀態，點進去標記、訓練與調整；新增在另一頁 */
 export function StatesSection({ camera }: { camera: CameraDto }) {
   const q = useQuery(statesQuery);
   const now = useNow();

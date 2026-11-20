@@ -19,6 +19,8 @@ export interface MaskEditor {
   value(): MaskPolygon[];
   /** 換上新的快照（blob: 網址換掉後會自動釋放）；null 是拿不到畫面，note 說明原因 */
   setImage(src: string | null, note?: string): void;
+  /** 拆掉：釋放快照、移除鍵盤監聽 */
+  destroy(): void;
 }
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -288,17 +290,18 @@ export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon
     const i = g ? Number(g.dataset.index) : null;
     setMode({ kind: "idle", selected: i === mode.selected ? null : i });
   });
+  // 畫到一半或選取中按 Esc 只取消這一步：在 window 的捕獲階段先處理，外面的對話框收不到這次 Esc，不會整個關掉
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "Escape" && (mode.kind === "drawing" || mode.selected !== null)) {
       e.preventDefault();
+      e.stopPropagation();
       setMode({ kind: "idle", selected: null });
-    } else if (e.key === "Enter" && mode.kind === "drawing") {
+    } else if (e.key === "Enter" && mode.kind === "drawing" && e.target instanceof Node && (stage.contains(e.target) || toolbar.contains(e.target))) {
       e.preventDefault();
       finishDrawing();
     }
   };
-  stage.addEventListener("keydown", onKey);
-  toolbar.addEventListener("keydown", onKey);
+  window.addEventListener("keydown", onKey, true);
 
   let shown: string | null = null;
   const swap = (src: string | null) => {
@@ -311,6 +314,12 @@ export function maskEditor(initial: MaskPolygon[], onChange: (masks: MaskPolygon
     stage,
     toolbar,
     value: () => masks.map((points) => ({ points: points.map(([x, y]) => [round(x), round(y)] as Pt) })),
+    destroy() {
+      window.removeEventListener("keydown", onKey, true);
+      swap(null);
+      stage.remove();
+      toolbar.remove();
+    },
     setImage(src, note) {
       if (src === null) {
         swap(null);

@@ -18,7 +18,7 @@ const FALLBACK: Pick<ObjectLabelsDto, "labels" | "common"> = { labels: COMMON_LA
 
 const moreTitle = (n: number) => (n > 0 ? `更多類別（已選 ${n}）` : "更多類別");
 
-/** 偵測卡片裡的「物件辨識」：模式、關注的類別、嚴格程度。只有系統設定開了物件辨識、而且這台開了動作偵測才畫出來 */
+/** 偵測設定裡的「物件辨識」：模式、關注的類別、嚴格程度。只有系統設定開了物件辨識、而且這台開了動作偵測才畫出來 */
 export function ObjectSection({ value, onChange }: { value: ObjectFields; onChange: (patch: Partial<ObjectFields>) => void }) {
   const catalog = useQuery(objectLabelsQuery).data ?? null;
   const mode = modeOf(value.objectMode);

@@ -63,9 +63,7 @@ function MaskPreview({ camera, masks, onMasks, live, children }: { camera: Camer
     shot.current!.prepend(ed.stage);
     after.current!.before(ed.toolbar);
     return () => {
-      ed.setImage(null);
-      ed.stage.remove();
-      ed.toolbar.remove();
+      ed.destroy();
       editor.current = null;
     };
   }, []);
@@ -98,7 +96,7 @@ function MaskPreview({ camera, masks, onMasks, live, children }: { camera: Camer
   const ptzNote = ptz.isError ? onvifGuess : ptz.data?.supported === true;
   return (
     <div className="detect-preview">
-      <div ref={shot} className="detect-shot">
+      <div ref={shot} className="detect-shot" data-base-ui-swipe-ignore="">
         {children}
       </div>
       <p ref={after} className="detect-ptz hint" hidden={!ptzNote}>
@@ -110,7 +108,7 @@ function MaskPreview({ camera, masks, onMasks, live, children }: { camera: Camer
 }
 
 /**
- * 攝影機表單裡的「偵測」卡片內容。active 是卡片有沒有展開：收起來時關掉快照與畫面變化曲線（各佔一條連線）。
+ * 攝影機設定裡的「偵測」對話框內容。active 是對話框有沒有打開：關起來時停掉快照與畫面變化曲線（各佔一條連線）。
  * onvif 是表單上這台目前有沒有 ONVIF（Tapo 一定有；通用 RTSP 要開「使用 ONVIF」）。
  */
 export function DetectSection({ camera, value, saved, onChange, onvif, active, objects }: { camera: CameraDto; value: DetectConfig; saved: DetectConfig; onChange: (patch: Partial<DetectConfig>) => void; onvif: boolean; active: boolean; objects: boolean }) {
@@ -139,8 +137,8 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
               <Icon name="alert" />
               <span>
                 {d.source === "onvif"
-                  ? "這台沒有設定 ONVIF，收不到相機的偵測。請在下方「進階設定」開啟「使用 ONVIF」，或改用畫面變化。"
-                  : "這台沒有設定 ONVIF，目前只會用畫面變化偵測。要一起用相機偵測，請在下方「進階設定」開啟「使用 ONVIF」。"}
+                  ? "這台沒有設定 ONVIF，收不到相機的偵測。請到「連線」的「進階」開啟「使用 ONVIF」，或改用畫面變化。"
+                  : "這台沒有設定 ONVIF，目前只會用畫面變化偵測。要一起用相機偵測，請到「連線」的「進階」開啟「使用 ONVIF」。"}
               </span>
             </p>
           </div>
@@ -226,7 +224,7 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
         </div>
       </div>
       {objects && d.enabled ? (
-        // 物件辨識緊接在動作偵測之後、同一張卡片裡
+        // 物件辨識緊接在動作偵測之後、同一個對話框裡
         <div className="detect-extra" data-slot="object-detection">
           <ObjectSection value={d} onChange={onChange} />
         </div>

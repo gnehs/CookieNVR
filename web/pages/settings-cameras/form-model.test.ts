@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CameraConfig } from "../../../src/types.ts";
-import { connKey, detectSummary, dirtyCards, draftOf, errorCard, invalidFields, probeFailure, validate } from "./form-model.ts";
+import { connKey, detectSummary, draftOf, editReducer, errorCard, invalidFields, planSave, probeFailure, sectionChanged, validate, type SectionEdit, type SectionKey } from "./form-model.ts";
 
 const rtsp: CameraConfig = {
   name: "前門",
@@ -44,24 +44,89 @@ describe("validate", () => {
   });
 });
 
-describe("dirtyCards", () => {
-  test("an untouched form has no dirty card", () => {
-    expect(dirtyCards(draftOf(rtsp), draftOf(rtsp)).size).toBe(0);
+const SECTIONS: SectionKey[] = ["basic", "conn", "rec", "detect", "ptz"];
+const changedSections = (d: ReturnType<typeof draftOf>, start: ReturnType<typeof draftOf>) => SECTIONS.filter((k) => sectionChanged(k, d, start));
+
+describe("sectionChanged", () => {
+  test("an untouched draft changes no section", () => {
+    expect(changedSections(draftOf(rtsp), draftOf(rtsp))).toEqual([]);
   });
 
-  test("each change marks only its own card", () => {
+  test("each change marks only its own section", () => {
     const saved = draftOf(rtsp);
-    expect([...dirtyCards({ ...saved, name: "後門" }, saved)]).toEqual(["basic"]);
-    expect([...dirtyCards({ ...saved, transport: "udp" }, saved)]).toEqual(["conn"]);
-    expect([...dirtyCards({ ...saved, recAudio: false }, saved)]).toEqual(["rec"]);
-    expect([...dirtyCards({ ...saved, detect: { ...saved.detect!, threshold: 15 } }, saved)]).toEqual(["detect"]);
-    expect([...dirtyCards({ ...saved, ptz: { mode: "relative", speed: 0.5 } }, saved)]).toEqual(["ptz"]);
+    expect(changedSections({ ...saved, name: "後門" }, saved)).toEqual(["basic"]);
+    expect(changedSections({ ...saved, transport: "udp" }, saved)).toEqual(["conn"]);
+    expect(changedSections({ ...saved, recDirect: true }, saved)).toEqual(["conn"]);
+    expect(changedSections({ ...saved, recAudio: false }, saved)).toEqual(["rec"]);
+    expect(changedSections({ ...saved, detect: { ...saved.detect!, threshold: 15 } }, saved)).toEqual(["detect"]);
+    expect(changedSections({ ...saved, ptz: { mode: "relative", speed: 0.5 } }, saved)).toEqual(["ptz"]);
   });
 
   test("typing the same Tapo host back is not a change", () => {
     const tapo: CameraConfig = { ...rtsp, connection: { type: "tapo", host: "10.0.0.9", username: "a", password: "b" } };
     const saved = draftOf(tapo);
     expect(connKey({ ...saved, tapoHost: " 10.0.0.9 " })).toBe(connKey(saved));
+    expect(sectionChanged("conn", { ...saved, tapoHost: " 10.0.0.9 ", mainUrl: "rtsp://x/y" }, saved)).toBe(false);
+  });
+});
+
+const editing = (key: SectionKey, config: CameraConfig, patch: Partial<ReturnType<typeof draftOf>> = {}): SectionEdit => {
+  const opened = editReducer(null, { type: "open", key, from: draftOf(config) });
+  return editReducer(opened, { type: "patch", patch })!;
+};
+
+describe("planSave", () => {
+  test("saving one section keeps every other section from the current config", () => {
+    const edit = editing("rec", rtsp, { recAudio: false, name: "改了但不屬於這一區" });
+    const current: CameraConfig = { ...rtsp, name: "別處剛改的名字" };
+    const r = planSave(edit, current, undefined);
+    if (!("config" in r)) throw new Error(r.error.summary);
+    expect(r.config.record).toEqual({ enabled: true, audio: false, direct: false });
+    expect(r.config.name).toBe("別處剛改的名字");
+    expect(r.config.connection).toEqual(rtsp.connection);
+    expect(r.test).toBeNull();
+  });
+
+  test("a changed connection asks for a test first; an unchanged one does not", () => {
+    const changed = planSave(editing("conn", rtsp, { transport: "udp" }), rtsp, undefined);
+    if (!("config" in changed)) throw new Error(changed.error.summary);
+    expect(changed.test).toEqual({ ...rtsp.connection, transport: "udp" } as CameraConfig["connection"]);
+    const direct = planSave(editing("conn", rtsp, { recDirect: true }), rtsp, undefined);
+    if (!("config" in direct)) throw new Error(direct.error.summary);
+    expect(direct.test).toBeNull();
+    expect(direct.config.record.direct).toBe(true);
+  });
+
+  test("an invalid field in the open section comes back as that section's error", () => {
+    const r = planSave(editing("basic", rtsp, { name: "  " }), rtsp, undefined);
+    if (!("error" in r)) throw new Error("expected an error");
+    expect(errorCard(r.error)).toBe("basic");
+  });
+
+  test("detect settings stay intact when another section is saved", () => {
+    const withDetect: CameraConfig = { ...rtsp, detect: { ...draftOf(rtsp).detect!, enabled: true, threshold: 15 } };
+    const r = planSave(editing("basic", withDetect, { name: "後門" }), withDetect, undefined);
+    if (!("config" in r)) throw new Error(r.error.summary);
+    expect(r.config.detect?.threshold).toBe(15);
+    expect(r.config.name).toBe("後門");
+  });
+});
+
+describe("editReducer", () => {
+  test("editing a flagged field clears the error; editing another field keeps it", () => {
+    let s = editing("conn", rtsp);
+    s = editReducer(s, { type: "fail", error: { summary: "x", field: { key: "ovPort", message: "bad", also: [] } } })!;
+    expect(editReducer(s, { type: "patch", patch: { ovUser: "a" } })!.error).not.toBeNull();
+    expect(editReducer(s, { type: "patch", patch: { ovPort: "81" } })!.error).toBeNull();
+    expect(editReducer(s, { type: "patch", patch: { type: "tapo" } })!.error).toBeNull();
+  });
+
+  test("a failed save returns to editing with the error", () => {
+    const s = editReducer(editing("conn", rtsp), { type: "submit", status: "testing" })!;
+    expect(s.status).toBe("testing");
+    const failed = editReducer(s, { type: "fail", error: { summary: "連不上" } })!;
+    expect(failed.status).toBe("editing");
+    expect(failed.error?.summary).toBe("連不上");
   });
 });
 

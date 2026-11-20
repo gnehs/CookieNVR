@@ -18,20 +18,19 @@ details.disclosure.fcard > summary .fcard-ico .icon { color: var(--text-2); tran
 .fcard-flag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .fcard-flag.error { background: var(--bad-soft); color: var(--bad-text); }
 details.disclosure.fcard > summary .fcard-flag.error .icon { color: var(--bad-text); transform: none; }
-.fcard-flag.dirty { background: var(--accent-soft); color: var(--accent-text); }
-.fcard-flag.dirty i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .fcard-chevron { display: inline-flex; flex: none; }
 details.disclosure.fcard > summary .fcard-chevron .icon { color: var(--muted); }
 details.disclosure.fcard[open] > summary .fcard-chevron .icon { transform: rotate(180deg); }
 
 /* 卡片內容：設定列一列一列，中間細線分隔 */
-.fcard-body > *:not([hidden]) ~ *:not([hidden]), .set-rows > *:not([hidden]) ~ *:not([hidden]), .fcard .set-disclosure > .disclosure-body > *:not([hidden]) ~ *:not([hidden]) { border-top: 1px solid var(--border); }
+.fcard-body > *:not([hidden]) ~ *:not([hidden]), .dlg-fields > *:not([hidden]) ~ *:not([hidden]), .set-rows > *:not([hidden]) ~ *:not([hidden]), .fcard .set-disclosure > .disclosure-body > *:not([hidden]) ~ *:not([hidden]), .dlg-fields .set-disclosure > .disclosure-body > *:not([hidden]) ~ *:not([hidden]) { border-top: 1px solid var(--border); }
 .fcard-body > .set-rows:empty, .set-rows[hidden] { display: none; }
 .set-block { padding: 16px 20px; }
 .set-row > .field-error { grid-column: 1 / -1; justify-self: end; }
 .set-row:has(> .field-error) input { border-color: var(--bad); }
 /* 搬進卡片的區塊：卡片標題已經寫了名稱，不再重複 */
-.fcard-homekit .hk-head h3 { display: none; }
+.dlg-fields .hk-head h3 { display: none; }
+.dlg-fields > .panel-section, .dlg-fields > .st-section { padding: 18px 22px 22px; }
 .set-row.wide .set-row-control > .segmented, .set-row.wide .set-row-control > .choice { max-width: 100%; }
 @container (max-width: 560px) {
   .set-row.wide .set-row-control > .segmented { width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
@@ -40,6 +39,14 @@ details.disclosure.fcard[open] > summary .fcard-chevron .icon { transform: rotat
 }
 .detect-extra:empty { display: none; }
 .set-row:not(.wide) .set-row-control > input[type="text"] { width: 120px; }
+
+/* 編輯頁的區塊清單：整列是按鈕，點了打開那個區塊的對話框 */
+.sec-row { width: 100%; flex-wrap: nowrap; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 68px; }
+.sec-row .row-text { flex: 1; display: grid; }
+.sec-row > .icon { flex: none; color: var(--muted); }
+.sec-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sec-row:active { background: var(--fill); }
+@media (hover: hover) { .sec-row:hover { background: var(--fill); } }
 
 /* 底部動作列：黏在視窗底部，長表單也隨時按得到儲存 */
 .form-bar {

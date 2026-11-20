@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { Icon } from "../../ui/Icon.tsx";
 
 /**
@@ -41,18 +41,4 @@ export function Range({ initial, onInput, step = 0.5, ...aria }: { initial: numb
       }}
     />
   );
-}
-
-/** 這個元素所在的 `<details>`（例如一張 FormCard）目前有沒有展開 */
-export function useDetailsOpen(inside: RefObject<HTMLElement | null>): boolean {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const details = inside.current?.closest("details");
-    if (!details) return;
-    const sync = () => setOpen(details.open);
-    sync();
-    details.addEventListener("toggle", sync);
-    return () => details.removeEventListener("toggle", sync);
-  }, [inside]);
-  return open;
 }

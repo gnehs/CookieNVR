@@ -44,7 +44,7 @@ function blockedReason(dto: HomekitDto): string | null {
   return null;
 }
 
-/** 收合的卡片上的一句話：已加入、等待配對、未開啟… */
+/** 設定列上的一句話：已加入、等待配對、未開啟… */
 export function homekitSummary(dto: HomekitDto | undefined): string {
   if (!dto) return "正在檢查…";
   if (!dto.systemEnabled) return "未開啟（要先在「設定 → 一般」開啟）";
@@ -121,7 +121,7 @@ function Requirements() {
   );
 }
 
-/** 攝影機表單裡的「Apple 家庭」：開關、配對用的 QR code 與配對碼、重設配對。開關與重設直接生效，不經過表單的儲存 */
+/** 攝影機設定裡的「Apple 家庭」：開關、配對用的 QR code 與配對碼、重設配對。開關與重設直接生效，沒有另外的儲存 */
 export function HomekitSection({ camera }: { camera: CameraDto }) {
   const qc = useQueryClient();
   const q = useQuery(homekitQuery(camera.id));

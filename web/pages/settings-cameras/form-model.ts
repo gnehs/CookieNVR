@@ -37,7 +37,17 @@ export interface Draft extends Fields {
   ptz: PtzPrefs | undefined;
 }
 
-export type CardKey = "basic" | "conn" | "rec" | "detect" | "ptz" | "homekit";
+/** 表單上各自打開、各自儲存的區塊 */
+export type SectionKey = "basic" | "conn" | "rec" | "detect" | "ptz";
+
+/** 每個區塊管哪些欄位：儲存一個區塊時只把這些欄位換進目前的設定 */
+const SECTION_FIELDS: Record<SectionKey, readonly (keyof Draft)[]> = {
+  basic: ["name", "enabled"],
+  conn: ["type", "tapoHost", "tapoUser", "tapoPass", "mainUrl", "subUrl", "transport", "onvifOn", "ovHost", "ovPort", "ovUser", "ovPass", "recDirect"],
+  rec: ["recEnabled", "recAudio"],
+  detect: ["detect"],
+  ptz: ["ptz"],
+};
 
 export const DEFAULT_PTZ: PtzPrefs = { mode: "auto", speed: 0.5, invertPan: false, invertTilt: false };
 
@@ -84,25 +94,25 @@ export function draftOf(c: CameraConfig | null): Draft {
 export interface FormError {
   summary: string;
   field?: { key: FieldKey; message: string; also: FieldKey[] };
-  /** 沒有對應欄位、但要標成有錯的卡片 */
-  card?: CardKey;
+  /** 沒有對應欄位、但要標成有錯的區塊 */
+  card?: SectionKey;
   /** 「複製錯誤內容」的文字 */
   copy?: string;
 }
 
-const CARD_OF_FIELD: Record<FieldKey, CardKey> = {
-  name: "basic", enabled: "basic",
-  type: "conn", tapoHost: "conn", tapoUser: "conn", tapoPass: "conn", mainUrl: "conn", subUrl: "conn", transport: "conn",
-  onvifOn: "conn", ovHost: "conn", ovPort: "conn", ovUser: "conn", ovPass: "conn", recDirect: "conn",
-  recEnabled: "rec", recAudio: "rec",
-};
+const SECTION_OF_FIELD = Object.fromEntries(
+  (Object.entries(SECTION_FIELDS) as [SectionKey, readonly (keyof Draft)[]][]).flatMap(([key, fields]) => fields.map((f) => [f, key])),
+) as Record<FieldKey, SectionKey>;
 
-export function errorCard(e: FormError | null): CardKey | null {
+export function errorCard(e: FormError | null): SectionKey | null {
   if (!e) return null;
-  return e.card ?? (e.field ? CARD_OF_FIELD[e.field.key] : null);
+  return e.card ?? (e.field ? SECTION_OF_FIELD[e.field.key] : null);
 }
 
 export const invalidFields = (e: FormError | null): FieldKey[] => (e?.field ? [e.field.key, ...e.field.also] : []);
+
+/** 改了標紅的欄位、或換了攝影機類型，原本的錯誤就不再適用 */
+export const clearsError = (e: FormError | null, patch: Partial<Draft>) => !!e && ("type" in patch || invalidFields(e).some((k) => k in patch));
 
 const fieldError = (key: FieldKey, message: string, summary = "請修正標示的欄位"): FormError => ({ summary, field: { key, message, also: [] } });
 
@@ -151,16 +161,73 @@ export function validate(d: Draft, keep: Pick<CameraConfig, "detect" | "homekit"
   return { config, conn: r.conn };
 }
 
-/** 哪幾張卡片和打開頁面時不一樣 */
-export function dirtyCards(d: Draft, saved: Draft): Set<CardKey> {
-  const out = new Set<CardKey>();
-  const changed = (keys: FieldKey[]) => keys.some((k) => d[k] !== saved[k]);
-  if (changed(["name", "enabled"])) out.add("basic");
-  if (connKey(d) !== connKey(saved) || changed(["recDirect"]) || (d.type === "rtsp" && changed(["transport", "onvifOn"]))) out.add("conn");
-  if (changed(["recEnabled", "recAudio"])) out.add("rec");
-  if (JSON.stringify(d.detect) !== JSON.stringify(saved.detect)) out.add("detect");
-  if (JSON.stringify(d.ptz ?? null) !== JSON.stringify(saved.ptz ?? null)) out.add("ptz");
+const sameFields = (a: Draft, b: Draft, keys: FieldKey[]) => keys.every((k) => a[k] === b[k]);
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+/** 每個區塊怎麼算「有改」：連線比的是實際會送出的連線，Tapo 用不到的 RTSP 欄位不算 */
+const SAME: Record<SectionKey, (a: Draft, b: Draft) => boolean> = {
+  basic: (a, b) => sameFields(a, b, ["name", "enabled"]),
+  conn: (a, b) => connKey(a) === connKey(b) && a.recDirect === b.recDirect && (a.type !== "rtsp" || sameFields(a, b, ["transport", "onvifOn"])),
+  rec: (a, b) => sameFields(a, b, ["recEnabled", "recAudio"]),
+  detect: (a, b) => sameJson(a.detect, b.detect),
+  ptz: (a, b) => sameJson(a.ptz, b.ptz),
+};
+
+export const sectionChanged = (key: SectionKey, d: Draft, start: Draft) => !SAME[key](d, start);
+
+/** base 換上 edited 裡這個區塊的欄位，其他區塊維持 base */
+export function withSection(base: Draft, edited: Draft, key: SectionKey): Draft {
+  const out = { ...base };
+  for (const f of SECTION_FIELDS[key]) (out as Record<keyof Draft, unknown>)[f] = edited[f];
   return out;
+}
+
+/**
+ * 編輯頁一次只開一個區塊：打開時從目前的設定複製一份 draft，start 留著比對有沒有改。
+ * status 是送出的進度；error 顯示在對話框裡。
+ */
+export interface SectionEdit {
+  key: SectionKey;
+  /** 關閉後仍留著內容，讓對話框的關閉動畫有東西可畫；下次打開時整份換掉 */
+  open: boolean;
+  start: Draft;
+  draft: Draft;
+  status: "editing" | "testing" | "saving";
+  error: FormError | null;
+}
+
+export type EditAction =
+  | { type: "open"; key: SectionKey; from: Draft }
+  | { type: "patch"; patch: Partial<Draft> }
+  | { type: "submit"; status: "testing" | "saving" }
+  | { type: "fail"; error: FormError }
+  | { type: "close" };
+
+export function editReducer(s: SectionEdit | null, a: EditAction): SectionEdit | null {
+  if (a.type === "open") return { key: a.key, open: true, start: a.from, draft: a.from, status: "editing", error: null };
+  if (!s) return null;
+  switch (a.type) {
+    case "patch":
+      return { ...s, draft: { ...s.draft, ...a.patch }, error: clearsError(s.error, a.patch) ? null : s.error };
+    case "submit":
+      return { ...s, status: a.status, error: null };
+    case "fail":
+      return { ...s, status: "editing", error: a.error };
+    case "close":
+      return { ...s, open: false };
+  }
+}
+
+/**
+ * 儲存一個區塊：把它的欄位換進「現在」的設定（不是打開對話框時的那份，期間別處改的不會被蓋掉）再檢查。
+ * test 是連線改過、存檔前要先測的連線；沒改連線時是 null。
+ */
+export function planSave(edit: SectionEdit, current: CameraConfig, homekit: CameraConfig["homekit"]): { config: CameraConfig; test: CameraConnection | null } | { error: FormError } {
+  const base = draftOf(current);
+  const merged = withSection(base, edit.draft, edit.key);
+  const r = validate(merged, current, homekit);
+  if ("error" in r) return r;
+  return { config: r.config, test: edit.key === "conn" && connKey(merged) !== connKey(base) ? r.conn : null };
 }
 
 /** 網址裡的主機名稱，不含帳密與路徑 */
