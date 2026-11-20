@@ -1,6 +1,6 @@
 import { Menu as Base } from "@base-ui/react/menu";
 import { Link, type LinkProps } from "@tanstack/react-router";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, useRef } from "react";
 import { Icon } from "./Icon.tsx";
 import type { IconName } from "./icons.ts";
 
@@ -18,13 +18,7 @@ export interface MenuItem {
   onSelect?: () => void;
 }
 
-/** 選單裡的一組，帶一個小標題（例如「設定」底下的分頁） */
-export interface MenuGroup {
-  heading: string;
-  items: MenuItem[];
-}
-
-export type MenuEntry = MenuItem | MenuGroup | null | false;
+export type MenuEntry = MenuItem | null | false;
 
 function ItemBody({ it }: { it: MenuItem }) {
   return (
@@ -57,32 +51,59 @@ function Item({ it }: { it: MenuItem }) {
 }
 
 /**
+ * 一塊高亮底色跟著 Base UI 標的 data-highlighted（滑鼠或方向鍵）在項目間滑動。
+ * 剛出現時直接落在該項、只淡入，之後換項才滑過去；沒有項目被標時淡出。
+ */
+function useHighlightBlock() {
+  const block = useRef<HTMLDivElement>(null);
+  const popupRef = (popup: HTMLDivElement | null) => {
+    if (!popup) return;
+    const sync = () => {
+      const b = block.current;
+      if (!b) return;
+      const it = popup.querySelector<HTMLElement>(".menu-item[data-highlighted]");
+      if (!it) {
+        delete b.dataset.shown;
+        return;
+      }
+      b.style.setProperty("--x", `${it.offsetLeft}px`);
+      b.style.setProperty("--y", `${it.offsetTop}px`);
+      b.style.setProperty("--w", `${it.offsetWidth}px`);
+      b.style.setProperty("--h", `${it.offsetHeight}px`);
+      b.toggleAttribute("data-danger", it.classList.contains("danger"));
+      if (b.dataset.shown === undefined) {
+        b.dataset.instant = "";
+        void b.offsetWidth;
+        b.dataset.shown = "";
+        delete b.dataset.instant;
+      }
+    };
+    const mo = new MutationObserver(sync);
+    mo.observe(popup, { subtree: true, attributes: true, attributeFilter: ["data-highlighted"] });
+    sync();
+    return () => mo.disconnect();
+  };
+  return { block, popupRef };
+}
+
+/**
  * 觸發按鈕＋選單（Base UI Menu）：方向鍵在項目間移動，Esc 與點外面關閉並把焦點還給按鈕。
  * 桌面浮在按鈕旁，手機由 CSS 改成底部面板，面板頂端顯示 label。
  */
 export function Menu({ trigger, label, entries, align = "end", side = "bottom" }: { trigger: ReactElement; label: string; entries: MenuEntry[]; align?: "start" | "end"; side?: "bottom" | "top" }) {
+  const { block, popupRef } = useHighlightBlock();
   return (
     <Base.Root>
       <Base.Trigger render={trigger} />
       <Base.Portal>
         <Base.Backdrop className="sheet-backdrop" data-sheet="menu" />
         <Base.Positioner className="menu-pos" side={side} align={align} sideOffset={6} collisionPadding={8}>
-          <Base.Popup className="menu" aria-label={label}>
+          <Base.Popup ref={popupRef} className="menu" aria-label={label}>
+            <div ref={block} className="menu-hl" aria-hidden="true" />
             <div className="menu-title" aria-hidden="true">
               {label}
             </div>
-            {entries.map((e, i): ReactNode => {
-              if (!e) return null;
-              if (!("heading" in e)) return <Item key={i} it={e} />;
-              return (
-                <Base.Group key={i} className="menu-group">
-                  <Base.GroupLabel className="menu-heading">{e.heading}</Base.GroupLabel>
-                  {e.items.map((it, j) => (
-                    <Item key={j} it={it} />
-                  ))}
-                </Base.Group>
-              );
-            })}
+            {entries.map((e, i) => (e ? <Item key={i} it={e} /> : null))}
           </Base.Popup>
         </Base.Positioner>
       </Base.Portal>

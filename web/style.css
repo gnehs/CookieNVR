@@ -871,13 +871,20 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
   background: transparent; color: var(--text); font-size: 14px; text-align: left; cursor: pointer; white-space: nowrap;
 }
 .menu-item .icon { color: var(--text-2); }
-.menu-item:focus-visible, .menu-item[data-highlighted] { background: var(--fill-2); outline: none; }
+.menu-item { position: relative; z-index: 1; }
+.menu-item:focus-visible { outline: none; }
 .menu-item.danger, .menu-item.danger .icon { color: var(--bad-text); }
-.menu-item.danger:focus-visible, .menu-item.danger[data-highlighted] { background: color-mix(in srgb, var(--bad) 14%, var(--overlay)); }
-@media (hover: hover) {
-  .menu-item:hover { background: var(--fill-2); }
-  .menu-item.danger:hover { background: color-mix(in srgb, var(--bad) 14%, var(--overlay)); }
+/* 高亮底色是一塊共用的方塊，跟著被標的項目滑動（見 Menu.tsx useHighlightBlock） */
+.menu { position: relative; }
+.menu-hl {
+  position: absolute; top: 0; left: 0; width: var(--w, 0); height: var(--h, 0); border-radius: 9px;
+  background: var(--fill-2); opacity: 0; pointer-events: none;
+  transform: translate(var(--x, 0), var(--y, 0));
+  transition: transform var(--dur-2) var(--ease-out), width var(--dur-2) var(--ease-out), height var(--dur-2) var(--ease-out), background-color var(--dur-2) ease, opacity var(--dur-1) ease;
 }
+.menu-hl[data-shown] { opacity: 1; }
+.menu-hl[data-instant] { transition: opacity var(--dur-1) ease; }
+.menu-hl[data-danger] { background: color-mix(in srgb, var(--bad) 14%, var(--overlay)); }
 
 /* ---------- 收合區塊（進階設定） ---------- */
 details.disclosure { border-top: 1px solid var(--border); }
@@ -1007,11 +1014,8 @@ details.more > p { margin-top: 6px; max-width: 62ch; color: var(--text-2); }
   }
   .menu .menu-title { display: block; }
   .menu-item { min-height: 50px; font-size: 15.5px; padding: 0 12px; border-radius: 12px; }
+  .menu-hl { border-radius: 12px; }
 }
-.menu-heading { padding: 10px 10px 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
-.menu-group { padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
-.menu-group:not(:first-child) { margin-top: 4px; border-top: 1px solid var(--border); }
-.menu-group .menu-item { padding-left: 18px; }
 .menu-item .menu-label { flex: 1; }
 .menu-item[aria-current="page"] { color: var(--accent-text); font-weight: 600; }
 .menu-count { min-width: 20px; padding: 0 6px; border-radius: 99px; background: var(--bad); color: var(--surface); font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }

@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useRouterState } from "@tanstack/react-router";
 import { infoQuery, logout, useMe } from "../data/session.ts";
 import { useHealth } from "../data/use-health.ts";
-import { SETTINGS_TABS } from "../pages/settings/SettingsLayout.tsx";
 import { Icon } from "../ui/Icon.tsx";
 import type { IconName } from "../ui/icons.ts";
 import { Menu } from "../ui/Menu.tsx";
@@ -86,14 +85,12 @@ function UserMenu({ active, path }: { active: Section | undefined; path: string 
         entries={[
           { label: "帳號", icon: "user", to: "/account", current: active === "account" },
           isAdmin && {
-            heading: "設定",
-            items: SETTINGS_TABS.map(([key, label]) => ({
-              label,
-              to: `/settings/${key}` as const,
-              current: path === `/settings/${key}`,
-              badge: key === "status" && alert ? String(issues) : undefined,
-              badgeLabel: key === "status" && alert ? `${issues} 件事需要處理` : undefined,
-            })),
+            label: "設定",
+            icon: "settings",
+            to: "/settings/cameras",
+            current: active === "settings",
+            badge: alert ? String(issues) : undefined,
+            badgeLabel: alert ? `${issues} 件事需要處理` : undefined,
           },
           { label: "登出", icon: "logout", onSelect: () => void logout() },
         ]}
