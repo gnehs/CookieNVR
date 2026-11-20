@@ -22,7 +22,7 @@ const MAP: Record<string, string> = {
   chevron: "caret-right",
   left: "caret-left",
   right: "caret-right",
-  activity: "pulse",
+  activity: "lightning",
   hdd: "hard-drive",
   users: "users",
   minus: "minus",

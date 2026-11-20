@@ -71,6 +71,20 @@
   --shadow-lg: 0 24px 64px -16px light-dark(rgb(20 20 30 / 0.22), rgb(0 0 0 / 0.7));
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /*
+   * 材質：一層一層疊出來的光影。浮起的東西＝上緣亮邊＋貼地的細影＋擴散的柔影；凹槽＝內側上方的暗影＋下緣一道亮邊。
+   * 只用在底色與陰影，圖示與文字一律實色。
+   */
+  --hi: light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.07));
+  --edge: light-dark(rgb(16 16 24 / 0.07), rgb(255 255 255 / 0.05));
+  --raise-1: inset 0 1px 0 var(--hi), 0 0 0 1px var(--edge), 0 1px 2px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.45)), 0 2px 6px -2px light-dark(rgb(16 16 24 / 0.08), rgb(0 0 0 / 0.4));
+  --raise-2: inset 0 1px 0 var(--hi), 0 1px 2px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.4)), 0 4px 12px -4px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.45)), 0 18px 36px -18px light-dark(rgb(16 16 24 / 0.12), rgb(0 0 0 / 0.6));
+  --raise-3: inset 0 1px 0 var(--hi), 0 0 0 1px var(--edge), 0 2px 4px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.4)), 0 12px 24px -8px light-dark(rgb(16 16 24 / 0.14), rgb(0 0 0 / 0.55)), 0 32px 64px -24px light-dark(rgb(16 16 24 / 0.22), rgb(0 0 0 / 0.7));
+  --well: inset 0 1px 2px light-dark(rgb(16 16 24 / 0.09), rgb(0 0 0 / 0.55)), inset 0 0 0 1px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.35)), 0 1px 0 var(--hi);
+  --grad-surface: linear-gradient(to bottom, light-dark(#ffffff, #222226), light-dark(#fbfbfc, #1b1b1e));
+  --grad-frame: linear-gradient(to bottom, light-dark(#fdfdfd, #18181b), light-dark(#f6f6f7, #131315));
+  --grad-well: linear-gradient(to bottom, light-dark(#e4e4e8, #121215), light-dark(#ececef, #19191c));
+  --grad-overlay: linear-gradient(to bottom, light-dark(#ffffff, #2e2e34), light-dark(#fafafb, #27272c));
   --font: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -1308,3 +1322,84 @@ a.menu-item { text-decoration: none; }
 .key-hint-keys { display: inline-flex; gap: 3px; }
 .key-hints-sep { width: 3px; height: 3px; margin: 0 6px; border-radius: 50%; background: var(--border-strong); }
 @media (hover: none) { .key-hints-fine { display: none; } }
+
+
+/* ==================== 材質層：漸層、陰影、內陰影 ==================== */
+
+/* 導覽的彩色圖塊：每一區一個固定色，上亮下暗的漸層、上緣高光、下緣內陰影，再落一點影子 */
+.nav-link { padding: 5px 8px; }
+.nav-link .nav-ico {
+  --tile: #6b7280;
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--tile) 78%, white), var(--tile) 70%, color-mix(in srgb, var(--tile) 88%, black));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), inset 0 -1px 1px rgb(0 0 0 / 0.18), 0 1px 2px color-mix(in srgb, var(--tile) 45%, transparent), 0 3px 8px -3px color-mix(in srgb, var(--tile) 55%, transparent);
+}
+.nav-link[data-section="cameras"] .nav-ico { --tile: #2f7cf6; }
+.nav-link[data-section="events"] .nav-ico { --tile: #f2730c; }
+.nav-link[data-section="recordings"] .nav-ico { --tile: #8b5cf6; }
+.nav-link .nav-ico .icon, .nav-link[aria-current="page"] .nav-ico .icon { color: #fff; --icon-bg: var(--tile); --duo: 38%; }
+.nav-link .nav-dot { top: -3px; right: -3px; }
+
+/* 側欄與目前項目 */
+.sidebar { background: var(--grad-frame); }
+.nav-ind { background: var(--grad-surface); box-shadow: var(--raise-1); }
+.user-btn[data-current] { background: var(--grad-surface); box-shadow: var(--raise-1); }
+.avatar {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 22%, var(--surface)), color-mix(in srgb, var(--accent) 36%, var(--surface)));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -1px 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 1px 2px light-dark(rgb(16 16 24 / 0.1), rgb(0 0 0 / 0.4));
+}
+
+/* 卡片與攝影機格：浮起一層 */
+.card { background: var(--grad-surface); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-2); }
+.cam-tile { background: var(--grad-frame); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-2); }
+@media (hover: hover) { .cam-tile:hover { border-color: transparent; box-shadow: 0 0 0 1px var(--border-strong), var(--raise-3); } }
+.cam-tile[data-event] .cam-frame { box-shadow: 0 0 0 1px var(--accent), 0 0 18px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
+/* 畫面嵌進格子裡：內緣一圈細線與上方一點暗影 */
+.cam-frame::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06), inset 0 1px 3px rgb(0 0 0 / 0.12); }
+.home-alert { background: var(--grad-surface); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-1); }
+
+/* 凹槽：分頁列與分段控制的軌道；裡面的選中塊是浮起來的 */
+.pill-nav, .segmented { background: var(--grad-well); box-shadow: var(--well); }
+.pill-ind, .seg-ind { background: var(--grad-surface); box-shadow: var(--raise-1); }
+
+/* 輸入框與下拉選單：微微凹進去 */
+input[type="text"], input[type="password"], input[type="number"], input[type="url"], textarea, .sel-trigger {
+  background-image: linear-gradient(to bottom, light-dark(#f7f7f9, #0e0e11), var(--field) 40%);
+  box-shadow: inset 0 1px 2px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.5)), 0 1px 0 var(--hi);
+}
+input:focus-visible, textarea:focus-visible { box-shadow: inset 0 1px 2px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.5)), 0 0 0 3px color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+
+/* 開關：軌道是凹槽，開啟時灌滿主題色；圓鈕是一顆有高光的珠子 */
+.switch { background: var(--grad-well); border-color: transparent; box-shadow: var(--well); }
+.switch:checked {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 88%, black), var(--accent) 60%, color-mix(in srgb, var(--accent) 85%, white));
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.22), inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, black), 0 1px 0 var(--hi);
+}
+.switch::after {
+  background: linear-gradient(to bottom, #ffffff, #f0f0f3);
+  box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.08), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.18), 0 3px 6px -1px rgb(0 0 0 / 0.18);
+}
+
+/* 狀態標籤：淡色底也帶一點漸層與內緣 */
+.badge { background-image: linear-gradient(to bottom, light-dark(rgb(255 255 255 / 0.4), rgb(255 255 255 / 0.04)), transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 12%, transparent), inset 0 1px 0 light-dark(rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.05)); }
+
+/* 清單列的小圖塊 */
+.row-ico { background: var(--grad-well); box-shadow: var(--well); }
+
+/* 浮動層：選單、下拉、對話框、提示 */
+.menu, .popup { background: var(--grad-overlay); border-color: transparent; box-shadow: var(--raise-3); }
+.menu-hl { background: linear-gradient(to bottom, color-mix(in srgb, var(--fill-2) 55%, var(--overlay)), var(--fill-2)); box-shadow: inset 0 1px 0 var(--hi), inset 0 0 0 1px var(--edge); }
+.menu-hl[data-danger] { background: color-mix(in srgb, var(--bad) 14%, var(--overlay)); }
+.dlg { background-image: var(--grad-overlay); box-shadow: var(--raise-3); }
+.tip { background: linear-gradient(to bottom, color-mix(in srgb, var(--text) 88%, var(--bg)), var(--text)); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), var(--shadow); }
+.kbd { background: var(--grad-surface); box-shadow: inset 0 1px 0 var(--hi), 0 1px 0 var(--border-strong); }
+
+@media (max-width: 760px) {
+  .sidebar { background: var(--grad-surface); box-shadow: var(--raise-3); border-color: transparent; }
+  .nav-link { padding: 6px 4px 5px; }
+  .nav-ind { background: linear-gradient(to bottom, color-mix(in srgb, var(--accent-soft) 70%, var(--surface)), var(--accent-soft)); box-shadow: inset 0 1px 0 var(--hi), inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent); }
+  .user-btn[data-current] { background: transparent; box-shadow: none; }
+}
+@media (min-width: 761px) {
+  [data-sidebar="collapsed"] .nav-link { padding: 5px 8px; }
+}
