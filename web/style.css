@@ -141,7 +141,7 @@ button, a, summary, label { touch-action: manipulation; }
 .sidebar, .user-btn { --icon-bg: var(--frame); }
 .nav-link[aria-current="page"], .user-btn[data-current] { --icon-bg: var(--surface); --duo: 26%; }
 .menu, .popup { --icon-bg: var(--overlay); }
-.row-ico, .cam-frame, .ev-card-thumb { --icon-bg: var(--fill); }
+.cam-frame, .ev-card-thumb { --icon-bg: var(--fill); }
 .toast, .tip { --icon-bg: var(--text); --duo: 30%; }
 .toast.error { --icon-bg: var(--bad-text); }
 .muted { color: var(--muted); }
@@ -672,7 +672,16 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .row-text { min-width: 0; }
 .row-text b { font-weight: 600; overflow-wrap: anywhere; }
 .row-text small { display: block; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
-.row-ico { width: 36px; height: 36px; border-radius: 11px; flex: none; display: grid; place-items: center; background: var(--fill); color: var(--text-2); }
+/*
+ * 列首圖示的底是半透明疊上去的，列 hover 變成 --fill 時才不會跟底色糊成一片。
+ * 圖示本身不能有透明度，雙色圖示的填色 --icon-bg 用同樣比例對「列的底色」混出實色；
+ * 列 hover 時把 --row-bg 換成 --fill，兩者一起變深。不透明度：亮 5.5% 黑≈#f2f2f4、暗 4% 白≈#242428。
+ */
+.row-ico {
+  width: 36px; height: 36px; border-radius: 11px; flex: none; display: grid; place-items: center; color: var(--text-2);
+  background: light-dark(rgb(16 16 24 / 0.055), rgb(255 255 255 / 0.04));
+  --icon-bg: light-dark(color-mix(in srgb, rgb(16 16 24) 5.5%, var(--row-bg, var(--surface))), color-mix(in srgb, #fff 4%, var(--row-bg, var(--surface))));
+}
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .truncate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-text .truncate { overflow-wrap: normal; }
@@ -684,7 +693,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .row-link.stretch:focus-visible { outline: none; }
 .row-link.stretch:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
 .row-item:has(> .stretch) > .row-actions { position: relative; z-index: 1; }
-@media (hover: hover) { .row-item:has(> .stretch):hover { background: var(--fill); } }
+@media (hover: hover) { .row-item:has(> .stretch):hover { --row-bg: var(--fill); background: var(--fill); } }
 .card.row-list > .row-item:first-child { border-radius: var(--r-xl) var(--r-xl) 0 0; }
 .card.row-list > .row-item:last-child { border-radius: 0 0 var(--r-xl) var(--r-xl); }
 .card.row-list > .row-item:only-child { border-radius: var(--r-xl); }
@@ -769,7 +778,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .row-item[data-placeholder] > * { visibility: hidden; }
 .layout-box[data-placeholder] { border-radius: var(--r-xl); background: var(--fill); }
 .layout-box[data-placeholder] > * { visibility: hidden; }
-.layout-editor[data-dragging] .row-item:hover { background: transparent; }
+.layout-editor[data-dragging] .row-item:hover { --row-bg: var(--surface); background: transparent; }
 .layout-editor[data-dragging] .row-item[data-placeholder] { background: var(--fill); }
 .layout-editor[data-dragging="group"] .layout-list { pointer-events: none; }
 /* 空的分區是一塊虛線放置區，拖到上面時亮起來 */
