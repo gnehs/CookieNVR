@@ -77,6 +77,12 @@ async function request<T>(method: string, path: string, body?: unknown, quiet401
 }
 
 const get = <T>(p: string) => request<T>("GET", p);
+
+/**
+ * 伺服器的時間參數只收整數毫秒。播放器的時間由影片 currentTime 換算，常帶小數，
+ * 在這裡往外取整（開始往前、結束往後），範圍只會變寬、不會漏掉邊上的東西。
+ */
+const range = (start: number, end: number) => `start=${Math.floor(start)}&end=${Math.ceil(end)}`;
 const post = <T>(p: string, b?: unknown) => request<T>("POST", p, b ?? {});
 const put = <T>(p: string, b: unknown) => request<T>("PUT", p, b);
 const del = (p: string) => request<void>("DELETE", p);
@@ -120,15 +126,15 @@ export const api = {
   days: (id: string, tz: string) =>
     get<string[]>(`/cameras/${encodeURIComponent(id)}/days?tz=${encodeURIComponent(tz)}`),
   recordings: (id: string, start: number, end: number) =>
-    get<SegmentDto[]>(`/cameras/${encodeURIComponent(id)}/recordings?start=${start}&end=${end}`),
+    get<SegmentDto[]>(`/cameras/${encodeURIComponent(id)}/recordings?${range(start, end)}`),
   segmentUrl: (id: number) => `/api/segments/${id}`,
   events: (camera: string, start: number, end: number) =>
-    get<EventDto[]>(`/events?camera=${encodeURIComponent(camera)}&start=${start}&end=${end}`),
+    get<EventDto[]>(`/events?camera=${encodeURIComponent(camera)}&${range(start, end)}`),
   /** 所有攝影機在這段時間內還沒結束的事件；事件最長 10 分鐘，since 往前抓 10 分鐘以上就不會漏 */
-  activeEvents: (since: number, until: number) => get<EventDto[]>(`/events?start=${since}&end=${until}`).then((list) => list.filter((e) => e.endMs === null)),
+  activeEvents: (since: number, until: number) => get<EventDto[]>(`/events?${range(since, until)}`).then((list) => list.filter((e) => e.endMs === null)),
   /** 開始時間早於 before 的事件，由新到舊；camera 為 null 時是所有攝影機 */
   eventsBefore: (before: number, limit: number, camera: string | null, label: string | null = null) =>
-    get<EventDto[]>(`/events?before=${before}&limit=${limit}${camera ? `&camera=${encodeURIComponent(camera)}` : ""}${label ? `&label=${encodeURIComponent(label)}` : ""}`),
+    get<EventDto[]>(`/events?before=${Math.ceil(before)}&limit=${limit}${camera ? `&camera=${encodeURIComponent(camera)}` : ""}${label ? `&label=${encodeURIComponent(label)}` : ""}`),
   objects: () => get<ObjectsDto>("/objects"),
   objectLabels: () => get<ObjectLabelsDto>("/objects/labels"),
   startBenchmark: (devices?: string[]) => post<BenchmarkDto>("/objects/benchmark", devices ? { devices } : {}),
