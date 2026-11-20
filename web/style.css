@@ -72,19 +72,20 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   /*
-   * 材質：一層一層疊出來的光影。浮起的東西＝上緣亮邊＋貼地的細影＋擴散的柔影；凹槽＝內側上方的暗影＋下緣一道亮邊。
+   * 材質：介於擬物與扁平之間。浮起的東西＝一道細邊＋淡淡的上緣亮線＋小陰影；凹槽只有很淡的內影；
+   * 只有真的浮在內容上的（選單、對話框）才給明顯的深度。
    * 只用在底色與陰影，圖示與文字一律實色。
    */
-  --hi: light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.07));
-  --edge: light-dark(rgb(16 16 24 / 0.07), rgb(255 255 255 / 0.05));
-  --raise-1: inset 0 1px 0 var(--hi), 0 0 0 1px var(--edge), 0 1px 2px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.45)), 0 2px 6px -2px light-dark(rgb(16 16 24 / 0.08), rgb(0 0 0 / 0.4));
-  --raise-2: inset 0 1px 0 var(--hi), 0 1px 2px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.4)), 0 4px 12px -4px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.45)), 0 18px 36px -18px light-dark(rgb(16 16 24 / 0.12), rgb(0 0 0 / 0.6));
-  --raise-3: inset 0 1px 0 var(--hi), 0 0 0 1px var(--edge), 0 2px 4px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.4)), 0 12px 24px -8px light-dark(rgb(16 16 24 / 0.14), rgb(0 0 0 / 0.55)), 0 32px 64px -24px light-dark(rgb(16 16 24 / 0.22), rgb(0 0 0 / 0.7));
-  --well: inset 0 1px 2px light-dark(rgb(16 16 24 / 0.09), rgb(0 0 0 / 0.55)), inset 0 0 0 1px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.35)), 0 1px 0 var(--hi);
-  --grad-surface: linear-gradient(to bottom, light-dark(#ffffff, #222226), light-dark(#fbfbfc, #1b1b1e));
-  --grad-frame: linear-gradient(to bottom, light-dark(#fdfdfd, #18181b), light-dark(#f6f6f7, #131315));
-  --grad-well: linear-gradient(to bottom, light-dark(#e4e4e8, #121215), light-dark(#ececef, #19191c));
-  --grad-overlay: linear-gradient(to bottom, light-dark(#ffffff, #2e2e34), light-dark(#fafafb, #27272c));
+  --hi: light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.04));
+  --edge: light-dark(rgb(16 16 24 / 0.06), rgb(255 255 255 / 0.05));
+  --raise-1: inset 0 1px 0 var(--hi), 0 0 0 1px var(--edge), 0 1px 2px light-dark(rgb(16 16 24 / 0.06), rgb(0 0 0 / 0.35));
+  --raise-2: inset 0 1px 0 var(--hi), 0 1px 2px light-dark(rgb(16 16 24 / 0.04), rgb(0 0 0 / 0.3)), 0 2px 8px -2px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.35));
+  --raise-3: 0 0 0 1px var(--edge), 0 4px 12px -2px light-dark(rgb(16 16 24 / 0.08), rgb(0 0 0 / 0.45)), 0 16px 32px -12px light-dark(rgb(16 16 24 / 0.14), rgb(0 0 0 / 0.55));
+  --well: inset 0 1px 1px light-dark(rgb(16 16 24 / 0.04), rgb(0 0 0 / 0.3));
+  --grad-surface: linear-gradient(to bottom, light-dark(#ffffff, #1e1e21), light-dark(#fcfcfd, #1b1b1e));
+  --grad-frame: linear-gradient(to bottom, light-dark(#fafafb, #151517), light-dark(#f7f7f8, #131315));
+  --grad-well: var(--fill-2);
+  --grad-overlay: linear-gradient(to bottom, light-dark(#ffffff, #2a2a2f), light-dark(#fdfdfd, #27272c));
   --font: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -360,7 +361,7 @@ button, a, summary, label { touch-action: manipulation; }
   padding: 3px 9px 3px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; line-height: 1.5;
   background: var(--surface); color: var(--text-2); box-shadow: var(--shadow-sm);
 }
-.cam-status > i { width: 7px; height: 7px; border-radius: 50%; background-color: var(--muted); background-image: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.7), transparent 50%); box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.12); }
+.cam-status > i { width: 7px; height: 7px; border-radius: 50%; background-color: var(--muted); background-image: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.45), transparent 50%); box-shadow: none; }
 .cam-tile[data-status="recording"] .cam-status > i { background-color: var(--lamp-ok); }
 .cam-tile[data-tone="bad"] .cam-status { background: var(--bad-soft); color: var(--bad-text); }
 .cam-tile[data-tone="bad"] .cam-status > i { background-color: var(--lamp-bad); }
@@ -391,8 +392,8 @@ button, a, summary, label { touch-action: manipulation; }
 .badge::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%;
   background-color: var(--dot, currentColor);
-  background-image: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.7), transparent 50%);
-  box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.12), 0 0 0 2px color-mix(in srgb, var(--dot, currentColor) 20%, transparent);
+  background-image: radial-gradient(circle at 35% 28%, rgb(255 255 255 / 0.45), transparent 50%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dot, currentColor) 16%, transparent);
 }
 .badge.ok { background: var(--ok-soft); color: var(--ok-text); --dot: var(--lamp-ok); }
 .badge.bad { background: var(--bad-soft); color: var(--bad-text); --dot: var(--lamp-bad); }
@@ -468,26 +469,19 @@ button, a, summary, label { touch-action: manipulation; }
 }
 .btn[aria-busy="true"] { cursor: progress; }
 /*
- * 實體按鍵的質感：上緣一道亮邊、下緣一點陰影、由上往下微微變暗；主要按鈕外面再一圈同色的柔光。
+ * 按鈕的質感：上緣一道淡淡的亮線加一點貼地的影子；主要按鈕由上往下微微變深。
  * 只用在按鈕本身（底色、陰影），圖示與文字照舊是實色。
  */
-.btn:not(.ghost):not(:disabled) {
-  background-image: linear-gradient(to bottom, light-dark(color-mix(in srgb, var(--surface) 70%, white), color-mix(in srgb, var(--surface) 95%, white)), transparent 60%);
-  box-shadow: inset 0 1px 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.07)), 0 1px 2px light-dark(rgb(20 20 30 / 0.07), rgb(0 0 0 / 0.5));
-}
+.btn:not(.ghost):not(:disabled) { box-shadow: inset 0 1px 0 var(--hi), 0 1px 2px light-dark(rgb(16 16 24 / 0.06), rgb(0 0 0 / 0.4)); }
 .btn.primary:not(:disabled), .pb-controls > .pb-ctl:first-child {
-  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 82%, white), var(--accent) 55%, color-mix(in srgb, var(--accent) 90%, black));
-  border-color: color-mix(in srgb, var(--accent) 80%, black);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.28),
-    inset 0 -1px 0 rgb(0 0 0 / 0.12),
-    0 1px 2px color-mix(in srgb, var(--accent) 35%, transparent),
-    0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 92%, white), var(--accent));
+  border-color: color-mix(in srgb, var(--accent) 88%, black);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .btn.danger.solid:not(:disabled) {
-  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--bad) 84%, white), var(--bad) 55%, color-mix(in srgb, var(--bad) 90%, black));
-  border-color: color-mix(in srgb, var(--bad) 80%, black);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), inset 0 -1px 0 rgb(0 0 0 / 0.12), 0 6px 16px -6px color-mix(in srgb, var(--bad) 55%, transparent);
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--bad) 92%, white), var(--bad));
+  border-color: color-mix(in srgb, var(--bad) 88%, black);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px color-mix(in srgb, var(--bad) 30%, transparent);
 }
 .copy-face { display: inline-flex; align-items: center; gap: 7px; }
 .copy-btn[data-state="done"], .copy-btn[data-state="done"] .icon { color: var(--ok-text); }
@@ -1324,64 +1318,44 @@ a.menu-item { text-decoration: none; }
 @media (hover: none) { .key-hints-fine { display: none; } }
 
 
-/* ==================== 材質層：漸層、陰影、內陰影 ==================== */
+/* ==================== 材質層：細邊、淡亮線、小陰影 ==================== */
 
 /* 側欄與目前項目 */
 .sidebar { background: var(--grad-frame); }
 .nav-ind { background: var(--grad-surface); box-shadow: var(--raise-1); }
 .user-btn[data-current] { background: var(--grad-surface); box-shadow: var(--raise-1); }
-.avatar {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 22%, var(--surface)), color-mix(in srgb, var(--accent) 36%, var(--surface)));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), inset 0 -1px 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 1px 2px light-dark(rgb(16 16 24 / 0.1), rgb(0 0 0 / 0.4));
-}
+.avatar { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent); }
 
 /* 卡片與攝影機格：浮起一層 */
 .card { background: var(--grad-surface); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-2); }
 .cam-tile { background: var(--grad-frame); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-2); }
-@media (hover: hover) { .cam-tile:hover { border-color: transparent; box-shadow: 0 0 0 1px var(--border-strong), var(--raise-3); } }
-.cam-tile[data-event] .cam-frame { box-shadow: 0 0 0 1px var(--accent), 0 0 18px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
-/* 畫面嵌進格子裡：內緣一圈細線與上方一點暗影 */
-.cam-frame::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06), inset 0 1px 3px rgb(0 0 0 / 0.12); }
+@media (hover: hover) { .cam-tile:hover { border-color: transparent; box-shadow: 0 0 0 1px var(--border-strong), var(--raise-2); } }
+/* 畫面內緣一圈很細的線，亮的畫面邊界才不會糊進格子裡 */
+.cam-frame::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06); }
 .home-alert { background: var(--grad-surface); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-1); }
 
-/* 凹槽：分頁列與分段控制的軌道；裡面的選中塊是浮起來的 */
+/* 分頁列與分段控制：軌道是平的淡底，選中塊微微浮起 */
 .pill-nav, .segmented { background: var(--grad-well); box-shadow: var(--well); }
 .pill-ind, .seg-ind { background: var(--grad-surface); box-shadow: var(--raise-1); }
 
-/* 輸入框與下拉選單：微微凹進去 */
-input[type="text"], input[type="password"], input[type="number"], input[type="url"], textarea, .sel-trigger {
-  background-image: linear-gradient(to bottom, light-dark(#f7f7f9, #0e0e11), var(--field) 40%);
-  box-shadow: inset 0 1px 2px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.5)), 0 1px 0 var(--hi);
-}
-input:focus-visible, textarea:focus-visible { box-shadow: inset 0 1px 2px light-dark(rgb(16 16 24 / 0.07), rgb(0 0 0 / 0.5)), 0 0 0 3px color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+/* 輸入框與下拉選單：只有很淡的內影 */
+input[type="text"], input[type="password"], input[type="number"], input[type="url"], textarea, .sel-trigger { box-shadow: var(--well); }
+input:focus-visible, textarea:focus-visible { box-shadow: var(--well), 0 0 0 3px color-mix(in srgb, var(--accent) 22%, var(--surface)); }
 
-/* 開關：軌道是凹槽，開啟時灌滿主題色；圓鈕是一顆有高光的珠子 */
-.switch { background: var(--grad-well); border-color: transparent; box-shadow: var(--well); }
-.switch:checked {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 88%, black), var(--accent) 60%, color-mix(in srgb, var(--accent) 85%, white));
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.22), inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, black), 0 1px 0 var(--hi);
-}
-.switch::after {
-  background: linear-gradient(to bottom, #ffffff, #f0f0f3);
-  box-shadow: inset 0 -1px 1px rgb(0 0 0 / 0.08), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.18), 0 3px 6px -1px rgb(0 0 0 / 0.18);
-}
+/* 開關：軌道平的，圓鈕帶一點影子 */
+.switch { border-color: transparent; box-shadow: var(--well); }
+.switch:checked { box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.1); }
+.switch::after { box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.16), 0 2px 4px -1px rgb(0 0 0 / 0.12); }
 
-/* 狀態標籤：淡色底也帶一點漸層與內緣 */
-.badge { background-image: linear-gradient(to bottom, light-dark(rgb(255 255 255 / 0.4), rgb(255 255 255 / 0.04)), transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 12%, transparent), inset 0 1px 0 light-dark(rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.05)); }
-
-/* 清單列的小圖塊 */
-.row-ico { background: var(--grad-well); box-shadow: var(--well); }
+/* 狀態標籤：淡色底加一圈很細的同色邊 */
+.badge { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 9%, transparent); }
 
 /* 浮動層：選單、下拉、對話框、提示 */
 .menu, .popup { background: var(--grad-overlay); border-color: transparent; box-shadow: var(--raise-3); }
-.menu-hl { background: linear-gradient(to bottom, color-mix(in srgb, var(--fill-2) 55%, var(--overlay)), var(--fill-2)); box-shadow: inset 0 1px 0 var(--hi), inset 0 0 0 1px var(--edge); }
-.menu-hl[data-danger] { background: color-mix(in srgb, var(--bad) 14%, var(--overlay)); }
 .dlg { background-image: var(--grad-overlay); box-shadow: var(--raise-3); }
-.tip { background: linear-gradient(to bottom, color-mix(in srgb, var(--text) 88%, var(--bg)), var(--text)); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), var(--shadow); }
-.kbd { background: var(--grad-surface); box-shadow: inset 0 1px 0 var(--hi), 0 1px 0 var(--border-strong); }
 
 @media (max-width: 760px) {
   .sidebar { background: var(--grad-surface); box-shadow: var(--raise-3); border-color: transparent; }
-  .nav-ind { background: linear-gradient(to bottom, color-mix(in srgb, var(--accent-soft) 70%, var(--surface)), var(--accent-soft)); box-shadow: inset 0 1px 0 var(--hi), inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent); }
+  .nav-ind { background: var(--accent-soft); box-shadow: none; }
   .user-btn[data-current] { background: transparent; box-shadow: none; }
 }
