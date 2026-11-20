@@ -76,10 +76,9 @@
    * 只有真的浮在內容上的（選單、對話框）才給明顯的深度。
    * 只用在底色與陰影，圖示與文字一律實色。
    */
-  --hi: light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.04));
   --edge: light-dark(rgb(16 16 24 / 0.06), rgb(255 255 255 / 0.05));
   --raise-1: 0 0 0 1px var(--mat-edge), 0 1px 2px light-dark(rgb(16 16 24 / 0.06), rgb(0 0 0 / 0.35));
-  --raise-2: inset 0 1px 0 var(--hi), 0 1px 2px light-dark(rgb(16 16 24 / 0.04), rgb(0 0 0 / 0.3)), 0 2px 8px -2px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.35));
+  --raise-2: 0 1px 2px light-dark(rgb(16 16 24 / 0.04), rgb(0 0 0 / 0.3)), 0 2px 8px -2px light-dark(rgb(16 16 24 / 0.05), rgb(0 0 0 / 0.35));
   --raise-3: 0 0 0 1px var(--edge), 0 4px 12px -2px light-dark(rgb(16 16 24 / 0.08), rgb(0 0 0 / 0.45)), 0 16px 32px -12px light-dark(rgb(16 16 24 / 0.14), rgb(0 0 0 / 0.55));
   /*
    * 浮起元件的共用材質：實色細框、上淡下深的底、貼地的兩層影子，
@@ -1382,8 +1381,17 @@ a.menu-item { text-decoration: none; }
 .avatar { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent); }
 
 /* 卡片與攝影機格：浮起一層 */
-.card { background: var(--grad-surface); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-2); }
-.cam-tile { background: var(--grad-frame); border-color: transparent; box-shadow: 0 0 0 1px var(--edge), var(--raise-2); }
+/*
+ * 卡片的亮線不用偽元素：卡片裡有絕對定位的東西，加 position 會改到它們的定位基準。
+ * 改用三層背景：透明的 1px 框裡露出往下淡掉的亮線，底下墊一層同樣的底色，框內再蓋上卡片底色。
+ * 亮線固定在上緣 32px 內淡完，長卡片的兩側不會拖出一長條光。
+ */
+.card, .cam-tile { --card-bg: var(--grad-surface); border-color: transparent; }
+.cam-tile { --card-bg: var(--grad-frame); }
+.card, .cam-tile {
+  background: var(--card-bg) padding-box, linear-gradient(to bottom, var(--rim), transparent 32px) border-box, var(--card-bg) border-box;
+  box-shadow: 0 0 0 1px var(--mat-edge), var(--raise-2);
+}
 @media (hover: hover) { .cam-tile:hover { border-color: transparent; box-shadow: 0 0 0 1px var(--border-strong), var(--raise-2); } }
 /* 畫面內緣一圈很細的線，亮的畫面邊界才不會糊進格子裡 */
 .cam-frame::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06); }
