@@ -13,6 +13,7 @@ import "./ui/form-card.css";
 import "./ui/settings-row.css";
 import "./ui/date-picker.css";
 import "./ui/select.css";
+import "./ui/slider.css";
 import "./ui/popup.css";
 import "./storage.css";
 import "./metrics.css";

@@ -3,6 +3,7 @@ import type { OnvifProbeDto } from "../../../src/api-types.ts";
 import type { PtzMode, PtzPrefs } from "../../../src/types.ts";
 import { SwitchRow, Tiles } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
+import { Slider } from "../../ui/Slider.tsx";
 
 const MODES: { value: PtzMode; label: string; desc: string }[] = [
   { value: "auto", label: "自動", desc: "相機支援就按住轉動" },
@@ -25,13 +26,11 @@ export function PtzPrefsField({ value, onChange }: { value: PtzPrefs; onChange: 
         <span className="legend">鏡頭控制</span>
         <Tiles label="移動方式" options={MODES} value={value.mode} onChange={(mode) => onChange({ ...value, mode })} />
       </div>
-      <label className="ptz-speed" htmlFor={speedId}>
-        <span>預設速度</span>
-        <input type="range" id={speedId} min={0.1} max={1} step={0.05} aria-label="預設速度" aria-valuetext={pct} value={value.speed} onChange={(e) => onChange({ ...value, speed: Number(e.currentTarget.value) })} />
-        <output htmlFor={speedId} className="num">
-          {pct}
-        </output>
-      </label>
+      <div className="ptz-speed">
+        <span id={speedId}>預設速度</span>
+        <Slider min={0.1} max={1} step={0.05} aria-labelledby={speedId} aria-valuetext={pct} value={value.speed} onChange={(speed) => onChange({ ...value, speed })} />
+        <output className="num">{pct}</output>
+      </div>
       <SwitchRow title="左右反轉" desc="按「左」時鏡頭往右轉，就打開這個。" checked={value.invertPan ?? false} onChange={(invertPan) => onChange({ ...value, invertPan })} />
       <SwitchRow title="上下反轉" desc="鏡頭倒裝或在相機 App 開了畫面翻轉時，上下通常也會相反。" checked={value.invertTilt ?? false} onChange={(invertTilt) => onChange({ ...value, invertTilt })} />
     </div>

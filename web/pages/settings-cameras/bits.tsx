@@ -1,5 +1,6 @@
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Icon } from "../../ui/Icon.tsx";
+import { Slider } from "../../ui/Slider.tsx";
 
 /**
  * 同 `ui/SettingRow.tsx` 的 SettingsDisclosure，多了 defaultOpen：有不是預設值的進階設定時一打開就展開。
@@ -21,21 +22,15 @@ export function Disclosure({ title, summary, defaultOpen, children }: { title: s
   );
 }
 
-/** 0 到 100 的滑桿，填色跟著目前位置；位置自己記著，換算成設定值的四捨五入不會讓滑桿跳動 */
+/** 0 到 100 的滑桿；位置自己記著，換算成設定值的四捨五入不會讓滑桿跳動 */
 export function Range({ initial, onInput, step = 0.5, ...aria }: { initial: number; onInput: (pos: number) => void; step?: number; "aria-label"?: string; "aria-labelledby"?: string; "aria-valuetext"?: string }) {
   const [pos, setPos] = useState(initial);
   return (
-    <input
-      type="range"
-      className="range"
-      min={0}
-      max={100}
-      step={step}
+    <Slider
       value={pos}
-      style={{ "--fill": `${pos}%` } as CSSProperties}
+      step={step}
       {...aria}
-      onChange={(e) => {
-        const v = Number(e.currentTarget.value);
+      onChange={(v) => {
         setPos(v);
         onInput(v);
       }}

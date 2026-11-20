@@ -8,6 +8,7 @@ import { createPtzDriver, planMotion, type Clock, type DriverSnapshot, type PtzD
 import { apiTransport, stopOnUnload } from "../../ptz/transport.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/Icon.tsx";
+import { Slider } from "../../ui/Slider.tsx";
 import type { IconName } from "../../ui/icons.ts";
 import { PtzPresets } from "./PtzPresets.tsx";
 
@@ -213,24 +214,11 @@ function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: b
           </div>
         ) : null}
       </div>
-      <label className="ptz-speed" htmlFor={speedId}>
-        <span>速度</span>
-        <input
-          type="range"
-          id={speedId}
-          min="0.1"
-          max="1"
-          step="0.05"
-          aria-label="速度"
-          aria-valuetext={pct}
-          value={speed}
-          style={{ "--fill": `${((speed - 0.1) / 0.9) * 100}%` } as React.CSSProperties}
-          onChange={(e) => setSpeed(Number(e.currentTarget.value))}
-        />
-        <output htmlFor={speedId} className="num">
-          {pct}
-        </output>
-      </label>
+      <div className="ptz-speed">
+        <span id={speedId}>速度</span>
+        <Slider min={0.1} max={1} step={0.05} aria-labelledby={speedId} aria-valuetext={pct} value={speed} onChange={setSpeed} />
+        <output className="num">{pct}</output>
+      </div>
       <p className="ptz-hint ptz-keys">
         {plan.hold ? "按住持續轉動，點一下微調。" : "點一下移動一步。"}
         <KeyHints className="ptz-kbd" hints={[{ keys: ["↑", "↓", "←", "→"], label: "轉動鏡頭" }]} />
