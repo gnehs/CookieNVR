@@ -1,3 +1,5 @@
+import { plural, t as tc } from "@lingui/core/macro";
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyHints } from "../../ui/Kbd.tsx";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
@@ -23,13 +25,23 @@ function settled(o: Override, view: string, img: StateImageDto | undefined): boo
   return belongs ? img?.label === o.label : !img;
 }
 
-const sourceText = (img: StateImageDto) => (img.source === "import" ? "Frigate 的判斷" : "上次的判斷");
+function tileLabel(n: number, label: string | null, guess: string | null): string {
+  if (label) return tc`Picture ${n}, ${label}`;
+  if (guess) return tc`Picture ${n}, suggested “${guess}”`;
+  return tc`Picture ${n}`;
+}
+
+const guessText = (source: string, label: string) => tc`${source}: ${label}`;
+const guessTitle = (source: string, label: string, percent: number) => tc`${source}: ${label} (${percent}%)`;
+
+const sourceText = (img: StateImageDto) => (img.source === "import" ? tc`Frigate’s guess` : tc`Last guess`);
 
 /**
  * 標記畫面：分頁是「待標記」與每一類；網格裡每張圖下面是類別按鈕，按一下就標好。
  * 鍵盤：方向鍵移動、數字鍵標記（有選取時標記全部選取的）、Enter 採用預選、空白鍵選取、Delete 刪除、Esc 取消選取。
  */
 export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const classes = sensor.config.classes;
   const [view, setView] = useState<string>(sensor.images.pending > 0 || !sensor.model ? PENDING : classes[0]!);
@@ -115,7 +127,8 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
 
   const remove = async (targets: string[]) => {
     if (!targets.length) return;
-    const ok = targets.length === 1 || (await confirmDialog(`刪除 ${targets.length} 張畫面？`, "刪除後就不會用來訓練，無法復原。", { confirmLabel: "刪除", danger: true }));
+    const count = targets.length;
+    const ok = count === 1 || (await confirmDialog(plural(count, { one: "Delete # picture?", other: "Delete # pictures?" }), t`Deleted pictures won’t be used for training. This can’t be undone.`, { confirmLabel: t`Delete`, danger: true }));
     if (ok) void apply(targets, { deleted: true }, () => api.deleteStateImages(sensor.id, targets));
   };
 
@@ -201,6 +214,8 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
   const pendingCount = activeView === PENDING ? images.length : sensor.images.pending;
   const countOf = (c: string) => sensor.images.labeled.find((l) => l.label === c)?.count ?? 0;
   const busy = jobActive(sensor);
+  const chosenCount = chosen.length;
+  const suggestedCount = suggested.length;
   // 2、3 類排一列；4 類 2×2；更多時每列 3 個
   const classCols = classes.length <= 3 ? classes.length : classes.length === 4 ? 2 : 3;
   const fine = typeof matchMedia !== "undefined" && matchMedia("(pointer: fine)").matches;
@@ -210,17 +225,20 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
       <header className="lb-head">
         <div>
           <h2 id="lb-title" className="card-title">
-            標記畫面
+            <Trans>Label pictures</Trans>
           </h2>
-          <p className="hint">每張畫面點一下它是哪一類。標得越多、越多種光線，判斷越準。</p>
+          <p className="hint">
+            <Trans>Click which class each picture belongs to. The more you label, and under more kinds of light, the more accurate detection gets.</Trans>
+          </p>
         </div>
         <Button small icon="film" iconSize={15} disabled={busy} onClick={() => void api.collectStateImages(sensor.id).then((s) => onSensorMessage(qc, s)).catch((e) => toast(errMsg(e), "error"))}>
-          從錄影再挑一些
+          <Trans>Pick more from recordings</Trans>
         </Button>
       </header>
-      <div className="lb-tabs scroll-fade-x" role="tablist" aria-label="畫面分類">
+      <div className="lb-tabs scroll-fade-x" role="tablist" aria-label={t`Picture categories`}>
         <button type="button" role="tab" aria-selected={activeView === PENDING} onClick={() => setView(PENDING)}>
-          待標記<span className="lb-count num">{pendingCount}</span>
+          <Trans>Unlabeled</Trans>
+          <span className="lb-count num">{pendingCount}</span>
         </button>
         {classes.map((c, i) => (
           <button key={c} type="button" role="tab" aria-selected={activeView === c} onClick={() => setView(c)}>
@@ -236,16 +254,18 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
       {suggested.length > 0 ? (
         <div className="lb-suggest">
           <Icon name="info" size={16} />
-          <span className="lb-suggest-text">{suggested.length} 張有預選的類別（虛線框），確認沒問題就一次標好。</span>
+          <span className="lb-suggest-text">
+            <Plural value={suggestedCount} one="# picture has a suggested class (dashed outline). If it looks right, label it in one go." other="# pictures have a suggested class (dashed outline). If they look right, label them all in one go." />
+          </span>
           <Button small onClick={acceptSuggestions}>
-            全部照預選標記
+            <Trans>Label all as suggested</Trans>
           </Button>
         </div>
       ) : null}
 
       {q.isPending ? (
         <div className="lb-empty">
-          <span className="spin" aria-hidden="true" /> 正在讀取畫面…
+          <span className="spin" aria-hidden="true" /> <Trans>Loading pictures…</Trans>
         </div>
       ) : q.isError ? (
         <div className="lb-empty">{errMsg(q.error)}</div>
@@ -254,15 +274,15 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
           {activeView === PENDING ? (
             <>
               <Icon name="check-circle" size={22} />
-              <b>{busy ? "畫面準備好就會出現在這裡" : "都標記好了"}</b>
-              {busy ? null : <span>辨識時遇到沒把握的畫面，也會自動放進這裡。</span>}
+              <b>{busy ? t`Pictures will show up here when they’re ready` : t`All labeled`}</b>
+              {busy ? null : <span>{t`Pictures detection isn’t sure about are added here automatically.`}</span>}
             </>
           ) : (
-            <span>還沒有標記成「{activeView}」的畫面。</span>
+            <span>{t`No pictures labeled “${activeView}” yet.`}</span>
           )}
         </div>
       ) : (
-        <div ref={grid} className="lb-grid" data-many={classes.length > 2 ? "" : undefined} role="listbox" aria-multiselectable="true" aria-label={activeView === PENDING ? "待標記的畫面" : `標記為「${activeView}」的畫面`}>
+        <div ref={grid} className="lb-grid" data-many={classes.length > 2 ? "" : undefined} role="listbox" aria-multiselectable="true" aria-label={activeView === PENDING ? t`Unlabeled pictures` : t`Pictures labeled “${activeView}”`}>
           {images.map((img, i) => {
             const isSel = selected.has(img.id);
             const guess = img.guess && classes.includes(img.guess.label) ? img.guess : null;
@@ -273,7 +293,7 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
                 className="lb-tile"
                 role="option"
                 aria-selected={isSel}
-                aria-label={`第 ${i + 1} 張${img.label ? `，${img.label}` : guess ? `，預選「${guess.label}」` : ""}`}
+                aria-label={tileLabel(i + 1, img.label, guess?.label ?? null)}
                 tabIndex={focusId ? (img.id === focusId ? 0 : -1) : i === 0 ? 0 : -1}
                 onFocus={(e) => e.target === e.currentTarget && setFocusId(img.id)}
                 onKeyDown={(e) => onKey(e, img)}
@@ -284,8 +304,8 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
                     {isSel ? <Icon name="check" size={14} /> : null}
                   </span>
                   {guess && img.label === null ? (
-                    <span className="lb-guess" title={`${sourceText(img)}：${guess.label}（${Math.round(guess.score * 100)}%）`}>
-                      {sourceText(img)}：{guess.label}
+                    <span className="lb-guess" title={guessTitle(sourceText(img), guess.label, Math.round(guess.score * 100))}>
+                      {guessText(sourceText(img), guess.label)}
                     </span>
                   ) : null}
                 </div>
@@ -316,19 +336,19 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
           className="lb-keys"
           always
           hints={[
-            { keys: ["←", "→"], label: "移動" },
-            { keys: classes.length <= 3 ? classes.map((_, i) => String(i + 1)) : ["1", "…", String(Math.min(classes.length, 10) % 10)], label: "標記" },
-            { keys: ["Enter"], label: "採用預選" },
-            { keys: ["空白鍵"], label: "選取" },
-            { keys: ["Delete"], label: "刪除" },
+            { keys: ["←", "→"], label: t`Move` },
+            { keys: classes.length <= 3 ? classes.map((_, i) => String(i + 1)) : ["1", "…", String(Math.min(classes.length, 10) % 10)], label: t`Label` },
+            { keys: ["Enter"], label: t`Accept suggestion` },
+            { keys: ["Space"], label: t`Select` },
+            { keys: ["Delete"], label: t`Delete` },
           ]}
         />
       ) : null}
 
       {chosen.length > 0 ? (
-        <div className="lb-bar" role="toolbar" aria-label={`已選取 ${chosen.length} 張`}>
-          <b className="num">已選 {chosen.length} 張</b>
-          <span className="lb-bar-label">標成</span>
+        <div className="lb-bar" role="toolbar" aria-label={t`${chosenCount} selected`}>
+          <b className="num">{t`${chosenCount} selected`}</b>
+          <span className="lb-bar-label">{t`Mark as`}</span>
           {classes.map((c) => (
             <Button key={c} small onClick={() => label(chosen, c)} disabled={activeView === c}>
               {c}
@@ -336,15 +356,15 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
           ))}
           {activeView !== PENDING ? (
             <Button small variant="ghost" onClick={() => label(chosen, null)}>
-              移回待標記
+              <Trans>Move back to unlabeled</Trans>
             </Button>
           ) : null}
           <span className="lb-bar-gap" />
           <Button small variant="danger" icon="trash" iconSize={15} onClick={() => void remove(chosen)}>
-            刪除
+            <Trans>Delete</Trans>
           </Button>
           <Button small variant="ghost" onClick={() => setSelected(new Set())}>
-            取消
+            <Trans>Cancel</Trans>
           </Button>
         </div>
       ) : null}

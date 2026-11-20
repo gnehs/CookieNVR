@@ -1,5 +1,8 @@
+import { plural, t as tc } from "@lingui/core/macro";
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { i18n } from "@lingui/core";
 import { useEffect, useRef, useState } from "react";
 import type { CameraDto, CropBox, StateSensorDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
@@ -22,6 +25,7 @@ import { LabelBoard } from "./LabelBoard.tsx";
 
 /** 一個狀態感應器：目前狀態、訓練、標記、最近的切換、設定與刪除 */
 export function SensorPage({ cameraId, sensorId }: { cameraId: string; sensorId: string }) {
+  const { t } = useLingui();
   const sensors = useQuery(statesQuery);
   const cams = useQuery(camerasQuery);
   // 刪除後快取裡已經沒有它，但還沒換頁；別閃一下「找不到」
@@ -31,7 +35,7 @@ export function SensorPage({ cameraId, sensorId }: { cameraId: string; sensorId:
   if (failed) return <ErrorBox error={failed.error} onRetry={() => void failed.refetch()} />;
   const cam = cams.data!.find((c) => c.id === cameraId);
   const sensor = sensors.data!.find((s) => s.id === sensorId && s.cameraId === cameraId) ?? (last.current?.id === sensorId ? last.current : null);
-  if (!cam || !sensor) return <ErrorBox error={new PageError("找不到這個感應器", "它可能已經被刪除了。", { label: "回到攝影機設定", to: cam ? `/settings/cameras/${cam.id}` : "/settings/cameras" })} />;
+  if (!cam || !sensor) return <ErrorBox error={new PageError(t`Sensor not found`, t`It may have been deleted.`, { label: t`Back to camera settings`, to: cam ? `/settings/cameras/${cam.id}` : "/settings/cameras" })} />;
   last.current = sensor;
   return <Sensor key={sensor.id} cam={cam} sensor={sensor} />;
 }
@@ -53,19 +57,22 @@ function Sensor({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
 
 /** 最上面：現在是什麼狀態、從什麼時候開始；沒在辨識時說原因與下一步 */
 function Hero({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
+  const { t } = useLingui();
   const now = useNow();
   const v = sensorView(sensor);
+  const candidate = v.kind === "state" ? v.candidate : null;
+  const since = v.kind === "state" ? sinceText(v.since, now) : "";
   const job = sensor.job;
   const recentJob = job && (job.state === "done" || job.state === "failed") && job.kind !== "train" && now - job.finishedAt < 15 * 60_000 ? job : null;
   return (
-    <section className="card st-hero" aria-label="目前狀態">
+    <section className="card st-hero" aria-label={t`Current state`}>
       <div className="st-hero-main">
         <span className="hint">{cam.config.name}</span>
         {v.kind === "state" ? (
           <>
             <p className="st-big">{v.label}</p>
             <p className="st-hero-sub" title={formatDateTime(v.since)}>
-              {sinceText(v.since, now)}切換{v.candidate ? `・正在確認是不是變成「${v.candidate}」` : ""}
+              {candidate ? t`Last switched: ${since}, now checking whether it became “${candidate}”` : t`Last switched: ${since}`}
             </p>
           </>
         ) : (
@@ -93,16 +100,16 @@ function Hero({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
 
 function heroHint(s: StateSensorDto): string {
   const v = sensorView(s);
-  if (v.kind === "confirming") return "連續幾次看到同一個樣子就會確定，通常幾十秒內。";
-  if (v.kind === "paused") return s.problem?.code === "disabled" ? "到下面的設定打開「辨識」就會繼續。" : "等畫面穩定下來就會繼續。";
+  if (v.kind === "confirming") return tc`It settles once it sees the same state several times in a row, usually within a few dozen seconds.`;
+  if (v.kind === "paused") return s.problem?.code === "disabled" ? tc`Turn on “Detection” in the settings below to resume.` : tc`It will resume once the picture settles.`;
   if (v.kind !== "problem") return "";
   switch (v.code) {
     case "untrained":
-      return s.trainable ? "每一類都有畫面了，按「開始訓練」。" : "在下面標記畫面，每一類都有了就能訓練。";
+      return s.trainable ? tc`Every class has pictures. Press “Start training”.` : tc`Label pictures below. Once every class has some, you can train.`;
     case "stale-model":
-      return "類別改過了，重新訓練後才會繼續辨識。";
+      return tc`Classes changed. Detection resumes after retraining.`;
     case "camera-off":
-      return "攝影機沒有畫面，等它連上就會繼續。";
+      return tc`The camera has no picture. Detection resumes once it connects.`;
     case "worker":
       return v.message;
   }
@@ -110,16 +117,20 @@ function heroHint(s: StateSensorDto): string {
 
 /** 訓練：每類的張數、還差幾張、開始訓練與進度，完成後用白話說結果 */
 function TrainCard({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const [starting, setStarting] = useState(false);
   const status = trainStatus(sensor);
   const job = sensor.job;
   const training = job?.kind === "train" && (job.state === "queued" || job.state === "running") ? job : null;
   const failed = job?.kind === "train" && job.state === "failed" ? job : null;
+  const failedError = failed?.error ?? "";
   const needs = needsText(sensor);
   const m = sensor.model;
   const result = m ? resultSummary(m) : null;
   const busy = jobActive(sensor) || starting;
+  const trainedAt = m ? formatDateTime(m.trainedAt) : "";
+  const trainedCount = m ? m.counts.reduce((n, c) => n + c.count, 0) : 0;
   const primary = status !== "current";
 
   const train = async () => {
@@ -137,34 +148,42 @@ function TrainCard({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) 
     <section className="card st-train" aria-labelledby="train-title">
       <header className="st-train-head">
         <h2 id="train-title" className="card-title">
-          {m ? "辨識的準確度" : "訓練"}
+          {m ? t`Detection accuracy` : t`Training`}
         </h2>
         <Button variant={primary ? "primary" : undefined} small={!primary} icon="refresh" iconSize={15} disabled={busy || !sensor.trainable} onClick={() => void train()}>
-          {m ? "重新訓練" : "開始訓練"}
+          {m ? t`Retrain` : t`Start training`}
         </Button>
       </header>
-      <div className="st-counts" role="list" aria-label="每一類標記了幾張">
+      <div className="st-counts" role="list" aria-label={t`Images labeled per class`}>
         {sensor.images.labeled.map((l) => (
           <span key={l.label} role="listitem" className="st-count" data-short={l.count < 2 ? "" : undefined}>
             <b>{l.label}</b>
-            <span className="num">{l.count} 張</span>
+            <span className="num">
+              <Plural value={l.count} one="# image" other="# images" />
+            </span>
           </span>
         ))}
       </div>
       {training ? <JobBar job={training} /> : null}
-      {!training && needs ? <p className="hint st-needs">{needs}。在下面把待標記的畫面分好類。</p> : null}
+      {!training && needs ? <p className="hint st-needs">{needs}. <Trans>Sort the unlabeled pictures below into classes.</Trans></p> : null}
       {!training && !needs && status === "stale" ? (
         <p className="callout warn">
           <Icon name="alert" size={16} />
-          <span>類別改過了，重新訓練後才會繼續辨識。</span>
+          <span>
+            <Trans>Classes changed. Detection resumes after retraining.</Trans>
+          </span>
         </p>
       ) : null}
-      {!training && !needs && status === "outdated" ? <p className="hint">標記跟上次訓練時不一樣了，重新訓練就會用上新的標記。</p> : null}
-      {!training && !needs && status === "untrained" ? <p className="hint">每一類都有畫面了。訓練只要幾秒到幾十秒，完成後馬上開始辨識。</p> : null}
+      {!training && !needs && status === "outdated" ? <p className="hint">
+          <Trans>The labels differ from the last training. Retrain to use the new labels.</Trans>
+        </p> : null}
+      {!training && !needs && status === "untrained" ? <p className="hint">
+          <Trans>Every class has pictures. Training takes a few seconds to a few dozen, and detection starts right after.</Trans>
+        </p> : null}
       {failed && !training ? (
         <p className="callout bad">
           <Icon name="alert" size={16} />
-          <span>訓練失敗：{failed.error}</span>
+          <span>{t`Training failed: ${failedError}`}</span>
         </p>
       ) : null}
       {m && result && !training ? (
@@ -189,29 +208,33 @@ function TrainCard({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) 
             </ul>
           ) : null}
           <details className="more">
-            <summary>詳細資料</summary>
+            <summary>{t`Details`}</summary>
             <div className="st-detail">
               {result.mistakes.length ? (
                 <ul>
                   {result.mistakes.map((x) => (
-                    <li key={`${x.actual}>${x.predicted}`}>
-                      {x.count} 張「{x.actual}」被看成「{x.predicted}」
-                    </li>
+                    <li key={`${x.actual}>${x.predicted}`}>{mistakeText(x)}</li>
                   ))}
                 </ul>
               ) : (
-                <p>驗證時沒有看錯的畫面。</p>
+                <p>
+                  <Trans>No pictures were misread during checking.</Trans>
+                </p>
               )}
               <p className="hint">
-                驗證的畫面都沒有拿來學，跟實際使用時一樣是第一次看到。{formatDateTime(m.trainedAt)} 訓練，用了 {m.counts.reduce((n, c) => n + c.count, 0)} 張。看錯的多半是光線不同或過渡中的畫面，多標幾張類似的再重新訓練就會改善。
+                {t`The checking pictures weren’t used for learning, so detection saw them for the first time, just like in real use. Trained ${trainedAt} on ${trainedCount} images. Mistakes are mostly from different lighting or in-between frames; label a few more like them and retrain to improve.`}
               </p>
-              <CopyButton label="複製診斷資訊" className="small" getText={() => api.diagnostics(cam.id)} done="已複製診斷資訊，可以貼給 AI 或技術人員" />
+              <CopyButton label={t`Copy diagnostics`} className="small" getText={() => api.diagnostics(cam.id)} done={t`Diagnostics copied. You can paste them to an AI or a technician.`} />
             </div>
           </details>
         </div>
       ) : null}
     </section>
   );
+}
+
+function mistakeText({ count, actual, predicted }: { count: number; actual: string; predicted: string }): string {
+  return plural(count, { one: `# image of “${actual}” was read as “${predicted}”`, other: `# images of “${actual}” were read as “${predicted}”` });
 }
 
 /** 最近的狀態切換，附切換當下的畫面 */
@@ -224,14 +247,14 @@ function History({ sensor }: { sensor: StateSensorDto }) {
   return (
     <section className="card st-history" aria-labelledby="hist-title">
       <h2 id="hist-title" className="card-title">
-        最近的變化
+        <Trans>Recent changes</Trans>
       </h2>
       {q.isPending ? (
         <p className="hint st-pad">
-          <span className="spin" aria-hidden="true" /> 讀取中…
+          <span className="spin" aria-hidden="true" /> <Trans>Loading…</Trans>
         </p>
       ) : list.length === 0 ? (
-        <p className="hint st-pad">還沒有變化過。狀態改變時會記在這裡。</p>
+        <p className="hint st-pad"><Trans>No changes yet. State changes will be logged here.</Trans></p>
       ) : (
         <ol className="st-changes">
           {list.map((c) => (
@@ -253,7 +276,7 @@ function History({ sensor }: { sensor: StateSensorDto }) {
       {more ? (
         <div className="st-pad">
           <Button small variant="ghost" onClick={() => setAll(true)}>
-            顯示更多
+            <Trans>Show more</Trans>
           </Button>
         </div>
       ) : null}
@@ -277,6 +300,7 @@ const sameDraft = (a: Draft, b: Draft) =>
 
 /** 設定：名稱、類別、區域、判斷方式；按「儲存」才送出 */
 function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const [base, setBase] = useState(() => draftOf(sensor));
   const [draft, setDraft] = useState(base);
@@ -306,14 +330,19 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
     if (n) return setError({ message: n });
     const c = classesError(draft.rows.map((r) => r.name));
     if (c) return setError({ message: c.message, index: c.index });
-    if (!Number.isFinite(draft.threshold) || draft.threshold < 0.5 || draft.threshold > 0.99) return setError({ message: "把握程度要在 50% 到 99% 之間" });
-    if (!Number.isInteger(draft.intervalSec) || draft.intervalSec < 0 || draft.intervalSec > 3600) return setError({ message: "間隔要是 0 到 3600 秒的整數" });
+    if (!Number.isFinite(draft.threshold) || draft.threshold < 0.5 || draft.threshold > 0.99) return setError({ message: t`Confidence must be between 50% and 99%` });
+    if (!Number.isInteger(draft.intervalSec) || draft.intervalSec < 0 || draft.intervalSec > 3600) return setError({ message: t`The interval must be a whole number from 0 to 3600 seconds` });
     const original = sensor.config.classes;
     const plan = planClassEdit(original, draft.rows);
     const lost = plan.removed.reduce((sum, r) => sum + (counts.get(r) ?? 0), 0);
     const added = draft.rows.some((r) => r.original === null);
-    if (plan.removed.length && !(await confirmDialog(`刪除「${plan.removed.join("、")}」？`, lost ? `已標記成這${plan.removed.length > 1 ? "些" : ""}類的 ${lost} 張畫面會退回待標記，之後要重新訓練才會繼續辨識。` : "刪除類別後要重新訓練才會繼續辨識。", { confirmLabel: "刪除並儲存", danger: true }))) return;
-    if (!plan.removed.length && added && sensor.model && !(await confirmDialog("新增類別？", "新增類別後要標記這一類的畫面並重新訓練，在那之前會暫停辨識。", { confirmLabel: "儲存" }))) return;
+    const removedList = new Intl.ListFormat(i18n.locale, { type: "conjunction", style: "narrow" }).format(plan.removed);
+    const lostMessage = plural(lost, {
+      one: "# labeled image of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.",
+      other: "# labeled images of the deleted classes will go back to unlabeled. Retrain afterward to resume detection.",
+    });
+    if (plan.removed.length && !(await confirmDialog(t`Delete “${removedList}”?`, lost ? lostMessage : t`After deleting classes, retrain to resume detection.`, { confirmLabel: t`Delete and save`, danger: true }))) return;
+    if (!plan.removed.length && added && sensor.model && !(await confirmDialog(t`Add a class?`, t`After adding a class, label pictures for it and retrain. Detection stays paused until then.`, { confirmLabel: t`Save` }))) return;
     setSaving(true);
     try {
       const common = { name: draft.name.trim(), crop: draft.crop, threshold: draft.threshold, intervalSec: draft.intervalSec, onMotion: draft.onMotion, enabled: draft.enabled };
@@ -325,7 +354,7 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
       setBase(next);
       setDraft(next);
       setCropOpen(false);
-      toast("已儲存");
+      toast(t`Saved`);
     } catch (e) {
       setError({ message: errMsg(e) });
     } finally {
@@ -340,13 +369,13 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
           <Icon name="settings" size={18} />
         </span>
         <span className="fcard-text">
-          <b>設定</b>
+          <b>{t`Settings`}</b>
           <small className="fcard-sub">{settingsSummary(sensor)}</small>
         </span>
         <span className="fcard-flags">
           <span className="fcard-flag dirty" hidden={!dirty}>
             <i aria-hidden="true" />
-            未儲存
+            <Trans>Unsaved</Trans>
           </span>
         </span>
         <span className="fcard-chevron">
@@ -354,35 +383,35 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
         </span>
       </summary>
       <div className="fcard-body">
-        <SettingRow title="辨識" desc="關掉時保留標記與訓練結果，只是暫停判斷。" toggle control={(a) => <Switch {...a} checked={draft.enabled} onChange={(enabled) => set({ enabled })} />} />
-        <SettingRow title="名稱" wide control={(a) => <input {...a} type="text" autoComplete="off" spellCheck={false} maxLength={MAX_NAME} value={draft.name} onChange={(e) => set({ name: e.currentTarget.value })} />} />
+        <SettingRow title={t`Detection`} desc={t`When off, labels and training results are kept; detection just pauses.`} toggle control={(a) => <Switch {...a} checked={draft.enabled} onChange={(enabled) => set({ enabled })} />} />
+        <SettingRow title={t`Name`} wide control={(a) => <input {...a} type="text" autoComplete="off" spellCheck={false} maxLength={MAX_NAME} value={draft.name} onChange={(e) => set({ name: e.currentTarget.value })} />} />
         <div className="set-block">
-          <p className="set-row-title">類別</p>
-          <p className="set-row-desc st-cls-desc">改名不用重新訓練；新增或刪除類別後要重新訓練。</p>
+          <p className="set-row-title">{t`Classes`}</p>
+          <p className="set-row-desc st-cls-desc"><Trans>Renaming doesn’t need retraining; adding or deleting a class does.</Trans></p>
           <ClassesEditor rows={draft.rows} onRows={(rows) => set({ rows })} invalid={error?.index ?? null} counts={counts} />
         </div>
         <div className="set-block">
           <div className="st-crop-row">
             <div>
-              <p className="set-row-title">辨識區域</p>
-              <p className="set-row-desc">移動區域後，原本標記的畫面仍然是舊區域的樣子，最好重新挑選畫面再訓練。</p>
+              <p className="set-row-title">{t`Detection area`}</p>
+              <p className="set-row-desc"><Trans>After moving the area, the labeled pictures still show the old area. It’s best to pick new pictures and retrain.</Trans></p>
             </div>
             {cropOpen ? null : (
               <Button small icon="crosshair" iconSize={15} onClick={() => setCropOpen(true)}>
-                調整區域
+                <Trans>Adjust area</Trans>
               </Button>
             )}
           </div>
           {cropOpen ? <CropEditor cameraId={cam.id} value={draft.crop} onChange={(crop) => set({ crop })} /> : null}
         </div>
         <SettingRow
-          title="要多有把握才算數"
-          desc="越嚴格越不會誤判，但光線不好時可能比較慢才確定。"
+          title={t`How sure it must be`}
+          desc={t`Stricter means fewer false detections, but it may take longer to settle in poor light.`}
           wide
           control={
             <Choice
-              label="要多有把握才算數"
-              presets={THRESHOLD_PRESETS.map((p) => ({ value: p.value * 100, label: p.label }))}
+              label={t`How sure it must be`}
+              presets={THRESHOLD_PRESETS.map((p) => ({ value: p.value * 100, label: t(p.label) }))}
               initial={Math.round(draft.threshold * 100)}
               unit="%"
               onChange={(v) => set({ threshold: v / 100 })}
@@ -390,35 +419,35 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
           }
         />
         <SettingRow
-          title="多久看一次"
-          desc="選「不定時」時只在區域內畫面有變化時看。"
+          title={t`How often to check`}
+          desc={t`With “On change only”, it checks only when the picture inside the area changes.`}
           wide
           control={
             <Choice
-              label="多久看一次"
+              label={t`How often to check`}
               presets={[
-                { value: 5, label: "5 秒" },
-                { value: 10, label: "10 秒" },
-                { value: 60, label: "1 分鐘" },
-                { value: 0, label: "不定時" },
+                { value: 5, label: t`5 sec` },
+                { value: 10, label: t`10 sec` },
+                { value: 60, label: t`1 min` },
+                { value: 0, label: t`On change only` },
               ]}
               initial={draft.intervalSec}
-              unit="秒"
+              unit={t`sec`}
               onChange={(intervalSec) => set({ intervalSec })}
             />
           }
         />
-        <SettingRow title="畫面有變化時馬上看" desc="區域裡有動靜時立刻判斷一次，切換得更快。" toggle control={(a) => <Switch {...a} checked={draft.onMotion} onChange={(onMotion) => set({ onMotion })} />} />
+        <SettingRow title={t`Check right away on change`} desc={t`Checks immediately when something moves in the area, so it switches faster.`} toggle control={(a) => <Switch {...a} checked={draft.onMotion} onChange={(onMotion) => set({ onMotion })} />} />
         <div className="set-block st-save">
           <p className="form-error" role="alert">
             {error?.message}
           </p>
           <Button disabled={!dirty || saving} onClick={() => (setDraft(base), setError(null), setCropOpen(false))}>
-            還原
+            <Trans>Revert</Trans>
           </Button>
           <Button variant="primary" disabled={!dirty || saving} aria-busy={saving || undefined} onClick={() => void save()}>
             {saving ? <span className="spin" aria-hidden="true" /> : null}
-            儲存
+            <Trans>Save</Trans>
           </Button>
         </div>
       </div>
@@ -428,22 +457,31 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
 
 function settingsSummary(s: StateSensorDto): string {
   const c = s.config;
-  const parts = [c.classes.join("／")];
-  if (!c.enabled) parts.unshift("已暫停");
-  parts.push(c.intervalSec ? `每 ${c.intervalSec >= 60 && c.intervalSec % 60 === 0 ? `${c.intervalSec / 60} 分鐘` : `${c.intervalSec} 秒`}看一次` : "有變化時才看");
-  return parts.join("・");
+  const parts = [c.classes.join(" / ")];
+  if (!c.enabled) parts.unshift(tc`Paused`);
+  if (!c.intervalSec) parts.push(tc`Checks on change only`);
+  else if (c.intervalSec >= 60 && c.intervalSec % 60 === 0) {
+    const minutes = c.intervalSec / 60;
+    parts.push(plural(minutes, { one: "Checks every # minute", other: "Checks every # minutes" }));
+  } else {
+    const seconds = c.intervalSec;
+    parts.push(plural(seconds, { one: "Checks every # second", other: "Checks every # seconds" }));
+  }
+  return parts.join(" · ");
 }
 
 function Danger({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
+  const { t } = useLingui();
+  const sensorName = sensor.config.name;
   const qc = useQueryClient();
   const navigate = useNavigate();
   const remove = async () => {
-    const ok = await confirmDialog(`刪除「${sensor.config.name}」？`, "標記的畫面、訓練結果與變化紀錄都會一起刪除，無法復原。", { confirmLabel: "刪除", danger: true });
+    const ok = await confirmDialog(t`Delete “${sensorName}”?`, t`Labeled pictures, training results and the change history will all be deleted. This can’t be undone.`, { confirmLabel: t`Delete`, danger: true });
     if (!ok) return;
     try {
       await api.deleteState(sensor.id);
       onSensorRemoved(qc, sensor.id);
-      toast(`已刪除「${sensor.config.name}」`);
+      toast(t`Deleted “${sensorName}”`);
       void navigate({ to: "/settings/cameras/$id", params: { id: cam.id }, replace: true });
     } catch (e) {
       toast(errMsg(e), "error");
@@ -452,11 +490,11 @@ function Danger({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
   return (
     <section className="danger-zone">
       <div className="danger-text">
-        <b>刪除這個感應器</b>
-        <p>標記的畫面與訓練結果會一起刪除。</p>
+        <b>{t`Delete this sensor`}</b>
+        <p>{t`Labeled pictures and training results will be deleted too.`}</p>
       </div>
       <Button variant="danger" icon="trash" onClick={() => void remove()}>
-        刪除感應器
+        <Trans>Delete sensor</Trans>
       </Button>
     </section>
   );

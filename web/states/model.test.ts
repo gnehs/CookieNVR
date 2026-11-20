@@ -40,12 +40,12 @@ const model = (o: Partial<StateModelDto> = {}): StateModelDto => ({
 describe("類別驗證", () => {
   test("重複、空白、路徑字元與數量", () => {
     expect(classesError(["關", "開"])).toBeNull();
-    expect(classesError(["關", " 關 "])).toEqual({ index: 1, message: "「關」重複了" });
+    expect(classesError(["關", " 關 "])).toEqual({ index: 1, message: "“關” is used twice" });
     expect(classesError(["關", ""])?.index).toBe(1);
     expect(classesError(["a/b", "開"])?.index).toBe(0);
     expect(classesError([".hidden", "開"])?.index).toBe(0);
-    expect(classesError(["關"])).toEqual({ index: null, message: "至少要有 2 個類別" });
-    expect(classesError(Array.from({ length: 11 }, (_, i) => `c${i}`))?.message).toBe("最多 10 個類別");
+    expect(classesError(["關"])).toEqual({ index: null, message: "Add at least 2 classes" });
+    expect(classesError(Array.from({ length: 11 }, (_, i) => `c${i}`))?.message).toBe("At most 10 classes");
   });
 });
 
@@ -53,15 +53,15 @@ describe("目前狀態", () => {
   const now = new Date(2026, 10, 20, 15, 0).getTime();
   test("已知狀態顯示從何時開始", () => {
     const v = sensorView(sensor({ state: "開", since: now - 12 * 60_000 }));
-    expect(stateText(v, now)).toBe("開 · 12 分鐘前");
+    expect(stateText(v, now)).toBe("開 · 12 minutes ago");
   });
   test("候選和目前狀態一樣時不算確認中", () => {
     expect(sensorView(sensor({ state: "開", since: now, candidate: { label: "開", count: 1 } }))).toMatchObject({ kind: "state", candidate: null });
     expect(sensorView(sensor({ state: "開", since: now, candidate: { label: "關", count: 2 } }))).toMatchObject({ kind: "state", candidate: "關" });
   });
   test("還不知道狀態時是確認中", () => {
-    expect(stateText(sensorView(sensor({ candidate: { label: "關", count: 1 } })), now)).toBe("確認中：關");
-    expect(stateText(sensorView(sensor()), now)).toBe("確認中…");
+    expect(stateText(sensorView(sensor({ candidate: { label: "關", count: 1 } })), now)).toBe("Confirming: 關");
+    expect(stateText(sensorView(sensor()), now)).toBe("Confirming…");
   });
   test("問題優先於狀態，暫停不算問題", () => {
     expect(sensorView(sensor({ problem: { code: "untrained", message: "m" } }))).toMatchObject({ kind: "problem", code: "untrained" });
@@ -69,17 +69,17 @@ describe("目前狀態", () => {
     expect(sensorView(sensor({ problem: { code: "paused", message: "鏡頭移動中" } }))).toEqual({ kind: "paused", message: "鏡頭移動中" });
   });
   test("時間的說法", () => {
-    expect(sinceText(now - 30_000, now)).toBe("剛剛");
-    expect(sinceText(now - 3 * 3_600_000, now)).toBe("3 小時前");
-    expect(sinceText(new Date(2026, 10, 20, 7, 5).getTime(), now)).toBe("今天 07:05");
-    expect(sinceText(new Date(2026, 10, 19, 14, 5).getTime(), now)).toBe("昨天 14:05");
+    expect(sinceText(now - 30_000, now)).toBe("Just now");
+    expect(sinceText(now - 3 * 3_600_000, now)).toBe("3 hours ago");
+    expect(sinceText(new Date(2026, 10, 20, 7, 5).getTime(), now)).toBe("Today 07:05");
+    expect(sinceText(new Date(2026, 10, 19, 14, 5).getTime(), now)).toBe("Yesterday 14:05");
     expect(sinceText(new Date(2026, 10, 17, 9, 30).getTime(), now)).toBe("11/17 09:30");
   });
 });
 
 describe("訓練", () => {
   test("還差幾張", () => {
-    expect(needsText(sensor({ images: { pending: 3, labeled: [{ label: "關", count: 5 }, { label: "開", count: 1 }] } }))).toBe("還需要標記「開」1 張才能訓練");
+    expect(needsText(sensor({ images: { pending: 3, labeled: [{ label: "關", count: 5 }, { label: "開", count: 1 }] } }))).toBe("Label 1 more as “開” before training");
     expect(needsText(sensor({ images: { pending: 0, labeled: [{ label: "關", count: 2 }, { label: "開", count: 2 }] } }))).toBeNull();
   });
   test("標記和訓練時不同就提示重新訓練", () => {
@@ -91,7 +91,7 @@ describe("訓練", () => {
   });
   test("結果用白話：總共答對幾張、各類答對率、看錯的組合", () => {
     const r = resultSummary(model());
-    expect(r.headline).toBe("用你標記的 141 張驗證，答對 137 張");
+    expect(r.headline).toBe("Checked against your 141 labeled images: 137 correct");
     expect(r.perClass.map((p) => p.pct)).toEqual([100, 85, 100]);
     expect(r.mistakes).toEqual([{ actual: "移動中", predicted: "開", count: 4 }]);
   });

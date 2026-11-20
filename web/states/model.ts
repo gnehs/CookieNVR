@@ -1,26 +1,36 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { i18n } from "@lingui/core";
+import { msg, plural, t } from "@lingui/core/macro";
 import { MIN_STATE_IMAGES_PER_CLASS, type CropBox, type FrigateConfigResultDto, type StateModelDto, type StateSensorDto } from "../../src/api-types.ts";
 
 // 狀態辨識介面的純邏輯：驗證、狀態文字、訓練進度與結果的白話說法、類別編輯的計畫、框選區域的幾何。
 // 驗證規則照 src/states/config.ts（後端仍會再檢查一次）。
 
-export const DEFAULT_CLASSES = ["關", "開"] as const;
+/** 新感應器預設的兩個類別名稱：用目前的語言 */
+export const defaultClasses = (): string[] => [t`Closed`, t`Open`];
 export const MAX_CLASSES = 10;
 export const MAX_NAME = 40;
 export const MAX_CLASS_NAME = 32;
 
 export function sensorNameError(name: string): string | null {
   const s = name.trim();
-  if (!s) return "請取個名字，例如「鐵捲門」";
-  if (s.length > MAX_NAME) return `名稱最多 ${MAX_NAME} 個字`;
+  if (!s) return t`Give it a name, for example “Roller shutter”`;
+  if (s.length > MAX_NAME) {
+    const max = MAX_NAME;
+    return t`Names can be at most ${max} characters`;
+  }
   return null;
 }
 
 export function classNameError(name: string): string | null {
   const s = name.trim();
-  if (!s) return "類別名稱不能空白";
-  if (s.length > MAX_CLASS_NAME) return `類別名稱最多 ${MAX_CLASS_NAME} 個字`;
-  if (/[/\\]/.test(s)) return "類別名稱不能有 / 或 \\";
-  if (s.startsWith(".")) return "類別名稱不能以 . 開頭";
+  if (!s) return t`Class names can't be empty`;
+  if (s.length > MAX_CLASS_NAME) {
+    const max = MAX_CLASS_NAME;
+    return t`Class names can be at most ${max} characters`;
+  }
+  if (/[/\\]/.test(s)) return t`Class names can't contain a slash or backslash`;
+  if (s.startsWith(".")) return t`Class names can't start with a dot`;
   return null;
 }
 
@@ -29,10 +39,16 @@ export function classesError(names: readonly string[]): { index: number | null; 
   for (const [i, n] of names.entries()) {
     const e = classNameError(n);
     if (e) return { index: i, message: e };
-    if (names.slice(0, i).some((m) => m.trim() === n.trim())) return { index: i, message: `「${n.trim()}」重複了` };
+    if (names.slice(0, i).some((m) => m.trim() === n.trim())) {
+      const name = n.trim();
+      return { index: i, message: t`“${name}” is used twice` };
+    }
   }
-  if (names.length < 2) return { index: null, message: "至少要有 2 個類別" };
-  if (names.length > MAX_CLASSES) return { index: null, message: `最多 ${MAX_CLASSES} 個類別` };
+  if (names.length < 2) return { index: null, message: t`Add at least 2 classes` };
+  if (names.length > MAX_CLASSES) {
+    const max = MAX_CLASSES;
+    return { index: null, message: t`At most ${max} classes` };
+  }
   return null;
 }
 
@@ -47,7 +63,7 @@ export type SensorView =
 
 export function sensorView(s: StateSensorDto): SensorView {
   const p = s.problem;
-  if (p?.code === "disabled") return { kind: "paused", message: "已暫停辨識" };
+  if (p?.code === "disabled") return { kind: "paused", message: t`Detection paused` };
   if (p?.code === "paused") return { kind: "paused", message: p.message };
   if (p) return { kind: "problem", code: p.code, message: p.message };
   const candidate = s.candidate && s.candidate.label !== s.state ? s.candidate.label : null;
@@ -60,15 +76,21 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /** 「剛剛」「12 分鐘前」「3 小時前」「昨天 14:05」「11/18 14:05」 */
 export function sinceText(at: number, now = Date.now()): string {
   const diff = Math.max(0, now - at);
-  if (diff < 60_000) return "剛剛";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分鐘前`;
+  if (diff < 60_000) return t`Just now`;
+  if (diff < 3_600_000) {
+    const minutes = Math.floor(diff / 60_000);
+    return plural(minutes, { one: "# minute ago", other: "# minutes ago" });
+  }
   const d = new Date(at);
   const clock = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
-  if (diff < 6 * 3_600_000 && at >= today.getTime()) return `${Math.floor(diff / 3_600_000)} 小時前`;
-  if (at >= today.getTime()) return `今天 ${clock}`;
-  if (at >= today.getTime() - 86_400_000) return `昨天 ${clock}`;
+  if (diff < 6 * 3_600_000 && at >= today.getTime()) {
+    const hours = Math.floor(diff / 3_600_000);
+    return plural(hours, { one: "# hour ago", other: "# hours ago" });
+  }
+  if (at >= today.getTime()) return t`Today ${clock}`;
+  if (at >= today.getTime() - 86_400_000) return t`Yesterday ${clock}`;
   return `${d.getMonth() + 1}/${d.getDate()} ${clock}`;
 }
 
@@ -78,19 +100,23 @@ export function stateText(v: SensorView, now = Date.now()): string {
     case "state":
       return `${v.label} · ${sinceText(v.since, now)}`;
     case "confirming":
-      return v.candidate ? `確認中：${v.candidate}` : "確認中…";
+      if (v.candidate) {
+        const candidate = v.candidate;
+        return t`Confirming: ${candidate}`;
+      }
+      return t`Confirming…`;
     case "paused":
       return v.message;
     case "problem":
-      return PROBLEM_SHORT[v.code];
+      return i18n._(PROBLEM_SHORT[v.code]);
   }
 }
 
-const PROBLEM_SHORT: Record<Extract<SensorView, { kind: "problem" }>["code"], string> = {
-  untrained: "還沒訓練",
-  "stale-model": "要重新訓練",
-  "camera-off": "沒有畫面",
-  worker: "辨識程序沒有運作",
+const PROBLEM_SHORT: Record<Extract<SensorView, { kind: "problem" }>["code"], MessageDescriptor> = {
+  untrained: msg`Not trained yet`,
+  "stale-model": msg`Needs retraining`,
+  "camera-off": msg`No picture`,
+  worker: msg`Detection isn't running`,
 };
 
 export type Tone = "ok" | "warn" | "bad" | "muted" | "accent";
@@ -117,7 +143,15 @@ export function classNeeds(s: StateSensorDto): ClassNeed[] {
 /** 「還需要：開 2 張、移動中 1 張」；夠了是 null */
 export function needsText(s: StateSensorDto): string | null {
   const lacking = classNeeds(s).filter((c) => c.missing > 0);
-  return lacking.length ? `還需要標記${lacking.map((c) => `「${c.label}」${c.missing} 張`).join("、")}才能訓練` : null;
+  if (!lacking.length) return null;
+  const list = new Intl.ListFormat(i18n.locale, { type: "conjunction", style: "narrow" }).format(
+    lacking.map((c) => {
+      const label = c.label;
+      const missing = c.missing;
+      return t`${missing} more as “${label}”`;
+    }),
+  );
+  return t`Label ${list} before training`;
 }
 
 /**
@@ -145,7 +179,7 @@ export interface ResultSummary {
 export function resultSummary(m: StateModelDto): ResultSummary {
   const v = m.validation;
   const used = m.counts.reduce((n, c) => n + c.count, 0);
-  if (!v) return { headline: `用 ${used} 張標記好的畫面訓練完成`, perClass: [], mistakes: [] };
+  if (!v) return { headline: plural(used, { one: "Trained on # labeled image", other: "Trained on # labeled images" }), perClass: [], mistakes: [] };
   const total = v.perClass.reduce((n, p) => n + p.total, 0);
   const correct = v.perClass.reduce((n, p) => n + p.correct, 0);
   const mistakes: ResultSummary["mistakes"] = [];
@@ -156,7 +190,10 @@ export function resultSummary(m: StateModelDto): ResultSummary {
   );
   mistakes.sort((a, b) => b.count - a.count);
   return {
-    headline: correct === total ? `用你標記的 ${total} 張驗證，全部答對` : `用你標記的 ${total} 張驗證，答對 ${correct} 張`,
+    headline:
+      correct === total
+        ? plural(total, { one: "Checked against your # labeled image: correct", other: "Checked against your # labeled images: all correct" })
+        : plural(total, { one: `Checked against your # labeled image: ${correct} correct`, other: `Checked against your # labeled images: ${correct} correct` }),
     perClass: v.perClass.map((p) => ({ ...p, pct: p.total ? Math.round((p.correct / p.total) * 100) : 0 })),
     mistakes,
   };
@@ -265,7 +302,7 @@ export function classIndexOfKey(key: string, count: number): number | null {
 
 /** 門檻與間隔的白話 */
 export const THRESHOLD_PRESETS = [
-  { value: 0.6, label: "寬鬆" },
-  { value: 0.8, label: "標準" },
-  { value: 0.9, label: "嚴格" },
+  { value: 0.6, label: msg`Lenient` },
+  { value: 0.8, label: msg`Standard` },
+  { value: 0.9, label: msg`Strict` },
 ] as const;

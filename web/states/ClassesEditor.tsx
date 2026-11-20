@@ -1,3 +1,4 @@
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { useRef } from "react";
 import { Button } from "../ui/Button.tsx";
 import { Icon } from "../ui/Icon.tsx";
@@ -10,6 +11,7 @@ let seq = 0;
  * 讓人知道刪了會影響多少。
  */
 export function ClassesEditor({ rows, onRows, invalid, counts }: { rows: ClassRow[]; onRows: (rows: ClassRow[]) => void; invalid: number | null; counts?: Map<string, number> }) {
+  const { t } = useLingui();
   const list = useRef<HTMLOListElement>(null);
   const add = () => {
     onRows([...rows, { key: `new${++seq}`, original: null, name: "" }]);
@@ -19,6 +21,8 @@ export function ClassesEditor({ rows, onRows, invalid, counts }: { rows: ClassRo
     <div className="cls-edit">
       <ol ref={list} className="cls-list">
         {rows.map((r, i) => {
+          const num = i + 1;
+          const rowName = r.name || t`class ${num}`;
           const n = r.original ? (counts?.get(r.original) ?? 0) : 0;
           return (
             <li key={r.key}>
@@ -30,9 +34,9 @@ export function ClassesEditor({ rows, onRows, invalid, counts }: { rows: ClassRo
                 autoComplete="off"
                 spellCheck={false}
                 maxLength={MAX_CLASS_NAME}
-                aria-label={`第 ${i + 1} 類的名稱`}
+                aria-label={t`Name of class ${num}`}
                 aria-invalid={invalid === i || undefined}
-                placeholder={i === 0 ? "例如：關" : i === 1 ? "例如：開" : "例如：移動中"}
+                placeholder={i === 0 ? t`e.g. Closed` : i === 1 ? t`e.g. Open` : t`e.g. Moving`}
                 value={r.name}
                 onChange={(e) => onRows(rows.map((x) => (x.key === r.key ? { ...x, name: e.currentTarget.value } : x)))}
                 onKeyDown={(e) => {
@@ -43,19 +47,19 @@ export function ClassesEditor({ rows, onRows, invalid, counts }: { rows: ClassRo
                   }
                 }}
               />
-              {counts && n > 0 ? <span className="cls-count num">{n} 張</span> : null}
-              <Button small variant="ghost" iconOnly icon="x" iconSize={16} aria-label={`刪除「${r.name || `第 ${i + 1} 類`}」`} disabled={rows.length <= 2} onClick={() => onRows(rows.filter((x) => x.key !== r.key))} />
+              {counts && n > 0 ? <span className="cls-count num"><Plural value={n} one="# image" other="# images" /></span> : null}
+              <Button small variant="ghost" iconOnly icon="x" iconSize={16} aria-label={t`Delete “${rowName}”`} disabled={rows.length <= 2} onClick={() => onRows(rows.filter((x) => x.key !== r.key))} />
             </li>
           );
         })}
       </ol>
       <div className="cls-foot">
         <Button small icon="plus" iconSize={15} onClick={add} disabled={rows.length >= MAX_CLASSES}>
-          新增類別
+          <Trans>Add class</Trans>
         </Button>
         <p className="hint">
           <Icon name="info" size={14} />
-          開關之間的過渡（例如「移動中」）可以另外加一類，不加也可以。
+          <Trans>A transition between open and closed (for example “Moving”) can be its own class, or you can leave it out.</Trans>
         </p>
       </div>
     </div>

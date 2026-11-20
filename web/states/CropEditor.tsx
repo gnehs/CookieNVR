@@ -1,3 +1,6 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { CropBox } from "../../src/api-types.ts";
 import { api } from "../api.ts";
@@ -10,7 +13,7 @@ type Drag = { kind: "draw"; anchor: [number, number] } | { kind: "move"; start: 
 
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 const CORNERS = new Set(["nw", "ne", "se", "sw"]);
-const HANDLE_NAME: Record<string, string> = { nw: "左上角", ne: "右上角", se: "右下角", sw: "左下角" };
+const HANDLE_NAME: Record<string, MessageDescriptor> = { nw: msg`Top left corner`, ne: msg`Top right corner`, se: msg`Bottom right corner`, sw: msg`Bottom left corner` };
 
 type Shot = { state: "loading" } | { state: "ok"; src: string; w: number; h: number } | { state: "failed" };
 
@@ -19,6 +22,7 @@ type Shot = { state: "loading" } | { state: "ok"; src: string; w: number; h: num
  * 框和角都能用方向鍵（按住 Shift 移動較多）。旁邊的小圖是辨識時實際會看到的畫面（拉成正方形）。
  */
 export function CropEditor({ cameraId, value, onChange }: { cameraId: string; value: CropBox; onChange: (c: CropBox) => void }) {
+  const { t, i18n } = useLingui();
   const stage = useRef<HTMLDivElement>(null);
   const preview = useRef<HTMLCanvasElement>(null);
   const img = useRef<HTMLImageElement | null>(null);
@@ -102,6 +106,11 @@ export function CropEditor({ cameraId, value, onChange }: { cameraId: string; va
     return d[e.key] ?? null;
   };
 
+  const cornerLabel = (h: string) => {
+    const corner = i18n._(HANDLE_NAME[h]!);
+    return t`${corner}, resize with the arrow keys`;
+  };
+
   const [x1, y1, x2, y2] = value;
   const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
   const ratio = shot.state === "ok" ? `${shot.w} / ${shot.h}` : "16 / 9";
@@ -123,7 +132,7 @@ export function CropEditor({ cameraId, value, onChange }: { cameraId: string; va
           {shot.state !== "ok" ? (
             <span className="crop-ph">
               {shot.state === "loading" ? <span className="spin" aria-hidden="true" /> : <Icon name="camera" size={24} />}
-              <span>{shot.state === "loading" ? "正在取得畫面…" : "拿不到這台的畫面，可以先框個大概，之後再調整。"}</span>
+              <span>{shot.state === "loading" ? t`Getting the picture…` : t`Can’t get this camera’s picture. Draw a rough box for now and adjust it later.`}</span>
             </span>
           ) : null}
           <span className="crop-shade" aria-hidden="true" style={{ left: 0, top: 0, right: 0, height: pct(y1) }} />
@@ -135,7 +144,7 @@ export function CropEditor({ cameraId, value, onChange }: { cameraId: string; va
             style={{ left: pct(x1), top: pct(y1), width: pct(x2 - x1), height: pct(y2 - y1) }}
             tabIndex={0}
             role="group"
-            aria-label="辨識區域。用方向鍵移動，按住 Shift 一次移動多一點"
+            aria-label={t`Detection area. Move it with the arrow keys; hold Shift to move further.`}
             onPointerDown={(e) => begin(e, { kind: "move", start: toLocal(e), from: value })}
             onKeyDown={(e) => {
               const d = arrows(e);
@@ -150,7 +159,7 @@ export function CropEditor({ cameraId, value, onChange }: { cameraId: string; va
                 type="button"
                 className={`crop-handle ${h}`}
                 tabIndex={CORNERS.has(h) ? 0 : -1}
-                aria-label={CORNERS.has(h) ? `${HANDLE_NAME[h]}，用方向鍵調整大小` : undefined}
+                aria-label={CORNERS.has(h) ? cornerLabel(h) : undefined}
                 aria-hidden={CORNERS.has(h) ? undefined : true}
                 onPointerDown={(e) => begin(e, { kind: "resize", handle: h })}
                 onKeyDown={(e) => {
@@ -171,11 +180,11 @@ export function CropEditor({ cameraId, value, onChange }: { cameraId: string; va
         <figure className="crop-preview">
           <canvas ref={preview} width={160} height={160} hidden={shot.state !== "ok"} aria-hidden="true" />
           {shot.state !== "ok" ? <span className="crop-preview-ph" aria-hidden="true" /> : null}
-          <figcaption>辨識時看到的畫面</figcaption>
+          <figcaption>{t`What detection sees`}</figcaption>
         </figure>
-        <p className="hint">框住要判斷的東西（例如整扇門），四周留一點邊。在畫面空白處拖曳可以重畫。</p>
+        <p className="hint"><Trans>Box the thing to check (for example the whole door) and leave a little margin. Drag on an empty spot to redraw.</Trans></p>
         <Button small icon="refresh" iconSize={15} onClick={() => setRound((n) => n + 1)} disabled={shot.state === "loading"}>
-          更新畫面
+          <Trans>Refresh picture</Trans>
         </Button>
       </div>
     </div>

@@ -1,3 +1,6 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useEffect, useState } from "react";
 import type { StateJobDto, StateSensorDto } from "../../src/api-types.ts";
 import { sensorView, sinceText, stateText, viewTone } from "./model.ts";
@@ -14,8 +17,11 @@ export function useNow(ms = 30_000): number {
 
 /** 感應器目前的狀態：一個色點加一行字，例如「開 · 12 分鐘前」「確認中：關」「還沒訓練」 */
 export function StateLine({ sensor, now, withName = false }: { sensor: StateSensorDto; now: number; withName?: boolean }) {
+  const { t } = useLingui();
   const v = sensorView(sensor);
-  const name = withName ? <b className="st-name">{sensor.config.name}：</b> : null;
+  const sensorName = sensor.config.name;
+  const candidate = v.kind === "state" ? v.candidate : null;
+  const name = withName ? <b className="st-name">{t`${sensorName}:`}</b> : null;
   return (
     <span className="st-line" data-tone={viewTone(v)} data-kind={v.kind}>
       <i className="st-dot" aria-hidden="true" />
@@ -24,7 +30,7 @@ export function StateLine({ sensor, now, withName = false }: { sensor: StateSens
           {name}
           <b className="st-value">{v.label}</b>
           <span className="st-since"> · {sinceText(v.since, now)}</span>
-          {v.candidate ? <span className="st-candidate">，可能變成「{v.candidate}」</span> : null}
+          {candidate ? <span className="st-candidate">{t`, may change to “${candidate}”`}</span> : null}
         </span>
       ) : (
         <span className="st-text">
@@ -36,20 +42,21 @@ export function StateLine({ sensor, now, withName = false }: { sensor: StateSens
   );
 }
 
-const JOB_TEXT: Record<StateJobDto["kind"], string> = {
-  collect: "正在從錄影挑選畫面",
-  import: "正在匯入訓練資料",
-  train: "正在訓練",
+const JOB_TEXT: Record<StateJobDto["kind"], { running: MessageDescriptor; queued: MessageDescriptor }> = {
+  collect: { running: msg`Picking frames from recordings…`, queued: msg`Picking frames from recordings, waiting for other sensors to finish…` },
+  import: { running: msg`Importing training data…`, queued: msg`Importing training data, waiting for other sensors to finish…` },
+  train: { running: msg`Training…`, queued: msg`Training, waiting for other sensors to finish…` },
 };
 
 /** 進行中的背景工作：一句話加進度條（不知道進度時是來回跑的條） */
 export function JobBar({ job }: { job: Extract<StateJobDto, { state: "queued" | "running" }> }) {
+  const { i18n } = useLingui();
   const p = job.state === "running" ? job.progress : null;
   return (
     <div className="st-job" role="status">
       <div className="st-job-text">
         <span className="spin" aria-hidden="true" />
-        <span>{job.state === "queued" ? `${JOB_TEXT[job.kind]}，等其他感應器完成…` : `${JOB_TEXT[job.kind]}…`}</span>
+        <span>{i18n._(JOB_TEXT[job.kind][job.state])}</span>
         {p !== null ? <b className="num">{Math.round(p * 100)}%</b> : null}
       </div>
       <div className={`st-progress${p === null ? " indeterminate" : ""}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={p === null ? undefined : Math.round(p * 100)}>
