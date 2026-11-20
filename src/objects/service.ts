@@ -23,7 +23,7 @@ import { asObject } from "../http/validate.ts";
 import { normalizePciId } from "../metrics/parse.ts";
 import type { Camera, CameraId, DeviceRef, ObjectSettings, Route, WorkerSpec } from "../types.ts";
 import { camerasSupported, DROP_WARN_RATIO, loadSample, verdict } from "./capacity.ts";
-import { toHits, type Detection } from "./hits.ts";
+import { StationaryFilter, toHits, type Detection } from "./hits.ts";
 import { COCO_LABELS, COMMON_LABELS, labelName } from "./labels.ts";
 import { cpuShareOf, encodeFrame, encodeJson, KIND_JSON, parseDetectorMsg, type ReadyInfo } from "./protocol.ts";
 import { FrameQueue } from "./queue.ts";
@@ -145,6 +145,8 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
   const latencies: number[] = [];
   const lastQueued = new Map<CameraId, number>();
   const recent = new Map<CameraId, ObjectsDiagnostics["recent"][number]>();
+  /** 每台攝影機的靜止物件記憶，主程序重啟就重新累積 */
+  const stationary = new Map<CameraId, StationaryFilter>();
   /** 每個模型載入後回報的類別；自備模型沒載入過就不知道 */
   const classesByModel = new Map<string, { classes: string[]; titles: string[] }>();
   let deviceCache: { at: number; devices: InferenceDeviceDto[]; unavailable: ObjectsDto["unavailable"] } | null = null;
@@ -247,7 +249,10 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
       const camera = cameraOf(job.cameraId);
       if (camera && objectModeOf(camera) !== "off") {
         const detect = detectConfigOf(camera.config);
-        opts.events.signal(job.cameraId, { type: "objects", at: job.at, hits: toHits(detections, detect) }, detect.cooldownSec * 1000, job.jpeg);
+        let still = stationary.get(job.cameraId);
+        if (!still) stationary.set(job.cameraId, (still = new StationaryFilter()));
+        const hits = toHits(still.moving(detections, job.at), detect);
+        opts.events.signal(job.cameraId, { type: "objects", at: job.at, hits }, detect.cooldownSec * 1000, job.jpeg);
       }
     }
     pump();

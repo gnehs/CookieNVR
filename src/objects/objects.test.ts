@@ -6,7 +6,7 @@ import { DEFAULT_DETECT } from "../detect/config.ts";
 import { MsgReader } from "../detect/protocol.ts";
 import type { Signal } from "../events/lifecycle.ts";
 import type { Camera, CameraId, ObjectSettings } from "../types.ts";
-import { toHits, type Detection } from "./hits.ts";
+import { STATIONARY_MS, StationaryFilter, toHits, type Detection } from "./hits.ts";
 import { parseDetectorMsg } from "./protocol.ts";
 import { FrameQueue } from "./queue.ts";
 import { createObjectDetection } from "./service.ts";
@@ -23,6 +23,32 @@ test("hits keep watched labels above the threshold, best one per label, and skip
     { label: "person", score: 0.9 },
     { label: "car", score: 0.7 },
   ]);
+});
+
+test("a car parked in the same spot stops counting, while one that moves or a new arrival still counts", () => {
+  const f = new StationaryFilter();
+  const parked = (jitter = 0) => det("car", 0.9, [0.1 + jitter, 0.5, 0.3 + jitter, 0.7]);
+  expect(f.moving([parked()], 0)).toHaveLength(1);
+  expect(f.moving([parked(0.01)], 1_000)).toHaveLength(1);
+  // 隔了很久的下一次事件：別處有人在動，停著的車不再算
+  const person = det("person", 0.8, [0.6, 0.2, 0.7, 0.6]);
+  expect(f.moving([parked(0.005), person], STATIONARY_MS + 60_000)).toEqual([person]);
+  // 同一個位置旁邊開來另一台車
+  const other = det("car", 0.9, [0.5, 0.5, 0.7, 0.7]);
+  expect(f.moving([parked(), other], STATIONARY_MS + 61_000)).toEqual([other]);
+  // 停著的車開走了：框移到別處就算
+  const leaving = det("car", 0.9, [0.25, 0.5, 0.45, 0.7]);
+  expect(f.moving([leaving], STATIONARY_MS + 62_000)).toEqual([leaving]);
+});
+
+test("a stationary spot is forgotten after it goes unseen for several recognitions", () => {
+  const f = new StationaryFilter();
+  const car = det("car", 0.9, [0.1, 0.5, 0.3, 0.7]);
+  f.moving([car], 0);
+  expect(f.moving([car], STATIONARY_MS)).toEqual([]);
+  for (let i = 1; i <= 10; i++) f.moving([], STATIONARY_MS + i * 1_000);
+  // 同一個位置又出現一台車，是新來的
+  expect(f.moving([car], STATIONARY_MS + 20_000)).toEqual([car]);
 });
 
 test("the queue drops frames that waited more than a second", () => {
