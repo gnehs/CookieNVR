@@ -63,6 +63,7 @@ const cam = "cam1" as CameraId;
 const camera = (objectMode: "off" | "annotate" | "filter"): Camera => ({
   id: cam,
   position: 0,
+  groupId: null,
   createdAt: 0,
   updatedAt: 0,
   config: {

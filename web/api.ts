@@ -1,5 +1,7 @@
 import type {
   CameraDto,
+  CameraGroupDto,
+  CameraLayoutDto,
   HomekitActionDto,
   HomekitDto,
   CreatedTokenDto,
@@ -114,6 +116,12 @@ export const api = {
   settings: () => get<SettingsDto>("/settings"),
   updateSettings: (patch: Partial<Omit<Settings, "objects" | "devices">> & { objects?: Partial<ObjectSettings>; devices?: Partial<Settings["devices"]> }) => put<SettingsDto>("/settings", patch),
   cameras: () => get<CameraDto[]>("/cameras"),
+  cameraGroups: () => get<CameraGroupDto[]>("/camera-groups"),
+  createCameraGroup: (name: string) => post<CameraGroupDto>("/camera-groups", { name }),
+  renameCameraGroup: (id: string, name: string) => put<CameraGroupDto>(`/camera-groups/${encodeURIComponent(id)}`, { name }),
+  deleteCameraGroup: (id: string) => del(`/camera-groups/${encodeURIComponent(id)}`),
+  /** 一次排好分區順序與每台攝影機的分區、順序；回傳排好後的分區與攝影機 */
+  arrangeCameras: (layout: CameraLayoutDto) => put<{ groups: CameraGroupDto[]; cameras: CameraDto[] }>("/camera-layout", layout),
   createCamera: (config: CameraConfig) => post<CameraDto>("/cameras", config),
   updateCamera: (id: string, config: CameraConfig) => put<CameraDto>(`/cameras/${encodeURIComponent(id)}`, config),
   deleteCamera: (id: string, deleteRecordings = false) =>

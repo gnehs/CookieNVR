@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { openDb } from "../db.ts";
-import { defaultSettings, type CameraConfig } from "../types.ts";
+import { defaultSettings, type CameraConfig, type CameraId, type GroupId } from "../types.ts";
 import { createCameraStore } from "./cameras.ts";
 import { createSettingsStore, followRecordingsDefault } from "./settings.ts";
 
@@ -65,6 +65,66 @@ describe("CameraStore", () => {
   test("更新不存在的攝影機會丟錯", () => {
     const store = createCameraStore(openDb(":memory:"));
     expect(() => store.update("nope0000" as never, config("x"))).toThrow();
+  });
+});
+
+describe("CameraStore 分區與排列", () => {
+  const setup = () => {
+    const store = createCameraStore(openDb(":memory:"));
+    const [a, b, c] = ["a", "b", "c"].map((n) => store.create(config(n)));
+    return { store, a: a!, b: b!, c: c! };
+  };
+  const names = (store: ReturnType<typeof createCameraStore>) => store.list().map((x) => `${x.config.name}:${x.groupId ? store.groups().find((g) => g.id === x.groupId)?.name : "-"}`);
+
+  test("新增的分區排在最後，改名後名稱跟著變", () => {
+    const { store } = setup();
+    const out = store.createGroup("一樓");
+    store.createGroup("戶外");
+    store.renameGroup(out.id, "樓下");
+    expect(store.groups().map((g) => g.name)).toEqual(["樓下", "戶外"]);
+  });
+
+  test("arrange 依送來的順序排分區與攝影機，沒有分區的排在最前面", () => {
+    const { store, a, b, c } = setup();
+    const g1 = store.createGroup("一樓");
+    const g2 = store.createGroup("戶外");
+    store.arrange({ groups: [g2.id, g1.id], cameras: [{ id: c.id, groupId: g1.id }, { id: a.id, groupId: g2.id }, { id: b.id, groupId: null }] });
+    expect(store.groups().map((g) => g.name)).toEqual(["戶外", "一樓"]);
+    expect(names(store)).toEqual(["b:-", "a:戶外", "c:一樓"]);
+  });
+
+  test("重送同一份排列不會再通知訂閱者", () => {
+    const { store, a, b, c } = setup();
+    const g = store.createGroup("一樓");
+    const arrangement = { groups: [g.id], cameras: [{ id: b.id, groupId: g.id }, { id: a.id, groupId: null }, { id: c.id, groupId: null }] };
+    store.arrange(arrangement);
+    let calls = 0;
+    store.subscribe(() => calls++);
+    store.subscribeGroups(() => calls++);
+    store.arrange(arrangement);
+    expect(calls).toBe(0);
+  });
+
+  test("排列跟現況對不上時不報錯：不存在的略過，漏掉的接在後面", () => {
+    const { store, a, b, c } = setup();
+    const g = store.createGroup("一樓");
+    store.arrange({
+      groups: ["gone0000" as GroupId],
+      cameras: [{ id: "gone0000" as CameraId, groupId: null }, { id: c.id, groupId: "gone0000" as GroupId }, { id: a.id, groupId: g.id }],
+    });
+    expect(store.groups().map((x) => x.id)).toEqual([g.id]);
+    expect(names(store)).toEqual(["c:-", "b:-", "a:一樓"]);
+  });
+
+  test("刪掉分區後裡面的攝影機變成沒有分區，其他分區不受影響", () => {
+    const { store, a, b } = setup();
+    const g1 = store.createGroup("一樓");
+    const g2 = store.createGroup("戶外");
+    store.arrange({ groups: [g1.id, g2.id], cameras: [{ id: a.id, groupId: g1.id }, { id: b.id, groupId: g2.id }] });
+    store.removeGroup(g1.id);
+    expect(store.groups().map((g) => g.name)).toEqual(["戶外"]);
+    expect(store.get(a.id)?.groupId).toBeNull();
+    expect(store.get(b.id)?.groupId).toBe(g2.id);
   });
 });
 

@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
-import { activeEventsQuery, camerasQuery } from "../../data/queries.ts";
+import { sectionsOf } from "../../camera-layout.ts";
+import { activeEventsQuery, cameraGroupsQuery, camerasQuery } from "../../data/queries.ts";
 import { useMe } from "../../data/session.ts";
 import { useHealth } from "../../data/use-health.ts";
 import { alertSummary, cameraStatus, EVENT_ACTIVE } from "../../health.ts";
@@ -45,6 +46,7 @@ function CameraTile({ cam, eventActive, register }: { cam: CameraDto; eventActiv
 export function CamerasPage() {
   const isAdmin = useMe().role === "admin";
   const cams = useQuery(camerasQuery);
+  const groups = useQuery(cameraGroupsQuery).data ?? [];
   const events = useQuery(activeEventsQuery).data ?? [];
   const health = useHealth(isAdmin);
 
@@ -111,10 +113,25 @@ export function CamerasPage() {
             }
           />
         ) : (
-          <div className="cam-grid">
-            {list!.map((c) => (
-              <CameraTile key={c.id} cam={c} eventActive={events.some((e) => e.cameraId === c.id)} register={register} />
-            ))}
+          <div className="cam-sections">
+            {/* 沒有分區時只有一段、不放標題；空的分區在首頁不顯示 */}
+            {sectionsOf(list!, groups)
+              .filter((s) => s.cameras.length > 0)
+              .map((s) => (
+                <section key={s.group?.id ?? "ungrouped"} className="cam-section" aria-label={groups.length ? (s.group?.name ?? "未分區") : undefined}>
+                  {groups.length ? (
+                    <h2 className="cam-section-title">
+                      {s.group?.name ?? "未分區"}
+                      <span className="cam-section-count num">{s.cameras.length}</span>
+                    </h2>
+                  ) : null}
+                  <div className="cam-grid">
+                    {s.cameras.map((c) => (
+                      <CameraTile key={c.id} cam={c} eventActive={events.some((e) => e.cameraId === c.id)} register={register} />
+                    ))}
+                  </div>
+                </section>
+              ))}
           </div>
         )}
       </div>

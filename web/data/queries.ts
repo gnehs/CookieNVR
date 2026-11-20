@@ -8,6 +8,8 @@ import { api } from "../api.ts";
 
 /** SSE（`status-stream.ts`）一直在更新這份清單；第一次打開頁面時也會自己抓一次 */
 export const camerasQuery = queryOptions({ queryKey: ["cameras"], queryFn: api.cameras });
+/** 分區由 SSE 的 camera-groups 推送更新 */
+export const cameraGroupsQuery = queryOptions({ queryKey: ["camera-groups"], queryFn: api.cameraGroups });
 
 export const settingsQuery = queryOptions({ queryKey: ["settings"], queryFn: api.settings });
 

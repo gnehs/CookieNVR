@@ -1,8 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { CameraDto, EventDto, StateChangeDto, StateSensorDto, StreamSnapshotDto } from "../../src/api-types.ts";
+import type { CameraDto, CameraGroupDto, EventDto, StateChangeDto, StateSensorDto, StreamSnapshotDto } from "../../src/api-types.ts";
 import type { WorkerStatus } from "../../src/types.ts";
 import { onSensorMessage, onSensorRemoved, onStateChange, statesQuery } from "../states/queries.ts";
-import { activeEventsQuery, camerasQuery, systemQuery, workersQuery } from "./queries.ts";
+import { activeEventsQuery, cameraGroupsQuery, camerasQuery, systemQuery, workersQuery } from "./queries.ts";
 
 const POLL_MS = 5_000;
 /** 連續這麼多次連線都沒收到完整狀態，就先改成輪詢 */
@@ -45,11 +45,13 @@ export function startStatusStream(qc: QueryClient, opts: { admin: boolean }): ()
       // 重新連上：磁碟與設定這些不推送的資料、狀態切換紀錄與圖片清單，斷線期間錯過的變化一次補齊
       if (snapshots++ > 0) {
         if (opts.admin) void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
+        void qc.invalidateQueries({ queryKey: cameraGroupsQuery.queryKey });
         void qc.invalidateQueries({ queryKey: ["state-changes"] });
         void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "states" && q.queryKey.length > 1 });
       }
     });
     es.addEventListener("cameras", (e) => qc.setQueryData(camerasQuery.queryKey, parse<CameraDto[]>(e)));
+    es.addEventListener("camera-groups", (e) => qc.setQueryData(cameraGroupsQuery.queryKey, parse<CameraGroupDto[]>(e)));
     es.addEventListener("camera", (e) => setCams((cams) => upsert(cams, parse<CameraDto>(e))));
     es.addEventListener("worker", (e) => {
       const w = parse<WorkerStatus>(e);

@@ -1,4 +1,5 @@
 export type CameraId = string & { readonly __brand: "CameraId" };
+export type GroupId = string & { readonly __brand: "GroupId" };
 export type Role = "user" | "admin";
 export type StreamName = "main" | "sub";
 
@@ -89,10 +90,26 @@ export interface CameraConfig {
 
 export interface Camera {
   id: CameraId;
+  /** 全站的排列順序：沒有分區的在前，接著依分區順序；同一區裡也照這個數字排 */
   position: number;
+  /** 所屬分區；null 是沒有分區 */
+  groupId: GroupId | null;
   config: CameraConfig;
   createdAt: number;
   updatedAt: number;
+}
+
+/** 攝影機分區（例如「一樓」「戶外」），由管理員命名與排序，所有人看到的一樣 */
+export interface CameraGroup {
+  id: GroupId;
+  name: string;
+  position: number;
+}
+
+/** 一次排好全部：分區的順序，以及每台攝影機依序屬於哪一區 */
+export interface CameraArrangement {
+  groups: GroupId[];
+  cameras: { id: CameraId; groupId: GroupId | null }[];
 }
 
 /**
@@ -170,8 +187,22 @@ export interface CameraStore {
   create(config: CameraConfig): Camera;
   update(id: CameraId, config: CameraConfig): Camera;
   remove(id: CameraId): void;
-  /** 任何新增、修改、刪除後呼叫，參數為最新的完整清單 */
+  /** 任何新增、修改、刪除、重新排列後呼叫，參數為最新的完整清單 */
   subscribe(listener: (cameras: Camera[]) => void): Unsubscribe;
+
+  groups(): CameraGroup[];
+  /** 新分區放在最後 */
+  createGroup(name: string): CameraGroup;
+  renameGroup(id: GroupId, name: string): CameraGroup;
+  /** 分區裡的攝影機變成沒有分區，順序不變 */
+  removeGroup(id: GroupId): void;
+  /**
+   * 照這份排列重排分區與攝影機。清單跟現況對不上時（別人剛新增或刪除）不報錯：
+   * 不存在的 id 略過，漏掉的分區與攝影機接在最後、維持原本的相對順序。重送同一份結果不變。
+   */
+  arrange(arrangement: CameraArrangement): void;
+  /** 分區新增、改名、刪除、重新排列後呼叫 */
+  subscribeGroups(listener: (groups: CameraGroup[]) => void): Unsubscribe;
 }
 
 export interface SettingsStore {

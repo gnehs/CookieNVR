@@ -309,6 +309,7 @@ function cameraDto(camera: Camera, client: StreamClient): CameraDto {
   return {
     id: camera.id,
     position: camera.position,
+    groupId: camera.groupId,
     config: publicConfig(client.principal.role === "admin" ? camera.config : redactConfig(camera.config)),
     ...cameraStatus(camera.id),
     rtsp: rtspUrls(camera.id, client.req),
@@ -468,6 +469,7 @@ if (env.discovery) {
   }
 }
 
+cameras.subscribeGroups((groups) => hub.publish(() => ({ type: "camera-groups", data: groups.map((g) => ({ id: g.id, name: g.name })) })));
 cameras.subscribe((list) => {
   ptz.reconcile(list);
   detection.sync(list);

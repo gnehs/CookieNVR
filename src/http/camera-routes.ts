@@ -1,9 +1,9 @@
-import type { CameraDto, ProbeResult } from "../api-types.ts";
-import type { Camera, CameraConfig, CameraConnection, CameraId, CameraStore, Route } from "../types.ts";
+import type { CameraDto, CameraGroupDto, ProbeResult } from "../api-types.ts";
+import type { Camera, CameraArrangement, CameraConfig, CameraConnection, CameraGroup, CameraId, CameraStore, GroupId, Route } from "../types.ts";
 import { HttpError } from "./errors.ts";
 import { parseCameraConfig, parseConnection } from "./parse.ts";
 import { json, noContent } from "./respond.ts";
-import { readJson } from "./validate.ts";
+import { asObject, readJson, str } from "./validate.ts";
 
 export interface CameraDeps {
   cameras: CameraStore;
@@ -34,10 +34,34 @@ export function redactConfig(config: CameraConfig): CameraConfig {
   return { ...config, connection };
 }
 
+const GROUP_NAME_MAX = 40;
+
+const groupDto = (g: CameraGroup): CameraGroupDto => ({ id: g.id, name: g.name });
+
+const parseGroupName = (value: unknown): string => str(asObject(value), "name", { max: GROUP_NAME_MAX }).trim();
+
+/** 只檢查形狀；id 對不對得上由 store 處理（略過不存在的、補上漏掉的） */
+export function parseArrangement(value: unknown): CameraArrangement {
+  const body = asObject(value);
+  const { groups, cameras } = body;
+  if (!Array.isArray(groups) || !groups.every((g) => typeof g === "string")) throw new HttpError(400, "欄位 groups 必須是字串陣列");
+  if (!Array.isArray(cameras)) throw new HttpError(400, "欄位 cameras 必須是陣列");
+  return {
+    groups: groups as GroupId[],
+    cameras: cameras.map((c, i) => {
+      const o = asObject(c, `cameras[${i}] `);
+      if (typeof o.id !== "string") throw new HttpError(400, `欄位 cameras[${i}].id 必須是字串`);
+      if (o.groupId !== null && typeof o.groupId !== "string") throw new HttpError(400, `欄位 cameras[${i}].groupId 必須是字串或 null`);
+      return { id: o.id as CameraId, groupId: o.groupId as GroupId | null };
+    }),
+  };
+}
+
 export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeRecordings, publicConfig = (c) => c, mergeConfig = (c) => c }: CameraDeps): Route[] {
   const toDto = (camera: Camera, req: Request, admin: boolean): CameraDto => ({
     id: camera.id,
     position: camera.position,
+    groupId: camera.groupId,
     config: publicConfig(admin ? camera.config : redactConfig(camera.config)),
     ...cameraStatus(camera.id),
     rtsp: rtspUrls(camera.id, req),
@@ -49,7 +73,56 @@ export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeReco
     return camera;
   };
 
+  const findGroup = (raw: string | undefined): CameraGroup => {
+    const group = cameras.groups().find((g) => g.id === raw);
+    if (!group) throw new HttpError(404, "找不到這個分區");
+    return group;
+  };
+
   return [
+    {
+      method: "GET",
+      path: "/api/camera-groups",
+      access: "user",
+      handler() {
+        return json(cameras.groups().map(groupDto));
+      },
+    },
+    {
+      method: "POST",
+      path: "/api/camera-groups",
+      access: "admin",
+      async handler(ctx) {
+        return json(groupDto(cameras.createGroup(parseGroupName(await readJson(ctx.req)))), 201);
+      },
+    },
+    {
+      method: "PUT",
+      path: "/api/camera-groups/:id",
+      access: "admin",
+      async handler(ctx) {
+        const group = findGroup(ctx.params.id);
+        return json(groupDto(cameras.renameGroup(group.id, parseGroupName(await readJson(ctx.req)))));
+      },
+    },
+    {
+      method: "DELETE",
+      path: "/api/camera-groups/:id",
+      access: "admin",
+      handler(ctx) {
+        cameras.removeGroup(findGroup(ctx.params.id).id);
+        return noContent();
+      },
+    },
+    {
+      method: "PUT",
+      path: "/api/camera-layout",
+      access: "admin",
+      async handler(ctx) {
+        cameras.arrange(parseArrangement(await readJson(ctx.req)));
+        return json({ groups: cameras.groups().map(groupDto), cameras: cameras.list().map((c) => toDto(c, ctx.req, true)) });
+      },
+    },
     {
       method: "GET",
       path: "/api/cameras",

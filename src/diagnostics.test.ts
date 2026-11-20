@@ -15,7 +15,7 @@ const SECRETS = [
 ];
 
 function cam(id: string, config: CameraConfig): Camera {
-  return { id: id as CameraId, position: 0, config, createdAt: NOW, updatedAt: NOW };
+  return { id: id as CameraId, position: 0, groupId: null, config, createdAt: NOW, updatedAt: NOW };
 }
 
 const tapo = cam("front", {

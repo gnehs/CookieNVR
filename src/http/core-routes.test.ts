@@ -490,3 +490,39 @@ describe("設定與系統", () => {
     expect(restarted).toEqual(["record:abc"]);
   });
 });
+
+describe("camera groups and layout", () => {
+  const admin = (init: RequestInit & { json?: unknown } = {}) => ({ ...init, headers: { cookie: adminCookie } });
+  const createCam = async (config: CameraConfig) =>
+    ((await (await call("/api/cameras", admin({ method: "POST", json: config }))).json()) as CameraDto).id;
+  const createGroup = async (name: string) =>
+    ((await (await call("/api/camera-groups", admin({ method: "POST", json: { name } }))).json()) as { id: string }).id;
+
+  test("admins create, rename and delete groups; users only list them", async () => {
+    const id = await createGroup("  一樓  ");
+    expect((await call(`/api/camera-groups/${id}`, admin({ method: "PUT", json: { name: "樓下" } }))).status).toBe(200);
+    expect(await (await call("/api/camera-groups", as(userCookie))).json()).toEqual([{ id, name: "樓下" }]);
+    expect((await call("/api/camera-groups", { method: "POST", headers: { cookie: userCookie }, json: { name: "x" } })).status).toBe(403);
+    expect((await call(`/api/camera-groups/${id}`, admin({ method: "DELETE" }))).status).toBe(204);
+    expect((await call(`/api/camera-groups/${id}`, admin({ method: "DELETE" }))).status).toBe(404);
+  });
+
+  test("a blank group name is rejected", async () => {
+    expect((await call("/api/camera-groups", admin({ method: "POST", json: { name: "   " } }))).status).toBe(400);
+  });
+
+  test("PUT /api/camera-layout reorders cameras into groups and the camera list follows", async () => {
+    const door = await createCam(camera);
+    const yard = await createCam(tapo);
+    const g = await createGroup("戶外");
+    const res = await call("/api/camera-layout", admin({ method: "PUT", json: { groups: [g], cameras: [{ id: yard, groupId: null }, { id: door, groupId: g }] } }));
+    expect(res.status).toBe(200);
+    const list = (await (await call("/api/cameras", as(userCookie))).json()) as CameraDto[];
+    expect(list.map((c) => [c.config.name, c.groupId])).toEqual([
+      ["Tapo", null],
+      ["Door", g],
+    ]);
+    expect((await call("/api/camera-layout", { method: "PUT", headers: { cookie: userCookie }, json: { groups: [], cameras: [] } })).status).toBe(403);
+    expect((await call("/api/camera-layout", admin({ method: "PUT", json: { groups: "x", cameras: [] } }))).status).toBe(400);
+  });
+});

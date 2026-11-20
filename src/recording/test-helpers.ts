@@ -12,6 +12,7 @@ export function camera(id: string, record: Partial<Camera["config"]["record"]> =
   return {
     id: id as CameraId,
     position: 0,
+    groupId: null,
     createdAt: 0,
     updatedAt: 0,
     config: {

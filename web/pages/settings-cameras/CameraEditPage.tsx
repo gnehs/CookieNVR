@@ -13,7 +13,7 @@ import { Icon } from "../../ui/Icon.tsx";
 import type { IconName } from "../../ui/icons.ts";
 import { toast } from "../../ui/toast.tsx";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
-import { putCamera } from "./CamerasListPage.tsx";
+import { putCamera } from "./cache.ts";
 import { DetectSection } from "./DetectSection.tsx";
 import { BasicFields, ConnFields, RecFields, useFocusError, type FieldKit } from "./fields.tsx";
 import { basicSummary, connKey, connSummary, DEFAULT_PTZ, detectSummary, draftOf, editReducer, planSave, probeFailure, recSummary, sectionChanged, type Draft, type SectionEdit, type SectionKey } from "./form-model.ts";

@@ -7,6 +7,7 @@ function cam(id: string, name: string, o: { enabled?: boolean; record?: boolean;
   return {
     id: id as CameraId,
     position: 0,
+    groupId: null,
     config: { name, enabled: o.enabled ?? true, connection: { type: "tapo", host: "h", username: "u", password: "p" }, record: { enabled: o.record ?? true, audio: true, direct: false } },
     online: o.online ?? true,
     recording: o.recording ?? true,

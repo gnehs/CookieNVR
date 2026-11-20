@@ -21,6 +21,7 @@ function camera(id: string, patch: { enabled?: boolean; withSub?: boolean } = {}
   return {
     id: id as CameraId,
     position: 0,
+    groupId: null,
     createdAt: 0,
     updatedAt: 0,
     config: {

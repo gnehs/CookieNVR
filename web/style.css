@@ -154,7 +154,7 @@ button, a, summary, label { touch-action: manipulation; }
   [data-sidebar="collapsed"] .sidebar-toggle:focus-visible { opacity: 1; background: var(--fill); color: var(--text); }
   [data-sidebar="collapsed"] .brand:hover .brand-mark,
   [data-sidebar="collapsed"] .brand:has(.sidebar-toggle:focus-visible) .brand-mark { opacity: 0; }
-  [data-sidebar="collapsed"] .user-btn { position: relative; padding: 6px; overflow: hidden; }
+  [data-sidebar="collapsed"] .user-btn { padding: 6px; overflow: hidden; }
   /* 名字兩行比頭像高，不拿出排版的話收合後按鈕會被撐高 */
   [data-sidebar="collapsed"] .user-btn .who, [data-sidebar="collapsed"] .user-btn > .icon { position: absolute; left: 52px; }
   [data-sidebar="collapsed"] .user-btn[data-current] { background: var(--surface); }
@@ -187,7 +187,7 @@ button, a, summary, label { touch-action: manipulation; }
 .sidebar-foot { margin-top: auto; display: flex; min-width: 0; }
 .user-btn {
   /* 左邊 6px：32px 的頭像中心跟上面導覽列 20px 圖示（左內距 12px）的中心對齊 */
-  flex: 1; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; min-width: 0; text-align: left; cursor: pointer;
+  position: relative; flex: 1; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; min-width: 0; text-align: left; cursor: pointer;
   border-radius: 12px; background: transparent; border: 0; color: var(--text);
   transition: background-color 150ms ease, border-color 150ms ease, transform var(--dur-1) var(--ease-out);
 }
@@ -301,6 +301,11 @@ button, a, summary, label { touch-action: manipulation; }
 
 /* ---------- 攝影機首頁：畫面＋名稱 ---------- */
 .cam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+/* 首頁的分區：標題＋數量，分區之間留大一點的距離 */
+.cam-sections { display: grid; gap: 30px; }
+.cam-section-title { display: flex; align-items: baseline; gap: 8px; margin: 0 2px 12px; font-size: 16px; font-weight: 650; letter-spacing: 0.01em; }
+.cam-section-count { color: var(--muted); font-size: 13px; font-weight: 550; }
+@media (max-width: 760px) { .cam-sections { gap: 22px; } .cam-section-title { margin-bottom: 10px; } }
 @media (max-width: 760px) { .cam-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
 @media (max-width: 480px) { .cam-grid { grid-template-columns: minmax(0, 1fr); } }
 .cam-tile {
@@ -629,6 +634,51 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 /* 單層卡片：沒有標題列也沒有固定動作列的地方用這個，不再包一層外框 */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-sm); min-width: 0; }
 .list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding: 0 4px; }
+.list-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* ---------- 攝影機排列（設定 → 攝影機）：分區卡片與可拖曳的列 ---------- */
+.layout-editor { display: grid; gap: 22px; }
+.layout-box { display: grid; gap: 8px; min-width: 0; }
+.layout-head { display: flex; align-items: center; gap: 6px; min-height: 36px; padding-right: 2px; min-width: 0; }
+.layout-head h3 { font-size: 15px; font-weight: 650; min-width: 0; }
+.layout-head > .menu-btn { margin-left: auto; }
+.layout-box > .layout-head:not(:has(.drag-handle)) { padding-left: 6px; }
+.layout-count { color: var(--muted); font-size: 13px; font-weight: 550; }
+/* 把手：只有它能拿起，整列其他地方照樣點進編輯；觸控時不讓瀏覽器拿去捲動 */
+.drag-handle {
+  position: relative; z-index: 1; flex: none; width: 28px; height: 36px; margin: -4px 0; display: grid; place-items: center;
+  padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: grab; touch-action: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+@media (hover: hover) { .drag-handle:hover { background: var(--fill-2); color: var(--text); } }
+.drag-handle:active { cursor: grabbing; }
+.layout-list > .cam-row { padding-left: 8px; gap: 8px; }
+.layout-list > .cam-row > .row-main { gap: 12px; }
+/* 拖曳中留在原位的那一格：內容藏起來，只剩一塊底色標出會放在哪 */
+.row-item[data-placeholder] { background: var(--fill); }
+.row-item[data-placeholder] > * { visibility: hidden; }
+.layout-box[data-placeholder] { border-radius: var(--r-xl); background: var(--fill); }
+.layout-box[data-placeholder] > * { visibility: hidden; }
+.layout-editor[data-dragging] .row-item:hover { background: transparent; }
+.layout-editor[data-dragging] .row-item[data-placeholder] { background: var(--fill); }
+.layout-editor[data-dragging="group"] .layout-list { pointer-events: none; }
+/* 空的分區是一塊虛線放置區，拖到上面時亮起來 */
+.layout-list[data-empty] { background: transparent; box-shadow: none; border-style: dashed; border-color: var(--border-strong); }
+.layout-list[data-over] { border-color: var(--accent); background: var(--accent-soft); }
+.layout-empty { margin: 0; padding: 16px 18px; text-align: center; color: var(--muted); font-size: 13.5px; }
+/* 跟著指標走的那一份：浮起來的陰影，拿起時微微放大 */
+.drag-overlay {
+  background: var(--overlay); border: 1px solid var(--border-strong); border-radius: 14px; box-shadow: var(--shadow-lg); cursor: grabbing;
+  animation: drag-lift var(--dur-1) var(--ease-out) both;
+}
+.row-item.drag-overlay { border-bottom: 1px solid var(--border-strong); padding-left: 8px; gap: 8px; }
+.layout-head.drag-overlay { padding: 4px 12px 4px 0; }
+@keyframes drag-lift { to { transform: scale(1.02); } }
+@media (prefers-reduced-motion: reduce) { .drag-overlay { animation: none; } }
+@media (max-width: 560px) {
+  .list-toolbar { flex-wrap: wrap; }
+  .drag-handle { width: 36px; height: 44px; }
+}
 
 .bar { height: 8px; border-radius: 99px; background: var(--fill-2); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }

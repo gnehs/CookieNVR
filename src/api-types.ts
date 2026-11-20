@@ -1,5 +1,5 @@
 import type { OnvifErrorKind } from "./onvif/errors.ts";
-import type { CameraConfig, CameraId, DeviceRef, PtzMode, PtzPrefs, Role, Settings, WorkerStatus } from "./types.ts";
+import type { CameraConfig, CameraId, DeviceRef, GroupId, PtzMode, PtzPrefs, Role, Settings, WorkerStatus } from "./types.ts";
 
 export const API_VERSION = 1;
 
@@ -88,13 +88,27 @@ export interface LinkProofDto {
 
 export interface CameraDto {
   id: CameraId;
+  /** 全站排列順序：沒有分區的在前，接著依分區順序 */
   position: number;
+  groupId: GroupId | null;
   /** 一般使用者拿到的 config 會把所有密碼換成空字串，RTSP 網址中的帳密也會移除 */
   config: CameraConfig;
   online: boolean;
   recording: boolean;
   /** 對外 RTSP 網址，不含帳密 */
   rtsp: { main: string; sub: string | null };
+}
+
+/** 攝影機分區，陣列順序就是顯示順序 */
+export interface CameraGroupDto {
+  id: GroupId;
+  name: string;
+}
+
+/** PUT /api/camera-layout：分區的順序，以及每台攝影機依序屬於哪一區 */
+export interface CameraLayoutDto {
+  groups: GroupId[];
+  cameras: { id: CameraId; groupId: GroupId | null }[];
 }
 
 export interface StreamInfo {
@@ -438,6 +452,7 @@ export interface StreamSnapshotDto {
 export type StreamMessage =
   | { type: "snapshot"; data: StreamSnapshotDto }
   | { type: "cameras"; data: CameraDto[] }
+  | { type: "camera-groups"; data: CameraGroupDto[] }
   | { type: "camera"; data: CameraDto }
   | { type: "worker"; data: WorkerStatus }
   | { type: "event"; data: { phase: "start" | "update" | "end"; event: EventDto } }

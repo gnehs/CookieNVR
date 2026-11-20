@@ -111,6 +111,16 @@ const MIGRATIONS: string[] = [
   CREATE INDEX state_changes_sensor_at ON state_changes (sensor_id, at);
   CREATE INDEX state_changes_at ON state_changes (at);
   `,
+  `
+  CREATE TABLE camera_groups (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  ALTER TABLE cameras ADD COLUMN group_id TEXT REFERENCES camera_groups (id) ON DELETE SET NULL;
+  `,
 ];
 
 /** 開啟資料庫並升級到最新 schema。測試可傳 ":memory:"。 */

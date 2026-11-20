@@ -5,9 +5,9 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { BenchmarkDto, BenchmarkResultDto, CameraDto, HomekitDto, EventDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { BenchmarkDto, BenchmarkResultDto, CameraDto, CameraGroupDto, HomekitDto, EventDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import { detectConfigOf, PREVIEW_THRESHOLDS, usesPixel } from "../src/detect/config.ts";
-import type { CameraConfig, CameraId, Role, Settings, WorkerStatus } from "../src/types.ts";
+import type { CameraConfig, CameraId, GroupId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
 import { setupUri } from "../src/homekit/identity.ts";
 import { camerasSupported, verdict } from "../src/objects/capacity.ts";
@@ -77,12 +77,34 @@ let settings: Settings = {
   devices: { objects: "auto", decode: process.env.MOCK_DECODE ?? "auto" },
 };
 
-const cams: { id: CameraId; position: number; config: CameraConfig }[] = [];
+// cams 保持建立順序（camDto 用索引決定哪台離線、哪台在錄），對外一律照 position 排
+const cams: { id: CameraId; position: number; groupId: GroupId | null; config: CameraConfig }[] = [];
 let camSeq = 1;
 function addCam(config: CameraConfig) {
   const id = `cam${camSeq++}` as CameraId;
-  cams.push({ id, position: cams.length, config });
+  cams.push({ id, position: Math.max(-1, ...cams.map((c) => c.position)) + 1, groupId: null, config });
   return cams[cams.length - 1]!;
+}
+const ordered = () => [...cams].sort((a, b) => a.position - b.position);
+
+// 分區：陣列順序就是顯示順序；arrange 的規則跟真後端的 store 一樣（不存在的略過、漏掉的接在後面）
+const groups: CameraGroupDto[] = [];
+let groupSeq = 1;
+function arrange(body: { groups: GroupId[]; cameras: { id: CameraId; groupId: GroupId | null }[] }) {
+  const known = new Set(groups.map((g) => g.id));
+  const order = [...new Set([...body.groups.filter((id) => known.has(id)), ...groups.map((g) => g.id)])];
+  groups.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  const placed = new Map<CameraId, GroupId | null>();
+  for (const c of body.cameras) {
+    if (!cams.some((x) => x.id === c.id) || placed.has(c.id)) continue;
+    placed.set(c.id, c.groupId !== null && known.has(c.groupId) ? c.groupId : null);
+  }
+  for (const c of ordered()) if (!placed.has(c.id)) placed.set(c.id, c.groupId);
+  [null, ...order].flatMap((g) => [...placed].filter(([, gid]) => gid === g)).forEach(([id, gid], i) => {
+    const c = cams.find((x) => x.id === id)!;
+    c.position = i;
+    c.groupId = gid;
+  });
 }
 addCam({ name: "客廳", enabled: true, connection: { type: "tapo", host: "192.168.1.50", username: "nvr", password: "secret123" }, record: { enabled: true, audio: true, direct: false }, detect: { enabled: true, source: "pixel", threshold: 25, minArea: 0.005, cooldownSec: 10, masks: [{ points: [[0.62, 0.04], [0.98, 0.04], [0.98, 0.2], [0.62, 0.2]] }], labels: ["person", "cat"], objectMode: "annotate", objectScore: 0.5 } });
 addCam({ name: "車庫", enabled: true, connection: { type: "rtsp", mainUrl: "rtsp://u:p@192.168.1.60/s1", subUrl: "rtsp://u:p@192.168.1.60/s2", transport: "tcp" }, record: { enabled: true, audio: false, direct: true } });
@@ -547,6 +569,7 @@ function camDto(c: (typeof cams)[number], admin: boolean): CameraDto {
   return {
     id: c.id,
     position: c.position,
+    groupId: c.groupId,
     config: cfg,
     online: c.config.enabled && idx !== 1,
     recording: c.config.enabled && c.config.record.enabled && idx === 0,
@@ -818,7 +841,7 @@ function sse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 function broadcastCameras() {
-  for (const c of streamClients) c.send(sse("cameras", cams.map((x) => camDto(x, c.admin))));
+  for (const c of streamClients) c.send(sse("cameras", ordered().map((x) => camDto(x, c.admin))));
 }
 function broadcast(event: string, data: unknown) {
   for (const c of streamClients) c.send(sse(event, data));
@@ -832,7 +855,7 @@ function streamResponse(admin: boolean): Response {
     start(ctl) {
       client = { admin, send: (text) => ctl.enqueue(enc.encode(text)) };
       streamClients.add(client);
-      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: cams.map((c) => camDto(c, admin)), workers: admin ? workers : null, events: activeEvents(), stateSensors: states.sensors() })}`);
+      client.send(`retry: 3000\n\n${sse("snapshot", { cameras: ordered().map((c) => camDto(c, admin)), workers: admin ? workers : null, events: activeEvents(), stateSensors: states.sensors() })}`);
       ping = setInterval(() => client.send(": ping\n\n"), 20_000);
     },
     cancel() {
@@ -845,7 +868,8 @@ function streamResponse(admin: boolean): Response {
 
 async function api(req: Request, url: URL): Promise<Response> {
   const res = await route(req, url);
-  if (url.pathname.startsWith("/api/cameras") && req.method !== "GET" && res.ok) broadcastCameras();
+  if (/^\/api\/camera(s|-groups|-layout)\b/.test(url.pathname) && req.method !== "GET" && res.ok) broadcastCameras();
+  if (/^\/api\/camera-(groups|layout)\b/.test(url.pathname) && req.method !== "GET" && res.ok) broadcast("camera-groups", groups);
   return res;
 }
 
@@ -957,7 +981,8 @@ async function route(req: Request, url: URL): Promise<Response> {
     return noContent();
   }
 
-  if (path === "/cameras" && m === "GET") return json(cams.map((c) => camDto(c, admin)));
+  if (path === "/cameras" && m === "GET") return json(ordered().map((c) => camDto(c, admin)));
+  if (path === "/camera-groups" && m === "GET") return json(groups);
   if (path === "/stream" && m === "GET") return streamResponse(admin);
   // 假後端沒有即時影像：每台都回「沒有串流」，介面退回快照
   if (path === "/live" && m === "GET") {
@@ -1018,12 +1043,39 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (ptzResponse) return ptzResponse;
 
   if (path === "/mock/metrics" && m === "GET") return json(setMockMetrics(url.searchParams));
-  const denied = path.startsWith("/cameras") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
+  const denied = path.startsWith("/cameras") || path.startsWith("/camera-") || path.startsWith("/users") || path.startsWith("/settings") || path.startsWith("/system") ? needAdmin() : null;
   if (denied) return denied;
   const homekitResponse = await homekitApi(path, m, body);
   if (homekitResponse) return homekitResponse;
 
   if (path === "/cameras" && m === "POST") return json(camDto(addCam(body), true), 201);
+  if (path === "/camera-groups" && m === "POST") {
+    const name = String(body?.name ?? "").trim();
+    if (!name) return err(400, "欄位 name 不能為空");
+    const g = { id: `grp${groupSeq++}` as GroupId, name };
+    groups.push(g);
+    return json(g, 201);
+  }
+  const gm = path.match(/^\/camera-groups\/([^/]+)$/);
+  if (gm) {
+    const g = groups.find((x) => x.id === gm[1]);
+    if (!g) return err(404, "找不到這個分區");
+    if (m === "PUT") {
+      const name = String(body?.name ?? "").trim();
+      if (!name) return err(400, "欄位 name 不能為空");
+      g.name = name;
+      return json(g);
+    }
+    if (m === "DELETE") {
+      groups.splice(groups.indexOf(g), 1);
+      for (const c of cams) if (c.groupId === g.id) c.groupId = null;
+      return noContent();
+    }
+  }
+  if (path === "/camera-layout" && m === "PUT") {
+    arrange(body);
+    return json({ groups, cameras: ordered().map((c) => camDto(c, true)) });
+  }
   if (path === "/cameras/test" && m === "POST") {
     // 失敗訊息走真後端同一個 explainFailure，兩邊看到的措辭一致：
     // 主機或網址含 fail → 連線被拒絕、含 timeout → 逾時、含 404 → 找不到串流；密碼是 wrong → 帳密錯誤

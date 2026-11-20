@@ -14,7 +14,7 @@ import { BrandMark } from "../../ui/Panel.tsx";
 import { ErrorBox, PageError, Spinner } from "../../ui/states.tsx";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
 import { CameraEditPage } from "./CameraEditPage.tsx";
-import { putCamera } from "./CamerasListPage.tsx";
+import { putCamera } from "./cache.ts";
 import { BasicFields, ConnFields, RecFields, useFocusError } from "./fields.tsx";
 import { basicSummary, clearsError, connSummary, draftOf, errorCard, probeFailure, recSummary, streamLine, validate, type Draft, type FormError } from "./form-model.ts";
 import { PtzSupportNote } from "./PtzPrefs.tsx";
