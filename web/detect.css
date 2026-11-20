@@ -5,8 +5,8 @@
 .cam-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cam-event-dot { display: none; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 .cam-tile[data-event] .cam-event-dot { display: block; }
-.cam-tile .cam-frame { transition: border-color var(--dur-2) ease, box-shadow var(--dur-2) ease; }
-.cam-tile[data-event] .cam-frame { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.cam-tile .cam-frame { transition: box-shadow var(--dur-2) ease; }
+.cam-tile[data-event] .cam-frame { box-shadow: 0 0 0 2px var(--accent); }
 
 /* ---------- 事件頁 ---------- */
 .ev-head { align-items: center; }
