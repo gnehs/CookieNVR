@@ -189,14 +189,14 @@ function EventsList() {
   const labelOptions = useMemo(() => {
     const seen = items.flatMap((e) => e.labels);
     if (filter.label) seen.push(filter.label);
-    return eventLabelOptions(catalog, seen);
-  }, [items, catalog, filter.label]);
+    const enabled = cams.flatMap((c) => (c.config.enabled && c.config.detect?.enabled ? c.config.detect.labels : []));
+    return eventLabelOptions(catalog, enabled, seen);
+  }, [items, catalog, cams, filter.label]);
 
   const camEntries: SelectEntry<string>[] = [{ value: "", label: "所有攝影機" }, "separator", ...cams.map((c) => ({ value: c.id, label: c.config.name }))];
   const ALL = { value: "", label: "所有類別" };
   const opt = (l: { key: string; zh: string }) => ({ value: l.key, label: l.zh });
-  const labelEntries: SelectEntry<string>[] = [ALL, "separator", ...labelOptions.top.map(opt)];
-  if (labelOptions.rest.length) labelEntries.push({ heading: "其他類別", options: labelOptions.rest.map(opt) });
+  const labelEntries: SelectEntry<string>[] = [ALL, "separator", ...labelOptions.map(opt)];
   /** 還沒有任何事件帶類別（沒用物件辨識、相機也沒回報）就不佔位；篩選中一定要看得到 */
   const showLabelPick = !!filter.label || items.some((e) => e.labels.length > 0);
 

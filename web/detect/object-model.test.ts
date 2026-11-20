@@ -171,15 +171,18 @@ describe("類別清單", () => {
     expect(labelGroups(null, []).noPackage).toBe(false);
   });
 
-  test("事件篩選：常用與事件出現過的在前（含相機自己的 vehicle、pet），其餘在後，不重複", () => {
-    const o = eventLabelOptions(catalog, ["vehicle", "pet", "person", "toaster"]);
-    expect(o.top.map((l) => l.key)).toEqual(["person", "car", "dog", "vehicle", "pet", "toaster"]);
-    expect(o.top.find((l) => l.key === "vehicle")?.zh).toBe("車輛");
-    expect(o.rest.map((l) => l.key)).toEqual(["package"]);
+  test("事件篩選：只列有開啟的類別（照目錄順序），再接事件裡出現過的（含相機自己的 vehicle），不重複", () => {
+    const o = eventLabelOptions(catalog, ["dog", "person"], ["vehicle", "person"]);
+    expect(o.map((l) => l.key)).toEqual(["person", "dog", "vehicle"]);
+    expect(o.find((l) => l.key === "vehicle")?.zh).toBe("車輛");
   });
 
-  test("拿不到目錄時只剩出現過的類別", () => {
-    expect(eventLabelOptions(null, ["person"]).top.map((l) => l.key)).toEqual(["person"]);
+  test("沒開也沒出現過的類別不列", () => {
+    expect(eventLabelOptions(catalog, [], []).length).toBe(0);
+  });
+
+  test("拿不到目錄時只剩有開的與出現過的類別", () => {
+    expect(eventLabelOptions(null, ["cat"], ["person"]).map((l) => l.key)).toEqual(["cat", "person"]);
   });
 });
 

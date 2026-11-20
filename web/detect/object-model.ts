@@ -185,14 +185,13 @@ export function labelGroups(catalog: Pick<ObjectLabelsDto, "labels" | "common"> 
   };
 }
 
-/** 事件頁類別篩選的選項：模型的常用類別與事件裡出現過的（含相機自己的 vehicle、pet）放前面，其餘類別在後 */
-export function eventLabelOptions(catalog: Pick<ObjectLabelsDto, "labels" | "common"> | null, seen: Iterable<string>): { top: { key: string; zh: string }[]; rest: { key: string; zh: string }[] } {
+/** 事件頁類別篩選的選項：只列攝影機有開啟的類別，加上事件裡實際出現過的；模型支援但沒人開的不列 */
+export function eventLabelOptions(catalog: Pick<ObjectLabelsDto, "labels"> | null, enabled: Iterable<string>, seen: Iterable<string>): { key: string; zh: string }[] {
   const zh = new Map((catalog?.labels ?? []).map((l) => [l.key, l.zh]));
-  const topKeys = [...new Set([...(catalog?.common ?? []), ...seen])];
-  const top = topKeys.map((key) => ({ key, zh: zh.get(key) ?? labelName(key) }));
-  const taken = new Set(topKeys);
-  const rest = (catalog?.labels ?? []).filter((l) => !taken.has(l.key)).map((l) => ({ key: l.key, zh: l.zh }));
-  return { top, rest };
+  const on = new Set(enabled);
+  // 有開的照目錄順序；事件裡另外出現的（相機自己回報的 vehicle、pet，或之後關掉的類別）接在後面
+  const ordered = (catalog?.labels ?? []).filter((l) => on.has(l.key)).map((l) => l.key);
+  return [...new Set([...ordered, ...on, ...seen])].map((key) => ({ key, zh: zh.get(key) ?? labelName(key) }));
 }
 
 
