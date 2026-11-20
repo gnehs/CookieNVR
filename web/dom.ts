@@ -1,5 +1,5 @@
 // 給命令式物件（canvas 時間軸、偵測遮罩編輯器）自己建 DOM 用的小工具；React 元件不要用它，改用 JSX 與 `ui/Icon.tsx`
-import { ICONS } from "./ui/icons.ts";
+import { ICON_SVG_ATTRS, ICONS } from "./ui/icons.ts";
 
 type Child = Node | string | number | null | undefined | false | Child[];
 type Props = Record<string, any>;
@@ -32,6 +32,6 @@ export function icon(name: string, size = 18): HTMLSpanElement {
   const span = document.createElement("span");
   span.className = "icon";
   span.setAttribute("aria-hidden", "true");
-  span.innerHTML = `<svg viewBox="0 0 256 256" width="${size}" height="${size}" fill="currentColor">${(ICONS as Record<string, string>)[name] ?? ""}</svg>`;
+  span.innerHTML = `<svg ${ICON_SVG_ATTRS} width="${size}" height="${size}">${(ICONS as Record<string, string>)[name] ?? ""}</svg>`;
   return span;
 }

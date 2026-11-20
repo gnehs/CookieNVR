@@ -122,7 +122,7 @@ button, a, summary, label { touch-action: manipulation; }
  * 雙色圖示的淡色層：文字色混進「圖示底下的底色」，算出不透明的淡色（圖示不用透明度）。
  * 底色不是 --surface 的地方（側欄、按鈕、深色泡泡）各自設 --icon-bg。
  */
-.icon .duo { fill: color-mix(in srgb, currentColor var(--duo, 22%), var(--icon-bg, var(--surface))); }
+.icon .duo { stroke: none; fill: color-mix(in srgb, currentColor var(--duo, 18%), var(--icon-bg, var(--surface))); }
 .sidebar, .user-btn { --icon-bg: var(--frame); }
 .nav-link[aria-current="page"], .user-btn[data-current] { --icon-bg: var(--surface); --duo: 26%; }
 .menu, .popup { --icon-bg: var(--overlay); }
