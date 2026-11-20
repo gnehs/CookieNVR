@@ -1,9 +1,11 @@
+import { useLingui } from "@lingui/react/macro";
 import { useMe } from "../../data/session.ts";
 import { Appearance } from "./Appearance.tsx";
 import { PasswordPanel } from "./PasswordPanel.tsx";
 import { SessionsPanel } from "./SessionsPanel.tsx";
 
 export function AccountPage() {
+  const { t } = useLingui();
   const me = useMe();
   return (
     <div className="form-page">
@@ -14,7 +16,7 @@ export function AccountPage() {
           </span>
           <div>
             <h1>{me.username}</h1>
-            <p>{me.role === "admin" ? "管理員" : "一般使用者"}</p>
+            <p>{me.role === "admin" ? t`Admin` : t`Standard user`}</p>
           </div>
         </div>
       </header>

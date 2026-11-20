@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useMutation } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import { api } from "../../api.ts";
@@ -8,6 +9,7 @@ import { Panel, PanelSection } from "../../ui/Panel.tsx";
 import { toast } from "../../ui/toast.tsx";
 
 export function PasswordPanel() {
+  const { t } = useLingui();
   const form = useRef<HTMLFormElement>(null);
   const cur = useRef<HTMLInputElement>(null);
   const next = useRef<HTMLInputElement>(null);
@@ -17,7 +19,7 @@ export function PasswordPanel() {
     mutationFn: (v: { current: string; next: string }) => api.changePassword(v.current, v.next),
     onSuccess: () => {
       form.current?.reset();
-      toast("已變更密碼");
+      toast(t`Password changed`);
     },
     onError: (e) => setError(errMsg(e)),
   });
@@ -27,36 +29,36 @@ export function PasswordPanel() {
     setError("");
     const c = cur.current!.value;
     const n = next.current!.value;
-    if (!c) return setError("請輸入目前密碼");
-    if (n.length < 8) return setError("新密碼至少要 8 個字元");
-    if (n !== again.current!.value) return setError("兩次輸入的新密碼不一致");
+    if (!c) return setError(t`Enter your current password`);
+    if (n.length < 8) return setError(t`The new password must be at least 8 characters`);
+    if (n !== again.current!.value) return setError(t`The two new passwords don't match`);
     change.mutate({ current: c, next: n });
   };
 
   return (
     <form ref={form} onSubmit={submit}>
       <Panel
-        title="變更密碼"
+        title={t`Change password`}
         foot={
           <>
             <p className="form-error" role="alert">
               {error}
             </p>
             <Button variant="primary" type="submit" disabled={change.isPending}>
-              更新密碼
+              {t`Update password`}
             </Button>
           </>
         }
       >
         <PanelSection>
           <div className="form narrow">
-            <Field label="目前密碼">
+            <Field label={t`Current password`}>
               <input ref={cur} type="password" autoComplete="current-password" required />
             </Field>
-            <Field label="新密碼" hint="至少 8 個字元。變更後，其他裝置需要重新登入。">
+            <Field label={t`New password`} hint={t`At least 8 characters. Other devices will need to sign in again after you change it.`}>
               <input ref={next} type="password" autoComplete="new-password" required minLength={8} />
             </Field>
-            <Field label="再次輸入新密碼">
+            <Field label={t`Confirm new password`}>
               <input ref={again} type="password" autoComplete="new-password" required />
             </Field>
           </div>

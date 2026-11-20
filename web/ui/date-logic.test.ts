@@ -94,13 +94,13 @@ describe("前一天、後一天", () => {
 });
 
 describe("顯示", () => {
-  test("今天、昨天，其他是月/日加週幾；不同年份才寫年", () => {
+  test("今天、昨天，其他是月/日加星期；不同年份才寫年", () => {
     const today = k("2026-01-02");
-    expect(shortDay(today, today)).toBe("今天");
-    expect(shortDay(k("2026-01-01"), today)).toBe("昨天");
-    expect(shortDay(k("2025-12-31"), today)).toBe("2025/12/31 週三");
-    expect(shortDay(k("2026-01-01"), k("2026-01-05"))).toBe("1/1 週四");
-    expect(spokenDay(k("2026-11-19"))).toBe("2026 年 11 月 19 日 星期四");
+    expect(shortDay(today, today)).toBe("Today");
+    expect(shortDay(k("2026-01-01"), today)).toBe("Yesterday");
+    expect(shortDay(k("2025-12-31"), today)).toBe("Wed, 12/31/2025");
+    expect(shortDay(k("2026-01-01"), k("2026-01-05"))).toBe("Thu, 1/1");
+    expect(spokenDay(k("2026-11-19"))).toBe("Thursday, November 19, 2026");
   });
 });
 

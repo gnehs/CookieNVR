@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import type { ReactNode } from "react";
 import { Icon } from "./Icon.tsx";
 import type { IconName } from "./icons.ts";
@@ -7,12 +8,9 @@ import type { IconName } from "./icons.ts";
  * 右邊是錯誤的標示。以共用的 details.disclosure 為基礎，展開動畫一致。
  */
 export function FormCard(props: { title: string; icon: IconName; defaultOpen?: boolean; summary?: string; error?: boolean; className?: string; children?: ReactNode }) {
+  const { t } = useLingui();
   return (
-    <details
-      className={`disclosure fcard${props.className ? ` ${props.className}` : ""}`}
-      open={props.defaultOpen}
-      data-error={props.error ? "" : undefined}
-    >
+    <details className={`disclosure fcard${props.className ? ` ${props.className}` : ""}`} open={props.defaultOpen} data-error={props.error ? "" : undefined}>
       <summary>
         <span className="fcard-ico">
           <Icon name={props.icon} size={18} />
@@ -24,7 +22,7 @@ export function FormCard(props: { title: string; icon: IconName; defaultOpen?: b
         <span className="fcard-flags">
           <span className="fcard-flag error" hidden={!props.error}>
             <Icon name="alert-circle" size={14} />
-            有錯誤
+            {t`Has errors`}
           </span>
         </span>
         <span className="fcard-chevron">

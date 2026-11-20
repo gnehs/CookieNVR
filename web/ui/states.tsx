@@ -1,14 +1,16 @@
+import { useLingui } from "@lingui/react/macro";
 import type { ReactNode } from "react";
 import { errMsg } from "../format.ts";
 import { Button, ButtonLink } from "./Button.tsx";
 import { Icon } from "./Icon.tsx";
 import type { IconName } from "./icons.ts";
 
-export function Spinner({ label = "載入中…" }: { label?: string }) {
+export function Spinner({ label }: { label?: string }) {
+  const { t } = useLingui();
   return (
     <div className="state loading" role="status">
       <span className="spin" />
-      <span>{label}</span>
+      <span>{label ?? t`Loading…`}</span>
     </div>
   );
 }
@@ -39,6 +41,7 @@ export class PageError extends Error {
 }
 
 export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const { t } = useLingui();
   if (error instanceof PageError) {
     return (
       <StateBox
@@ -58,12 +61,12 @@ export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => v
     <StateBox
       kind="error"
       icon="alert"
-      title="這裡暫時打不開"
+      title={t`Can't open this right now`}
       body={errMsg(error)}
       actions={
         onRetry ? (
           <Button icon="refresh" onClick={onRetry}>
-            重新載入
+            {t`Reload`}
           </Button>
         ) : null
       }

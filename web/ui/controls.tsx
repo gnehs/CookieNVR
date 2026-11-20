@@ -1,10 +1,15 @@
+import { useLingui } from "@lingui/react/macro";
 import { useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { Icon } from "./Icon.tsx";
 import type { IconName } from "./icons.ts";
 import { useIndicator } from "./indicator.ts";
 
 /** 開關：role="switch" 的原生 checkbox（`.switch`），表單與鍵盤行為都是瀏覽器內建的 */
-export function Switch({ checked, onChange, ...rest }: { checked: boolean; onChange?: (v: boolean) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, "checked" | "onChange" | "type">) {
+export function Switch({
+  checked,
+  onChange,
+  ...rest
+}: { checked: boolean; onChange?: (v: boolean) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, "checked" | "onChange" | "type">) {
   return <input {...rest} type="checkbox" className="switch" role="switch" checked={checked} onChange={(e) => onChange?.(e.currentTarget.checked)} />;
 }
 
@@ -30,23 +35,35 @@ export interface TileOption<V extends string> {
 
 /** 選項磚：用原生 radio 保留方向鍵切換與 radiogroup 語意 */
 export function Tiles<V extends string>({ label, options, value, onChange }: { label: string; options: TileOption<V>[]; value: V; onChange: (v: V) => void }) {
+  const { t } = useLingui();
   const name = useId();
   return (
     <div className="tiles" role="radiogroup" aria-label={label}>
-      {options.map((o) => (
-        <label className="tile" key={o.value}>
-          <input type="radio" name={name} value={o.value} checked={o.value === value} aria-label={o.desc ? `${o.label}，${o.desc}` : o.label} onChange={(e) => e.currentTarget.checked && onChange(o.value)} />
-          <span className="tile-face">
-            {o.icon ? (
-              <span className="tile-ico">
-                <Icon name={o.icon} size={18} />
-              </span>
-            ) : null}
-            <b>{o.label}</b>
-            {o.desc ? <small>{o.desc}</small> : null}
-          </span>
-        </label>
-      ))}
+      {options.map((o) => {
+        const optLabel = o.label;
+        const optDesc = o.desc;
+        return (
+          <label className="tile" key={o.value}>
+            <input
+              type="radio"
+              name={name}
+              value={o.value}
+              checked={o.value === value}
+              aria-label={optDesc ? t`${optLabel}, ${optDesc}` : optLabel}
+              onChange={(e) => e.currentTarget.checked && onChange(o.value)}
+            />
+            <span className="tile-face">
+              {o.icon ? (
+                <span className="tile-ico">
+                  <Icon name={o.icon} size={18} />
+                </span>
+              ) : null}
+              <b>{o.label}</b>
+              {o.desc ? <small>{o.desc}</small> : null}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -72,7 +89,22 @@ export function Segmented<V extends string>({ label, options, value, onChange }:
  * 常用值＋自訂：先給幾個好選的選項，真的需要才展開數字欄位。
  * onChange 收到目前選到的數值；自訂欄位不合法時是 NaN。
  */
-export function Choice({ label, presets, initial, unit, step = 1, onChange }: { label: string; presets: { value: number; label: string }[]; initial: number; unit: string; step?: number; onChange: (v: number) => void }) {
+export function Choice({
+  label,
+  presets,
+  initial,
+  unit,
+  step = 1,
+  onChange,
+}: {
+  label: string;
+  presets: { value: number; label: string }[];
+  initial: number;
+  unit: string;
+  step?: number;
+  onChange: (v: number) => void;
+}) {
+  const { t } = useLingui();
   const [picked, setPicked] = useState(presets.some((p) => p.value === initial) ? String(initial) : "custom");
   const [custom, setCustom] = useState(String(initial));
   const input = useRef<HTMLInputElement>(null);
@@ -81,7 +113,7 @@ export function Choice({ label, presets, initial, unit, step = 1, onChange }: { 
     <div className="choice">
       <Segmented
         label={label}
-        options={[...presets.map((p) => ({ value: String(p.value), label: p.label })), { value: "custom", label: "自訂" }]}
+        options={[...presets.map((p) => ({ value: String(p.value), label: p.label })), { value: "custom", label: t`Custom` }]}
         value={picked}
         onChange={(v) => {
           setPicked(v);
@@ -97,7 +129,7 @@ export function Choice({ label, presets, initial, unit, step = 1, onChange }: { 
           min={0}
           step={String(step)}
           inputMode="decimal"
-          aria-label={`${label}（自訂，單位 ${unit}）`}
+          aria-label={t`${label} (custom, unit: ${unit})`}
           value={custom}
           ref={input}
           onChange={(e) => {

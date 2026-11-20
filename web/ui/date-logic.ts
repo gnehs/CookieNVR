@@ -2,12 +2,19 @@
  * 日曆用的純日期計算：以「YYYY-MM-DD」字串代表瀏覽器時區的一天。
  * 加減天數與月份一律用 UTC 的年月日運算，不經過當地時間，日光節約的那天也不會多一天或少一天。
  */
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
+
 export type DayKey = `${number}-${number}-${number}`;
 
-/** 週日開始：跟台灣常見的月曆、手機內建日曆一致，也跟全站的「週日…週六」寫法同一個順序 */
+/** 週日開始：台灣、日本與美式英文的月曆都是這個順序 */
 export const WEEK_START = 0;
-export const WEEKDAY_SHORT = ["日", "一", "二", "三", "四", "五", "六"] as const;
-export const WEEKDAY_LONG = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"] as const;
+
+/** 日期鍵是 UTC 的年月日，格式化也固定用 UTC，才不會被瀏覽器時區推到隔天；月份、星期的名稱交給 Intl 依介面語言產生 */
+const fmt = (opts: Intl.DateTimeFormatOptions, ms: number) => new Intl.DateTimeFormat(i18n.locale, { ...opts, timeZone: "UTC" }).format(ms);
+
+/** 星期幾的名稱（0 是週日）；narrow 給表頭，long 給螢幕閱讀器 */
+export const weekdayName = (d: number, width: "narrow" | "long") => fmt({ weekday: width }, Date.UTC(2023, 0, 1 + d));
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -83,24 +90,29 @@ export function monthGrid(year: number, month: number): MonthCell[] {
   });
 }
 
-export const monthTitle = (year: number, month: number) => `${year} 年 ${month} 月`;
+export const monthTitle = (year: number, month: number) => fmt({ year: "numeric", month: "long" }, Date.UTC(year, month - 1, 1));
 export const yearMonth = (k: DayKey): [number, number] => {
   const [y, m] = ymd(k);
   return [y, m];
 };
 
-/** 螢幕閱讀器念的完整日期：「2026 年 11 月 19 日 星期四」 */
-export function spokenDay(k: DayKey): string {
-  const [y, m, d] = ymd(k);
-  return `${y} 年 ${m} 月 ${d} 日 ${WEEKDAY_LONG[weekday(k)]}`;
-}
+/** 螢幕閱讀器念的完整日期：「2026年11月19日 星期四」「Thursday, November 19, 2026」 */
+export const spokenDay = (k: DayKey): string => fmt({ dateStyle: "full" }, utc(k));
 
-/** 按鈕上的短日期：「今天」「昨天」，其他是「11/17 週二」；不同年份才寫年 */
+/** 按鈕上的短日期：「今天」「昨天」，其他是月/日加星期；不同年份才寫年 */
 export function shortDay(k: DayKey, today: DayKey): string {
-  if (k === today) return "今天";
-  if (k === addDays(today, -1)) return "昨天";
-  const [y, m, d] = ymd(k);
-  return `${y === ymd(today)[0] ? "" : `${y}/`}${m}/${d} 週${WEEKDAY_SHORT[weekday(k)]}`;
+  if (k === today) return t`Today`;
+  if (k === addDays(today, -1)) return t`Yesterday`;
+  const sameYear = ymd(k)[0] === ymd(today)[0];
+  return fmt(
+    {
+      year: sameYear ? undefined : "numeric",
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+    },
+    utc(k),
+  );
 }
 
 export type GridKey = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown" | "Home" | "End" | "PageUp" | "PageDown";

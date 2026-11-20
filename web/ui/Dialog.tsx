@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { Dialog as Base } from "@base-ui/react/dialog";
 import { Drawer } from "@base-ui/react/drawer";
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
@@ -48,7 +50,12 @@ export function DialogClose({ className = "btn", disabled, children }: { classNa
   );
 }
 
-const askDiscard = () => confirmDialog("要放棄這些變更嗎？", "剛才改的設定還沒儲存，關掉就不會保留。", { confirmLabel: "放棄變更", cancelLabel: "繼續編輯", danger: true });
+const askDiscard = () =>
+  confirmDialog(t`Discard these changes?`, t`You haven't saved your recent edits. Closing will discard them.`, {
+    confirmLabel: t`Discard changes`,
+    cancelLabel: t`Keep editing`,
+    danger: true,
+  });
 
 /**
  * 對話框：桌面置中（Base UI Dialog）；手機是從下方滑出的面板（Base UI Drawer），可以按住往下拉關閉，
@@ -168,6 +175,7 @@ export function confirmDialog(title: string, message: string, opts: { confirmLab
 }
 
 export function ConfirmHost() {
+  const { t } = useLingui();
   const req = useSyncExternalStore(
     (fn) => (listeners.add(fn), () => listeners.delete(fn)),
     () => pending,
@@ -187,10 +195,10 @@ export function ConfirmHost() {
       <p className="dlg-text">{shown?.message}</p>
       <div className="dlg-actions">
         <button className="btn" type="button" onClick={() => answer(false)}>
-          {shown?.cancelLabel ?? "取消"}
+          {shown?.cancelLabel ?? t`Cancel`}
         </button>
         <button ref={confirmBtn} className={`btn ${shown?.danger ? "danger solid" : "primary"}`} type="button" onClick={() => answer(true)}>
-          {shown?.confirmLabel ?? "確定"}
+          {shown?.confirmLabel ?? t`OK`}
         </button>
       </div>
     </Dialog>

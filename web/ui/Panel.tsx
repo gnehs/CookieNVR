@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import logoUrl from "../assets/logo.png";
@@ -24,13 +25,14 @@ export function Panel(props: {
   flush?: boolean;
   children?: ReactNode;
 }) {
+  const { t } = useLingui();
   const head = props.title || props.back || props.actions;
   return (
     <section className={`panel${props.className ? ` ${props.className}` : ""}`}>
       {head ? (
         <div className="panel-head">
           {props.back ? (
-            <Link className="back-btn" to={props.back} aria-label="返回">
+            <Link className="back-btn" to={props.back} aria-label={t`Back`}>
               <Icon name="left" size={16} />
             </Link>
           ) : null}

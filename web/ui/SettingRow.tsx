@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon.tsx";
 import { Select } from "./Select.tsx";
@@ -116,7 +117,24 @@ export function SettingsDisclosure({ title, summary, children }: { title: string
  * 常用值的下拉選單＋「自訂…」：選自訂時在同一列出現數字欄位。
  * onChange 收到目前的數值；自訂欄位不合法時是 NaN。
  */
-export function PresetPicker({ label, presets, initial, unit, step = 1, onChange, id, "aria-describedby": describedBy }: { label: string; presets: { value: number; label: string }[]; initial: number; unit: string; step?: number; onChange: (v: number) => void } & Partial<RowA11y>) {
+export function PresetPicker({
+  label,
+  presets,
+  initial,
+  unit,
+  step = 1,
+  onChange,
+  id,
+  "aria-describedby": describedBy,
+}: {
+  label: string;
+  presets: { value: number; label: string }[];
+  initial: number;
+  unit: string;
+  step?: number;
+  onChange: (v: number) => void;
+} & Partial<RowA11y>) {
+  const { t } = useLingui();
   const [picked, setPicked] = useState(presets.some((p) => p.value === initial) ? String(initial) : "custom");
   const [custom, setCustom] = useState(String(initial));
   const input = useRef<HTMLInputElement>(null);
@@ -127,9 +145,9 @@ export function PresetPicker({ label, presets, initial, unit, step = 1, onChange
         id={id}
         aria-describedby={describedBy}
         label={label}
-        entries={[...presets.map((p) => ({ value: String(p.value), label: p.label })), "separator", { value: "custom", label: "自訂…" }]}
+        entries={[...presets.map((p) => ({ value: String(p.value), label: p.label })), "separator", { value: "custom", label: t`Custom…` }]}
         value={picked}
-        display={(o) => (o.value === "custom" ? "自訂" : o.label)}
+        display={(o) => (o.value === "custom" ? t`Custom` : o.label)}
         onChange={(v) => {
           setPicked(v);
           if (v === "custom") {
@@ -152,7 +170,7 @@ export function PresetPicker({ label, presets, initial, unit, step = 1, onChange
           step={String(step)}
           inputMode="decimal"
           className="preset-custom"
-          aria-label={`${label}（自訂，單位 ${unit}）`}
+          aria-label={t`${label} (custom, unit: ${unit})`}
           value={custom}
           onChange={(e) => {
             setCustom(e.currentTarget.value);

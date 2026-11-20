@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useRef, useState, type FormEvent } from "react";
@@ -10,6 +11,7 @@ import { Field } from "../../ui/Field.tsx";
 import { BrandMark } from "../../ui/Panel.tsx";
 
 function AuthForm(props: { title: string; intro?: string; submitLabel: string; confirm: boolean; onSubmit: (username: string, password: string) => Promise<void> }) {
+  const { t } = useLingui();
   const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,14 +24,14 @@ function AuthForm(props: { title: string; intro?: string; submitLabel: string; c
     setError("");
     const u = username.current!.value.trim();
     const p = password.current!.value;
-    if (!u || !p) return setError("請輸入帳號與密碼");
+    if (!u || !p) return setError(t`Enter a username and password`);
     if (props.confirm) {
       if (p.length < 8) {
-        setError("密碼至少 8 個字元");
+        setError(t`Password must be at least 8 characters`);
         return password.current!.focus();
       }
       if (p !== confirm.current!.value) {
-        setError("兩次輸入的密碼不一致");
+        setError(t`The two passwords don't match`);
         return confirm.current!.focus();
       }
     }
@@ -54,14 +56,14 @@ function AuthForm(props: { title: string; intro?: string; submitLabel: string; c
           {props.intro ? <p>{props.intro}</p> : null}
         </header>
         <form className="form" noValidate onSubmit={submit}>
-          <Field label="帳號">
+          <Field label={t`Username`}>
             <input ref={username} type="text" autoComplete="username" required autoCapitalize="off" spellCheck={false} autoFocus />
           </Field>
-          <Field label="密碼" hint={props.confirm ? "至少 8 個字元" : undefined}>
+          <Field label={t`Password`} hint={props.confirm ? t`At least 8 characters` : undefined}>
             <input ref={password} type="password" autoComplete={props.confirm ? "new-password" : "current-password"} required minLength={props.confirm ? 8 : undefined} />
           </Field>
           {props.confirm ? (
-            <Field label="再次輸入密碼">
+            <Field label={t`Confirm password`}>
               <input ref={confirm} type="password" autoComplete="new-password" required />
             </Field>
           ) : null}
@@ -83,15 +85,16 @@ function useSignedIn() {
 }
 
 export function LoginPage() {
+  const { t } = useLingui();
   const { next } = useSearch({ from: "/login" });
   const navigate = useNavigate();
   const signedIn = useSignedIn();
   const target = next ?? "/cameras";
   return (
     <AuthForm
-      title="登入"
-      intro={target.startsWith("/link") ? "登入後就能核准連線請求。" : undefined}
-      submitLabel="登入"
+      title={t`Sign in`}
+      intro={target.startsWith("/link") ? t`Sign in to approve the connection request.` : undefined}
+      submitLabel={t`Sign in`}
       confirm={false}
       onSubmit={async (u, p) => {
         signedIn(await api.login(u, p));
@@ -102,14 +105,15 @@ export function LoginPage() {
 }
 
 export function SetupPage() {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const signedIn = useSignedIn();
   return (
     <AuthForm
-      title="歡迎"
-      intro="第一次使用，先建立管理員帳號，接著就能加入攝影機。"
-      submitLabel="建立帳號"
+      title={t`Welcome`}
+      intro={t`First time here? Create an admin account, then you can add cameras.`}
+      submitLabel={t`Create account`}
       confirm
       onSubmit={async (u, p) => {
         signedIn(await api.setup(u, p));

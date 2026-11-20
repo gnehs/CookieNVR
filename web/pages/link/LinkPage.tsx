@@ -1,3 +1,5 @@
+import { plural } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
@@ -28,6 +30,7 @@ function Frame({ children }: { children: ReactNode }) {
 }
 
 function Outcome({ tone, icon, title, body }: { tone: "ok" | "bad" | "muted"; icon: IconName; title: string; body: string }) {
+  const { t } = useLingui();
   return (
     <Frame>
       <div className="link-outcome" data-tone={tone} role="status">
@@ -37,12 +40,13 @@ function Outcome({ tone, icon, title, body }: { tone: "ok" | "bad" | "muted"; ic
         <h1 className="auth-title">{title}</h1>
         <p>{body}</p>
       </div>
-      <ButtonLink to="/cameras">前往 CookieNVR</ButtonLink>
+      <ButtonLink to="/cameras">{t`Go to CookieNVR`}</ButtonLink>
     </Frame>
   );
 }
 
 function CodeEntry({ error }: { error?: string }) {
+  const { t } = useLingui();
   const navigate = useNavigate();
   const input = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState(error ?? "");
@@ -50,14 +54,17 @@ function CodeEntry({ error }: { error?: string }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const code = input.current!.value.toUpperCase().replace(/[^A-Z]/g, "");
-    if (code.length !== 8) return setErr("代碼是 8 個英文字母");
-    void navigate({ to: "/link/$code", params: { code: `${code.slice(0, 4)}-${code.slice(4)}` } });
+    if (code.length !== 8) return setErr(t`The code is 8 letters`);
+    void navigate({
+      to: "/link/$code",
+      params: { code: `${code.slice(0, 4)}-${code.slice(4)}` },
+    });
   };
   return (
     <Frame>
       <header>
-        <h1 className="auth-title">輸入連線代碼</h1>
-        <p>代碼顯示在要連線的 App（例如 Home Assistant）畫面上。</p>
+        <h1 className="auth-title">{t`Enter the connection code`}</h1>
+        <p>{t`The code is shown on the screen of the app you want to connect, such as Home Assistant.`}</p>
       </header>
       <form className="form" noValidate onSubmit={submit}>
         <input
@@ -70,14 +77,14 @@ function CodeEntry({ error }: { error?: string }) {
           maxLength={12}
           placeholder="XXXX-XXXX"
           className="link-code-input"
-          aria-label="連線代碼"
+          aria-label={t`Connection code`}
           autoFocus
         />
         <p className="form-error" role="alert">
           {err}
         </p>
         <Button variant="primary" type="submit">
-          繼續
+          {t`Continue`}
         </Button>
       </form>
     </Frame>
@@ -86,10 +93,18 @@ function CodeEntry({ error }: { error?: string }) {
 
 function minutesLeft(seconds: number): string {
   const s = Math.max(0, seconds);
-  return s >= 60 ? `${Math.ceil(s / 60)} 分鐘內有效` : `${s} 秒內有效`;
+  if (s >= 60) {
+    const minutes = Math.ceil(s / 60);
+    return plural(minutes, {
+      one: "Valid for # minute",
+      other: "Valid for # minutes",
+    });
+  }
+  return plural(s, { one: "Valid for # second", other: "Valid for # seconds" });
 }
 
 function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; ip: string; expiresIn: number; onDone: (v: View) => void }) {
+  const { t } = useLingui();
   const me = useMe();
   // 用 NVR 給的剩餘秒數在本機倒數，瀏覽器時鐘不準也不影響
   const [deadline] = useState(() => Date.now() + expiresIn * 1000);
@@ -123,6 +138,8 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
       setError(errMsg(e));
     },
   });
+  const spelledCode = code.split("").join(" ");
+  const username = me.username;
   const disabled = !armed || decide.isPending;
   const act = (d: "approve" | "deny") => {
     setError("");
@@ -131,47 +148,47 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
   return (
     <Frame>
       <header>
-        <h1 className="auth-title">允許「{app}」連線？</h1>
+        <h1 className="auth-title">{t`Allow ${app} to connect?`}</h1>
       </header>
       <div className="link-code">
-        <p>確認和 {app} 畫面上的代碼一樣</p>
-        <output className="link-code-value" translate="no" aria-label={`代碼 ${code.split("").join(" ")}`}>
+        <p>{t`Make sure this matches the code on the ${app} screen`}</p>
+        <output className="link-code-value" translate="no" aria-label={t`Code ${spelledCode}`}>
           {code}
         </output>
       </div>
       <div className="link-grants">
-        <p>
-          允許後，{app} 會以「{me.username}」的身分：
-        </p>
+        <p>{t`If you allow it, ${app} will act as ${username} and can:`}</p>
         <ul>
           <li>
             <Icon name="camera" size={16} />
-            看到所有攝影機的畫面和錄影
+            {t`See the picture and recordings of every camera`}
           </li>
           <li>
             <Icon name="activity" size={16} />
-            在有動靜時收到通知
+            {t`Get notified when something moves`}
           </li>
           <li>
             <Icon name="crosshair" size={16} />
-            轉動可以轉的鏡頭
+            {t`Move cameras that can pan and tilt`}
           </li>
           <li>
             <Icon name="settings" size={16} />
-            開關錄影與偵測，也能變更所有設定（和你的管理員帳號一樣）
+            {t`Turn recording and detection on or off, and change every setting (the same as your admin account)`}
           </li>
         </ul>
       </div>
       <p className="link-source">
         <Icon name="globe" size={16} />
         <span>
-          請求來自 <b translate="no">{ip}</b>
+          <Trans>
+            Request from <b translate="no">{ip}</b>
+          </Trans>
         </span>
       </p>
       {isLocalAddress(ip) ? null : (
         <div className="callout warn">
           <Icon name="alert" />
-          <p>這個請求不是從你家裡的網路送出的。除非你很確定，否則請按拒絕。</p>
+          <p>{t`This request didn't come from your home network. Unless you're sure about it, choose Deny.`}</p>
         </div>
       )}
       <p className="form-error" role="alert">
@@ -179,22 +196,23 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
       </p>
       <div className="link-actions">
         <Button disabled={disabled} onClick={() => act("deny")}>
-          拒絕
+          {t`Deny`}
         </Button>
         <Button variant="primary" disabled={disabled} onClick={() => act("approve")}>
-          允許
+          {t`Allow`}
         </Button>
       </div>
       <p className="link-meta">
         <span>{minutesLeft(left)}</span>
         <br />
-        如果不是你剛剛在 {app} 裡按的，請按拒絕。
+        {t`If you didn't just start this in ${app}, choose Deny.`}
       </p>
     </Frame>
   );
 }
 
 function Request({ code }: { code: string }) {
+  const { t } = useLingui();
   const me = useMe();
   const q = useQuery({
     queryKey: ["link", code],
@@ -212,48 +230,65 @@ function Request({ code }: { code: string }) {
       </Frame>
     );
   if (q.isError) {
-    if (q.error instanceof ApiError && q.error.status === 404) return <CodeEntry error="找不到這組代碼，可能打錯了或已經過期" />;
+    if (q.error instanceof ApiError && q.error.status === 404) return <CodeEntry error={t`We couldn't find that code. It may have been mistyped or expired.`} />;
     return (
       <Frame>
         <div className="link-outcome" data-tone="bad" role="alert">
-          <h1 className="auth-title">這裡暫時打不開</h1>
+          <h1 className="auth-title">{t`Can't open this right now`}</h1>
           <p>{errMsg(q.error)}</p>
         </div>
         <Button icon="refresh" onClick={() => void q.refetch()}>
-          重新載入
+          {t`Reload`}
         </Button>
       </Frame>
     );
   }
   const req = q.data;
+  const app = req.app;
   const state: View | "ask" = view ?? (req.status === "pending" ? "ask" : req.status === "denied" ? "denied" : req.status === "expired" ? "expired" : "used");
   switch (state) {
     case "ask":
-      if (me.role !== "admin") return <Outcome tone="muted" icon="lock" title="需要管理員帳號" body={`只有管理員可以允許 ${req.app} 連線，請改用管理員帳號登入後再開啟這個頁面。`} />;
+      if (me.role !== "admin")
+        return (
+          <Outcome
+            tone="muted"
+            icon="lock"
+            title={t`Admin account required`}
+            body={t`Only admins can allow ${app} to connect. Sign in with an admin account, then open this page again.`}
+          />
+        );
       return <Ask code={code} app={req.app} ip={req.ip} expiresIn={req.expiresIn} onDone={setView} />;
     case "approved":
-      return <Outcome tone="ok" icon="check" title="已允許" body={`回到 ${req.app}，它會自動完成設定。之後可以在「設定 → 一般 → 連接其他 App」隨時撤銷。`} />;
+      return (
+        <Outcome
+          tone="ok"
+          icon="check"
+          title={t`Allowed`}
+          body={t`Go back to ${app} and it will finish setting up on its own. You can revoke access at any time in Settings → General → Connect other apps.`}
+        />
+      );
     case "denied":
-      return <Outcome tone="muted" icon="x" title="已拒絕" body={`${req.app} 不會連線到 CookieNVR。`} />;
+      return <Outcome tone="muted" icon="x" title={t`Denied`} body={t`${app} won't connect to CookieNVR.`} />;
     case "used":
-      return <Outcome tone="ok" icon="check" title="這個請求已經完成" body={`${req.app} 已經連線了，不需要再做什麼。`} />;
+      return <Outcome tone="ok" icon="check" title={t`This request is already done`} body={t`${app} is already connected. There's nothing more to do.`} />;
     case "expired":
-      return <Outcome tone="muted" icon="clock" title="這個請求已經過期" body={`回到 ${req.app} 重新開始，會拿到一組新的代碼。`} />;
+      return <Outcome tone="muted" icon="clock" title={t`This request has expired`} body={t`Go back to ${app} and start again to get a new code.`} />;
   }
 }
 
 /** 核准頁：其他 App（例如 Home Assistant）要求連線時，使用者在這裡對照代碼後允許或拒絕 */
 export function LinkPage({ code }: { code?: string }) {
+  const { t } = useLingui();
   // 被其他網站用 iframe 嵌入時不顯示按鈕，避免點擊劫持
   if (window.top !== window.self)
     return (
       <Frame>
         <header>
-          <h1 className="auth-title">請直接開啟這個頁面</h1>
-          <p>為了安全，連線請求只能在 CookieNVR 自己的分頁裡核准。</p>
+          <h1 className="auth-title">{t`Open this page directly`}</h1>
+          <p>{t`For security, connection requests can only be approved in CookieNVR's own tab.`}</p>
         </header>
         <a className="btn primary" href={location.href} target="_blank" rel="noopener">
-          在新分頁開啟
+          {t`Open in a new tab`}
         </a>
       </Frame>
     );

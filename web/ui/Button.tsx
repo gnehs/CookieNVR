@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { createLink } from "@tanstack/react-router";
 import { forwardRef, useRef, useState, type ButtonHTMLAttributes, type AnchorHTMLAttributes } from "react";
 import { Icon } from "./Icon.tsx";
@@ -67,15 +69,28 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 export async function copyWithToast(text: string, label: string) {
-  if (await copyText(text)) toast(`已複製${label}`);
-  else toast("無法複製，請手動選取", "error");
+  if (await copyText(text)) toast(t`Copied ${label}`);
+  else toast(t`Couldn't copy. Select the text manually.`, "error");
 }
 
 /**
  * 複製按鈕：按下後在按鈕上換成打勾與「已複製」，同時用 toast 告知。
  * 不在回饋期間停用按鈕，失敗後可以直接再按一次。
  */
-export function CopyButton({ label, getText, done, className, ariaLabel }: { label: string; getText: () => string | Promise<string>; done?: string; className?: string; ariaLabel?: string }) {
+export function CopyButton({
+  label,
+  getText,
+  done,
+  className,
+  ariaLabel,
+}: {
+  label: string;
+  getText: () => string | Promise<string>;
+  done?: string;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const { t } = useLingui();
   const [state, setState] = useState<"done" | "failed" | null>(null);
   const busy = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -87,7 +102,11 @@ export function CopyButton({ label, getText, done, className, ariaLabel }: { lab
     try {
       // 內容要等網路回來時，Safari 只接受在點擊當下交出 ClipboardItem（內容可以是之後才完成的 Promise）
       if (window.isSecureContext && "ClipboardItem" in window && navigator.clipboard?.write) {
-        await navigator.clipboard.write([new ClipboardItem({ "text/plain": pending.then((t) => new Blob([t], { type: "text/plain" })) })]);
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": pending.then((t) => new Blob([t], { type: "text/plain" })),
+          }),
+        ]);
         ok = true;
       }
     } catch {}
@@ -99,14 +118,14 @@ export function CopyButton({ label, getText, done, className, ariaLabel }: { lab
     busy.current = false;
     clearTimeout(timer.current);
     setState(ok ? "done" : "failed");
-    toast(ok ? (done ?? "已複製") : "無法複製，請再試一次", ok ? "ok" : "error");
+    toast(ok ? (done ?? t`Copied`) : t`Couldn't copy. Try again.`, ok ? "ok" : "error");
     timer.current = setTimeout(() => setState(null), 2200);
   };
   return (
     <button type="button" className={`btn copy-btn${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-state={state ?? undefined} onClick={onClick}>
       <span className="copy-face" key={state ?? "idle"}>
         <Icon name={state === "done" ? "check" : state === "failed" ? "alert" : "copy"} size={16} />
-        <span>{state === "done" ? "已複製" : state === "failed" ? "複製失敗" : label}</span>
+        <span>{state === "done" ? t`Copied` : state === "failed" ? t`Copy failed` : label}</span>
       </span>
     </button>
   );

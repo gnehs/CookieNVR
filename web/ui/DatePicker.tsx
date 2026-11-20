@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { Popover } from "@base-ui/react/popover";
 import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "./Icon.tsx";
@@ -16,8 +17,7 @@ import {
   spokenDay,
   stepDay,
   WEEK_START,
-  WEEKDAY_LONG,
-  WEEKDAY_SHORT,
+  weekdayName,
   yearMonth,
   type DayKey,
   type GridKey,
@@ -51,7 +51,9 @@ const WEEK = Array.from({ length: 7 }, (_, i) => (WEEK_START + i) % 7);
 
 /** 日期選擇：跟下拉選單同一種按鈕，點開是月曆（Base UI Popover 裡一個 role="grid"，鍵盤操作照 WAI-ARIA 日期選擇） */
 export function DatePicker(props: DatePickerProps) {
+  const { t } = useLingui();
   const { value, min = null, max = null, marked = null } = props;
+  const pickerLabel = props.label;
   const labelId = useId();
   const valueId = useId();
   const titleId = useId();
@@ -66,7 +68,7 @@ export function DatePicker(props: DatePickerProps) {
 
   const selectable = (k: DayKey) => (!min || k >= min) && (!max || k <= max) && (!props.onlyMarked || !!marked?.has(k));
   const near = (dir: 1 | -1, from: DayKey) => stepDay(from, dir, selectable, min, max);
-  const label = value ? (props.format ?? shortDay)(value, today) : (props.clearLabel ?? "選擇日期");
+  const label = value ? (props.format ?? shortDay)(value, today) : (props.clearLabel ?? t`Select a date`);
 
   /** 打開時焦點在目前的值；沒有值時在今天，只能選有資料的日子時改到最近一個有資料的日子 */
   const initialFocus = (): DayKey => {
@@ -112,7 +114,7 @@ export function DatePicker(props: DatePickerProps) {
         {props.label}
       </span>
       {props.stepper ? (
-        <button type="button" className="btn icon-only dp-step" aria-label="前一天" disabled={!value || near(-1, value) === null} onClick={() => step(-1)}>
+        <button type="button" className="btn icon-only dp-step" aria-label={t`Previous day`} disabled={!value || near(-1, value) === null} onClick={() => step(-1)}>
           <Icon name="left" size={18} />
         </button>
       ) : null}
@@ -153,7 +155,7 @@ export function DatePicker(props: DatePickerProps) {
               <Popover.Popup
                 ref={swipe}
                 className="popup dp-pop"
-                aria-label={`選擇${props.label}`}
+                aria-label={t`Select ${pickerLabel}`}
                 data-instant={instant ? "" : undefined}
                 // 打開時焦點放在目前的值（或今天）那一格
                 initialFocus={() => body.current?.querySelector<HTMLElement>('td[tabindex="0"]') ?? null}
@@ -169,7 +171,7 @@ export function DatePicker(props: DatePickerProps) {
                   <button
                     type="button"
                     className="btn ghost icon-only dp-nav"
-                    aria-label="上個月"
+                    aria-label={t`Previous month`}
                     disabled={!!min && monthOf(addMonths(firstOfView, -1)) < monthOf(min)}
                     onClick={() => focusDay(addMonths(focusKey, -1), false)}
                   >
@@ -181,7 +183,7 @@ export function DatePicker(props: DatePickerProps) {
                   <button
                     type="button"
                     className="btn ghost icon-only dp-nav"
-                    aria-label="下個月"
+                    aria-label={t`Next month`}
                     disabled={!!max && monthOf(addMonths(firstOfView, 1)) > monthOf(max)}
                     onClick={() => focusDay(addMonths(focusKey, 1), false)}
                   >
@@ -192,8 +194,8 @@ export function DatePicker(props: DatePickerProps) {
                   <thead>
                     <tr>
                       {WEEK.map((d) => (
-                        <th key={d} scope="col" abbr={WEEKDAY_LONG[d]}>
-                          {WEEKDAY_SHORT[d]}
+                        <th key={d} scope="col" abbr={weekdayName(d, "long")}>
+                          {weekdayName(d, "narrow")}
                         </th>
                       ))}
                     </tr>
@@ -225,7 +227,7 @@ export function DatePicker(props: DatePickerProps) {
                               className="dp-day"
                               tabIndex={c.key === focusKey ? 0 : -1}
                               data-key={c.key}
-                              aria-label={`${spokenDay(c.key)}${has && props.markedLabel ? `，${props.markedLabel}` : ""}${c.key === today ? "，今天" : ""}`}
+                              aria-label={[spokenDay(c.key), has && props.markedLabel, c.key === today && t`Today`].filter(Boolean).join(", ")}
                               aria-selected={c.key === value ? true : undefined}
                               aria-current={c.key === today ? "date" : undefined}
                               aria-disabled={selectable(c.key) ? undefined : true}
@@ -244,7 +246,7 @@ export function DatePicker(props: DatePickerProps) {
                   <div className="dp-foot">
                     {todayOk ? (
                       <button type="button" className="btn small" onClick={() => pick(today)}>
-                        今天
+                        {t`Today`}
                       </button>
                     ) : null}
                     {props.clearLabel ? (
@@ -260,7 +262,7 @@ export function DatePicker(props: DatePickerProps) {
         </Popover.Root>
       </span>
       {props.stepper ? (
-        <button type="button" className="btn icon-only dp-step" aria-label="後一天" disabled={!value || near(1, value) === null} onClick={() => step(1)}>
+        <button type="button" className="btn icon-only dp-step" aria-label={t`Next day`} disabled={!value || near(1, value) === null} onClick={() => step(1)}>
           <Icon name="right" size={18} />
         </button>
       ) : null}

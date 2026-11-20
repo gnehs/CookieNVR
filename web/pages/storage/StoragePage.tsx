@@ -1,3 +1,6 @@
+import { i18n } from "@lingui/core";
+import { plural, t } from "@lingui/core/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import type { SettingsDto, SystemDto } from "../../../src/api-types.ts";
@@ -15,8 +18,18 @@ import { toast } from "../../ui/toast.tsx";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
 
 const GB = 1024 ** 3;
-const days = (list: number[]) => [...list.map((d) => ({ value: d, label: `${d} 天` })), { value: 0, label: "不限" }];
-const FREE_PRESETS = [2, 5, 10, 20].map((g) => ({ value: g, label: `${g} GB` }));
+const days = (list: number[]) => [
+  ...list.map((d) => ({
+    value: d,
+    label: plural(d, { one: "# day", other: "# days" }),
+  })),
+  { value: 0, label: t`Unlimited` },
+];
+const listOf = (items: string[]) => new Intl.ListFormat(i18n.locale, { type: "conjunction" }).format(items);
+const FREE_PRESETS = [2, 5, 10, 20].map((g) => ({
+  value: g,
+  label: `${g} GB`,
+}));
 
 interface Draft {
   continuousDays: number;
@@ -35,6 +48,7 @@ const sameDraft = (a: Draft, b: Draft) => a.continuousDays === b.continuousDays 
 
 /** 設定 → 錄影與儲存 */
 export function StoragePage() {
+  const { t } = useLingui();
   const settings = useQuery(settingsQuery);
   const sys = useQuery(systemQuery);
   const cams = useQuery(camerasQuery);
@@ -63,6 +77,7 @@ function Content({ settings, sys, names }: { settings: SettingsDto; sys: SystemD
 }
 
 function Estimate({ sys, draft, savedMinFreeGb }: { sys: SystemDto; draft: Draft; savedMinFreeGb: number }) {
+  const { t } = useLingui();
   const free = Number.isFinite(draft.minFreeGb) ? draft.minFreeGb : savedMinFreeGb;
   const est = estimateDays(sys, free * GB);
   const keep = draft.continuousDays;
@@ -70,7 +85,7 @@ function Estimate({ sys, draft, savedMinFreeGb }: { sys: SystemDto; draft: Draft
     return (
       <p className="sto-estimate" aria-live="polite">
         <Icon name="clock" size={17} />
-        <span>錄影一段時間後，這裡會估算大約可以存幾天。</span>
+        <span>{t`Once there are some recordings, this will estimate how many days fit.`}</span>
       </p>
     );
   }
@@ -80,7 +95,16 @@ function Estimate({ sys, draft, savedMinFreeGb }: { sys: SystemDto; draft: Draft
       <p className="sto-estimate warn" aria-live="polite">
         <Icon name="alert" size={17} />
         <span>
-          <b className="num">空間只夠存約 {d} 天</b>，比設定的 {keep} 天少，最舊的錄影會提早刪除。
+          <b className="num">
+            {plural(d, {
+              one: "Space only fits about # day",
+              other: "Space only fits about # days",
+            })}
+          </b>
+          {plural(keep, {
+            one: ", fewer than the # day you set, so the oldest recordings will be deleted early.",
+            other: ", fewer than the # days you set, so the oldest recordings will be deleted early.",
+          })}
         </span>
       </p>
     );
@@ -89,8 +113,13 @@ function Estimate({ sys, draft, savedMinFreeGb }: { sys: SystemDto; draft: Draft
     <p className="sto-estimate" aria-live="polite">
       <Icon name={keep > 0 ? "check-circle" : "hdd"} size={17} />
       <span>
-        <b className="num">大約可存 {d} 天</b>
-        {keep > 0 ? `的錄影。設定保留 ${keep} 天，空間足夠。` : "的錄影。沒有天數上限，空間不夠時從最舊的開始刪除。"}
+        <b className="num">{plural(d, { one: "About # day fits", other: "About # days fit" })}</b>
+        {keep > 0
+          ? plural(keep, {
+              one: ". You keep recordings for # day, so there's enough space.",
+              other: ". You keep recordings for # days, so there's enough space.",
+            })
+          : t`. There's no day limit; when space runs low, the oldest recordings are deleted first.`}
       </span>
     </p>
   );
@@ -100,21 +129,40 @@ const inside = (path: string, dir: string) => path === dir || path.startsWith(di
 
 /** 容量條以外要知道的事：appdata 在另一顆的用量、留在舊位置的錄影、另外掛了 /recordings 卻和 appdata 同一顆 */
 function DiskNotes({ sys }: { sys: SystemDto }) {
+  const { t } = useLingui();
   const data = sys.dataDisk;
   const old = sys.elsewhere.reduce((a, e) => a + e.bytes, 0);
-  const notes: { icon: "hdd" | "info" | "alert"; tone?: "warn"; text: string }[] = [];
+  const dataPath = data.path;
+  const dataFree = formatBytes(data.freeBytes);
+  const dataTotal = formatBytes(data.totalBytes);
+  const notes: {
+    icon: "hdd" | "info" | "alert";
+    tone?: "warn";
+    text: string;
+  }[] = [];
   if (!data.sameAsRecordings) {
     const tone = data.freeBytes < DATA_DISK.warnBytes ? "warn" : undefined;
-    notes.push({ icon: tone ? "alert" : "hdd", tone, text: `資料庫、縮圖與匯出放在 appdata（${data.path}）那顆硬碟：可用 ${formatBytes(data.freeBytes)}，共 ${formatBytes(data.totalBytes)}。` });
+    notes.push({
+      icon: tone ? "alert" : "hdd",
+      tone,
+      text: t`The database, thumbnails and exports live on the appdata disk (${dataPath}): ${dataFree} free of ${dataTotal}.`,
+    });
   } else if (!inside(sys.disk.path, data.path)) {
     notes.push({
       icon: "info",
-      text: "錄影和 appdata 其實在同一顆硬碟上。如果另外掛載錄影資料夾是想放到別顆硬碟（例如 Unraid 的陣列），請檢查那個共享的主要儲存設定。",
+      text: t`Recordings and appdata are actually on the same disk. If you mounted the recordings folder separately to put it on another disk (for example an Unraid array), check that share's primary storage setting.`,
     });
   }
   if (old > 0) {
-    const where = sys.elsewhere.length === 1 ? `舊的位置 ${sys.elsewhere[0]!.path}` : `${sys.elsewhere.length} 個舊的位置（${sys.elsewhere.map((e) => e.path).join("、")}）`;
-    notes.push({ icon: "info", text: `另有 ${formatBytes(old)} 錄影在${where}，不算在上面的容量裡；照常可以回放，會照保留天數自動清掉。` });
+    const oldPaths = sys.elsewhere.map((e) => e.path);
+    const oldCount = oldPaths.length;
+    const oldList = listOf(oldPaths);
+    const where = oldCount === 1 ? t`the old location ${oldList}` : t`${oldCount} old locations (${oldList})`;
+    const oldSize = formatBytes(old);
+    notes.push({
+      icon: "info",
+      text: t`Another ${oldSize} of recordings are in ${where}. They aren't counted in the capacity above; they still play back and are cleared automatically by the retention days.`,
+    });
   }
   if (!notes.length) return null;
   return (
@@ -129,10 +177,16 @@ function DiskNotes({ sys }: { sys: SystemDto }) {
   );
 }
 
-type Part = { name: string; bytes: number; kind: "cam" | "orphan" | "other"; shade?: number };
+type Part = {
+  name: string;
+  bytes: number;
+  kind: "cam" | "orphan" | "other";
+  shade?: number;
+};
 
 /** 儲存空間總覽：容量條、各攝影機用量。估算放在這張卡裡，但依下面表單目前填的值算 */
 function Overview({ sys, names, draft, savedMinFreeGb }: { sys: SystemDto; names: Map<string, string>; draft: Draft; savedMinFreeGb: number }) {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const { totalBytes, freeBytes } = sys.disk;
   const live = sys.usage.filter((u) => names.has(u.cameraId)).sort((a, b) => b.bytes - a.bytes);
@@ -141,41 +195,67 @@ function Overview({ sys, names, draft, savedMinFreeGb }: { sys: SystemDto; names
   const other = Math.max(0, totalBytes - freeBytes - recorded);
   const pct = (n: number) => (totalBytes > 0 ? (n / totalBytes) * 100 : 0);
   const parts: Part[] = [
-    ...live.map((u, i) => ({ name: names.get(u.cameraId)!, bytes: u.bytes, kind: "cam" as const, shade: i % 5 })),
-    ...(orphanBytes > 0 ? [{ name: "已刪除的攝影機", bytes: orphanBytes, kind: "orphan" as const }] : []),
-    ...(other > 0 ? [{ name: "其他檔案", bytes: other, kind: "other" as const }] : []),
+    ...live.map((u, i) => ({
+      name: names.get(u.cameraId)!,
+      bytes: u.bytes,
+      kind: "cam" as const,
+      shade: i % 5,
+    })),
+    ...(orphanBytes > 0
+      ? [
+          {
+            name: t`Deleted cameras`,
+            bytes: orphanBytes,
+            kind: "orphan" as const,
+          },
+        ]
+      : []),
+    ...(other > 0 ? [{ name: t`Other files`, bytes: other, kind: "other" as const }] : []),
   ];
   const usedPct = Math.round(pct(totalBytes - freeBytes));
+  const totalText = formatBytes(totalBytes);
+  const recordedText = formatBytes(recorded);
+  const recordPath = sys.disk.path;
+  const freeText = formatBytes(freeBytes);
+  const partsText = listOf(parts.map((p) => `${p.name} ${formatBytes(p.bytes)}`));
 
   const purge = useMutation({
     mutationFn: () => api.purgeOrphanedRecordings(),
     onSuccess: async (res) => {
-      toast(`已清除，釋放 ${formatBytes(res.bytes)}`);
+      const freed = formatBytes(res.bytes);
+      toast(t`Cleared, freed ${freed}`);
       await qc.invalidateQueries({ queryKey: ["system"] });
     },
   });
   const clearOrphans = async () => {
-    const ok = await confirmDialog("清除已刪除攝影機的錄影？", `這些攝影機已經不在了，錄影會立刻永久刪除，無法復原，並釋放 ${formatBytes(orphanBytes)}。其他攝影機的錄影不受影響。`, {
-      confirmLabel: "清除錄影",
-      danger: true,
-    });
+    const freed = formatBytes(orphanBytes);
+    const ok = await confirmDialog(
+      t`Clear recordings of deleted cameras?`,
+      t`These cameras no longer exist. Their recordings will be permanently deleted right away, which can't be undone, freeing ${freed}. Recordings of other cameras aren't affected.`,
+      {
+        confirmLabel: t`Clear recordings`,
+        danger: true,
+      },
+    );
     if (ok) purge.mutate();
   };
 
   return (
-    <SettingsGroup title="儲存空間" className="sto">
+    <SettingsGroup title={t`Storage`} className="sto">
       <div className="sto-body">
         <div className="sto-top">
           <div className="sto-free">
             <b className="num">{formatBytes(freeBytes)}</b>
-            <span>可用</span>
+            <span>{t`Free`}</span>
           </div>
-          <span className="sto-total num">{`共 ${formatBytes(totalBytes)} · 錄影佔 ${formatBytes(recorded)}`}</span>
+          <span className="sto-total num">{t`${totalText} total · ${recordedText} recorded`}</span>
         </div>
         <p className="sto-where">
-          錄影位置 <code>{sys.disk.path}</code> 所在的硬碟
+          <Trans>
+            The disk holding the recording location <code>{recordPath}</code>
+          </Trans>
         </p>
-        <div className="sto-bar" role="img" aria-label={`已用 ${usedPct}%，${parts.map((p) => `${p.name} ${formatBytes(p.bytes)}`).join("、")}，可用 ${formatBytes(freeBytes)}`}>
+        <div className="sto-bar" role="img" aria-label={t`${usedPct}% used, ${partsText}, ${freeText} free`}>
           {parts.map((p) => (
             <i key={`${p.kind}:${p.name}`} className={`sto-seg ${p.kind}`} data-shade={p.shade} style={{ width: `${Math.max(pct(p.bytes), 0.6).toFixed(2)}%` }} />
           ))}
@@ -193,39 +273,43 @@ function Overview({ sys, names, draft, savedMinFreeGb }: { sys: SystemDto; names
               </span>
               <span className="sto-size num">{formatBytes(p.bytes)}</span>
               {p.kind === "orphan" ? (
-                <Button small variant="danger" aria-label="清除已刪除攝影機的錄影" disabled={purge.isPending} onClick={() => void clearOrphans()}>
-                  清除
+                <Button small variant="danger" aria-label={t`Clear recordings of deleted cameras`} disabled={purge.isPending} onClick={() => void clearOrphans()}>
+                  {t`Clear`}
                 </Button>
               ) : null}
             </li>
           ))}
           <li className="sto-item free">
             <i className="sto-swatch sto-seg free" aria-hidden="true" />
-            <span className="sto-name">可用</span>
+            <span className="sto-name">{t`Free`}</span>
             <span className="sto-size num">{formatBytes(freeBytes)}</span>
           </li>
         </ul>
       ) : (
-        <p className="sto-empty">還沒有錄影。</p>
+        <p className="sto-empty">{t`No recordings yet.`}</p>
       )}
     </SettingsGroup>
   );
 }
 
 function RetentionForm({ settings, draft, setDraft }: { settings: SettingsDto; draft: Draft; setDraft: (f: (d: Draft) => Draft) => void }) {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const saved = draftOf(settings);
   const [error, setError] = useState("");
   const form = useRef<HTMLFormElement>(null);
   const pathInput = useRef<HTMLInputElement>(null);
-  const set = <K extends keyof Draft>(k: K) => (v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const set =
+    <K extends keyof Draft>(k: K) =>
+    (v: Draft[K]) =>
+      setDraft((d) => ({ ...d, [k]: v }));
 
   const save = useMutation({
     mutationFn: (patch: Partial<SettingsDto>) => api.updateSettings(patch),
     onSuccess: (next) => {
       qc.setQueryData(settingsQuery.queryKey, next);
       void qc.invalidateQueries({ queryKey: ["system"] });
-      toast("已儲存錄影與儲存設定");
+      toast(t`Recording and storage settings saved`);
     },
     onError: (e) => setError(errMsg(e)),
   });
@@ -234,60 +318,73 @@ function RetentionForm({ settings, draft, setDraft }: { settings: SettingsDto; d
     e.preventDefault();
     setError("");
     const d = { ...draft, storagePath: draft.storagePath.trim() };
-    if (![d.continuousDays, d.eventDays, d.minFreeGb].every((n) => Number.isFinite(n) && n >= 0)) return void setError("天數與空間請填 0 或更大的數字");
+    if (![d.continuousDays, d.eventDays, d.minFreeGb].every((n) => Number.isFinite(n) && n >= 0)) return void setError(t`Enter 0 or a larger number for days and space`);
     if (!d.storagePath) {
       const details = form.current?.querySelector<HTMLDetailsElement>("details.set-disclosure");
       if (details) details.open = true;
       pathInput.current?.focus();
-      return void setError("請填寫儲存位置");
+      return void setError(t`Enter a storage location`);
     }
     if (d.storagePath !== saved.storagePath) {
-      const ok = await confirmDialog("更改儲存位置？", `新的錄影會存到「${d.storagePath}」。舊的錄影留在原處，仍然可以回放，但不會搬過去。`, { confirmLabel: "更改並儲存" });
+      const newPath = d.storagePath;
+      const ok = await confirmDialog(
+        t`Change the storage location?`,
+        t`New recordings will be saved to "${newPath}". Old recordings stay where they are and can still be played back, but they won't be moved.`,
+        { confirmLabel: t`Change and save` },
+      );
       if (!ok) return;
     }
     save.mutate({
       ...(d.storagePath !== saved.storagePath ? { storagePath: d.storagePath } : {}),
-      retention: { continuousDays: Math.floor(d.continuousDays), eventDays: Math.floor(d.eventDays), minFreeBytes: Math.round(d.minFreeGb * GB) },
+      retention: {
+        continuousDays: Math.floor(d.continuousDays),
+        eventDays: Math.floor(d.eventDays),
+        minFreeBytes: Math.round(d.minFreeGb * GB),
+      },
     });
   };
 
   const unchanged = sameDraft({ ...draft, storagePath: draft.storagePath.trim() }, saved);
   const f = draft.minFreeGb;
+  const keepFree = Number.isFinite(f) ? `${f} GB` : "—";
+  const pathText = draft.storagePath.trim() || t`No location set`;
   return (
     <form ref={form} className="set-form" noValidate onSubmit={(e) => void onSubmit(e)}>
       <SettingsGroup
-        title="保留期限"
-        desc="超過就自動刪除；空間不夠時，不論天數都會先刪最舊的錄影。"
+        title={t`Retention`}
+        desc={t`Recordings older than this are deleted automatically. When space runs low, the oldest recordings go first, whatever the days say.`}
         foot={
           <>
             <p className="form-error" role="alert">
               {error}
             </p>
             <Button type="submit" variant="primary" disabled={unchanged || save.isPending}>
-              儲存變更
+              {t`Save changes`}
             </Button>
           </>
         }
       >
         <SettingRow
-          title="連續錄影"
-          desc="全天候錄下的影片。"
-          control={(a) => <PresetPicker {...a} label="連續錄影" presets={days([3, 7, 14, 30])} initial={saved.continuousDays} unit="天" onChange={set("continuousDays")} />}
+          title={t`Continuous recording`}
+          desc={t`Video recorded around the clock.`}
+          control={(a) => (
+            <PresetPicker {...a} label={t`Continuous recording`} presets={days([3, 7, 14, 30])} initial={saved.continuousDays} unit={t`days`} onChange={set("continuousDays")} />
+          )}
         />
         <SettingRow
-          title="事件片段"
-          desc="偵測到動靜時的片段，通常可以留得比連續錄影久。"
-          control={(a) => <PresetPicker {...a} label="事件片段" presets={days([7, 30, 90])} initial={saved.eventDays} unit="天" onChange={set("eventDays")} />}
+          title={t`Event clips`}
+          desc={t`Clips recorded when motion is detected. They can usually be kept longer than continuous recording.`}
+          control={(a) => <PresetPicker {...a} label={t`Event clips`} presets={days([7, 30, 90])} initial={saved.eventDays} unit={t`days`} onChange={set("eventDays")} />}
         />
-        <SettingsDisclosure title="進階設定" summary={`保留 ${Number.isFinite(f) ? `${f} GB` : "—"} 空間 · ${draft.storagePath.trim() || "未設定位置"}`}>
+        <SettingsDisclosure title={t`Advanced`} summary={t`Keep ${keepFree} free · ${pathText}`}>
           <SettingRow
-            title="最低剩餘空間"
-            desc="硬碟剩下的空間少於這個值時，先刪除最舊的錄影。"
-            control={(a) => <PresetPicker {...a} label="最低剩餘空間" presets={FREE_PRESETS} initial={saved.minFreeGb} unit="GB" step={0.1} onChange={set("minFreeGb")} />}
+            title={t`Minimum free space`}
+            desc={t`When the disk has less free space than this, the oldest recordings are deleted first.`}
+            control={(a) => <PresetPicker {...a} label={t`Minimum free space`} presets={FREE_PRESETS} initial={saved.minFreeGb} unit="GB" step={0.1} onChange={set("minFreeGb")} />}
           />
           <SettingRow
-            title="儲存位置"
-            desc="錄影存放的資料夾。改了之後新的錄影存到新位置，舊的仍然可以回放。"
+            title={t`Storage location`}
+            desc={t`The folder where recordings are stored. After you change it, new recordings go to the new location and old ones can still be played back.`}
             wide
             control={(a) => (
               <input
