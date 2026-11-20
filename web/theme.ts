@@ -1,3 +1,5 @@
+import { msg } from "@lingui/core/macro";
+
 // index.html 的 inline script 在首次繪製前用同樣的 key 套用偏好，兩邊要一起改
 const MODE_KEY = "cookienvr.color-scheme";
 const ACCENT_KEY = "cookienvr.accent";
@@ -6,13 +8,13 @@ const SIDEBAR_KEY = "cookienvr.sidebar";
 export type ColorMode = "light" | "dark" | "system";
 
 export const ACCENTS = [
-  { id: "blue", label: "藍" },
-  { id: "indigo", label: "靛" },
-  { id: "violet", label: "紫" },
-  { id: "pink", label: "粉" },
-  { id: "orange", label: "橘" },
-  { id: "green", label: "綠" },
-  { id: "teal", label: "青" },
+  { id: "blue", label: msg`Blue` },
+  { id: "indigo", label: msg`Indigo` },
+  { id: "violet", label: msg`Violet` },
+  { id: "pink", label: msg`Pink` },
+  { id: "orange", label: msg`Orange` },
+  { id: "green", label: msg`Green` },
+  { id: "teal", label: msg`Teal` },
 ] as const;
 
 export type Accent = (typeof ACCENTS)[number]["id"];

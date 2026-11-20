@@ -1,0 +1,92 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-11-20 19:27+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+
+#: web/pages/account/Appearance.tsx
+msgid "Accent color"
+msgstr "Accent color"
+
+#: web/pages/account/Appearance.tsx
+msgid "Appearance"
+msgstr "Appearance"
+
+#: web/pages/account/Appearance.tsx
+msgid "Applies to this browser only"
+msgstr "Applies to this browser only"
+
+#: web/theme.ts
+msgid "Blue"
+msgstr "Blue"
+
+#: web/pages/account/Appearance.tsx
+msgid "Choose light or dark, or follow your system automatically."
+msgstr "Choose light or dark, or follow your system automatically."
+
+#: web/pages/account/Appearance.tsx
+msgid "Color mode"
+msgstr "Color mode"
+
+#: web/pages/account/Appearance.tsx
+msgid "Currently dark"
+msgstr "Currently dark"
+
+#: web/pages/account/Appearance.tsx
+msgid "Currently light"
+msgstr "Currently light"
+
+#: web/pages/account/Appearance.tsx
+msgid "Dark"
+msgstr "Dark"
+
+#: web/theme.ts
+msgid "Green"
+msgstr "Green"
+
+#: web/theme.ts
+msgid "Indigo"
+msgstr "Indigo"
+
+#: web/pages/account/Appearance.tsx
+msgid "Language"
+msgstr "Language"
+
+#: web/pages/account/Appearance.tsx
+msgid "Light"
+msgstr "Light"
+
+#: web/pages/account/Appearance.tsx
+msgid "Match browser"
+msgstr "Match browser"
+
+#: web/pages/account/Appearance.tsx
+msgid "Match system"
+msgstr "Match system"
+
+#: web/theme.ts
+msgid "Orange"
+msgstr "Orange"
+
+#: web/theme.ts
+msgid "Pink"
+msgstr "Pink"
+
+#: web/theme.ts
+msgid "Teal"
+msgstr "Teal"
+
+#: web/pages/account/Appearance.tsx
+msgid "The language of the interface."
+msgstr "The language of the interface."
+
+#: web/pages/account/Appearance.tsx
+msgid "Used for buttons, selections, and navigation."
+msgstr "Used for buttons, selections, and navigation."
+
+#: web/theme.ts
+msgid "Violet"
+msgstr "Violet"

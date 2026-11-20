@@ -1,0 +1,92 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-11-20 19:27+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: zh-Hant\n"
+
+#: web/pages/account/Appearance.tsx
+msgid "Accent color"
+msgstr "主色"
+
+#: web/pages/account/Appearance.tsx
+msgid "Appearance"
+msgstr "外觀"
+
+#: web/pages/account/Appearance.tsx
+msgid "Applies to this browser only"
+msgstr "只套用在這個瀏覽器"
+
+#: web/theme.ts
+msgid "Blue"
+msgstr "藍"
+
+#: web/pages/account/Appearance.tsx
+msgid "Choose light or dark, or follow your system automatically."
+msgstr "選擇淺色或深色，或跟著系統自動切換。"
+
+#: web/pages/account/Appearance.tsx
+msgid "Color mode"
+msgstr "色彩模式"
+
+#: web/pages/account/Appearance.tsx
+msgid "Currently dark"
+msgstr "目前為深色"
+
+#: web/pages/account/Appearance.tsx
+msgid "Currently light"
+msgstr "目前為淺色"
+
+#: web/pages/account/Appearance.tsx
+msgid "Dark"
+msgstr "深色"
+
+#: web/theme.ts
+msgid "Green"
+msgstr "綠"
+
+#: web/theme.ts
+msgid "Indigo"
+msgstr "靛"
+
+#: web/pages/account/Appearance.tsx
+msgid "Language"
+msgstr "語言"
+
+#: web/pages/account/Appearance.tsx
+msgid "Light"
+msgstr "淺色"
+
+#: web/pages/account/Appearance.tsx
+msgid "Match browser"
+msgstr "跟隨瀏覽器"
+
+#: web/pages/account/Appearance.tsx
+msgid "Match system"
+msgstr "跟隨系統"
+
+#: web/theme.ts
+msgid "Orange"
+msgstr "橘"
+
+#: web/theme.ts
+msgid "Pink"
+msgstr "粉"
+
+#: web/theme.ts
+msgid "Teal"
+msgstr "青"
+
+#: web/pages/account/Appearance.tsx
+msgid "The language of the interface."
+msgstr "介面使用的語言。"
+
+#: web/pages/account/Appearance.tsx
+msgid "Used for buttons, selections, and navigation."
+msgstr "用在按鈕、選取狀態與導覽列。"
+
+#: web/theme.ts
+msgid "Violet"
+msgstr "紫"

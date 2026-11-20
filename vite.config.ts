@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants, gzipSync } from "node:zlib";
+import { lingui } from "@lingui/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
@@ -45,6 +46,7 @@ export default defineConfig({
       generatedRouteTree: `${web}/routeTree.gen.ts`,
     }),
     react(),
+    lingui({ macroTransform: true }),
     precompress(),
   ],
   server: {

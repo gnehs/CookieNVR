@@ -72,7 +72,7 @@ FROM oven/bun:${BUN_VERSION}-slim AS web
 WORKDIR /build
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
-COPY tsconfig.json vite.config.ts ./
+COPY tsconfig.json vite.config.ts lingui.config.ts ./
 COPY src ./src
 COPY web ./web
 RUN bun run build

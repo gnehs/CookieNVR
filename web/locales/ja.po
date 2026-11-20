@@ -1,0 +1,92 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-11-20 19:27+0800\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: web/pages/account/Appearance.tsx
+msgid "Accent color"
+msgstr "アクセントカラー"
+
+#: web/pages/account/Appearance.tsx
+msgid "Appearance"
+msgstr "外観"
+
+#: web/pages/account/Appearance.tsx
+msgid "Applies to this browser only"
+msgstr "このブラウザにのみ適用"
+
+#: web/theme.ts
+msgid "Blue"
+msgstr "ブルー"
+
+#: web/pages/account/Appearance.tsx
+msgid "Choose light or dark, or follow your system automatically."
+msgstr "ライトかダークを選ぶか、システムに合わせて自動で切り替えます。"
+
+#: web/pages/account/Appearance.tsx
+msgid "Color mode"
+msgstr "カラーモード"
+
+#: web/pages/account/Appearance.tsx
+msgid "Currently dark"
+msgstr "現在はダーク"
+
+#: web/pages/account/Appearance.tsx
+msgid "Currently light"
+msgstr "現在はライト"
+
+#: web/pages/account/Appearance.tsx
+msgid "Dark"
+msgstr "ダーク"
+
+#: web/theme.ts
+msgid "Green"
+msgstr "グリーン"
+
+#: web/theme.ts
+msgid "Indigo"
+msgstr "インディゴ"
+
+#: web/pages/account/Appearance.tsx
+msgid "Language"
+msgstr "言語"
+
+#: web/pages/account/Appearance.tsx
+msgid "Light"
+msgstr "ライト"
+
+#: web/pages/account/Appearance.tsx
+msgid "Match browser"
+msgstr "ブラウザに合わせる"
+
+#: web/pages/account/Appearance.tsx
+msgid "Match system"
+msgstr "システムに合わせる"
+
+#: web/theme.ts
+msgid "Orange"
+msgstr "オレンジ"
+
+#: web/theme.ts
+msgid "Pink"
+msgstr "ピンク"
+
+#: web/theme.ts
+msgid "Teal"
+msgstr "ティール"
+
+#: web/pages/account/Appearance.tsx
+msgid "The language of the interface."
+msgstr "インターフェースの表示言語。"
+
+#: web/pages/account/Appearance.tsx
+msgid "Used for buttons, selections, and navigation."
+msgstr "ボタン、選択状態、ナビゲーションに使われます。"
+
+#: web/theme.ts
+msgid "Violet"
+msgstr "バイオレット"
