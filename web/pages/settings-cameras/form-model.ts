@@ -1,3 +1,4 @@
+import { plural, t } from "@lingui/core/macro";
 import type { StreamInfo } from "../../../src/api-types.ts";
 import { detectConfigOf } from "../../../src/detect/config.ts";
 import type { CameraConfig, CameraConnection, DetectConfig, PtzPrefs } from "../../../src/types.ts";
@@ -114,25 +115,25 @@ export const invalidFields = (e: FormError | null): FieldKey[] => (e?.field ? [e
 /** 改了標紅的欄位、或換了攝影機類型，原本的錯誤就不再適用 */
 export const clearsError = (e: FormError | null, patch: Partial<Draft>) => !!e && ("type" in patch || invalidFields(e).some((k) => k in patch));
 
-const fieldError = (key: FieldKey, message: string, summary = "請修正標示的欄位"): FormError => ({ summary, field: { key, message, also: [] } });
+const fieldError = (key: FieldKey, message: string, summary = t`Fix the highlighted fields`): FormError => ({ summary, field: { key, message, also: [] } });
 
 export function toConnection(d: Fields): { conn: CameraConnection } | { error: FormError } {
   if (d.type === "tapo") {
-    if (!d.tapoHost.trim()) return { error: fieldError("tapoHost", "請填寫相機的 IP 位址") };
-    if (!d.tapoUser.trim()) return { error: fieldError("tapoUser", "請填寫相機帳號") };
-    if (!d.tapoPass) return { error: fieldError("tapoPass", "請填寫相機密碼") };
+    if (!d.tapoHost.trim()) return { error: fieldError("tapoHost", t`Enter the camera's IP address`) };
+    if (!d.tapoUser.trim()) return { error: fieldError("tapoUser", t`Enter the camera username`) };
+    if (!d.tapoPass) return { error: fieldError("tapoPass", t`Enter the camera password`) };
     return { conn: { type: "tapo", host: d.tapoHost.trim(), username: d.tapoUser.trim(), password: d.tapoPass } };
   }
   const main = d.mainUrl.trim();
-  if (!/^rtsps?:\/\/\S+$/i.test(main)) return { error: fieldError("mainUrl", "請填寫以 rtsp:// 開頭的串流網址") };
+  if (!/^rtsps?:\/\/\S+$/i.test(main)) return { error: fieldError("mainUrl", t`Enter a stream URL starting with rtsp://`) };
   const sub = d.subUrl.trim();
-  if (sub && !/^rtsps?:\/\/\S+$/i.test(sub)) return { error: fieldError("subUrl", "低畫質串流網址需以 rtsp:// 開頭") };
+  if (sub && !/^rtsps?:\/\/\S+$/i.test(sub)) return { error: fieldError("subUrl", t`The low-quality stream URL must start with rtsp://`) };
   const conn: CameraConnection = { type: "rtsp", mainUrl: main, transport: d.transport };
   if (sub) conn.subUrl = sub;
   if (d.onvifOn) {
     const port = Number(d.ovPort);
-    if (!d.ovHost.trim()) return { error: fieldError("ovHost", "請填寫 ONVIF 主機") };
-    if (!Number.isInteger(port) || port < 1 || port > 65535) return { error: fieldError("ovPort", "ONVIF 連接埠需為 1 到 65535 的數字") };
+    if (!d.ovHost.trim()) return { error: fieldError("ovHost", t`Enter the ONVIF host`) };
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return { error: fieldError("ovPort", t`The ONVIF port must be a number from 1 to 65535`) };
     conn.onvif = { host: d.ovHost.trim(), port, username: d.ovUser, password: d.ovPass };
   }
   return { conn };
@@ -146,7 +147,7 @@ export function connKey(d: Fields): string | null {
 
 /** 送出前的檢查；過了就是要存的設定與連線 */
 export function validate(d: Draft, keep: Pick<CameraConfig, "detect" | "homekit"> | null, homekit: CameraConfig["homekit"]): { config: CameraConfig; conn: CameraConnection } | { error: FormError } {
-  if (!d.name.trim()) return { error: fieldError("name", "請幫這台攝影機取個名稱") };
+  if (!d.name.trim()) return { error: fieldError("name", t`Give this camera a name`) };
   const r = toConnection(d);
   if ("error" in r) return r;
   const config: CameraConfig = {
@@ -239,39 +240,61 @@ export function hostOf(url: string): string {
   }
 }
 
-const SENS = { low: "低", medium: "中", high: "高", custom: "自訂" } as const;
+const sensLabel = (level: "low" | "medium" | "high" | "custom") => {
+  if (level === "low") return t`Low`;
+  if (level === "medium") return t`Medium`;
+  if (level === "high") return t`High`;
+  return t`Custom`;
+};
 
-export const basicSummary = (d: Draft, existing: boolean) => `${d.name.trim() || "還沒取名"}${existing ? ` · ${d.enabled ? "已啟用" : "已停用"}` : ""}`;
+export const basicSummary = (d: Draft, existing: boolean) => `${d.name.trim() || t`Unnamed`}${existing ? ` · ${d.enabled ? t`Enabled` : t`Disabled`}` : ""}`;
 
 export function connSummary(d: Draft): string {
   const host = d.type === "tapo" ? d.tapoHost.trim() : hostOf(d.mainUrl);
-  return `${d.type === "tapo" ? "Tapo" : "其他攝影機"} · ${host || "還沒填位址"}${d.type === "rtsp" && d.onvifOn ? " · 使用 ONVIF" : ""}`;
+  return `${d.type === "tapo" ? "Tapo" : t`Other camera`} · ${host || t`No address yet`}${d.type === "rtsp" && d.onvifOn ? ` · ${t`Uses ONVIF`}` : ""}`;
 }
 
 export const connAdvancedSummary = (d: Draft) =>
-  [d.type === "rtsp" ? d.transport.toUpperCase() : null, d.type === "rtsp" && d.onvifOn ? "使用 ONVIF" : null, d.recDirect ? "錄影直接連到相機" : null].filter(Boolean).join(" · ") || "大多數情況不需要調整";
+  [d.type === "rtsp" ? d.transport.toUpperCase() : null, d.type === "rtsp" && d.onvifOn ? t`Uses ONVIF` : null, d.recDirect ? t`Records straight from the camera` : null].filter(Boolean).join(" · ") || t`Most setups need no changes`;
 
 /** 連線的進階設定有不是預設值的東西時，一打開就展開 */
 export const connAdvancedOpen = (d: Draft) => (d.type === "rtsp" && (d.transport !== "tcp" || d.onvifOn)) || d.recDirect;
 
-export const recSummary = (d: Draft) => (!d.recEnabled ? "不錄影" : d.recAudio ? "全天候錄影 · 錄下聲音" : "全天候錄影 · 不錄聲音");
+export const recSummary = (d: Draft) => (!d.recEnabled ? t`Not recording` : d.recAudio ? t`Recording 24/7 · with sound` : t`Recording 24/7 · without sound`);
 
 /** objects 是物件辨識的一句話（系統沒開物件辨識時是 null） */
 export function detectSummary(d: DetectConfig, objects: string | null): string {
-  if (!d.enabled) return "未開啟";
-  const parts = ["已開啟"];
-  if (d.source === "onvif") parts.push("相機偵測");
+  if (!d.enabled) return t`Off`;
+  const parts = [t`On`];
+  if (d.source === "onvif") parts.push(t`Camera detection`);
   else {
-    if (d.source === "both") parts.push("畫面變化＋相機偵測");
-    parts.push(`靈敏度${SENS[sensitivityOf(d.threshold)]}`);
-    if (d.masks.length) parts.push(`${d.masks.length} 個排除區域`);
+    if (d.source === "both") parts.push(t`Motion + camera detection`);
+    const level = sensLabel(sensitivityOf(d.threshold));
+    parts.push(t`Sensitivity: ${level}`);
+    const masks = d.masks.length;
+    if (masks) parts.push(plural(masks, { one: "# excluded area", other: "# excluded areas" }));
   }
   if (objects) parts.push(objects);
   return parts.join(" · ");
 }
 
 export function describeConn(conn: CameraConnection): string {
-  return conn.type === "tapo" ? `Tapo，主機 ${conn.host}` : `RTSP，主機 ${hostOf(conn.mainUrl)}，傳輸 ${conn.transport.toUpperCase()}${conn.subUrl ? "，有低畫質串流" : ""}${conn.onvif ? "，有 ONVIF" : ""}`;
+  if (conn.type === "tapo") {
+    const host = conn.host;
+    return t`Tapo, host ${host}`;
+  }
+  const host = hostOf(conn.mainUrl);
+  const transport = conn.transport.toUpperCase();
+  const extras = [conn.subUrl ? t`has low-quality stream` : null, conn.onvif ? t`has ONVIF` : null].filter(Boolean);
+  return t`RTSP, host ${host}, transport ${transport}` + (extras.length ? `, ${extras.join(", ")}` : "");
+}
+
+function copyText(conn: CameraConnection, error: string, detail?: string): string {
+  const camera = describeConn(conn);
+  const lines = [t`CookieNVR camera connection test failed`, t`Camera: ${camera}`, t`Error: ${error}`];
+  if (detail) lines.push(t`ffprobe output:`, detail);
+  lines.push(t`(Username and password omitted)`);
+  return lines.join("\n");
 }
 
 /** 測試連線失敗：錯誤掛在對應的欄位，原文只放進「複製錯誤內容」 */
@@ -285,10 +308,10 @@ export function probeFailure(conn: CameraConnection, error: string, detail?: str
     subUrl: ["subUrl", []],
   };
   return {
-    summary: help.field ? "連不上這台攝影機，所以還沒儲存" : help.message,
+    summary: help.field ? t`Couldn't reach this camera, so nothing was saved` : help.message,
     field: help.field ? { key: target[help.field][0], message: help.message, also: target[help.field][1] } : undefined,
     card: "conn",
-    copy: `CookieNVR 測試攝影機連線失敗\n攝影機：${describeConn(conn)}\n錯誤：${error}${detail ? `\nffprobe 輸出：\n${detail}` : ""}\n（帳號密碼已省略）`,
+    copy: copyText(conn, error, detail),
   };
 }
 
@@ -302,5 +325,5 @@ function quality(w: number): string {
 
 export function streamLine(s: StreamInfo): string {
   const q = quality(s.width);
-  return [q ? `${q}（${s.width}×${s.height}）` : `${s.width}×${s.height}`, `${Math.round(s.fps * 10) / 10} fps`, s.videoCodec.toUpperCase().replace("HEVC", "H.265").replace("H264", "H.264"), s.audioCodec ? "有聲音" : "無聲音"].join("・");
+  return [q ? `${q}（${s.width}×${s.height}）` : `${s.width}×${s.height}`, `${Math.round(s.fps * 10) / 10} fps`, s.videoCodec.toUpperCase().replace("HEVC", "H.265").replace("H264", "H.264"), s.audioCodec ? t`Has sound` : t`No sound`].join("・");
 }

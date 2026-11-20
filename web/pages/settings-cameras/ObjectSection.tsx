@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import type { ObjectLabelsDto } from "../../../src/api-types.ts";
@@ -16,10 +17,9 @@ export type ObjectFields = Pick<DetectConfig, "labels" | "objectMode" | "objectS
 /** 類別目錄還沒到、或抓不到時的備用清單：只有常用類別 */
 const FALLBACK: Pick<ObjectLabelsDto, "labels" | "common"> = { labels: COMMON_LABELS.map((key) => ({ key, zh: labelName(key), en: key })), common: [...COMMON_LABELS] };
 
-const moreTitle = (n: number) => (n > 0 ? `更多類別（已選 ${n}）` : "更多類別");
-
 /** 偵測設定裡的「物件辨識」：模式、關注的類別、嚴格程度。只有系統設定開了物件辨識、而且這台開了動作偵測才畫出來 */
 export function ObjectSection({ value, onChange, zones }: { value: ObjectFields; onChange: (patch: Partial<ObjectFields>) => void; zones?: React.ReactNode }) {
+  const { t } = useLingui();
   const catalog = useQuery(objectLabelsQuery).data ?? null;
   const mode = modeOf(value.objectMode);
   const g = labelGroups(catalog ?? FALLBACK, value.labels);
@@ -42,24 +42,26 @@ export function ObjectSection({ value, onChange, zones }: { value: ObjectFields;
   const note = !catalog
     ? null
     : !catalog.known
-      ? "自訂模型還沒載入過，類別清單暫時是內建模型的，載入後會更新。"
+      ? t`The custom model hasn't been loaded yet, so the category list is the built-in model's for now. It updates once loaded.`
       : g.noPackage
         ? catalog.model === "builtin"
-          ? "內建模型不含包裹；要辨識包裹需要放入含有這個類別的自訂模型。"
-          : "目前的模型沒有包裹這個類別。"
+          ? t`The built-in model doesn't include packages. To detect packages, add a custom model that has this category.`
+          : t`The current model has no package category.`
         : null;
   const problem = labelsProblem(mode, value.labels);
   const strict = STRICTNESS[strictnessOf(value.objectScore)];
+  const moreSelected = g.more.filter((l) => value.labels.includes(l.key)).length;
+  const moreTitle = moreSelected > 0 ? t`More categories (${moreSelected} selected)` : t`More categories`;
 
   return (
     <div className="set-rows obj-section">
       <SettingRow
-        title="物件辨識"
+        title={t`Object detection`}
         desc={OBJECT_MODES.find((m) => m.value === mode)!.desc}
         wide
         control={
           <Segmented
-            label="物件辨識"
+            label={t`Object detection`}
             options={OBJECT_MODES.map(({ value, label }) => ({ value, label }))}
             value={mode}
             onChange={(v) =>
@@ -70,17 +72,17 @@ export function ObjectSection({ value, onChange, zones }: { value: ObjectFields;
         }
       />
       <div className="set-block obj-block" hidden={mode === "off"}>
-        <span className="set-row-title">要注意的東西</span>
-        <div className="obj-labels" role="group" aria-label="要注意的東西">
+        <span className="set-row-title">{t`What to watch for`}</span>
+        <div className="obj-labels" role="group" aria-label={t`What to watch for`}>
           {g.common.map((l) => box(l.key, l.zh))}
         </div>
         <details ref={more} className="detect-more obj-more" hidden={g.more.length === 0} onToggle={() => (touched.current = true)}>
           <summary>
             <Icon name="chevron" size={15} />
-            <span>{moreTitle(g.more.filter((l) => value.labels.includes(l.key)).length)}</span>
+            <span>{moreTitle}</span>
           </summary>
           <div className="detect-more-body">
-            <div className="obj-labels" role="group" aria-label="更多類別">
+            <div className="obj-labels" role="group" aria-label={t`More categories`}>
               {g.more.map((l) => box(l.key, l.zh))}
             </div>
           </div>
@@ -96,19 +98,19 @@ export function ObjectSection({ value, onChange, zones }: { value: ObjectFields;
       <div className="set-block obj-block" hidden={mode === "off"}>
         <div className="range-field">
           <div className="range-label">
-            <span>嚴格程度</span>
+            <span>{t`Strictness`}</span>
             <span className="range-value">{strict.word}</span>
           </div>
           <div className="range-row">
-            <span className="range-end">寬鬆</span>
-            <Range aria-label="嚴格程度" aria-valuetext={strict.word} step={100 / 13} initial={scoreToPos(value.objectScore)} onInput={(pos) => onChange({ objectScore: posToScore(pos) })} />
-            <span className="range-end">嚴格</span>
+            <span className="range-end">{t`Lenient`}</span>
+            <Range aria-label={t`Strictness`} aria-valuetext={strict.word} step={100 / 13} initial={scoreToPos(value.objectScore)} onInput={(pos) => onChange({ objectScore: posToScore(pos) })} />
+            <span className="range-end">{t`Strict`}</span>
           </div>
           <small className="hint">{strict.hint}</small>
         </div>
       </div>
       <div className="set-block obj-block" hidden={mode === "off" || !zones}>
-        <span className="set-row-title">不辨識的區域</span>
+        <span className="set-row-title">{t`Areas to ignore`}</span>
         {zones}
       </div>
     </div>

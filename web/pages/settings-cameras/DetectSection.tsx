@@ -1,3 +1,5 @@
+import { plural, t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
@@ -18,45 +20,46 @@ import { ScoreMeter } from "./ScoreMeter.tsx";
 const SNAPSHOT_MS = 2_000;
 
 
-const OBJECT_MASK_COPY: MaskCopy = {
-  tag: "不辨識",
-  empty: "畫出不需要辨識物件的範圍，例如停車格。裡面照樣偵測動作，只是停在裡面的東西不會被標上類別。",
-  some: (n) => `${n} 個不辨識的區域，物件中心落在裡面就不算。點一下區域可以調整或刪除。`,
-  add: "新增不辨識的區域",
-};
+const objectMaskCopy = (): MaskCopy => ({
+  tag: t`Not detected`,
+  empty: t`Draw the areas where objects don't need to be recognized, such as a parking spot. Motion is still detected inside, but things there won't get a category label.`,
+  some: (count) => plural(count, { one: "# area where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it.", other: "# areas where objects aren't detected. An object doesn't count when its center is inside. Click an area to adjust or delete it." }),
+  add: t`Add an area to ignore`,
+});
 
-const SOURCES: { value: DetectSource; label: string; hint: string }[] = [
-  { value: "pixel", label: "畫面變化", hint: "比對畫面的變化，每台攝影機都能用，也能排除不需要的區域。" },
-  { value: "onvif", label: "相機偵測", hint: "用相機內建的偵測，不佔用這台電腦的資源，但不能排除區域。" },
-  { value: "both", label: "兩者都用", hint: "任一個偵測到就算，比較不會漏掉。" },
+const sources = (): { value: DetectSource; label: string; hint: string }[] => [
+  { value: "pixel", label: t`Motion`, hint: t`Compares changes in the picture. Works with every camera and can exclude areas you don't need.` },
+  { value: "onvif", label: t`Camera detection`, hint: t`Uses the camera's built-in detection. It doesn't use this computer's resources, but can't exclude areas.` },
+  { value: "both", label: t`Both`, hint: t`Counts when either one detects something, so fewer things are missed.` },
 ];
 
-const SENSITIVITY: { value: Sensitivity; label: string }[] = [
-  { value: "low", label: "低" },
-  { value: "medium", label: "中" },
-  { value: "high", label: "高" },
-  { value: "custom", label: "自訂" },
+const sensitivities = (): { value: Sensitivity; label: string }[] => [
+  { value: "low", label: t`Low` },
+  { value: "medium", label: t`Medium` },
+  { value: "high", label: t`High` },
+  { value: "custom", label: t`Custom` },
 ];
 
-const SENSITIVITY_HINT: Record<Sensitivity, string> = {
-  low: "只有明顯的動作才算，適合樹多、車多或光線常變的地方。",
-  medium: "大多數情況的建議值。",
-  high: "細微的變化也會偵測到，適合室內或想要不漏接。",
-  custom: "往右越靈敏。",
+const sensitivityHint = (s: Sensitivity): string => {
+  if (s === "low") return t`Only obvious motion counts. Good for places with many trees, cars, or changing light.`;
+  if (s === "medium") return t`The recommended setting for most situations.`;
+  if (s === "high") return t`Even subtle changes are detected. Good for indoors or when you don't want to miss anything.`;
+  return t`The further right, the more sensitive.`;
 };
 
 /** 自訂靈敏度的文字描述，不顯示數字 */
 function sensitivityWord(threshold: number): string {
-  if (threshold <= SENSITIVITY_PRESETS.high) return "很靈敏";
-  if (threshold <= SENSITIVITY_PRESETS.medium) return "偏靈敏";
-  if (threshold <= SENSITIVITY_PRESETS.low) return "偏保守";
-  return "很保守";
+  if (threshold <= SENSITIVITY_PRESETS.high) return t`Very sensitive`;
+  if (threshold <= SENSITIVITY_PRESETS.medium) return t`Fairly sensitive`;
+  if (threshold <= SENSITIVITY_PRESETS.low) return t`Fairly conservative`;
+  return t`Very conservative`;
 }
 
 const sameMasks = (a: DetectConfig["masks"], b: DetectConfig["masks"]) => JSON.stringify(a) === JSON.stringify(b);
 
 /** 排除區域編輯器加上每 2 秒換一次的快照：編輯器在 effect 建立、cleanup 拆掉；快照只在 live 為真時抓 */
 function MaskPreview({ camera, masks, onMasks, live, copy, children }: { camera: CameraDto; masks: DetectConfig["masks"]; onMasks: (m: DetectConfig["masks"]) => void; live: boolean; copy?: MaskCopy; children?: React.ReactNode }) {
+  const { t } = useLingui();
   const shot = useRef<HTMLDivElement>(null);
   const after = useRef<HTMLParagraphElement>(null);
   const editor = useRef<MaskEditor | null>(null);
@@ -85,11 +88,11 @@ function MaskPreview({ camera, masks, onMasks, live, copy, children }: { camera:
       try {
         const res = await fetch(api.snapshotUrl(camera.id, Date.now()), { credentials: "same-origin" });
         if (stopped) return;
-        if (!res.ok) return ed.setImage(null, res.status === 404 ? "這台攝影機已停用" : "目前拿不到畫面，相機可能連不上");
+        if (!res.ok) return ed.setImage(null, res.status === 404 ? t`This camera is disabled` : t`Can't get the picture right now. The camera may be unreachable.`);
         const blob = await res.blob();
         if (!stopped) ed.setImage(URL.createObjectURL(blob));
       } catch {
-        if (!stopped) ed.setImage(null, "目前拿不到畫面");
+        if (!stopped) ed.setImage(null, t`Can't get the picture right now`);
       }
     };
     void load();
@@ -109,7 +112,7 @@ function MaskPreview({ camera, masks, onMasks, live, copy, children }: { camera:
       </div>
       <p ref={after} className="detect-ptz hint" hidden={!ptzNote}>
         <Icon name="info" size={15} />
-        <span>排除區域是照畫面位置畫的。鏡頭轉到別的方向後會對不上，轉回原位就恢復；如果要長期換角度，記得重畫。</span>
+        <span>{t`Excluded areas are drawn at fixed positions in the picture. If the camera turns another way they no longer line up, and they match again when it returns. If you change the angle for good, redraw them.`}</span>
       </p>
     </div>
   );
@@ -120,6 +123,7 @@ function MaskPreview({ camera, masks, onMasks, live, copy, children }: { camera:
  * onvif 是表單上這台目前有沒有 ONVIF（Tapo 一定有；通用 RTSP 要開「使用 ONVIF」）。
  */
 export function DetectSection({ camera, value, saved, onChange, onvif, active, objects }: { camera: CameraDto; value: DetectConfig; saved: DetectConfig; onChange: (patch: Partial<DetectConfig>) => void; onvif: boolean; active: boolean; objects: boolean }) {
+  const { t } = useLingui();
   const [sens, setSens] = useState<Sensitivity>(() => sensitivityOf(value.threshold));
   const areaId = useId();
   const live = camera.config.enabled;
@@ -127,26 +131,28 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
   const pixel = d.enabled && d.source !== "onvif";
   const wantLive = live && pixel && active;
   const needOnvif = d.source !== "pixel" && !onvif;
-  const areaText = `畫面的 ${formatArea(d.minArea)}`;
+  const area = formatArea(d.minArea);
+  const areaText = t`${area} of the picture`;
+  const cooldown = d.cooldownSec;
 
   return (
     <>
       <div className="detect-section set-rows">
-        <SettingRow title="偵測動作" desc="有動靜時建立事件，之後可以在「事件」頁快速找到。" toggle control={(a) => <Switch {...a} checked={d.enabled} onChange={(v) => onChange({ enabled: v })} />} />
+        <SettingRow title={t`Detect motion`} desc={t`Creates an event whenever something moves, so you can find it quickly on the Events page.`} toggle control={(a) => <Switch {...a} checked={d.enabled} onChange={(v) => onChange({ enabled: v })} />} />
         <div className="set-rows" hidden={!d.enabled}>
           <SettingRow
-            title="偵測方式"
-            desc={SOURCES.find((s) => s.value === d.source)!.hint}
+            title={t`Detection method`}
+            desc={sources().find((s) => s.value === d.source)!.hint}
             wide
-            control={<Segmented label="偵測方式" options={SOURCES.map(({ value, label }) => ({ value, label }))} value={d.source} onChange={(v) => onChange({ source: v })} />}
+            control={<Segmented label={t`Detection method`} options={sources().map(({ value, label }) => ({ value, label }))} value={d.source} onChange={(v) => onChange({ source: v })} />}
           />
           <div className="set-block" hidden={!needOnvif}>
             <p className="callout warn">
               <Icon name="alert" />
               <span>
                 {d.source === "onvif"
-                  ? "這台沒有設定 ONVIF，收不到相機的偵測。請到「連線」的「進階」開啟「使用 ONVIF」，或改用畫面變化。"
-                  : "這台沒有設定 ONVIF，目前只會用畫面變化偵測。要一起用相機偵測，請到「連線」的「進階」開啟「使用 ONVIF」。"}
+                  ? t`ONVIF isn't set up for this camera, so it can't receive the camera's detections. Turn on "Use ONVIF" under Connection → Advanced, or switch to motion detection.`
+                  : t`ONVIF isn't set up for this camera, so only motion detection is used for now. To use camera detection too, turn on "Use ONVIF" under Connection → Advanced.`}
               </span>
             </p>
           </div>
@@ -161,18 +167,18 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
                   <span className="cam-ph">
                     <Icon name="power" size={22} />
                   </span>
-                  <p>這台攝影機已停用。啟用並儲存後，才能在這裡看到畫面、畫出不需要偵測的區域。</p>
+                  <p>{t`This camera is disabled. Enable it and save to see the picture here and draw areas that shouldn't be detected.`}</p>
                 </div>
               )}
             </div>
             <SettingRow
-              title="靈敏度"
-              desc={SENSITIVITY_HINT[sens]}
+              title={t`Sensitivity`}
+              desc={sensitivityHint(sens)}
               wide
               control={
                 <Segmented
-                  label="靈敏度"
-                  options={SENSITIVITY}
+                  label={t`Sensitivity`}
+                  options={sensitivities()}
                   value={sens}
                   onChange={(v) => {
                     setSens(v);
@@ -184,46 +190,46 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
             <div className="set-block" hidden={sens !== "custom"}>
               <div className="range-field">
                 <div className="range-label">
-                  <span>自訂</span>
+                  <span>{t`Custom`}</span>
                   <span className="range-value">{sensitivityWord(d.threshold)}</span>
                 </div>
                 <div className="range-row">
-                  <span className="range-end">保守</span>
-                  <Range aria-label="自訂靈敏度" aria-valuetext={sensitivityWord(d.threshold)} initial={thresholdToPos(d.threshold)} onInput={(pos) => onChange({ threshold: posToThreshold(pos) })} />
-                  <span className="range-end">靈敏</span>
+                  <span className="range-end">{t`Conservative`}</span>
+                  <Range aria-label={t`Custom sensitivity`} aria-valuetext={sensitivityWord(d.threshold)} initial={thresholdToPos(d.threshold)} onInput={(pos) => onChange({ threshold: posToThreshold(pos) })} />
+                  <span className="range-end">{t`Sensitive`}</span>
                 </div>
               </div>
             </div>
           </div>
           <Disclosure
-            title="更多選項"
-            summary={`${d.source !== "onvif" ? `變化範圍 ${formatArea(d.minArea)} · ` : ""}結束前等待 ${d.cooldownSec} 秒`}
+            title={t`More options`}
+            summary={`${d.source !== "onvif" ? `${t`Change area ${area}`} · ` : ""}${t`Waits ${cooldown} sec before ending`}`}
             defaultOpen={d.minArea !== DEFAULT_DETECT.minArea || d.cooldownSec !== DEFAULT_DETECT.cooldownSec}
           >
             <div className="set-block" hidden={!pixel}>
               <div className="range-field">
                 <div className="range-label">
-                  <span id={areaId}>變化範圍超過</span>
+                  <span id={areaId}>{t`Change area larger than`}</span>
                   <span className="range-value num">{areaText}</span>
                 </div>
                 <div className="range-row">
-                  <span className="range-end">小</span>
+                  <span className="range-end">{t`Small`}</span>
                   <Range aria-labelledby={areaId} aria-valuetext={areaText} initial={areaToPos(d.minArea)} onInput={(pos) => onChange({ minArea: posToArea(pos) })} />
-                  <span className="range-end">大</span>
+                  <span className="range-end">{t`Large`}</span>
                 </div>
-                <small className="hint">畫面裡有這麼大的範圍在變化，才算有動作。調大可以忽略小動物和落葉；即時畫面變化的曲線會跟著改。</small>
+                <small className="hint">{t`Motion counts only when an area this large changes. Raise it to ignore small animals and falling leaves. The live motion curve follows.`}</small>
               </div>
             </div>
             <SettingRow
-              title="動作停止後，再等多久結束事件"
-              desc="等待期間又有動作，會算在同一筆事件裡。"
+              title={t`How long to wait after motion stops before ending the event`}
+              desc={t`Motion during the wait counts toward the same event.`}
               wide
               control={
                 <Choice
-                  label="事件結束前等待"
-                  presets={[5, 10, 30].map((v) => ({ value: v, label: `${v} 秒` }))}
+                  label={t`Wait before ending the event`}
+                  presets={[5, 10, 30].map((v) => ({ value: v, label: t`${v} sec` }))}
                   initial={d.cooldownSec}
-                  unit="秒"
+                  unit={t`sec`}
                   onChange={(v) => Number.isFinite(v) && onChange({ cooldownSec: Math.min(300, Math.max(1, Math.round(v))) })}
                 />
               }
@@ -238,7 +244,7 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
             value={d}
             onChange={onChange}
             zones={
-              live ? <MaskPreview camera={camera} masks={d.objectMasks} onMasks={(objectMasks) => onChange({ objectMasks })} live={active && modeOf(d.objectMode) !== "off"} copy={OBJECT_MASK_COPY} /> : null
+              live ? <MaskPreview camera={camera} masks={d.objectMasks} onMasks={(objectMasks) => onChange({ objectMasks })} live={active && modeOf(d.objectMode) !== "off"} copy={objectMaskCopy()} /> : null
             }
           />
         </div>

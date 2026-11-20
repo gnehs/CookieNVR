@@ -1,3 +1,5 @@
+import { plural, t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ReactNode } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
@@ -10,18 +12,21 @@ import { toast } from "../../ui/toast.tsx";
 
 /** 不勾選時，刪除攝影機只移除設定；已錄的片段留在硬碟上，照保留天數與最低剩餘空間清除，但介面上已經沒有入口可以回放 */
 async function keepMessage(qc: QueryClient): Promise<string> {
-  const lead = "會停止錄影並移除這台攝影機。已錄的影片會留在硬碟上，但之後無法再回放，";
   try {
     const { continuousDays: c, eventDays: e } = (await qc.fetchQuery(settingsQuery)).retention;
-    if (c === 0 && e === 0) return `${lead}而且保留天數設為不限，只有空間不夠時才會從最舊的開始刪除。在那之前會一直佔用空間。`;
-    const days = (n: number) => (n === 0 ? "不限" : `${n} 天`);
-    return `${lead}會繼續佔用空間，直到超過保留天數（連續錄影 ${days(c)}、事件片段 ${days(e)}）才自動刪除。`;
+    if (c === 0 && e === 0) {
+      return t`This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back, and retention is set to unlimited, so the oldest are deleted only when space runs low. Until then they keep using space.`;
+    }
+    const days = (n: number) => (n === 0 ? t`unlimited` : plural(n, { one: "# day", other: "# days" }));
+    const continuous = days(c);
+    const events = days(e);
+    return t`This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period (continuous ${continuous}, events ${events}) and are then deleted automatically.`;
   } catch {
-    return `${lead}會繼續佔用空間，直到超過保留天數才自動刪除。`;
+    return t`This stops recording and removes the camera. Existing recordings stay on disk but can no longer be played back. They keep using space until they pass the retention period and are then deleted automatically.`;
   }
 }
 
-const PURGE_MESSAGE = "會停止錄影並移除這台攝影機，這台所有的錄影也會立刻永久刪除，無法復原。";
+const purgeMessage = () => t`This stops recording and removes the camera. All of its recordings are also deleted right away and can't be recovered.`;
 
 interface Ask {
   name: string;
@@ -36,6 +41,7 @@ interface Ask {
  * `remove(cam)` 在真的刪掉時回傳 true；`dialog` 要放進畫面裡。
  */
 export function useDeleteCamera(): { dialog: ReactNode; remove: (cam: CameraDto) => Promise<boolean> } {
+  const { t } = useLingui();
   const qc = useQueryClient();
   const [ask, setAsk] = useState<Ask | null>(null);
   const [open, setOpen] = useState(false);
@@ -66,26 +72,29 @@ export function useDeleteCamera(): { dialog: ReactNode; remove: (cam: CameraDto)
     }
     qc.setQueryData(camerasQuery.queryKey, (list) => list?.filter((c) => c.id !== cam.id));
     void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
-    toast(`已刪除「${cam.config.name}」`);
+    const name = cam.config.name;
+    toast(t`Deleted "${name}"`);
     return true;
   };
 
+  const askName = ask?.name ?? "";
+  const freed = ask?.bytes === undefined ? "" : formatBytes(ask.bytes);
   const dialog = (
-    <Dialog open={open} onOpenChange={(o) => !o && answer(null)} title={ask ? `刪除「${ask.name}」？` : ""} initialFocus={confirmBtn} onClosed={() => setAsk(null)}>
+    <Dialog open={open} onOpenChange={(o) => !o && answer(null)} title={ask ? t`Delete "${askName}"?` : ""} initialFocus={confirmBtn} onClosed={() => setAsk(null)}>
       <p className="dlg-text" aria-live="polite">
-        {purge ? PURGE_MESSAGE : ask?.keep}
+        {purge ? purgeMessage() : ask?.keep}
       </p>
       {ask && ask.bytes !== 0 ? (
         <div className="dlg-option">
-          <SwitchRow title="同時刪除這台的錄影" desc={ask.bytes === undefined ? undefined : `會釋放 ${formatBytes(ask.bytes)}`} checked={purge} onChange={setPurge} />
+          <SwitchRow title={t`Also delete this camera's recordings`} desc={ask.bytes === undefined ? undefined : t`Frees ${freed}`} checked={purge} onChange={setPurge} />
         </div>
       ) : null}
       <div className="dlg-actions">
         <button className="btn" type="button" onClick={() => answer(null)}>
-          取消
+          {t`Cancel`}
         </button>
         <button ref={confirmBtn} className="btn danger solid" type="button" onClick={() => answer(purge)}>
-          {purge ? "刪除攝影機與錄影" : "刪除攝影機"}
+          {purge ? t`Delete camera and recordings` : t`Delete camera`}
         </button>
       </div>
     </Dialog>

@@ -1,3 +1,6 @@
+import type { MessageDescriptor } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useReducer, useRef, useState, type ReactNode } from "react";
@@ -25,14 +28,14 @@ import { useDeleteCamera } from "./useDeleteCamera.tsx";
 /** 不是表單的區塊：打開看、在裡面直接操作，沒有儲存 */
 type InfoKey = "states" | "homekit";
 
-const TITLE: Record<SectionKey | InfoKey, string> = {
-  basic: "基本",
-  conn: "連線",
-  rec: "錄影",
-  detect: "偵測",
-  ptz: "鏡頭控制",
-  states: "狀態辨識",
-  homekit: "Apple 家庭",
+const TITLE: Record<SectionKey | InfoKey, MessageDescriptor> = {
+  basic: msg`Basic`,
+  conn: msg`Connection`,
+  rec: msg`Recording`,
+  detect: msg`Detection`,
+  ptz: msg`Camera control`,
+  states: msg`State recognition`,
+  homekit: msg`Apple Home`,
 };
 
 const ICON: Record<SectionKey | InfoKey, IconName> = {
@@ -49,13 +52,14 @@ const ICON: Record<SectionKey | InfoKey, IconName> = {
 const WIDE = new Set<SectionKey | InfoKey>(["detect"]);
 
 function SectionRow({ k, summary, onOpen }: { k: SectionKey | InfoKey; summary: string; onOpen: () => void }) {
+  const { i18n } = useLingui();
   return (
     <button type="button" className="row-item sec-row" onClick={onOpen} aria-haspopup="dialog">
       <span className="row-ico">
         <Icon name={ICON[k]} size={18} />
       </span>
       <span className="row-text">
-        <b>{TITLE[k]}</b>
+        <b>{i18n._(TITLE[k])}</b>
         <small className="truncate">{summary}</small>
       </span>
       <Icon name="chevron" size={16} />
@@ -90,6 +94,7 @@ function SectionFields({ edit, camera, set, objects }: { edit: SectionEdit; came
  * 儲存時只把這個區塊的變更合併進目前的設定再送出（見 form-model 的 planSave）。
  */
 export function CameraEditPage({ camera }: { camera: CameraDto }) {
+  const { t, i18n } = useLingui();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [edit, dispatch] = useReducer(editReducer, null);
@@ -135,7 +140,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
       putCamera(qc, cam);
       void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
       dispatch({ type: "close" });
-      toast(plan.test ? "連線成功，已儲存" : "已儲存");
+      toast(plan.test ? t`Connected and saved` : t`Saved`);
     } catch (err) {
       dispatch({ type: "fail", error: { summary: errMsg(err) } });
     }
@@ -145,6 +150,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
     if (await del.remove(camera)) void navigate({ to: "/settings/cameras" });
   };
 
+  const cameraName = camera.config.name;
   const busy = edit !== null && edit.status !== "editing";
   const dirty = edit !== null && sectionChanged(edit.key, edit.draft, edit.start);
   // 連線改過時按鈕寫「測試並儲存」，讓人知道會先連一次
@@ -155,17 +161,17 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
         <p className="form-error" role="alert">
           {edit.error?.summary}
         </p>
-        <span className="copy-slot">{edit.error?.copy ? <CopyButton label="複製錯誤內容" className="small ghost" done="已複製錯誤內容，可以貼給 AI 或技術人員" getText={() => edit.error!.copy!} /> : null}</span>
+        <span className="copy-slot">{edit.error?.copy ? <CopyButton label={t`Copy error`} className="small ghost" done={t`Error copied. You can paste it to an AI or a technician.`} getText={() => edit.error!.copy!} /> : null}</span>
       </div>
-      <DialogClose disabled={busy}>取消</DialogClose>
+      <DialogClose disabled={busy}>{t`Cancel`}</DialogClose>
       <button className="btn primary" type="button" disabled={busy || !dirty} aria-busy={busy || undefined} onClick={() => void save()}>
         {busy ? (
           <>
             <span className="spin" aria-hidden="true" />
-            <span>{edit.status === "testing" ? "正在測試連線…" : "儲存中…"}</span>
+            <span>{edit.status === "testing" ? t`Testing connection…` : t`Saving…`}</span>
           </>
         ) : (
-          <span>{needsTest ? "測試並儲存" : "儲存"}</span>
+          <span>{needsTest ? t`Test and save` : t`Save`}</span>
         )}
       </button>
     </>
@@ -176,7 +182,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
     homekit: <HomekitSection camera={camera} />,
   };
   return (
-    <SettingsSubpage title={`編輯「${camera.config.name}」`} back="/settings/cameras">
+    <SettingsSubpage title={t`Edit "${cameraName}"`} back="/settings/cameras">
       <div className="card row-list sec-list">
         {rows.map((k) => (
           <SectionRow key={k} k={k} summary={summary[k]} onOpen={() => open(k)} />
@@ -184,16 +190,16 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
       </div>
       <section className="danger-zone">
         <div className="danger-text">
-          <b>刪除這台攝影機</b>
-          <p>停止錄影並移除設定；可以選擇是否一起刪除已錄的影片。</p>
+          <b>{t`Delete this camera`}</b>
+          <p>{t`Stops recording and removes its settings. You can choose whether to delete the recorded video too.`}</p>
         </div>
         <button className="btn danger" type="button" onClick={() => void removeCamera()}>
           <Icon name="trash" size={16} />
-          刪除攝影機
+          {t`Delete camera`}
         </button>
       </section>
 
-      <Dialog open={edit?.open ?? false} onOpenChange={(o) => !o && dispatch({ type: "close" })} title={edit ? TITLE[edit.key] : ""} guard={busy ? "busy" : dirty ? "dirty" : false} wide={edit ? WIDE.has(edit.key) : false} footer={footer}>
+      <Dialog open={edit?.open ?? false} onOpenChange={(o) => !o && dispatch({ type: "close" })} title={edit ? i18n._(TITLE[edit.key]) : ""} guard={busy ? "busy" : dirty ? "dirty" : false} wide={edit ? WIDE.has(edit.key) : false} footer={footer}>
         <form
           className="dlg-fields"
           noValidate
@@ -206,7 +212,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
           {edit ? <SectionFields edit={edit} camera={camera} set={(patch) => dispatch({ type: "patch", patch })} objects={objectsOn} /> : null}
         </form>
       </Dialog>
-      <Dialog open={info !== null} onOpenChange={(o) => !o && setInfo(null)} title={shownInfo ? TITLE[shownInfo] : ""} footer={<DialogClose className="btn primary">完成</DialogClose>} onClosed={() => setShownInfo(null)}>
+      <Dialog open={info !== null} onOpenChange={(o) => !o && setInfo(null)} title={shownInfo ? i18n._(TITLE[shownInfo]) : ""} footer={<DialogClose className="btn primary">{t`Done`}</DialogClose>} onClosed={() => setShownInfo(null)}>
         <div className="dlg-fields">{shownInfo ? infoBody[shownInfo] : null}</div>
       </Dialog>
       {del.dialog}

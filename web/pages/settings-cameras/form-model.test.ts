@@ -134,13 +134,13 @@ describe("probeFailure", () => {
   test("wrong Tapo credentials mark the password and the account", () => {
     const e = probeFailure({ type: "tapo", host: "h", username: "u", password: "p" }, "帳號或密碼錯誤（401）");
     expect(invalidFields(e)).toEqual(["tapoPass", "tapoUser"]);
-    expect(e.summary).toBe("連不上這台攝影機，所以還沒儲存");
+    expect(e.summary).toBe("Couldn't reach this camera, so nothing was saved");
     expect(e.copy).not.toContain("p\n");
   });
 
   test("ffprobe 原文只出現在複製內容裡", () => {
     const e = probeFailure({ type: "tapo", host: "h", username: "u", password: "p" }, "主碼流：攝影機有回應，但沒有送出影像，可能是同時連線數已達上限", "Failed reading RTSP data: Operation timed out");
-    expect(e.copy).toContain("ffprobe 輸出：\nFailed reading RTSP data: Operation timed out");
+    expect(e.copy).toContain("ffprobe output:\nFailed reading RTSP data: Operation timed out");
     expect(e.field?.message).not.toContain("Failed");
   });
 });
@@ -148,7 +148,7 @@ describe("probeFailure", () => {
 describe("detectSummary", () => {
   test("pixel detection lists sensitivity, masks and objects", () => {
     const d = draftOf(rtsp).detect!;
-    expect(detectSummary({ ...d, enabled: true, source: "both", threshold: 15, masks: [{ points: [[0, 0], [1, 0], [1, 1]] }] }, "標註人")).toBe("已開啟 · 畫面變化＋相機偵測 · 靈敏度高 · 1 個排除區域 · 標註人");
-    expect(detectSummary({ ...d, enabled: false }, null)).toBe("未開啟");
+    expect(detectSummary({ ...d, enabled: true, source: "both", threshold: 15, masks: [{ points: [[0, 0], [1, 0], [1, 1]] }] }, "標註人")).toBe("On · Motion + camera detection · Sensitivity: High · 1 excluded area · 標註人");
+    expect(detectSummary({ ...d, enabled: false }, null)).toBe("Off");
   });
 });

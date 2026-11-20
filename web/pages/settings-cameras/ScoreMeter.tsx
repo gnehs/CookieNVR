@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react/macro";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { DetectFrameState, MotionSampleDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
@@ -31,6 +32,7 @@ type Colors = Record<(typeof PROBES)[number], string>;
  * 排除區域要儲存後 worker 才會套用，masksPending 時提示。
  */
 export function ScoreMeter({ cameraId, minArea, threshold, thresholdPending, masksPending }: { cameraId: string; minArea: number; threshold: number; thresholdPending: boolean; masksPending: boolean }) {
+  const { t } = useLingui();
   const [frame, setFrame] = useState<FrameState>("connecting");
   const [level, setLevel] = useState<Level>("calm");
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -172,16 +174,16 @@ export function ScoreMeter({ cameraId, minArea, threshold, thresholdPending, mas
   const shown: Level = frame === "lost" ? "lost" : frame === "ok" ? level : "calm";
   const pendingText = masksPending
     ? thresholdPending && !hasCurve
-      ? "調整後的靈敏度與排除區域，儲存後才會反映在這裡。"
-      : "調整後的排除區域，儲存後才會反映在這裡。"
+      ? t`Changes to sensitivity and excluded areas show up here after you save.`
+      : t`Changes to excluded areas show up here after you save.`
     : thresholdPending && !hasCurve
-      ? "調整後的靈敏度，儲存後才會反映在這裡。"
+      ? t`Changes to sensitivity show up here after you save.`
       : "";
   const note = frame === "lost" ? MOTION_LEVEL_TEXT.lost : frame === "connecting" || frame === "ok" ? "" : DETECT_FRAME_TEXT[frame];
   return (
-    <div className="meter" role="group" aria-label="即時畫面變化" data-level={shown}>
+    <div className="meter" role="group" aria-label={t`Live motion in the picture`} data-level={shown}>
       <div className="meter-head">
-        <span className="meter-title">畫面變化</span>
+        <span className="meter-title">{t`Motion`}</span>
         <span className="meter-level" aria-live="polite">
           {frame === "ok" || frame === "lost" ? MOTION_LEVEL_TEXT[shown] : ""}
         </span>
@@ -189,7 +191,7 @@ export function ScoreMeter({ cameraId, minArea, threshold, thresholdPending, mas
       <div ref={plot} className="meter-plot" style={{ "--trigger": `${(1 - TRIGGER_Y) * 100}%` } as CSSProperties}>
         <canvas ref={canvas} className="meter-canvas" height={HEIGHT} aria-hidden="true" />
         <span className="meter-trigger" aria-hidden="true" hidden={frame !== "ok"}>
-          觸發線
+          {t`Trigger line`}
         </span>
         <span className="meter-note" hidden={!note}>
           {note}

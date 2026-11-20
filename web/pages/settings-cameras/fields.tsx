@@ -1,3 +1,4 @@
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useEffect, useRef, useState, type InputHTMLAttributes, type RefObject } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
 import { maskedField } from "../../camera-form-logic.ts";
@@ -64,35 +65,37 @@ function controls({ draft, set, error }: FieldKit) {
 
 /** 名稱；編輯時多一個「啟用」開關 */
 export function BasicFields({ kit, existing, nameRef }: { kit: FieldKit; existing: boolean; nameRef?: RefObject<HTMLInputElement | null> }) {
+  const { t } = useLingui();
   const c = controls(kit);
   return (
     <>
       <SettingRow
-        title="名稱"
-        desc="會顯示在首頁與錄影頁。"
+        title={t`Name`}
+        desc={t`Shown on the home page and the recordings page.`}
         wide
         error={c.fieldError("name")}
-        control={(a) => <input ref={nameRef} type="text" autoComplete="off" spellCheck={false} autoCapitalize="off" placeholder="例如：客廳、前門" maxLength={60} {...c.inputProps("name", a)} value={kit.draft.name} onChange={(e) => kit.set({ name: e.currentTarget.value })} />}
+        control={(a) => <input ref={nameRef} type="text" autoComplete="off" spellCheck={false} autoCapitalize="off" placeholder={t`For example: Living room, Front door`} maxLength={60} {...c.inputProps("name", a)} value={kit.draft.name} onChange={(e) => kit.set({ name: e.currentTarget.value })} />}
       />
-      {existing ? c.flag("enabled", "啟用這台攝影機", "停用後不看畫面也不錄影，但保留設定。") : null}
+      {existing ? c.flag("enabled", t`Enable this camera`, t`When disabled, it neither shows video nor records, but its settings are kept.`) : null}
     </>
   );
 }
 
 /** 攝影機類型（Tapo／其他）、連線欄位與進階；existing 有值時多一列「給其他 App 的串流網址」 */
 export function ConnFields({ kit, existing }: { kit: FieldKit; existing: CameraDto | null }) {
+  const { t } = useLingui();
   const c = controls(kit);
   const { draft, set } = kit;
   const rtsp = draft.type === "rtsp";
   return (
     <>
       <div className="set-block">
-        <span className="sr-only">攝影機類型</span>
+        <span className="sr-only">{t`Camera type`}</span>
         <Tiles
-          label="攝影機類型"
+          label={t`Camera type`}
           options={[
-            { value: "tapo", label: "Tapo", desc: "只要填 IP 與相機帳號", icon: "tapo" },
-            { value: "rtsp", label: "其他攝影機", desc: "任何支援 RTSP 的攝影機", icon: "link" },
+            { value: "tapo", label: "Tapo", desc: t`Just enter the IP and camera account`, icon: "tapo" },
+            { value: "rtsp", label: t`Other camera`, desc: t`Any camera that supports RTSP`, icon: "link" },
           ]}
           value={draft.type}
           onChange={(type) => set({ type })}
@@ -103,27 +106,29 @@ export function ConnFields({ kit, existing }: { kit: FieldKit; existing: CameraD
           <p className="callout">
             <Icon name="info" />
             <span>
-              帳號密碼請在 Tapo App 的「進階設定 → 相機帳戶」建立，<b>不是</b> TP-Link 雲端帳號。
+              <Trans>
+                Create the username and password in the Tapo app under "Advanced settings → Camera account". It is <b>not</b> your TP-Link cloud account.
+              </Trans>
             </span>
           </p>
         </div>
         {/* 不用 inputMode="decimal"：iPhone 的數字鍵盤打不出主機名稱 */}
-        <SettingRow title="相機 IP 位址" desc="建議在路由器把這個位址固定下來。" wide error={c.fieldError("tapoHost")} control={c.text("tapoHost", { placeholder: "例如 192.168.1.50", inputMode: "url" })} />
-        <SettingRow title="相機帳號" wide error={c.fieldError("tapoUser")} control={c.text("tapoUser")} />
-        <SettingRow title="相機密碼" wide error={c.fieldError("tapoPass")} control={c.secret("tapoPass")} />
+        <SettingRow title={t`Camera IP address`} desc={t`We recommend reserving this address in your router.`} wide error={c.fieldError("tapoHost")} control={c.text("tapoHost", { placeholder: t`For example 192.168.1.50`, inputMode: "url" })} />
+        <SettingRow title={t`Camera username`} wide error={c.fieldError("tapoUser")} control={c.text("tapoUser")} />
+        <SettingRow title={t`Camera password`} wide error={c.fieldError("tapoPass")} control={c.secret("tapoPass")} />
       </div>
       <div className="set-rows" hidden={!rtsp}>
-        <SettingRow title="串流網址" desc="以 rtsp:// 開頭，通常寫在相機的說明書或 App 裡。帳號密碼可以直接寫在網址中。" wide error={c.fieldError("mainUrl")} control={c.url("mainUrl", "rtsp://帳號:密碼@192.168.1.60:554/stream1")} />
-        <SettingRow title="低畫質串流網址" desc="選填。有的話，首頁預覽與動作偵測會更省資源。" wide error={c.fieldError("subUrl")} control={c.url("subUrl", "rtsp://…/stream2")} />
+        <SettingRow title={t`Stream URL`} desc={t`Starts with rtsp://, usually found in the camera's manual or app. You can put the username and password in the URL.`} wide error={c.fieldError("mainUrl")} control={c.url("mainUrl", t`rtsp://username:password@192.168.1.60:554/stream1`)} />
+        <SettingRow title={t`Low-quality stream URL`} desc={t`Optional. If provided, home page previews and motion detection use fewer resources.`} wide error={c.fieldError("subUrl")} control={c.url("subUrl", "rtsp://…/stream2")} />
       </div>
-      <Disclosure title="進階" summary={connAdvancedSummary(draft)} defaultOpen={connAdvancedOpen(draft)}>
+      <Disclosure title={t`Advanced`} summary={connAdvancedSummary(draft)} defaultOpen={connAdvancedOpen(draft)}>
         <div className="set-rows" hidden={!rtsp}>
           <SettingRow
-            title="傳輸方式"
-            desc="TCP 穩定不掉畫面，建議使用；UDP 延遲較低，網路不穩時容易花屏。"
+            title={t`Transport`}
+            desc={t`TCP is stable and doesn't drop frames, so it's recommended. UDP has lower latency but can show glitches on an unstable network.`}
             control={
               <Segmented
-                label="傳輸方式"
+                label={t`Transport`}
                 options={[
                   { value: "tcp", label: "TCP" },
                   { value: "udp", label: "UDP" },
@@ -133,24 +138,24 @@ export function ConnFields({ kit, existing }: { kit: FieldKit; existing: CameraD
               />
             }
           />
-          {c.flag("onvifOn", "使用 ONVIF", "可以控制鏡頭轉向，並接收相機自己偵測到的事件。")}
+          {c.flag("onvifOn", t`Use ONVIF`, t`Lets you steer the camera and receive events the camera detects itself.`)}
           <div className="set-rows" hidden={!draft.onvifOn}>
-            <SettingRow title="ONVIF 主機" wide error={c.fieldError("ovHost")} control={c.text("ovHost", { placeholder: "192.168.1.60" })} />
-            <SettingRow title="連接埠" error={c.fieldError("ovPort")} control={c.text("ovPort", { inputMode: "numeric" })} />
-            <SettingRow title="ONVIF 帳號" wide control={c.text("ovUser")} />
-            <SettingRow title="ONVIF 密碼" wide control={c.secret("ovPass")} />
+            <SettingRow title={t`ONVIF host`} wide error={c.fieldError("ovHost")} control={c.text("ovHost", { placeholder: "192.168.1.60" })} />
+            <SettingRow title={t`Port`} error={c.fieldError("ovPort")} control={c.text("ovPort", { inputMode: "numeric" })} />
+            <SettingRow title={t`ONVIF username`} wide control={c.text("ovUser")} />
+            <SettingRow title={t`ONVIF password`} wide control={c.secret("ovPass")} />
           </div>
         </div>
-        {c.flag("recDirect", "錄影直接連到相機", "影像服務出問題時錄影不受影響，但會多佔用相機一條連線。")}
+        {c.flag("recDirect", t`Record straight from the camera`, t`Recording keeps working if the video service has problems, but it uses one more connection on the camera.`)}
         {existing ? (
           <SettingRow
-            title="給其他 App 的串流網址"
+            title={t`Stream URL for other apps`}
             wide
-            desc="在「設定 → 一般」開啟「讓其他 App 讀取攝影機畫面」後，VLC 或 Home Assistant 可以用這個網址看這台攝影機。"
+            desc={t`After turning on "Let other apps read camera video" under Settings → General, VLC or Home Assistant can use this URL to watch this camera.`}
             control={
               <div className="form-actions">
-                <CopyButton label="複製串流網址" className="small" done="已複製串流網址" getText={() => existing.rtsp.main} />
-                {existing.rtsp.sub ? <CopyButton label="複製低畫質網址" className="small" done="已複製低畫質串流網址" getText={() => existing.rtsp.sub!} /> : null}
+                <CopyButton label={t`Copy stream URL`} className="small" done={t`Stream URL copied`} getText={() => existing.rtsp.main} />
+                {existing.rtsp.sub ? <CopyButton label={t`Copy low-quality URL`} className="small" done={t`Low-quality stream URL copied`} getText={() => existing.rtsp.sub!} /> : null}
               </div>
             }
           />
@@ -161,11 +166,12 @@ export function ConnFields({ kit, existing }: { kit: FieldKit; existing: CameraD
 }
 
 export function RecFields({ kit }: { kit: FieldKit }) {
+  const { t } = useLingui();
   const c = controls(kit);
   return (
     <>
-      {c.flag("recEnabled", "全天候錄影")}
-      {c.flag("recAudio", "錄下聲音")}
+      {c.flag("recEnabled", t`Record 24/7`)}
+      {c.flag("recAudio", t`Record sound`)}
     </>
   );
 }
