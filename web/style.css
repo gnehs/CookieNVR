@@ -277,6 +277,25 @@ button, a, summary, label { touch-action: manipulation; }
 .page-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .stack { display: grid; gap: 20px; }
 
+/* 捲動容器邊緣淡出：用 mask 溶掉內容本身，不疊顏色，背景與邊框要放在外層。
+   隨捲動位置變化：在開頭時起點清楚、終點淡出；捲到底時終點變清楚；沒有溢出就完全不淡出。
+   不支援捲動驅動動畫的瀏覽器（Firefox）不淡出：固定淡出會連沒溢出的內容也溶掉。 */
+@property --sf-start { syntax: "<length-percentage>"; inherits: false; initial-value: 0px; }
+@property --sf-end { syntax: "<length-percentage>"; inherits: false; initial-value: 0px; }
+@supports (animation-timeline: scroll()) {
+  .scroll-fade, .scroll-fade-x {
+    --scroll-fade-size: min(12%, 40px);
+    --scroll-fade-reveal: 96px;
+    mask-image: linear-gradient(var(--sf-dir, to bottom), transparent, #000 var(--sf-start), #000 calc(100% - var(--sf-end)), transparent);
+    animation: sf-start linear both, sf-end linear both;
+    animation-timeline: scroll(self block);
+    animation-range: 0 var(--scroll-fade-reveal), calc(100% - var(--scroll-fade-reveal)) 100%;
+  }
+  .scroll-fade-x { --sf-dir: to right; --scroll-fade-size: min(12%, 32px); animation-timeline: scroll(self inline); }
+}
+@keyframes sf-start { from { --sf-start: 0px; } to { --sf-start: var(--scroll-fade-size); } }
+@keyframes sf-end { from { --sf-end: var(--scroll-fade-size); } to { --sf-end: 0px; } }
+
 /* 膠囊狀分段導覽（設定分頁） */
 .pill-nav {
   position: relative; display: flex; gap: 2px; padding: 4px; margin: -6px 0 22px; width: fit-content; max-width: 100%;

@@ -93,7 +93,7 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
       <p className="ptz-hint" id="ptz-limit" hidden={!admin || !full}>
         {full ? `已達上限（${max} 個），請先刪除一個。` : ""}
       </p>
-      <ul className="ptz-presets" hidden={presets.length === 0}>
+      <ul className="ptz-presets scroll-fade-x" hidden={presets.length === 0}>
         {presets.map((p) => (
           <li className="ptz-preset" key={p.token}>
             <button className="ptz-preset-go" type="button" aria-busy={goingTo === p.token ? "true" : undefined} onClick={() => void go(p)}>

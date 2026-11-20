@@ -218,7 +218,7 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
           從錄影再挑一些
         </Button>
       </header>
-      <div className="lb-tabs" role="tablist" aria-label="畫面分類">
+      <div className="lb-tabs scroll-fade-x" role="tablist" aria-label="畫面分類">
         <button type="button" role="tab" aria-selected={activeView === PENDING} onClick={() => setView(PENDING)}>
           待標記<span className="lb-count num">{pendingCount}</span>
         </button>

@@ -538,7 +538,7 @@ const EventList = memo(function EventList({ events, current, onJump, onExport }:
   }, [current]);
 
   return (
-    <ol className="ev-list" aria-label="事件清單" ref={listRef}>
+    <ol className="ev-list scroll-fade" aria-label="事件清單" ref={listRef}>
       {events.length === 0 ? (
         <li className="ev-empty">
           <EmptyState title="這一天沒有事件" body="開啟動作偵測後，偵測到的事件會出現在這裡。" icon="activity" />

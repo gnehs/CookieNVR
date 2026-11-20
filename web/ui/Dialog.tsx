@@ -104,7 +104,7 @@ export function Dialog({ open, onOpenChange, title, children, initialFocus, onCl
   const cls = `${sheet ? "sheet" : "dlg"}${footer ? " has-foot" : ""}${wide ? " wide" : ""}`;
   const body = footer ? (
     <>
-      <div className="dlg-body">{children}</div>
+      <div className="dlg-body scroll-fade">{children}</div>
       <div className="dlg-foot">{footer}</div>
     </>
   ) : (
