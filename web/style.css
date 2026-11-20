@@ -957,7 +957,8 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .ev-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ev-row { position: relative; }
 .ev-row .ev-item { padding-right: 48px; }
-.ev-export { position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 36px; min-height: 36px; }
+/* 兩個 class：材質層的 .btn { position: relative } 排在後面，單一 class 會被蓋掉 */
+.ev-row > .ev-export { position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 36px; min-height: 36px; }
 .ev-row .badge.live { margin-right: 4px; }
 .ev-text { display: grid; min-width: 0; flex: 1; line-height: 1.35; }
 .ev-text b { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -979,9 +980,16 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
   .pb-actions { gap: 0; }
   .pb-clock { font-size: 17px; }
   .pb-grid { gap: 12px; }
-  .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -16px; border-radius: 0 0 var(--r-xl) var(--r-xl); border-top: 0; padding: 6px 10px 6px; }
+  /* 黏在頂端的是一條平的工具列：圓角底下會露出捲過去的內容，看起來像兩層疊在一起 */
+  .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -16px; border-radius: 0; border-width: 0 0 1px; box-shadow: none; padding: 6px 12px 8px; }
+  /* 時間軸與事件拿掉外框，只留內面板；標題列變成段落標題，不再是卡片裡的卡片 */
+  .pb-timeline, .pb-events { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
+  .pb-events .panel-head { padding: 4px 4px 8px; min-height: 0; }
+  /* 清單跟著頁面捲，不在已經會捲的頁面裡再開一個捲動區 */
+  .pb-events .panel-body { overflow: visible; }
+  .pb-events .ev-list { max-height: none; overflow: visible; mask-image: none; }
   .pb-timeline .panel-body { padding: 8px 6px; }
-  .pb-timeline .panel-head { padding-top: 6px; min-height: 0; }
+  .pb-timeline .panel-head { padding: 0 0 8px; min-height: 0; }
   .pb-timeline .panel-head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .pb-timeline .panel-head .segmented { order: 3; flex: 1 1 100%; }
   .pb-timeline .panel-head .segmented label { flex: 1; text-align: center; }
