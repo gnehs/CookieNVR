@@ -476,7 +476,7 @@ function frontDoorEvents(dayStart: number): EventDto[] {
   return out;
 }
 
-/** 錄影頁用的假事件（只有前兩台、最近三天）、前門一週的事件，加上即時產生的 */
+/** 單台頁時間軸用的假事件（只有前兩台、最近三天）、前門一週的事件，加上即時產生的 */
 function allEvents(cameraId: string | null): EventDto[] {
   const t0 = now();
   const day = (d: number) => localMidnight(localMidnight(t0) - d * DAY + 12 * 3_600_000);

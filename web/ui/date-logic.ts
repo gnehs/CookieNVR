@@ -139,7 +139,7 @@ export function moveInGrid(k: DayKey, key: GridKey, shift: boolean): DayKey {
   }
 }
 
-/** 往前或往後找下一個可選的日子（回放頁的前一天、後一天會跳過沒有錄影的日子） */
+/** 往前或往後找下一個可選的日子（單台頁的前一天、後一天會跳過沒有錄影的日子） */
 export function stepDay(k: DayKey, dir: 1 | -1, selectable: (k: DayKey) => boolean, min: DayKey | null, max: DayKey | null, limit = 3660): DayKey | null {
   let cur = k;
   for (let i = 0; i < limit; i++) {
