@@ -4,6 +4,7 @@ import { createAuth } from "../auth/index.ts";
 import { openDb } from "../db.ts";
 import { createCameraStore, createSettingsStore } from "../stores/index.ts";
 import type { CameraConfig, Route } from "../types.ts";
+import { createCameraDto } from "./camera-routes.ts";
 import { coreRoutes } from "./core-routes.ts";
 import { createRouter, type ServerLike } from "./router.ts";
 
@@ -86,8 +87,10 @@ beforeEach(async () => {
         diagnosed.push(only);
         return `report for ${only ?? "all"}`;
       },
-      cameraStatus: () => ({ online: true, recording: false }),
-      rtspUrls: (id) => ({ main: `rtsp://nvr:8554/${id}/main`, sub: `rtsp://nvr:8554/${id}/sub` }),
+      cameraDto: createCameraDto({
+        cameraStatus: () => ({ online: true, recording: false }),
+        rtspUrls: (id) => ({ main: `rtsp://nvr:8554/${id}/main`, sub: `rtsp://nvr:8554/${id}/sub` }),
+      }),
       purgeRecordings: (id) => void purged.push(id),
       supervisor: { restart: (id) => void restarted.push(id) },
     }),

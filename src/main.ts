@@ -21,7 +21,7 @@ import { createHomekit } from "./homekit/manager.ts";
 import type { CodecName } from "./hwcodec/commands.ts";
 import { planDecode } from "./hwcodec/plan.ts";
 import { createVideoCodecs, decodeStatusDto } from "./hwcodec/service.ts";
-import { coreRoutes, createRouter, HttpError, linkRoutes, redactConfig } from "./http/index.ts";
+import { coreRoutes, createRouter, HttpError, linkRoutes, createCameraDto } from "./http/index.ts";
 import { webApp } from "./http/web-app.ts";
 import { createLive } from "./live/live.ts";
 import { metricsRoutes } from "./metrics/routes.ts";
@@ -301,22 +301,14 @@ function rtspUrls(id: CameraId, req: Request) {
 
 const publicConfig = (config: CameraConfig) => publicCameraConfig(config, settings.get().objects.enabled);
 
-function cameraDto(camera: Camera, client: StreamClient): CameraDto {
-  return {
-    id: camera.id,
-    position: camera.position,
-    groupId: camera.groupId,
-    config: publicConfig(client.principal.role === "admin" ? camera.config : redactConfig(camera.config)),
-    ...cameraStatus(camera.id),
-    rtsp: rtspUrls(camera.id, client.req),
-  };
-}
+const cameraDto = createCameraDto({ cameraStatus, rtspUrls, publicConfig });
+const clientCameraDto = (camera: Camera, client: StreamClient): CameraDto => cameraDto(camera, client.req, client.principal.role === "admin");
 
 const hub = createStreamHub({
   // 撤銷或降級後切斷，讓用戶端重連時拿到新的權限
   stillAuthorized: (client) => auth.authenticate(client.req, new URL(client.req.url))?.role === client.principal.role,
   snapshot: (client) => ({
-    cameras: cameras.list().map((c) => cameraDto(c, client)),
+    cameras: cameras.list().map((c) => clientCameraDto(c, client)),
     workers: client.principal.role === "admin" ? supervisor.status().map(publicWorker) : null,
     events: events.active(),
     stateSensors: states.list(),
@@ -330,7 +322,7 @@ function publishCameraChanges(): void {
     const key = JSON.stringify(cameraStatus(camera.id));
     if (sentStatus.get(camera.id) === key) continue;
     sentStatus.set(camera.id, key);
-    hub.publish((client) => ({ type: "camera", data: cameraDto(camera, client) }));
+    hub.publish((client) => ({ type: "camera", data: clientCameraDto(camera, client) }));
   }
 }
 
@@ -385,10 +377,8 @@ const routes = [
     system,
     diagnostics,
     probe,
-    cameraStatus,
-    rtspUrls,
+    cameraDto,
     purgeRecordings: purgeCameraRecordings,
-    publicConfig,
     mergeConfig: (incoming, existing) => mergeCameraConfig(incoming, existing, settings.get().objects.enabled),
     supervisor: {
       restart(id, reason) {
@@ -479,7 +469,7 @@ cameras.subscribe((list) => {
   states.sync(list);
   homekit.sync();
   for (const c of list) sentStatus.set(c.id, JSON.stringify(cameraStatus(c.id)));
-  hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
+  hub.publish((client) => ({ type: "cameras", data: list.map((c) => clientCameraDto(c, client)) }));
   void reconcileWorkers().catch((e) => log("workers", e));
   void restream.sync(list).catch((e) => logRestream(e));
 });
@@ -524,7 +514,7 @@ settings.subscribe((s) => {
   if (s.objects.enabled === objectsWasEnabled) return;
   objectsWasEnabled = s.objects.enabled;
   const list = cameras.list();
-  hub.publish((client) => ({ type: "cameras", data: list.map((c) => cameraDto(c, client)) }));
+  hub.publish((client) => ({ type: "cameras", data: list.map((c) => clientCameraDto(c, client)) }));
 });
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => logRestream(e));
 

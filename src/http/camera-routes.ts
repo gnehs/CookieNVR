@@ -9,15 +9,33 @@ import { msg } from "../messages/index.ts";
 export interface CameraDeps {
   cameras: CameraStore;
   probe: (conn: CameraConnection) => Promise<ProbeResult>;
-  cameraStatus: (id: CameraId) => { online: boolean; recording: boolean };
-  rtspUrls: (id: CameraId, req: Request) => { main: string; sub: string | null };
+  /** 組出對用戶端的攝影機資料；SSE 推送用的是同一個，見 createCameraDto */
+  cameraDto: CameraDtoBuilder;
   /** 攝影機已移除後呼叫；實際清除在背景進行，失敗由實作寫入日誌。 */
   purgeRecordings: (id: CameraId) => void;
-  /** 對外的設定（例如只放生效中的物件類別）；沒給就原樣 */
-  publicConfig?: (config: CameraConfig) => CameraConfig;
   /** 修改時把用戶端送來的設定與原本的合併；沒給就整份取代 */
   mergeConfig?: (incoming: CameraConfig, existing: CameraConfig) => CameraConfig;
 }
+
+export type CameraDtoBuilder = (camera: Camera, req: Request, admin: boolean) => CameraDto;
+
+export interface CameraDtoParts {
+  cameraStatus: (id: CameraId) => { online: boolean; recording: boolean };
+  rtspUrls: (id: CameraId, req: Request) => { main: string; sub: string | null };
+  /** 對外的設定（例如只放生效中的物件類別）；沒給就原樣 */
+  publicConfig?: (config: CameraConfig) => CameraConfig;
+}
+
+export const createCameraDto =
+  ({ cameraStatus, rtspUrls, publicConfig = (c) => c }: CameraDtoParts): CameraDtoBuilder =>
+  (camera, req, admin) => ({
+    id: camera.id,
+    position: camera.position,
+    groupId: camera.groupId,
+    config: publicConfig(admin ? camera.config : redactConfig(camera.config)),
+    ...cameraStatus(camera.id),
+    rtsp: rtspUrls(camera.id, req),
+  });
 
 const stripUrlCredentials = (url: string) => url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/?#]*@/i, "$1");
 
@@ -58,16 +76,7 @@ export function parseArrangement(value: unknown): CameraArrangement {
   };
 }
 
-export function cameraRoutes({ cameras, probe, cameraStatus, rtspUrls, purgeRecordings, publicConfig = (c) => c, mergeConfig = (c) => c }: CameraDeps): Route[] {
-  const toDto = (camera: Camera, req: Request, admin: boolean): CameraDto => ({
-    id: camera.id,
-    position: camera.position,
-    groupId: camera.groupId,
-    config: publicConfig(admin ? camera.config : redactConfig(camera.config)),
-    ...cameraStatus(camera.id),
-    rtsp: rtspUrls(camera.id, req),
-  });
-
+export function cameraRoutes({ cameras, probe, cameraDto: toDto, purgeRecordings, mergeConfig = (c) => c }: CameraDeps): Route[] {
   const find = (raw: string | undefined): Camera => {
     const camera = cameras.get((raw ?? "") as CameraId);
     if (!camera) throw new HttpError(404, msg("http.cameraNotFound"));
