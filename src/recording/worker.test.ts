@@ -73,6 +73,14 @@ test("day directories exist for today and tomorrow (UTC) for recording cameras o
   expect((await readdir(join(settings.storagePath, "rec"))).sort()).toEqual(["20261231", "20270101"]);
 });
 
+test("one camera whose directory cannot be created does not hold back the others", async () => {
+  const settings = await tempSettings();
+  await Bun.write(join(settings.storagePath, "bad"), "a file where the camera directory should be");
+  const errors = await ensureDayDirs([camera("bad"), camera("good")], settings, Date.UTC(2026, 11, 31, 23, 30));
+  expect(errors).toHaveLength(2);
+  expect((await readdir(join(settings.storagePath, "good"))).sort()).toEqual(["20261231", "20270101"]);
+});
+
 const realEnv = readEnv({});
 const hasTools = Boolean(Bun.which(realEnv.ffmpegBin) && Bun.which(realEnv.ffprobeBin) && Bun.which(realEnv.mediamtxBin));
 

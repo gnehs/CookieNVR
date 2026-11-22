@@ -84,12 +84,16 @@ async function newestMtime(storagePath: string, camera: Camera, now: number): Pr
   return newest;
 }
 
-/** ffmpeg does not create directories, so today's and tomorrow's must exist before it rolls over. */
-export async function ensureDayDirs(cameras: Camera[], settings: Settings, now: number): Promise<void> {
+/**
+ * ffmpeg does not create directories, so today's and tomorrow's must exist before it rolls over.
+ * Returns the failures instead of rejecting: one camera's unwritable path must not hold back the others.
+ */
+export async function ensureDayDirs(cameras: Camera[], settings: Settings, now: number): Promise<unknown[]> {
   const days = [dayKey(now), dayKey(now + DAY_MS)];
-  await Promise.all(
+  const results = await Promise.allSettled(
     cameras
       .filter(isRecording)
       .flatMap((c) => days.map((d) => mkdir(dayDir(settings.storagePath, c.id, d), { recursive: true }))),
   );
+  return results.flatMap((r) => (r.status === "rejected" ? [r.reason] : []));
 }

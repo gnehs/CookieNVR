@@ -353,3 +353,16 @@ describe("stdout as data", () => {
     expect(tail.some((l) => l.includes("frame-bytes"))).toBe(false);
   });
 });
+
+test("a pid file that cannot be written is reported and workers still start and stop", async () => {
+  const logDir = tempDir();
+  await Bun.write(join(logDir, "blocker"), "");
+  const errors: unknown[] = [];
+  const { sup } = makeSupervisor({ logDir, pidFile: join(logDir, "blocker", "workers.pid.json"), onError: (e) => errors.push(e) });
+  await sup.ready;
+  sup.apply([sh("w", "sleep 30")]);
+  await until(() => one(sup, "w")?.state === "running");
+  sup.apply([]);
+  await until(() => one(sup, "w") === undefined);
+  expect(errors.length).toBeGreaterThan(0);
+});

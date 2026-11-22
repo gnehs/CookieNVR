@@ -93,21 +93,26 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
   function signal(cameraId: CameraId, sig: Signal, cooldownMs: number, frame?: Uint8Array): void {
     const t = track(cameraId);
     const policy = { cooldownMs, filterWindowMs: deps.filterWindow?.(cameraId) ?? null };
-    for (const fx of step(t.state, sig, policy)) {
-      if (fx.type === "start") {
-        const event = insertEvent(db, { cameraId, source: fx.source, startMs: fx.at, score: fx.score, labels: fx.labels });
-        t.eventId = event.id;
-        emit("start", event);
-        setThumb(t, event.id, fx.thumb, frame);
-      } else if (fx.type === "update" && t.eventId !== null) {
-        emit("update", updateEvent(db, t.eventId, { score: fx.score, source: fx.source, labels: fx.labels }));
-        setThumb(t, t.eventId, fx.thumb, frame);
-      } else if (fx.type === "end" && t.eventId !== null) {
-        const id = t.eventId;
-        t.eventId = null;
-        if (t.wantThumb === id) t.wantThumb = null;
-        emit("end", updateEvent(db, id, { endMs: fx.at }));
+    // A failed write (database disk full) drops this signal's effects; callers are timers and stream readers that must keep running.
+    try {
+      for (const fx of step(t.state, sig, policy)) {
+        if (fx.type === "start") {
+          const event = insertEvent(db, { cameraId, source: fx.source, startMs: fx.at, score: fx.score, labels: fx.labels });
+          t.eventId = event.id;
+          emit("start", event);
+          setThumb(t, event.id, fx.thumb, frame);
+        } else if (fx.type === "update" && t.eventId !== null) {
+          emit("update", updateEvent(db, t.eventId, { score: fx.score, source: fx.source, labels: fx.labels }));
+          setThumb(t, t.eventId, fx.thumb, frame);
+        } else if (fx.type === "end" && t.eventId !== null) {
+          const id = t.eventId;
+          t.eventId = null;
+          if (t.wantThumb === id) t.wantThumb = null;
+          emit("end", updateEvent(db, id, { endMs: fx.at }));
+        }
       }
+    } catch (e) {
+      deps.onError?.(e);
     }
     if (sig.type === "stop" && t.state.event === null) tracks.delete(cameraId);
   }

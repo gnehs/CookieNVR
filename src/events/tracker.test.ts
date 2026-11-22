@@ -101,3 +101,14 @@ test("filter mode drops motion that never shows a watched label", async () => {
   expect(notices).toEqual([]);
   expect(db.query("SELECT COUNT(*) AS n FROM events").get()).toEqual({ n: 0 });
 });
+
+test("a database write that fails is reported and does not throw into the caller", async () => {
+  const db = openDb(":memory:");
+  const dataDir = await mkdtemp(join(tmpdir(), "cookienvr-tracker-"));
+  const errors: unknown[] = [];
+  const tracker = createEventTracker({ db, dataDir, now: () => 100_000, onError: (e) => errors.push(e) });
+  db.run("DROP TABLE events");
+  tracker.signal(cam, px(0, 0.02), 10_000);
+  tracker.signal(cam, px(200, 0.03), 10_000);
+  expect(errors.length).toBeGreaterThan(0);
+});

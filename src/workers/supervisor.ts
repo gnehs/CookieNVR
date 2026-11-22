@@ -34,6 +34,8 @@ export interface SupervisorOptions {
   unstableThreshold?: number;
   tailLines?: number;
   now?: () => number;
+  /** The pid file could not be written (data disk full or read-only); workers keep running. */
+  onError?: (e: unknown) => void;
 }
 
 /**
@@ -170,7 +172,16 @@ export function createSupervisor(opts: SupervisorOptions): CookieSupervisor {
       const startToken = processStartToken(w.phase.run.pid);
       if (startToken) entries.push({ id: w.spec.id, pid: w.phase.run.pid, startToken });
     }
-    writePidFile(cfg.pidFile, entries);
+    savePids(entries);
+  }
+
+  // Losing the pid file only costs orphan reaping after a crash; throwing here would take the main process down.
+  function savePids(entries: PidEntry[]): void {
+    try {
+      writePidFile(cfg.pidFile, entries);
+    } catch (e) {
+      opts.onError?.(e);
+    }
   }
 
   function pushTail(w: Worker, line: string): void {
@@ -461,7 +472,7 @@ export function createSupervisor(opts: SupervisorOptions): CookieSupervisor {
       await ready;
       for (const w of [...workers.values()]) stop(w, "remove");
       while (runEnded.size > 0) await Promise.all([...runEnded]);
-      writePidFile(cfg.pidFile, []);
+      savePids([]);
     },
   };
 }

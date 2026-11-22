@@ -74,7 +74,7 @@ if (previousRecordingsDir) {
   console.log(`[storage] 錄影位置改成 ${recordingsDir}：原本自動放在 ${previousRecordingsDir}，現在有${env.recordingsDir ? "設定 RECORDINGS_DIR" : "另外掛載的 /recordings"}。舊的錄影留在原處，照常可以回放，並照保留天數清除`);
 }
 const settings = createSettingsStore(db, env.dataDir, recordingsDir);
-const supervisor = createSupervisor({ logDir });
+const supervisor = createSupervisor({ logDir, onError: (e) => log("workers", e) });
 const restream = createRestream({
   env,
   configDir: join(env.dataDir, "mediamtx"),
@@ -240,7 +240,7 @@ function desiredWorkers(): WorkerSpec[] {
 
 // 目錄必須先存在，ffmpeg 才寫得進去，所以對帳 worker 一律排在建目錄之後。
 async function reconcileWorkers(): Promise<void> {
-  await ensureDayDirs(cameras.list(), settings.get(), Date.now());
+  for (const e of await ensureDayDirs(cameras.list(), settings.get(), Date.now())) log("record", e);
   supervisor.apply(desiredWorkers());
 }
 
@@ -444,8 +444,15 @@ const server = (() => {
 })();
 
 await supervisor.ready;
-await ensureDayDirs(cameras.list(), settings.get(), Date.now());
-await indexer.reconcile(Date.now());
+for (const e of await ensureDayDirs(cameras.list(), settings.get(), Date.now())) log("record", e);
+// 資料磁碟滿了對帳會寫不進去；只有保留期清理能騰出空間，所以清一輪再試，還是不行也照常啟動（每 10 秒的掃描會補上）
+try {
+  await indexer.reconcile(Date.now());
+} catch (e) {
+  log("index", e);
+  await retention.runOnce(Date.now()).catch((e) => log("retention", e));
+  await indexer.reconcile(Date.now()).catch((e) => log("index", e));
+}
 detection.sync(cameras.list());
 states.sync(cameras.list());
 homekit.sync();
@@ -603,5 +610,8 @@ async function shutdown(exitCode = 0): Promise<void> {
 }
 process.on("SIGTERM", () => void shutdown());
 process.on("SIGINT", () => void shutdown());
+// Bun 預設遇到沒人接的錯誤就結束程序，所有攝影機的錄影跟著停；啟動完成後改成印出來繼續跑
+process.on("unhandledRejection", (e) => log("unhandled", e));
+process.on("uncaughtException", (e) => log("unhandled", e));
 
 console.log(`CookieNVR ${pkg.version} 已啟動：http://localhost:${server.port}`);
