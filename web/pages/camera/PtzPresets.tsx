@@ -84,9 +84,13 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
         <h3>{t`Presets`}</h3>
         {admin ? (
           <div className="ptz-sub-tools">
-            <Button small icon="plus" disabled={full} aria-describedby="ptz-limit" onClick={() => setAdding(true)}>
-              {t`Save current position`}
-            </Button>
+            {presets.length > 0 ? (
+              <Button small iconOnly icon="plus" disabled={full} aria-label={t`Save current position`} title={t`Save current position`} aria-describedby="ptz-limit" onClick={() => setAdding(true)} />
+            ) : (
+              <Button small icon="plus" disabled={full} aria-describedby="ptz-limit" onClick={() => setAdding(true)}>
+                {t`Save current position`}
+              </Button>
+            )}
             {presets.length > 0 ? (
               <Button small variant="ghost" aria-pressed={editing} onClick={() => setEditing(!editing)}>
                 {editing ? t`Done` : t`Edit`}

@@ -2,7 +2,6 @@ import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
-import { KeyHints } from "../../ui/Kbd.tsx";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type { CameraDto, PtzDto } from "../../../src/api-types.ts";
@@ -209,7 +208,6 @@ function Panel({ cam, caps, admin, overlay }: { cam: CameraDto; caps: Supported;
     );
   };
 
-  const speedId = `ptz-speed-${cam.id}`;
   const pct = `${Math.round(speed * 100)}%`;
   const zoom = hasZoom ? (
     <div className="ptz-zoom" role="group" aria-label={t`Zoom`}>
@@ -217,6 +215,8 @@ function Panel({ cam, caps, admin, overlay }: { cam: CameraDto; caps: Supported;
       {key("zoomOut")}
     </div>
   ) : null;
+  const turn = t`Turn camera`;
+  const hint = `${plan.hold ? t`Hold to keep turning, tap to nudge.` : t`Tap to move one step.`} ${turn} ↑ ↓ ← →`;
   const toggle = () => {
     driverRef.current?.cancel();
     setShown(!shown);
@@ -235,7 +235,7 @@ function Panel({ cam, caps, admin, overlay }: { cam: CameraDto; caps: Supported;
       ) : null}
       <div className="ptz-corner">
         {shown && !narrow ? zoom : null}
-        <button type="button" className="ptz-toggle" aria-pressed={shown} onClick={toggle}>
+        <button type="button" className="ptz-toggle" aria-pressed={shown} title={shown ? hint : undefined} onClick={toggle}>
           <Icon name="camera" size={16} />
           <span>{t({ message: "Camera", context: "button that shows or hides the pan-tilt-zoom controls" })}</span>
         </button>
@@ -254,17 +254,12 @@ function Panel({ cam, caps, admin, overlay }: { cam: CameraDto; caps: Supported;
               <Icon name="stop" size={18} />
             </button>
             <div className="ptz-speed">
-              <span id={speedId}>{t`Speed`}</span>
-              <Slider min={0.1} max={1} step={0.05} aria-labelledby={speedId} aria-valuetext={pct} value={speed} onChange={setSpeed} />
+              <Slider min={0.1} max={1} step={0.05} aria-label={t`Speed`} aria-valuetext={pct} value={speed} onChange={setSpeed} />
               <output className="num">{pct}</output>
             </div>
             <span className="ptz-state" aria-live="polite" role="status" data-tone={statusTone}>
               {statusText}
             </span>
-            <p className="ptz-hint ptz-keys" hidden={statusText !== ""}>
-              {plan.hold ? t`Hold to keep turning, tap to nudge.` : t`Tap to move one step.`}
-              <KeyHints className="ptz-kbd" hints={[{ keys: ["↑", "↓", "←", "→"], label: t`Turn camera` }]} />
-            </p>
           </div>
         </section>
       ) : null}
