@@ -8,7 +8,7 @@ import { labelName } from "../../detect/label-names.ts";
 import { api } from "../../api.ts";
 import { activeEventsQuery, camerasQuery, objectLabelsQuery } from "../../data/queries.ts";
 import { useMe } from "../../data/session.ts";
-import { dayBounds, dayKey, dayTitle, groupByDay, mergeEvents, playbackSearch } from "../../detect/model.ts";
+import { dayTitle, groupByDay, mergeEvents, playbackSearch } from "./model.ts";
 import { eventLabelOptions } from "../../detect/object-model.ts";
 import { errMsg, formatClock } from "../../format.ts";
 import { EVENT_ACTIVE } from "../../health.ts";
@@ -18,6 +18,7 @@ import { Button, ButtonLink } from "../../ui/Button.tsx";
 import { DatePicker } from "../../ui/DatePicker.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
 import { dayOf, type DayKey } from "../../ui/date-logic.ts";
+import { dayRange } from "../camera/day.ts";
 import { Icon } from "../../ui/Icon.tsx";
 import { MenuButton } from "../../ui/Menu.tsx";
 import { MultiSelect, Select, type SelectEntry } from "../../ui/Select.tsx";
@@ -68,7 +69,7 @@ const listKey = (f: Filter) => ["events", "list", { camera: f.camera, labels: f.
 
 /** 抓一頁；有日期篩選時切掉前一天的，切到了就是最後一頁 */
 async function fetchPage(f: Filter, before: number | null): Promise<Page> {
-  const b = f.date ? dayBounds(f.date) : null;
+  const b = f.date ? dayRange(f.date) : null;
   // 剛開始的事件時間可能比瀏覽器時鐘晚一點點，往後多抓一分鐘
   const cursor = before ?? (b ? b[1] : Date.now() + 60_000);
   const page = await api.eventsBefore(cursor, PAGE_SIZE, f.camera, f.labels);
@@ -157,7 +158,7 @@ function EventsList() {
   // 結束的事件再抓一次單筆拿到長度；抓回來的放這裡蓋過清單裡的舊資料
   const [patched, setPatched] = useState<ReadonlyMap<number, EventDto>>(new Map());
   const matches = (e: EventDto) =>
-    (!filter.camera || e.cameraId === filter.camera) && (!filter.date || dayKey(e.startMs) === filter.date) && (filter.labels.length === 0 || e.labels.some((l) => filter.labels.includes(l)));
+    (!filter.camera || e.cameraId === filter.camera) && (!filter.date || dayOf(e.startMs) === filter.date) && (filter.labels.length === 0 || e.labels.some((l) => filter.labels.includes(l)));
   const activeData = active.data;
   const items = useMemo(() => {
     const fromPages = (list.data?.pages ?? []).flatMap((p) => p.events);
@@ -238,7 +239,7 @@ function EventsList() {
   async function remove(e: EventDto, el: HTMLElement | null) {
     if (e.endMs === null) return toast(t`The event is still in progress. You can delete it once it ends.`, "error");
     const camName = nameOf(e.cameraId);
-    const day = dayTitle(dayKey(e.startMs), Date.now());
+    const day = dayTitle(dayOf(e.startMs), Date.now());
     const clock = formatClock(e.startMs);
     const ok = await confirmDialog(t`Delete this event?`, t`${camName}, ${day} ${clock}. The event and its thumbnail are deleted permanently. The recording is cleared later under the normal retention period.`, { confirmLabel: t`Delete`, danger: true });
     if (!ok) return;
@@ -358,7 +359,7 @@ function EventCard({ e, now, name, admin, onRemove }: { e: EventDto; now: number
   const live = e.endMs === null;
   const len = (e.endMs ?? now) - e.startMs;
   const labels = e.labels.length ? labelText(e.labels) : null;
-  const when = `${dayTitle(dayKey(e.startMs), now)} ${formatClock(e.startMs)}`;
+  const when = `${dayTitle(dayOf(e.startMs), now)} ${formatClock(e.startMs)}`;
   const duration = spoken(len);
   const badge = EVENT_ACTIVE.badge;
   const label = [name, when, labels, live ? t`${badge}, running for ${duration}` : t`Length ${duration}`, t`Play recording`].filter((x): x is string => !!x).join(t({ message: ", ", context: "clause separator" }));
