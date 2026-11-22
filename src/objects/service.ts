@@ -1,7 +1,6 @@
-import { readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Socket, UnixSocketListener } from "bun";
 import builtinModel from "../../detector/builtin-model.json";
 import type {
   BenchmarkDto,
@@ -27,7 +26,8 @@ import type { Camera, CameraId, DeviceRef, ObjectSettings, Route, WorkerSpec } f
 import { camerasSupported, DROP_WARN_RATIO, loadSample, verdict } from "./capacity.ts";
 import { StationaryFilter, toHits, type Detection } from "./hits.ts";
 import { COCO_LABELS, COMMON_LABELS, labelName } from "./labels.ts";
-import { encodeJson, KIND_JSON, MsgReader } from "../workers/framing.ts";
+import { encodeJson, KIND_JSON } from "../workers/framing.ts";
+import { createSocketLink } from "../workers/socket-link.ts";
 import { cpuShareOf, encodeFrame, parseDetectorMsg, type ReadyInfo } from "./protocol.ts";
 import { FrameQueue } from "./queue.ts";
 
@@ -131,12 +131,15 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
   const report = (e: unknown) => opts.onError?.("detector", e);
 
   let phase: Phase = { tag: "off" };
-  let listener: UnixSocketListener<undefined> | null = null;
-  let conn: Socket<undefined> | null = null;
-  let reader = new MsgReader();
-  /** socket 寫不完的部分，等 drain 再送 */
-  let unsent: Uint8Array | null = null;
-  let lastMsgAt = 0;
+  const link = createSocketLink({
+    path: socketPath,
+    now,
+    onMessage: (kind, payload) => {
+      if (kind === KIND_JSON) onMessage(dec.decode(payload));
+    },
+    onDisconnect: disconnected,
+    onError: report,
+  });
   let busyMs: number | null = null;
   let gpu: GpuUsageDto | null = null;
   const queue = new FrameQueue<Job>();
@@ -202,38 +205,25 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
     saveBench();
   }
 
-  function write(bytes: Uint8Array): void {
-    if (!conn) return;
-    if (unsent) {
-      const merged = new Uint8Array(unsent.length + bytes.length);
-      merged.set(unsent);
-      merged.set(bytes, unsent.length);
-      unsent = merged;
-      return;
-    }
-    const n = conn.write(bytes);
-    if (n < bytes.length) unsent = bytes.slice(Math.max(0, n));
-  }
-
   /** 測速指令要等手上那張做完才送，detector 一次只做一件事 */
   function maybeSendBench(): boolean {
     if (!bench || bench.state !== "running" || bench.sent) return false;
-    if (inFlight || !conn) return true;
+    if (inFlight || !link.connected()) return true;
     bench.sent = true;
-    write(encodeJson({ type: "bench", devices: bench.devices, seconds: bench.seconds }));
+    link.write(encodeJson({ type: "bench", devices: bench.devices, seconds: bench.seconds }));
     return true;
   }
 
   function pump(): void {
     if (maybeSendBench() || benchRunning()) return;
-    if (inFlight || !conn || phase.tag !== "ready") return;
+    if (inFlight || !link.connected() || phase.tag !== "ready") return;
     const before = queue.dropped;
     const job = queue.take(now());
     for (let i = before; i < queue.dropped; i++) droppedAt.push(now());
     if (!job) return;
     const id = nextId++;
     inFlight = { id, job, sentAt: now() };
-    write(encodeFrame(id, job.jpeg));
+    link.write(encodeFrame(id, job.jpeg));
   }
 
   function trim(list: number[], maxAgeMs: number): void {
@@ -265,7 +255,6 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
   }
 
   function onMessage(raw: string): void {
-    lastMsgAt = now();
     const msg = parseDetectorMsg(raw);
     if (!msg) return;
     switch (msg.type) {
@@ -304,49 +293,12 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
   }
 
   function disconnected(): void {
-    conn = null;
-    unsent = null;
     inFlight = null;
     busyMs = null;
     gpu = null;
     queue.clear();
-    reader = new MsgReader();
     phase = enabled() ? { tag: "starting" } : { tag: "off" };
     if (benchRunning()) finishBench("failed", mk("objects.benchInterrupted"));
-  }
-
-  function ensureListener(): void {
-    if (listener) return;
-    rmSync(socketPath, { force: true });
-    listener = Bun.listen<undefined>({
-      unix: socketPath,
-      socket: {
-        open(socket) {
-          // 重啟時舊程序可能還沒斷線：只認最新的連線
-          conn?.end();
-          disconnected();
-          conn = socket;
-          lastMsgAt = now();
-        },
-        data(socket, chunk) {
-          if (socket !== conn) return;
-          for (const msg of reader.push(chunk)) if (msg.kind === KIND_JSON) onMessage(dec.decode(msg.payload));
-        },
-        drain(socket) {
-          if (socket !== conn || !unsent) return;
-          const rest = unsent;
-          unsent = null;
-          write(rest);
-        },
-        close(socket) {
-          if (socket === conn) disconnected();
-        },
-        error(socket, e) {
-          report(e);
-          if (socket === conn) disconnected();
-        },
-      },
-    });
   }
 
   function modelPath(id: string): string {
@@ -355,7 +307,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
 
   function healthy(): boolean {
     const t = now();
-    if (t - lastMsgAt > STALL_MS) return false;
+    if (t - link.lastSeenAt() > STALL_MS) return false;
     if (benchRunning()) return t - bench!.startedAt < BENCH_LIMIT_MS;
     if (busyMs !== null && busyMs > STALL_MS) return false;
     if (inFlight && t - inFlight.sentAt > STALL_MS) return false;
@@ -365,10 +317,10 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
   function workerSpecs(): WorkerSpec[] {
     const s = opts.settings();
     if (!s.objects.enabled) {
-      if (phase.tag !== "off" && !conn) phase = { tag: "off" };
+      if (phase.tag !== "off" && !link.connected()) phase = { tag: "off" };
       return [];
     }
-    ensureListener();
+    link.listen();
     if (phase.tag === "off") phase = { tag: "starting" };
     return [
       {
@@ -527,7 +479,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
 
   function cancelBench(): BenchmarkDto | null {
     if (!benchRunning()) return benchDto();
-    if (bench!.sent) write(encodeJson({ type: "bench-cancel" }));
+    if (bench!.sent) link.write(encodeJson({ type: "bench-cancel" }));
     else finishBench("cancelled", null);
     return benchDto();
   }
@@ -614,10 +566,7 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
     }),
     routes: () => routes,
     async stop() {
-      conn?.end();
-      listener?.stop(true);
-      listener = null;
-      rmSync(socketPath, { force: true });
+      link.stop();
     },
   };
 }

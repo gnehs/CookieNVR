@@ -1,6 +1,5 @@
 import type { Database } from "bun:sqlite";
-import type { Socket, UnixSocketListener } from "bun";
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { rm, unlink, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import backboneModel from "../../detector/backbone-model.json";
@@ -19,7 +18,8 @@ import {
   type StreamMessage,
 } from "../api-types.ts";
 import { chunksOf } from "../detect/protocol.ts";
-import { encodeJson, MsgReader } from "../workers/framing.ts";
+import { encodeJson } from "../workers/framing.ts";
+import { createSocketLink } from "../workers/socket-link.ts";
 import type { Env } from "../env.ts";
 import { HttpError } from "../http/errors.ts";
 import { msg, type Msg, zh } from "../messages/index.ts";
@@ -148,11 +148,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
   const thumbPath = (id: string, changeId: number) => join(sensorDir(id), "changes", `${changeId}.jpg`);
 
   let phase: Phase = { tag: "off" };
-  let listener: UnixSocketListener<undefined> | null = null;
-  let conn: Socket<undefined> | null = null;
-  let reader = new MsgReader();
-  let unsent: Uint8Array | null = null;
-  let lastMsgAt = 0;
+  const link = createSocketLink({ path: socketPath, now, onMessage, onDisconnect: disconnected, onError: report });
   let nextId = 1;
   let inFlight: { id: number; sensorId: SensorId; sentAt: number; mode: ClassifyRequest["mode"] } | null = null;
   const pending = new Map<SensorId, { req: Omit<ClassifyRequest, "id">; jpeg: Uint8Array }>();
@@ -198,20 +194,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   // ─── worker 連線 ───
 
-  function write(bytes: Uint8Array): void {
-    if (!conn) return;
-    if (unsent) {
-      const merged = new Uint8Array(unsent.length + bytes.length);
-      merged.set(unsent);
-      merged.set(bytes, unsent.length);
-      unsent = merged;
-      return;
-    }
-    const n = conn.write(bytes);
-    if (n < bytes.length) unsent = bytes.slice(Math.max(0, n));
-  }
-
-  const ready = () => conn !== null && phase.tag === "ready";
+  const ready = () => link.connected() && phase.tag === "ready";
 
   function pump(): void {
     if (!ready()) return;
@@ -219,7 +202,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       const q = jobQueue.shift()!;
       if (!sensors.has(q.sensorId)) continue;
       sentJobs.add(q.cmd.job);
-      write(encodeJson(q.cmd));
+      link.write(encodeJson(q.cmd));
     }
     if (inFlight) return;
     const next = pending.entries().next();
@@ -228,11 +211,10 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     pending.delete(sensorId);
     const id = nextId++;
     inFlight = { id, sensorId, sentAt: now(), mode: req.mode };
-    write(encodeClassify({ ...req, id }, jpeg));
+    link.write(encodeClassify({ ...req, id }, jpeg));
   }
 
   function onMessage(kind: number, payload: Uint8Array): void {
-    lastMsgAt = now();
     const m = parseWorkerMsg(kind, payload);
     if (!m) return;
     switch (m.type) {
@@ -264,11 +246,8 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
   }
 
   function disconnected(): void {
-    conn = null;
-    unsent = null;
     inFlight = null;
     pending.clear();
-    reader = new MsgReader();
     phase = needsWorker() ? { tag: "starting" } : { tag: "off" };
     for (const rt of sensors.values()) {
       if (rt.jobId !== null && sentJobs.has(rt.jobId)) finishJob(rt, { ok: false, error: msg("states.workerRestarted") });
@@ -276,55 +255,22 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     sentJobs.clear();
   }
 
-  function ensureListener(): void {
-    if (listener) return;
-    rmSync(socketPath, { force: true });
-    listener = Bun.listen<undefined>({
-      unix: socketPath,
-      socket: {
-        open(socket) {
-          conn?.end();
-          disconnected();
-          conn = socket;
-          lastMsgAt = now();
-        },
-        data(socket, chunk) {
-          if (socket !== conn) return;
-          for (const frame of reader.push(chunk)) onMessage(frame.kind, frame.payload);
-        },
-        drain(socket) {
-          if (socket !== conn || !unsent) return;
-          const rest = unsent;
-          unsent = null;
-          write(rest);
-        },
-        close(socket) {
-          if (socket === conn) disconnected();
-        },
-        error(socket, e) {
-          report(e);
-          if (socket === conn) disconnected();
-        },
-      },
-    });
-  }
-
   const jobActive = (rt: Runtime) => rt.job?.state === "queued" || rt.job?.state === "running";
   const needsWorker = () => [...sensors.values()].some((rt) => (rt.row.config.enabled && rt.model) || jobActive(rt));
 
   function healthy(): boolean {
     const t = now();
-    if (t - lastMsgAt > STALL_MS) return false;
+    if (t - link.lastSeenAt() > STALL_MS) return false;
     if (inFlight && t - inFlight.sentAt > STALL_MS) return false;
     return !(phase.tag === "loading" && t - phase.since > LOAD_LIMIT_MS);
   }
 
   function workerSpecs(): WorkerSpec[] {
     if (!needsWorker()) {
-      if (phase.tag !== "off" && !conn) phase = { tag: "off" };
+      if (phase.tag !== "off" && !link.connected()) phase = { tag: "off" };
       return [];
     }
-    ensureListener();
+    link.listen();
     if (phase.tag === "off") phase = { tag: "starting" };
     return [
       {
@@ -971,10 +917,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     routes,
     async stop() {
       clearInterval(timer);
-      conn?.end();
-      listener?.stop(true);
-      listener = null;
-      rmSync(socketPath, { force: true });
+      link.stop();
     },
   };
 }

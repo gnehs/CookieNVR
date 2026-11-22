@@ -82,7 +82,7 @@ export class SocketWriter {
   constructor(private readonly socket: { write(data: Uint8Array): number }) {}
 
   write(text: string): void {
-    this.push(new TextEncoder().encode(text));
+    this.writeBytes(new TextEncoder().encode(text));
   }
 
   /** Call from the socket's `drain` handler. */
@@ -90,10 +90,10 @@ export class SocketWriter {
     const rest = this.unsent;
     if (!rest) return;
     this.unsent = null;
-    this.push(rest);
+    this.writeBytes(rest);
   }
 
-  private push(bytes: Uint8Array): void {
+  writeBytes(bytes: Uint8Array): void {
     if (this.unsent) {
       const merged = new Uint8Array(this.unsent.length + bytes.length);
       merged.set(this.unsent);
