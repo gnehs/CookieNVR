@@ -17,7 +17,7 @@ import { liveCommand, recordCommand } from "./ffmpeg.ts";
 import { isPaired } from "./hap-storage.ts";
 import { allocatePort, createIdentity, setupUri, type HomekitIdentity } from "./identity.ts";
 import { motionByCamera } from "./motion.ts";
-import { encode, LineReader, parseFromWorker, type AccessoryStatus, type StreamSession, type ToWorker } from "./protocol.ts";
+import { encode, LineReader, parseFromWorker, SocketWriter, type AccessoryStatus, type StreamSession, type ToWorker } from "./protocol.ts";
 import { msg } from "../messages/index.ts";
 
 const WORKER_SCRIPT = join(import.meta.dir, "worker.ts");
@@ -78,10 +78,16 @@ export interface Homekit {
 
 type CheckEntry = { connKey: string; at: number } & ({ result: StreamCheck } | { error: string });
 
+interface ControlData {
+  reader: LineReader;
+  authed: boolean;
+  writer: SocketWriter;
+}
+
 interface Control {
-  listener: TCPSocketListener<{ reader: LineReader; authed: boolean }>;
+  listener: TCPSocketListener<ControlData>;
   token: string;
-  socket: Socket<{ reader: LineReader; authed: boolean }> | null;
+  socket: Socket<ControlData> | null;
 }
 
 const connKeyOf = (c: Camera) => JSON.stringify(c.config.connection);
@@ -216,7 +222,7 @@ export function createHomekit(opts: HomekitOptions): Homekit {
   }
 
   function send(msg: ToWorker): void {
-    if (control?.socket) control.socket.write(encode(msg));
+    control?.socket?.data.writer.write(encode(msg));
   }
 
   function motionNow(): Map<string, boolean> {
@@ -244,12 +250,15 @@ export function createHomekit(opts: HomekitOptions): Homekit {
     const ctl: Control = {
       token,
       socket: null,
-      listener: Bun.listen<{ reader: LineReader; authed: boolean }>({
+      listener: Bun.listen<ControlData>({
         hostname: "127.0.0.1",
         port: 0,
         socket: {
           open(s) {
-            s.data = { reader: new LineReader(), authed: false };
+            s.data = { reader: new LineReader(), authed: false, writer: new SocketWriter(s) };
+          },
+          drain(s) {
+            s.data.writer.drain();
           },
           data(s, chunk) {
             try {

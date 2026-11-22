@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { buildEnvelope, formatCreated, parseFault, passwordDigest } from "./soap.ts";
+import { OnvifError } from "./errors.ts";
+import { buildEnvelope, formatCreated, MAX_RESPONSE_BYTES, parseFault, passwordDigest, soapCall } from "./soap.ts";
 import { child, find, parseXml, path } from "./xml.ts";
 
 describe("WS-Security UsernameToken", () => {
@@ -53,5 +54,38 @@ describe("parseFault", () => {
   test("SOAP 1.1：faultcode 與 faultstring", () => {
     const fault = parseXml(`<s:Fault xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><faultcode>s:Client</faultcode><faultstring>bad</faultstring></s:Fault>`);
     expect(parseFault(fault)).toEqual({ code: "Client", subcode: null, reason: "bad" });
+  });
+});
+
+describe("回應大小上限", () => {
+  const call = (respond: () => Response) =>
+    soapCall({ url: "http://cam/onvif", action: "urn:a", name: "X", body: "<X/>" }, { fetch: (async () => respond()) as unknown as typeof fetch, timeoutMs: 2_000 });
+  const envelope = (pad: string) =>
+    `<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"><s:Body><XResponse>${pad}</XResponse></s:Body></s:Envelope>`;
+
+  test("一般大小的回應照常解析", async () => {
+    expect((await call(() => new Response(envelope("ok")))).local).toBe("XResponse");
+  });
+
+  test("沒有 Content-Length、一路送下去的回應讀到上限就中止", async () => {
+    let sent = 0;
+    const endless = () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          pull(c) {
+            sent += 1 << 20;
+            c.enqueue(new Uint8Array(1 << 20).fill(0x20));
+          },
+        }),
+      );
+    const err = await call(endless).catch((e) => e);
+    expect(err).toBeInstanceOf(OnvifError);
+    expect(err.kind).toBe("protocol");
+    expect(sent).toBeLessThanOrEqual(MAX_RESPONSE_BYTES + (2 << 20));
+  });
+
+  test("Content-Length 超過上限的回應不讀本文", async () => {
+    const err = await call(() => new Response("x", { headers: { "content-length": String(MAX_RESPONSE_BYTES + 1) } })).catch((e) => e);
+    expect(err.kind).toBe("protocol");
   });
 });

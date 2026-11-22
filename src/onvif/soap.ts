@@ -139,6 +139,33 @@ function redact(text: string, secret: string | undefined): string {
   return secret ? text.split(secret).join("***") : text;
 }
 
+/** ONVIF 回應都是幾十 KB；上限擋住壞掉或惡意的裝置一路送資料把主程序的記憶體吃光 */
+export const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+class ResponseTooLarge extends Error {}
+
+async function readBody(res: Response): Promise<string> {
+  if (Number(res.headers.get("content-length") ?? 0) > MAX_RESPONSE_BYTES) {
+    await res.body?.cancel();
+    throw new ResponseTooLarge();
+  }
+  if (!res.body) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  const reader = res.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > MAX_RESPONSE_BYTES) {
+      await reader.cancel();
+      throw new ResponseTooLarge();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 /** 送出 SOAP 請求並回傳 Body 的第一個子元素 */
 export async function soapCall(req: SoapRequest, transport: SoapTransport): Promise<XmlElement> {
   const secret = req.credentials?.password || undefined;
@@ -151,16 +178,18 @@ export async function soapCall(req: SoapRequest, transport: SoapTransport): Prom
 
   let status: number;
   let text: string;
+  let res: Response | undefined;
   try {
-    const res = await transport.fetch(req.url, {
+    res = await transport.fetch(req.url, {
       method: "POST",
       headers: { "Content-Type": `application/soap+xml; charset=utf-8; action="${req.action}"` },
       body: buildEnvelope(req),
       signal,
     });
     status = res.status;
-    text = await res.text();
+    text = await readBody(res);
   } catch (err) {
+    if (err instanceof ResponseTooLarge) throw fail("protocol", `回應超過 ${MAX_RESPONSE_BYTES / 1024 / 1024} MB`, null, res?.status ?? null);
     if (req.signal?.aborted) throw fail("aborted", "已中止");
     if (timeoutSignal.aborted) throw fail("timeout", `相機在 ${req.timeoutMs ?? transport.timeoutMs} ms 內沒有回應`);
     const detail = err instanceof Error ? err.message : String(err);

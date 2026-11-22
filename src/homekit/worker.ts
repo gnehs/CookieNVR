@@ -5,7 +5,7 @@ import { join } from "node:path";
 import pkg from "../../package.json";
 import { installChaCha20Poly1305 } from "./chacha.ts";
 import { compactDeviceId, createRoutedStore } from "./hap-storage.ts";
-import { encode, LineReader, parseToWorker, type AccessoryConfig, type FromWorker, type ToWorker } from "./protocol.ts";
+import { encode, LineReader, parseToWorker, SocketWriter, type AccessoryConfig, type FromWorker, type ToWorker } from "./protocol.ts";
 import type { CameraAccessory as CameraAccessoryType } from "./accessory.ts";
 
 const STATUS_MS = 2_000;
@@ -35,6 +35,7 @@ const log = (m: string) => console.error(`[homekit] ${m}`);
 const snapshots = new Map<number, (jpeg: Uint8Array | null) => void>();
 let nextReq = 1;
 const reader = new LineReader();
+let writer: SocketWriter | null = null;
 
 const socket = await Bun.connect({
   hostname: controlHost,
@@ -56,6 +57,9 @@ const socket = await Bun.connect({
         }
       }
     },
+    drain() {
+      writer?.drain();
+    },
     close() {
       log("control connection closed");
       void shutdown(1);
@@ -65,8 +69,9 @@ const socket = await Bun.connect({
     },
   },
 });
+writer = new SocketWriter(socket);
 function send(msg: FromWorker): void {
-  socket.write(encode(msg));
+  writer?.write(encode(msg));
 }
 
 let statusQueued = false;

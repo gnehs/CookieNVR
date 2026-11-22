@@ -72,6 +72,40 @@ export function encode(msg: ToWorker | FromWorker): string {
   return `${JSON.stringify(msg)}\n`;
 }
 
+/**
+ * Bun sockets do not buffer: write() reports how many bytes it took and drops the rest. A snapshot reply is
+ * hundreds of kilobytes, so a line cut short would run into the next one and both would be lost.
+ */
+export class SocketWriter {
+  private unsent: Uint8Array | null = null;
+
+  constructor(private readonly socket: { write(data: Uint8Array): number }) {}
+
+  write(text: string): void {
+    this.push(new TextEncoder().encode(text));
+  }
+
+  /** Call from the socket's `drain` handler. */
+  drain(): void {
+    const rest = this.unsent;
+    if (!rest) return;
+    this.unsent = null;
+    this.push(rest);
+  }
+
+  private push(bytes: Uint8Array): void {
+    if (this.unsent) {
+      const merged = new Uint8Array(this.unsent.length + bytes.length);
+      merged.set(this.unsent);
+      merged.set(bytes, this.unsent.length);
+      this.unsent = merged;
+      return;
+    }
+    const n = this.socket.write(bytes);
+    if (n < bytes.length) this.unsent = bytes.slice(Math.max(0, n));
+  }
+}
+
 /** Splits a byte stream into lines; keeps an unterminated tail for the next chunk. */
 export class LineReader {
   private partial = "";
