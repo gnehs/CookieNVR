@@ -22,6 +22,24 @@ React 19 + TanStack Router（檔案式路由）+ TanStack Query + Base UI，Vite
 - 成功後把結果寫進快取：清單用 `data/cache.ts` 的 `putItem` / `dropItem`（純函式版是 `upsert` / `without`），不要每個地方自己寫 `list.map`、`filter`。更新設定一律用 `data/use-update-settings.ts` 的 `useUpdateSettings`，它成功後自己寫 `settingsQuery`，要額外做的事用 options 補。invalidate 與 `setQueryData` 用 `xxxQuery.queryKey`，不寫字面值的 key。
 - 站台名稱用 `data/session.ts` 的 `useSiteName()`。
 - 載入中用 `<Spinner />`，錯誤用 `<ErrorBox error onRetry />`，找不到資料這類已知錯誤丟 `PageError`（`ui/states.tsx`）。
+- 頁面等查詢的載入與錯誤用 `<QueryGate queries={[a, b]}>{([a, b]) => …}</QueryGate>`（`ui/states.tsx`）：任何一個失敗就畫 `ErrorBox`（重試只重抓失敗的那個），否則有查詢還沒資料就畫 `Spinner`，全部好了才呼叫 children，拿到的資料不含 `undefined`。children 是函式不是元件，裡面不能用 hook，要用就放在前面或拆成子元件。載入或錯誤畫面刻意不同的頁（骨架、局部提示、保留頁首）不要硬套，自己寫分支。
+- 在清單快取裡找一筆（例如網址上的攝影機）用 `data/use-retained-item.ts` 的 `useRetainedItem(list, match)`：刪除後快取沒有它、但還沒換頁時回傳上一次找到的，不會閃一下「找不到」。找不到就丟 `PageError`。
+
+新增一頁最短的寫法：
+
+```tsx
+export function ThingPage({ id }: { id: string }) {
+  const things = useQuery(thingsQuery);
+  return (
+    <QueryGate queries={[things]}>
+      {([list]) => {
+        const thing = list.find((x) => x.id === id);
+        return thing ? <Thing thing={thing} /> : <ErrorBox error={new PageError(t`Thing not found`, t`It may have been deleted.`, { label: t`Back`, to: "/things" })} />;
+      }}
+    </QueryGate>
+  );
+}
+```
 
 ## 共用的畫面零件
 
