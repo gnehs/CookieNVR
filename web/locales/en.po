@@ -101,7 +101,7 @@ msgstr "{area} of the picture"
 msgid "{badge}, running for {duration}"
 msgstr "{badge}, running for {duration}"
 
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 msgid "{base} ({rel})"
 msgstr "{base} ({rel})"
 
@@ -185,7 +185,7 @@ msgstr "{count, plural, one {# camera with unstable recording} other {# cameras 
 msgid "{count, plural, one {# event · {kinds}} other {# events · {kinds}}}"
 msgstr "{count, plural, one {# event · {kinds}} other {# events · {kinds}}}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "{count, plural, one {# event} other {# events}}"
 msgstr "{count, plural, one {# event} other {# events}}"
@@ -278,7 +278,7 @@ msgstr "{device} isn't actually running this model ({runtime} handed the work ba
 msgid "{device}: {text}"
 msgstr "{device}: {text}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "{duration} · about {size}"
 msgstr "{duration} · about {size}"
 
@@ -514,7 +514,7 @@ msgstr "{seconds} s to load"
 msgid "{seconds} sec"
 msgstr "{seconds} sec"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "{selected}, up to 2 hours per export"
 msgstr "{selected}, up to 2 hours per export"
 
@@ -599,11 +599,11 @@ msgstr "{username} {role}, {menuName} menu, {issueText}"
 msgid "{v} sec"
 msgstr "{v} sec"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "{what} {clock} · {dur}"
 msgstr "{what} {clock} · {dur}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "{what} {clock} · {dur} · In progress"
 msgstr "{what} {clock} · {dur} · In progress"
 
@@ -631,7 +631,7 @@ msgstr "<0>Network setup:</0> Your iPhone finds the camera on your home network,
 msgid "<0>Waiting to be added.</0> Scan the QR code below with your iPhone."
 msgstr "<0>Waiting to be added.</0> Scan the QR code below with your iPhone."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "1 hour"
 msgstr "1 hour"
 
@@ -639,7 +639,7 @@ msgstr "1 hour"
 msgid "1 min"
 msgstr "1 min"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "10 minutes"
 msgstr "10 minutes"
 
@@ -655,7 +655,7 @@ msgstr "100% is all the CPU available to it"
 msgid "100% is the CPU of the whole machine"
 msgstr "100% is the CPU of the whole machine"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "24 hours"
 msgstr "24 hours"
 
@@ -671,7 +671,7 @@ msgstr "5 sec"
 msgid "5 times per second"
 msgstr "5 times per second"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "6 hours"
 msgstr "6 hours"
 
@@ -745,7 +745,6 @@ msgstr "Add at least 2 classes"
 
 #: web/pages/cameras/CamerasPage.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 #: web/pages/settings-cameras/CamerasListPage.tsx
@@ -806,7 +805,7 @@ msgstr "Added classes: {list}"
 msgid "Added group \"{groupName}\". Drag cameras into it."
 msgstr "Added group \"{groupName}\". Drag cameras into it."
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Added to exports. You can download it below the timeline when it's done."
 msgstr "Added to exports. You can download it below the timeline when it's done."
 
@@ -983,10 +982,6 @@ msgstr "Ask an admin to add a camera."
 msgid "Ask an admin to add a camera. Detected motion will show up here."
 msgstr "Ask an admin to add a camera. Detected motion will show up here."
 
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Ask an admin to add a camera. The footage will show up here."
-msgstr "Ask an admin to add a camera. The footage will show up here."
-
 #: web/pages/auth/AuthPage.tsx
 #: web/pages/settings-users/UsersPage.tsx
 msgid "At least 8 characters"
@@ -1020,12 +1015,13 @@ msgstr "Auto (recommended)"
 msgid "available, {total} total"
 msgstr "available, {total} total"
 
+#: web/pages/camera/CameraPage.tsx
 #: web/pages/settings/SettingsLayout.tsx
 #: web/ui/Panel.tsx
 msgid "Back"
 msgstr "Back"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Back / forward 10 seconds"
 msgstr "Back / forward 10 seconds"
 
@@ -1039,11 +1035,11 @@ msgstr "Back to camera settings"
 msgid "Back to cameras"
 msgstr "Back to cameras"
 
-#: web/pages/recordings/Playback.tsx
-msgid "Back to latest"
-msgstr "Back to latest"
+#: web/pages/camera/Playback.tsx
+msgid "Back to live"
+msgstr "Back to live"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Back to playhead"
 msgstr "Back to playhead"
 
@@ -1205,8 +1201,8 @@ msgstr "Cake"
 msgid "Calculating…"
 msgstr "Calculating…"
 
+#: web/pages/camera/PtzPanel.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 msgid "Camera"
 msgstr "Camera"
 
@@ -1388,8 +1384,8 @@ msgid "Can't see the picture"
 msgstr "Can't see the picture"
 
 #: web/detect/mask-editor.ts
+#: web/pages/camera/export.tsx
 #: web/pages/camera/PtzPresets.tsx
-#: web/pages/recordings/export.tsx
 #: web/pages/settings-cameras/CameraEditPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
@@ -1401,11 +1397,11 @@ msgstr "Can't see the picture"
 msgid "Cancel"
 msgstr "Cancel"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Cancel export {title}"
 msgstr "Cancel export {title}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Cancel selection"
 msgstr "Cancel selection"
 
@@ -1444,9 +1440,9 @@ msgstr "Cat 88%"
 msgid "Category"
 msgstr "Category"
 
-#: web/pages/recordings/Playback.tsx
-msgid "Caught up to live, back to 1× speed"
-msgstr "Caught up to live, back to 1× speed"
+#: web/pages/camera/Playback.tsx
+msgid "Caught up to live"
+msgstr "Caught up to live"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -1713,7 +1709,7 @@ msgstr "Continue"
 msgid "Continuous recording"
 msgstr "Continuous recording"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Continuous recording is off for this camera."
 msgstr "Continuous recording is off for this camera."
 
@@ -1904,8 +1900,8 @@ msgstr "Custom…"
 msgid "Dark"
 msgstr "Dark"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "Date"
 msgstr "Date"
 
@@ -2213,7 +2209,7 @@ msgstr "Donut"
 msgid "Down"
 msgstr "Down"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Download"
 msgstr "Download"
 
@@ -2221,7 +2217,7 @@ msgstr "Download"
 msgid "Drag cameras here"
 msgstr "Drag cameras here"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Drag on the timeline to select a range, or play to the spot you want and press “Set start”."
 msgstr "Drag on the timeline to select a range, or play to the spot you want and press “Set start”."
 
@@ -2375,7 +2371,7 @@ msgstr "Error: {error}"
 msgid "Even subtle changes are detected. Good for indoors or when you don't want to miss anything."
 msgstr "Even subtle changes are detected. Good for indoors or when you don't want to miss anything."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Event"
 msgstr "Event"
 
@@ -2391,7 +2387,7 @@ msgstr "Event deleted"
 msgid "Event in progress"
 msgstr "Event in progress"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Event list"
 msgstr "Event list"
 
@@ -2400,8 +2396,8 @@ msgid "Event not found"
 msgstr "Event not found"
 
 #: web/app/Shell.tsx
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "Events"
 msgstr "Events"
 
@@ -2445,11 +2441,11 @@ msgstr "Expand sidebar"
 msgid "Experimental"
 msgstr "Experimental"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export"
 msgstr "Export"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export failed"
 msgstr "Export failed"
 
@@ -2457,11 +2453,11 @@ msgstr "Export failed"
 msgid "Export failed. Please try again later"
 msgstr "Export failed. Please try again later"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export finished: {title}"
 msgstr "Export finished: {title}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export jobs"
 msgstr "Export jobs"
 
@@ -2469,23 +2465,23 @@ msgstr "Export jobs"
 msgid "Export not found. It may have expired"
 msgstr "Export not found. It may have expired"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export progress"
 msgstr "Export progress"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Export the event video from {clock}"
 msgstr "Export the event video from {clock}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Export video (includes 5 seconds before and after)"
 msgstr "Export video (includes 5 seconds before and after)"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Exported videos"
 msgstr "Exported videos"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Exporting {pct}%"
 msgstr "Exporting {pct}%"
 
@@ -2638,7 +2634,7 @@ msgstr "File too large. The limit is 100 MB"
 msgid "Filter"
 msgstr "Filter"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Finished videos are kept for 24 hours."
 msgstr "Finished videos are kept for 24 hours."
 
@@ -2725,15 +2721,16 @@ msgstr "Frisbee"
 msgid "From {ip}"
 msgstr "From {ip}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Full screen"
 msgstr "Full screen"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Gap"
 msgstr "Gap"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "gaps are skipped"
 msgstr "gaps are skipped"
 
@@ -2864,7 +2861,7 @@ msgstr "has low-quality stream"
 msgid "has ONVIF"
 msgstr "has ONVIF"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Has recordings"
 msgstr "Has recordings"
 
@@ -3005,7 +3002,7 @@ msgid "In \"{name}\""
 msgstr "In \"{name}\""
 
 #: web/health.ts
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "In progress"
 msgstr "In progress"
@@ -3241,6 +3238,10 @@ msgstr "Link request not found. It may have expired"
 msgid "Link requests are being created too often. Try again later"
 msgstr "Link requests are being created too often. Try again later"
 
+#: web/pages/camera/live.tsx
+msgid "Live"
+msgstr "Live"
+
 #: web/health.ts
 msgid "Live changes unavailable"
 msgstr "Live changes unavailable"
@@ -3269,8 +3270,8 @@ msgstr "Loading model…"
 msgid "Loading pictures…"
 msgstr "Loading pictures…"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 #: web/pages/settings-cameras/StatesSection.tsx
 #: web/pages/states/SensorPage.tsx
 #: web/ui/states.tsx
@@ -3535,7 +3536,7 @@ msgstr "Movement"
 msgid "Moving"
 msgstr "Moving"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Mute"
 msgstr "Mute"
 
@@ -3632,7 +3633,6 @@ msgstr "No cameras have object detection turned on right now."
 
 #: web/pages/cameras/CamerasPage.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 #: web/pages/settings-cameras/CamerasListPage.tsx
 msgid "No cameras yet"
 msgstr "No cameras yet"
@@ -3657,8 +3657,8 @@ msgstr "No categories selected, no events recorded"
 msgid "No changes yet. State changes will be logged here."
 msgstr "No changes yet. State changes will be logged here."
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "No earlier events"
 msgstr "No earlier events"
 
@@ -3666,7 +3666,7 @@ msgstr "No earlier events"
 msgid "No earlier events on this day"
 msgstr "No earlier events on this day"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No events on this day"
 msgstr "No events on this day"
 
@@ -3690,7 +3690,7 @@ msgstr "No Intel graphics detected"
 msgid "No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings"
 msgstr "No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No later events"
 msgstr "No later events"
 
@@ -3742,7 +3742,7 @@ msgstr "No pictures were misread during checking."
 msgid "No presets yet. Turn the camera to the position you want, then press “Save current position”."
 msgstr "No presets yet. Turn the camera to the position you want, then press “Save current position”."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No recordings today yet"
 msgstr "No recordings today yet"
 
@@ -3778,7 +3778,7 @@ msgstr "No write permission"
 msgid "None. Previews use the high-quality stream, scaled down."
 msgstr "None. Previews use the high-quality stream, scaled down."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Normal speed"
 msgstr "Normal speed"
 
@@ -3869,7 +3869,7 @@ msgstr "On"
 msgid "On change only"
 msgstr "On change only"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android."
 msgstr "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android."
 
@@ -3877,7 +3877,7 @@ msgstr "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, F
 msgid "once every {seconds} seconds"
 msgstr "once every {seconds} seconds"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Once motion detection is on, detected events show up here."
 msgstr "Once motion detection is on, detected events show up here."
 
@@ -3897,17 +3897,13 @@ msgstr "Once on, media and smart home apps on other devices at home can also see
 msgid "Once per second"
 msgstr "Once per second"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Once recording starts, you can play it back here within a few minutes."
 msgstr "Once recording starts, you can play it back here within a few minutes."
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Once there are some recordings, this will estimate how many days fit."
 msgstr "Once there are some recordings, this will estimate how many days fit."
-
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Once you add a camera it starts recording, and the footage shows up here."
-msgstr "Once you add a camera it starts recording, and the footage shows up here."
 
 #: web/pages/events/EventsPage.tsx
 msgid "Once you add a camera, detected motion shows up here."
@@ -4091,7 +4087,7 @@ msgstr "Password must be at least 8 characters"
 msgid "Paste the classification section of your Frigate config to import the box and detection settings."
 msgstr "Paste the classification section of your Frigate config to import the box and detection settings."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Pause"
 msgstr "Pause"
 
@@ -4194,11 +4190,11 @@ msgctxt "object category"
 msgid "Pizza"
 msgstr "Pizza"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Play"
 msgstr "Play"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Play / pause"
 msgstr "Play / pause"
 
@@ -4206,15 +4202,24 @@ msgstr "Play / pause"
 msgid "Play recording"
 msgstr "Play recording"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Play the video or click the timeline first, then set the start and end"
 msgstr "Play the video or click the timeline first, then set the start and end"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
+msgid "Playback"
+msgstr "Playback"
+
+#: web/pages/camera/Playback.tsx
+msgid "Playback · {ago} ago"
+msgstr "Playback · {ago} ago"
+
+#: web/pages/camera/Playback.tsx
 msgid "Playback speed"
 msgstr "Playback speed"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Player"
 msgstr "Player"
 
@@ -4247,7 +4252,7 @@ msgctxt "object category"
 msgid "Potted plant"
 msgstr "Potted plant"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Preparing"
 msgstr "Preparing"
 
@@ -4280,7 +4285,7 @@ msgstr "Press Space or Enter to pick up, use the arrow keys to move, and press a
 msgid "Previous"
 msgstr "Previous"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Previous / next event"
 msgstr "Previous / next event"
 
@@ -4308,7 +4313,7 @@ msgstr "QR code for adding to Apple Home"
 msgid "Quality"
 msgstr "Quality"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Queued, {ahead} ahead"
 msgstr "Queued, {ahead} ahead"
 
@@ -4337,7 +4342,7 @@ msgstr "Record sound"
 msgid "Record straight from the camera"
 msgstr "Record straight from the camera"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/pages/settings-cameras/CameraEditPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 msgid "Recording"
@@ -4401,11 +4406,11 @@ msgstr "Recording is off for this camera, so there’s nothing to pick from"
 msgid "Recording keeps working if the video service has problems, but it uses one more connection on the camera."
 msgstr "Recording keeps working if the video service has problems, but it uses one more connection on the camera."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Recording now"
 msgstr "Recording now"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Recording of {camName}"
 msgstr "Recording of {camName}"
 
@@ -4437,12 +4442,6 @@ msgstr "Recording unstable"
 #: web/pages/status/explain.ts
 msgid "Recording will be interrupted for a few seconds."
 msgstr "Recording will be interrupted for a few seconds."
-
-#: web/app/Shell.tsx
-#: web/pages/recordings/Playback.tsx
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Recordings"
-msgstr "Recordings"
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Recordings and appdata are actually on the same disk. If you mounted the recordings folder separately to put it on another disk (for example an Unraid array), check that share's primary storage setting."
@@ -4491,7 +4490,7 @@ msgctxt "object category"
 msgid "Remote"
 msgstr "Remote"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Remove this export"
 msgstr "Remove this export"
 
@@ -4636,7 +4635,7 @@ msgstr "rtsp://username:password@192.168.1.60:554/stream1"
 msgid "Run benchmark"
 msgstr "Run benchmark"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Running for {elapsed}"
 msgstr "Running for {elapsed}"
 
@@ -4741,11 +4740,11 @@ msgstr "Set “{name}” to the current position"
 msgid "Set “{name}” to where the camera is pointing now? The old position will be replaced."
 msgstr "Set “{name}” to where the camera is pointing now? The old position will be replaced."
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Set end"
 msgstr "Set end"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Set start"
 msgstr "Set start"
 
@@ -4797,8 +4796,8 @@ msgid "Show more"
 msgstr "Show more"
 
 #: web/pages/settings-cameras/fields.tsx
-msgid "Shown on the home page and the recordings page."
-msgstr "Shown on the home page and the recordings page."
+msgid "Shown on the home page and on the camera's own page."
+msgstr "Shown on the home page and on the camera's own page."
 
 #: web/pages/settings-system/SystemPage.tsx
 msgid "Shown on the sign-in page, in the sidebar and in the browser tab title."
@@ -4851,7 +4850,7 @@ msgctxt "object category"
 msgid "Skateboard"
 msgstr "Skateboard"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Skipped a {gap} gap"
 msgstr "Skipped a {gap} gap"
 
@@ -4873,7 +4872,7 @@ msgstr "Snowboard"
 msgid "Sort the unlabeled pictures below into classes."
 msgstr "Sort the unlabeled pictures below into classes."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Space"
 msgstr "Space"
 
@@ -5311,7 +5310,7 @@ msgstr "The device you picked earlier can't be detected right now, so the system
 msgid "The disk holding the recording location <0>{recordPath}</0>"
 msgstr "The disk holding the recording location <0>{recordPath}</0>"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "The event is longer than 2 hours. Only the first 2 hours are exported."
 msgstr "The event is longer than 2 hours. Only the first 2 hours are exported."
 
@@ -5587,7 +5586,7 @@ msgstr "This browser can't play H.265 live video"
 msgid "This browser can't play live video from this camera"
 msgstr "This browser can't play live video from this camera"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This browser can't play recordings"
 msgstr "This browser can't play recordings"
 
@@ -5636,7 +5635,7 @@ msgstr "This camera has no ONVIF set up, so its lens can't be controlled"
 msgid "This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset"
 msgstr "This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This camera has no recordings yet"
 msgstr "This camera has no recordings yet"
 
@@ -5652,7 +5651,7 @@ msgstr "This camera has not been added to Apple Home"
 msgid "This camera is disabled"
 msgstr "This camera is disabled"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This camera is disabled."
 msgstr "This camera is disabled."
 
@@ -5732,7 +5731,7 @@ msgstr "This image has no Nvidia inference components. Use the latest-nvidia ima
 msgid "This isn't a zip file"
 msgstr "This isn't a zip file"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "This position is too close to the edge. Try another one."
 msgstr "This position is too close to the edge. Try another one."
 
@@ -5801,12 +5800,12 @@ msgstr "Tilt reversed"
 msgid "timeline"
 msgstr "timeline"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "Timeline"
 msgstr "Timeline"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Timeline range"
 msgstr "Timeline range"
 
@@ -5820,7 +5819,7 @@ msgid "Toaster"
 msgstr "Toaster"
 
 #: web/detect/model.ts
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 #: web/ui/date-logic.ts
 #: web/ui/DatePicker.tsx
 msgid "Today"
@@ -5951,7 +5950,7 @@ msgstr "Turn on \"Apple Home\" in <0>Settings → General</0> first to use it he
 msgid "Turn on “Detection” in the settings below to resume."
 msgstr "Turn on “Detection” in the settings below to resume."
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Turn on in camera settings"
 msgstr "Turn on in camera settings"
 
@@ -6026,7 +6025,7 @@ msgstr "unlimited"
 msgid "Unlimited"
 msgstr "Unlimited"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Unmute"
 msgstr "Unmute"
 
@@ -6054,7 +6053,7 @@ msgstr "Up"
 msgid "Up to {max} excluded areas."
 msgstr "Up to {max} excluded areas."
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "up to now"
 msgstr "up to now"
 
@@ -6219,10 +6218,6 @@ msgstr "Waiting to be added in the Home app"
 msgid "Waits {cooldown} sec before ending"
 msgstr "Waits {cooldown} sec before ending"
 
-#: web/pages/camera/CameraPage.tsx
-msgid "Watch playback"
-msgstr "Watch playback"
-
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "Watch this camera in the Home app on iPhone, iPad, or Mac, and get notified when there is motion."
 msgstr "Watch this camera in the Home app on iPhone, iPad, or Mac, and get notified when there is motion."
@@ -6358,7 +6353,7 @@ msgid "yaml must be a string"
 msgstr "yaml must be a string"
 
 #: web/detect/model.ts
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 #: web/ui/date-logic.ts
 msgid "Yesterday"
 msgstr "Yesterday"
@@ -6387,7 +6382,7 @@ msgstr "You can shorten the retention period first"
 msgid "You haven't saved your recent edits. Closing will discard them."
 msgstr "You haven't saved your recent edits. Closing will discard them."
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "You've reached the latest recording"
 msgstr "You've reached the latest recording"
 

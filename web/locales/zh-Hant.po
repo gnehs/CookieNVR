@@ -101,7 +101,7 @@ msgstr "畫面的 {area}"
 msgid "{badge}, running for {duration}"
 msgstr "{badge}，已持續 {duration}"
 
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 msgid "{base} ({rel})"
 msgstr "{base}（{rel}）"
 
@@ -185,7 +185,7 @@ msgstr "{count, plural, other {# 台錄影不穩定}}"
 msgid "{count, plural, one {# event · {kinds}} other {# events · {kinds}}}"
 msgstr "{count, plural, other {# 個事件 · {kinds}}}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "{count, plural, one {# event} other {# events}}"
 msgstr "{count, plural, other {# 個事件}}"
@@ -278,7 +278,7 @@ msgstr "{device} 沒有實際執行這個模型（{runtime} 把運算交回處�
 msgid "{device}: {text}"
 msgstr "{device}：{text}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "{duration} · about {size}"
 msgstr "{duration} · 約 {size}"
 
@@ -514,7 +514,7 @@ msgstr "載入花了 {seconds} 秒"
 msgid "{seconds} sec"
 msgstr "{seconds} 秒"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "{selected}, up to 2 hours per export"
 msgstr "{selected}，一次最多匯出 2 小時"
 
@@ -599,11 +599,11 @@ msgstr "{username} {role}，{menuName}選單，有 {issueText}"
 msgid "{v} sec"
 msgstr "{v} 秒"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "{what} {clock} · {dur}"
 msgstr "{what} {clock} · {dur}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "{what} {clock} · {dur} · In progress"
 msgstr "{what} {clock} · {dur} 進行中"
 
@@ -631,7 +631,7 @@ msgstr "<0>網路設定：</0>iPhone 是在家裡的網路上「找」到攝影�
 msgid "<0>Waiting to be added.</0> Scan the QR code below with your iPhone."
 msgstr "<0>等待加入</0>用 iPhone 掃描下面的 QR code。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "1 hour"
 msgstr "1 小時"
 
@@ -639,7 +639,7 @@ msgstr "1 小時"
 msgid "1 min"
 msgstr "1 分鐘"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "10 minutes"
 msgstr "10 分鐘"
 
@@ -655,7 +655,7 @@ msgstr "以可用的處理器為 100%"
 msgid "100% is the CPU of the whole machine"
 msgstr "以整台機器的處理器為 100%"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "24 hours"
 msgstr "24 小時"
 
@@ -671,7 +671,7 @@ msgstr "5 秒"
 msgid "5 times per second"
 msgstr "每秒 5 次"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "6 hours"
 msgstr "6 小時"
 
@@ -745,7 +745,6 @@ msgstr "至少要有 2 個類別"
 
 #: web/pages/cameras/CamerasPage.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 #: web/pages/settings-cameras/CamerasListPage.tsx
@@ -806,7 +805,7 @@ msgstr "新增類別：{list}"
 msgid "Added group \"{groupName}\". Drag cameras into it."
 msgstr "已新增分區「{groupName}」，把攝影機拖進去吧"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Added to exports. You can download it below the timeline when it's done."
 msgstr "已加入匯出，完成後可以在時間軸下方下載"
 
@@ -983,10 +982,6 @@ msgstr "請管理員加入攝影機。"
 msgid "Ask an admin to add a camera. Detected motion will show up here."
 msgstr "請管理員加入攝影機，偵測到的動作會出現在這裡。"
 
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Ask an admin to add a camera. The footage will show up here."
-msgstr "請管理員加入攝影機，錄好的影片會出現在這裡。"
-
 #: web/pages/auth/AuthPage.tsx
 #: web/pages/settings-users/UsersPage.tsx
 msgid "At least 8 characters"
@@ -1020,12 +1015,13 @@ msgstr "自動（建議）"
 msgid "available, {total} total"
 msgstr "可用，共 {total}"
 
+#: web/pages/camera/CameraPage.tsx
 #: web/pages/settings/SettingsLayout.tsx
 #: web/ui/Panel.tsx
 msgid "Back"
 msgstr "返回"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Back / forward 10 seconds"
 msgstr "前後 10 秒"
 
@@ -1039,11 +1035,11 @@ msgstr "回到攝影機設定"
 msgid "Back to cameras"
 msgstr "回到攝影機列表"
 
-#: web/pages/recordings/Playback.tsx
-msgid "Back to latest"
-msgstr "回到最新"
+#: web/pages/camera/Playback.tsx
+msgid "Back to live"
+msgstr "回到即時"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Back to playhead"
 msgstr "回到播放位置"
 
@@ -1205,8 +1201,8 @@ msgstr "蛋糕"
 msgid "Calculating…"
 msgstr "正在計算…"
 
+#: web/pages/camera/PtzPanel.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 msgid "Camera"
 msgstr "攝影機"
 
@@ -1388,8 +1384,8 @@ msgid "Can't see the picture"
 msgstr "看不到畫面"
 
 #: web/detect/mask-editor.ts
+#: web/pages/camera/export.tsx
 #: web/pages/camera/PtzPresets.tsx
-#: web/pages/recordings/export.tsx
 #: web/pages/settings-cameras/CameraEditPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
@@ -1401,11 +1397,11 @@ msgstr "看不到畫面"
 msgid "Cancel"
 msgstr "取消"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Cancel export {title}"
 msgstr "取消匯出 {title}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Cancel selection"
 msgstr "取消選取"
 
@@ -1444,9 +1440,9 @@ msgstr "貓 88%"
 msgid "Category"
 msgstr "類別"
 
-#: web/pages/recordings/Playback.tsx
-msgid "Caught up to live, back to 1× speed"
-msgstr "已追到最新，改回 1 倍速"
+#: web/pages/camera/Playback.tsx
+msgid "Caught up to live"
+msgstr "已追上即時"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -1713,7 +1709,7 @@ msgstr "繼續"
 msgid "Continuous recording"
 msgstr "連續錄影"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Continuous recording is off for this camera."
 msgstr "這台攝影機沒有開啟全天候錄影。"
 
@@ -1904,8 +1900,8 @@ msgstr "自訂…"
 msgid "Dark"
 msgstr "深色"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "Date"
 msgstr "日期"
 
@@ -2213,7 +2209,7 @@ msgstr "甜甜圈"
 msgid "Down"
 msgstr "向下"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Download"
 msgstr "下載"
 
@@ -2221,7 +2217,7 @@ msgstr "下載"
 msgid "Drag cameras here"
 msgstr "把攝影機拖到這裡"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Drag on the timeline to select a range, or play to the spot you want and press “Set start”."
 msgstr "在時間軸上拖曳選取範圍，或播放到想要的位置再按「設為開始」。"
 
@@ -2375,7 +2371,7 @@ msgstr "錯誤：{error}"
 msgid "Even subtle changes are detected. Good for indoors or when you don't want to miss anything."
 msgstr "細微的變化也會偵測到，適合室內或想要不漏接。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Event"
 msgstr "事件"
 
@@ -2391,7 +2387,7 @@ msgstr "已刪除事件"
 msgid "Event in progress"
 msgstr "事件進行中"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Event list"
 msgstr "事件清單"
 
@@ -2400,8 +2396,8 @@ msgid "Event not found"
 msgstr "找不到這筆事件"
 
 #: web/app/Shell.tsx
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "Events"
 msgstr "事件"
 
@@ -2445,11 +2441,11 @@ msgstr "展開側欄"
 msgid "Experimental"
 msgstr "實驗性"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export"
 msgstr "匯出"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export failed"
 msgstr "匯出失敗"
 
@@ -2457,11 +2453,11 @@ msgstr "匯出失敗"
 msgid "Export failed. Please try again later"
 msgstr "匯出失敗，請稍後再試"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export finished: {title}"
 msgstr "匯出完成：{title}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export jobs"
 msgstr "匯出工作"
 
@@ -2469,23 +2465,23 @@ msgstr "匯出工作"
 msgid "Export not found. It may have expired"
 msgstr "找不到這個匯出，可能已經過期"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export progress"
 msgstr "匯出進度"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Export the event video from {clock}"
 msgstr "匯出 {clock} 的事件影片"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Export video (includes 5 seconds before and after)"
 msgstr "匯出影片（含前後 5 秒）"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Exported videos"
 msgstr "匯出的影片"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Exporting {pct}%"
 msgstr "匯出中 {pct}%"
 
@@ -2638,7 +2634,7 @@ msgstr "檔案太大，上限 100 MB"
 msgid "Filter"
 msgstr "過濾"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Finished videos are kept for 24 hours."
 msgstr "完成的影片會保留 24 小時。"
 
@@ -2725,15 +2721,16 @@ msgstr "飛盤"
 msgid "From {ip}"
 msgstr "來自 {ip}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Full screen"
 msgstr "全螢幕"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Gap"
 msgstr "缺片"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "gaps are skipped"
 msgstr "缺片會略過"
 
@@ -2864,7 +2861,7 @@ msgstr "有低畫質串流"
 msgid "has ONVIF"
 msgstr "有 ONVIF"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Has recordings"
 msgstr "有錄影"
 
@@ -3005,7 +3002,7 @@ msgid "In \"{name}\""
 msgstr "在「{name}」裡"
 
 #: web/health.ts
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "In progress"
 msgstr "進行中"
@@ -3241,6 +3238,10 @@ msgstr "找不到這個連結請求，可能已過期"
 msgid "Link requests are being created too often. Try again later"
 msgstr "建立連結請求太頻繁，請稍後再試"
 
+#: web/pages/camera/live.tsx
+msgid "Live"
+msgstr "即時"
+
 #: web/health.ts
 msgid "Live changes unavailable"
 msgstr "暫時看不到即時變化"
@@ -3269,8 +3270,8 @@ msgstr "載入模型中…"
 msgid "Loading pictures…"
 msgstr "正在讀取畫面…"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 #: web/pages/settings-cameras/StatesSection.tsx
 #: web/pages/states/SensorPage.tsx
 #: web/ui/states.tsx
@@ -3535,7 +3536,7 @@ msgstr "移動方式"
 msgid "Moving"
 msgstr "移動中"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Mute"
 msgstr "靜音"
 
@@ -3632,7 +3633,6 @@ msgstr "目前沒有攝影機開啟物件辨識。"
 
 #: web/pages/cameras/CamerasPage.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 #: web/pages/settings-cameras/CamerasListPage.tsx
 msgid "No cameras yet"
 msgstr "還沒有攝影機"
@@ -3657,8 +3657,8 @@ msgstr "未選類別，不記錄事件"
 msgid "No changes yet. State changes will be logged here."
 msgstr "還沒有變化過。狀態改變時會記在這裡。"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "No earlier events"
 msgstr "前面沒有事件了"
 
@@ -3666,7 +3666,7 @@ msgstr "前面沒有事件了"
 msgid "No earlier events on this day"
 msgstr "這天沒有更早的事件了"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No events on this day"
 msgstr "這一天沒有事件"
 
@@ -3690,7 +3690,7 @@ msgstr "沒有偵測到Intel 內顯"
 msgid "No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings"
 msgstr "容器裡找不到 Intel 內顯（/dev/dri），請在容器設定掛入 /dev/dri"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No later events"
 msgstr "後面沒有事件了"
 
@@ -3742,7 +3742,7 @@ msgstr "驗證時沒有看錯的畫面。"
 msgid "No presets yet. Turn the camera to the position you want, then press “Save current position”."
 msgstr "還沒有預置點。把鏡頭轉到想要的位置，再按「儲存目前位置」。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No recordings today yet"
 msgstr "今天還沒有錄影"
 
@@ -3778,7 +3778,7 @@ msgstr "沒有寫入權限"
 msgid "None. Previews use the high-quality stream, scaled down."
 msgstr "沒有，預覽會改用高畫質縮小"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Normal speed"
 msgstr "正常速度"
 
@@ -3869,7 +3869,7 @@ msgstr "已開啟"
 msgid "On change only"
 msgstr "不定時"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android."
 msgstr "iPhone 請更新到 iOS 17.1 以上；也可以改用電腦或 Android 上的 Chrome、Edge、Firefox 或 Safari。"
 
@@ -3877,7 +3877,7 @@ msgstr "iPhone 請更新到 iOS 17.1 以上；也可以改用電腦或 Android �
 msgid "once every {seconds} seconds"
 msgstr "每 {seconds} 秒 1 次"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Once motion detection is on, detected events show up here."
 msgstr "開啟動作偵測後，偵測到的事件會出現在這裡。"
 
@@ -3897,17 +3897,13 @@ msgstr "開啟後，家裡其他裝置上的影音或智慧家庭 App 也能看�
 msgid "Once per second"
 msgstr "每秒 1 次"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Once recording starts, you can play it back here within a few minutes."
 msgstr "錄影開始後，幾分鐘內就能在這裡回放。"
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Once there are some recordings, this will estimate how many days fit."
 msgstr "錄影一段時間後，這裡會估算大約可以存幾天。"
-
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Once you add a camera it starts recording, and the footage shows up here."
-msgstr "加入攝影機後就會開始錄影，錄好的影片會出現在這裡。"
 
 #: web/pages/events/EventsPage.tsx
 msgid "Once you add a camera, detected motion shows up here."
@@ -4091,7 +4087,7 @@ msgstr "密碼至少 8 個字元"
 msgid "Paste the classification section of your Frigate config to import the box and detection settings."
 msgstr "貼上 Frigate 設定檔裡 classification 那一段，會帶入框選的區域與判斷設定。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Pause"
 msgstr "暫停"
 
@@ -4194,11 +4190,11 @@ msgctxt "object category"
 msgid "Pizza"
 msgstr "披薩"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Play"
 msgstr "播放"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Play / pause"
 msgstr "播放／暫停"
 
@@ -4206,15 +4202,24 @@ msgstr "播放／暫停"
 msgid "Play recording"
 msgstr "播放錄影"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Play the video or click the timeline first, then set the start and end"
 msgstr "先播放或點一下時間軸，再設定開始與結束"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
+msgid "Playback"
+msgstr "回放"
+
+#: web/pages/camera/Playback.tsx
+msgid "Playback · {ago} ago"
+msgstr "回放 · {ago}前"
+
+#: web/pages/camera/Playback.tsx
 msgid "Playback speed"
 msgstr "播放速度"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Player"
 msgstr "播放器"
 
@@ -4247,7 +4252,7 @@ msgctxt "object category"
 msgid "Potted plant"
 msgstr "盆栽"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Preparing"
 msgstr "準備中"
 
@@ -4280,7 +4285,7 @@ msgstr "按空白鍵或 Enter 拿起，用方向鍵移動，再按一次放下�
 msgid "Previous"
 msgstr "上一步"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Previous / next event"
 msgstr "上／下一個事件"
 
@@ -4308,7 +4313,7 @@ msgstr "加入 Apple 家庭用的 QR code"
 msgid "Quality"
 msgstr "畫質"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Queued, {ahead} ahead"
 msgstr "排隊中，前面還有 {ahead} 個"
 
@@ -4337,7 +4342,7 @@ msgstr "錄下聲音"
 msgid "Record straight from the camera"
 msgstr "錄影直接連到相機"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/pages/settings-cameras/CameraEditPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 msgid "Recording"
@@ -4401,11 +4406,11 @@ msgstr "這台沒有開錄影，挑不到畫面"
 msgid "Recording keeps working if the video service has problems, but it uses one more connection on the camera."
 msgstr "影像服務出問題時錄影不受影響，但會多佔用相機一條連線。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Recording now"
-msgstr "錄製中"
+msgstr "錄影中"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Recording of {camName}"
 msgstr "{camName} 的錄影"
 
@@ -4437,12 +4442,6 @@ msgstr "錄影不穩定"
 #: web/pages/status/explain.ts
 msgid "Recording will be interrupted for a few seconds."
 msgstr "錄影會中斷幾秒鐘。"
-
-#: web/app/Shell.tsx
-#: web/pages/recordings/Playback.tsx
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Recordings"
-msgstr "錄影"
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Recordings and appdata are actually on the same disk. If you mounted the recordings folder separately to put it on another disk (for example an Unraid array), check that share's primary storage setting."
@@ -4491,7 +4490,7 @@ msgctxt "object category"
 msgid "Remote"
 msgstr "遙控器"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Remove this export"
 msgstr "移除這筆匯出"
 
@@ -4636,7 +4635,7 @@ msgstr "rtsp://帳號:密碼@192.168.1.60:554/stream1"
 msgid "Run benchmark"
 msgstr "測速"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Running for {elapsed}"
 msgstr "已持續 {elapsed}"
 
@@ -4741,11 +4740,11 @@ msgstr "把「{name}」覆寫成目前位置"
 msgid "Set “{name}” to where the camera is pointing now? The old position will be replaced."
 msgstr "要把「{name}」改成鏡頭現在的位置嗎？原本的位置會被取代。"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Set end"
 msgstr "設為結束"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Set start"
 msgstr "設為開始"
 
@@ -4797,8 +4796,8 @@ msgid "Show more"
 msgstr "顯示更多"
 
 #: web/pages/settings-cameras/fields.tsx
-msgid "Shown on the home page and the recordings page."
-msgstr "會顯示在首頁與錄影頁。"
+msgid "Shown on the home page and on the camera's own page."
+msgstr "會顯示在首頁與這台攝影機的頁面。"
 
 #: web/pages/settings-system/SystemPage.tsx
 msgid "Shown on the sign-in page, in the sidebar and in the browser tab title."
@@ -4851,7 +4850,7 @@ msgctxt "object category"
 msgid "Skateboard"
 msgstr "滑板"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Skipped a {gap} gap"
 msgstr "跳過 {gap} 缺片"
 
@@ -4873,7 +4872,7 @@ msgstr "單板滑雪板"
 msgid "Sort the unlabeled pictures below into classes."
 msgstr "在下面把待標記的畫面分好類。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Space"
 msgstr "空白鍵"
 
@@ -5311,7 +5310,7 @@ msgstr "之前選的裝置現在偵測不到，暫時由系統自動選擇。裝
 msgid "The disk holding the recording location <0>{recordPath}</0>"
 msgstr "錄影位置 <0>{recordPath}</0> 所在的硬碟"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "The event is longer than 2 hours. Only the first 2 hours are exported."
 msgstr "事件超過 2 小時，只匯出前 2 小時"
 
@@ -5587,7 +5586,7 @@ msgstr "這個瀏覽器無法播放 H.265 即時畫面"
 msgid "This browser can't play live video from this camera"
 msgstr "這個瀏覽器無法播放這台的即時畫面"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This browser can't play recordings"
 msgstr "這個瀏覽器無法播放錄影"
 
@@ -5636,7 +5635,7 @@ msgstr "這台相機沒有設定 ONVIF，無法控制鏡頭"
 msgid "This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset"
 msgstr "這台還沒有錄影可以抽樣；等錄一段時間後再試，或匯入資料集"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This camera has no recordings yet"
 msgstr "這台攝影機還沒有錄影"
 
@@ -5652,7 +5651,7 @@ msgstr "這台還沒有加入 Apple 家庭"
 msgid "This camera is disabled"
 msgstr "這台攝影機已停用"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This camera is disabled."
 msgstr "這台攝影機已停用。"
 
@@ -5732,7 +5731,7 @@ msgstr "這個映像沒有 Nvidia 推論元件，請改用 latest-nvidia 映像"
 msgid "This isn't a zip file"
 msgstr "這不是 zip 檔"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "This position is too close to the edge. Try another one."
 msgstr "這個位置太靠近邊界，換一個位置試試"
 
@@ -5801,12 +5800,12 @@ msgstr "上下反轉"
 msgid "timeline"
 msgstr "時間軸"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "Timeline"
 msgstr "時間軸"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Timeline range"
 msgstr "時間軸範圍"
 
@@ -5820,7 +5819,7 @@ msgid "Toaster"
 msgstr "烤麵包機"
 
 #: web/detect/model.ts
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 #: web/ui/date-logic.ts
 #: web/ui/DatePicker.tsx
 msgid "Today"
@@ -5951,7 +5950,7 @@ msgstr "要先到 <0>設定 → 一般</0> 開啟「Apple 家庭」，這裡才�
 msgid "Turn on “Detection” in the settings below to resume."
 msgstr "到下面的設定打開「辨識」就會繼續。"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Turn on in camera settings"
 msgstr "到攝影機設定開啟"
 
@@ -6026,7 +6025,7 @@ msgstr "不限"
 msgid "Unlimited"
 msgstr "不限"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Unmute"
 msgstr "開啟聲音"
 
@@ -6054,7 +6053,7 @@ msgstr "向上"
 msgid "Up to {max} excluded areas."
 msgstr "最多 {max} 個排除區域。"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "up to now"
 msgstr "到現在為止"
 
@@ -6219,10 +6218,6 @@ msgstr "等待在「家庭」App 加入"
 msgid "Waits {cooldown} sec before ending"
 msgstr "結束前等待 {cooldown} 秒"
 
-#: web/pages/camera/CameraPage.tsx
-msgid "Watch playback"
-msgstr "看回放"
-
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "Watch this camera in the Home app on iPhone, iPad, or Mac, and get notified when there is motion."
 msgstr "在 iPhone、iPad 或 Mac 的「家庭」App 裡看這台攝影機，有動作時收到通知。"
@@ -6358,7 +6353,7 @@ msgid "yaml must be a string"
 msgstr "yaml 必須是字串"
 
 #: web/detect/model.ts
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 #: web/ui/date-logic.ts
 msgid "Yesterday"
 msgstr "昨天"
@@ -6387,7 +6382,7 @@ msgstr "可以先縮短保留天數"
 msgid "You haven't saved your recent edits. Closing will discard them."
 msgstr "剛才改的設定還沒儲存，關掉就不會保留。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "You've reached the latest recording"
 msgstr "已經播到最新的錄影"
 

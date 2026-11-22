@@ -101,7 +101,7 @@ msgstr "映像の {area}"
 msgid "{badge}, running for {duration}"
 msgstr "{badge}、{duration}継続中"
 
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 msgid "{base} ({rel})"
 msgstr "{base}（{rel}）"
 
@@ -185,7 +185,7 @@ msgstr "{count, plural, other {録画が不安定なカメラ # 台}}"
 msgid "{count, plural, one {# event · {kinds}} other {# events · {kinds}}}"
 msgstr "{count, plural, other {#件のイベント · {kinds}}}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "{count, plural, one {# event} other {# events}}"
 msgstr "{count, plural, other {#件のイベント}}"
@@ -278,7 +278,7 @@ msgstr "{device}は実際にはこのモデルを実行していません（{run
 msgid "{device}: {text}"
 msgstr "{device}：{text}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "{duration} · about {size}"
 msgstr "{duration} · 約{size}"
 
@@ -514,7 +514,7 @@ msgstr "読み込みに{seconds}秒"
 msgid "{seconds} sec"
 msgstr "{seconds}秒"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "{selected}, up to 2 hours per export"
 msgstr "{selected}。1回のエクスポートは最大2時間までです"
 
@@ -599,11 +599,11 @@ msgstr "{username}（{role}）、{menuName}メニュー、{issueText}"
 msgid "{v} sec"
 msgstr "{v} 秒"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "{what} {clock} · {dur}"
 msgstr "{what} {clock} · {dur}"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "{what} {clock} · {dur} · In progress"
 msgstr "{what} {clock} · {dur} · 進行中"
 
@@ -631,7 +631,7 @@ msgstr "<0>ネットワーク設定：</0>iPhone は自宅のネットワーク�
 msgid "<0>Waiting to be added.</0> Scan the QR code below with your iPhone."
 msgstr "<0>追加を待っています。</0>iPhone で下の QR コードをスキャンしてください。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "1 hour"
 msgstr "1時間"
 
@@ -639,7 +639,7 @@ msgstr "1時間"
 msgid "1 min"
 msgstr "1分"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "10 minutes"
 msgstr "10分"
 
@@ -655,7 +655,7 @@ msgstr "利用可能なCPUを100%とします"
 msgid "100% is the CPU of the whole machine"
 msgstr "マシン全体のCPUを100%とします"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "24 hours"
 msgstr "24時間"
 
@@ -671,7 +671,7 @@ msgstr "5秒"
 msgid "5 times per second"
 msgstr "毎秒5回"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "6 hours"
 msgstr "6時間"
 
@@ -745,7 +745,6 @@ msgstr "クラスは2つ以上必要です"
 
 #: web/pages/cameras/CamerasPage.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
 #: web/pages/settings-cameras/CamerasListPage.tsx
@@ -806,7 +805,7 @@ msgstr "追加したクラス: {list}"
 msgid "Added group \"{groupName}\". Drag cameras into it."
 msgstr "グループ「{groupName}」を追加しました。カメラをドラッグして入れてください"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Added to exports. You can download it below the timeline when it's done."
 msgstr "エクスポートに追加しました。完了するとタイムラインの下からダウンロードできます。"
 
@@ -983,10 +982,6 @@ msgstr "管理者にカメラの追加を依頼してください。"
 msgid "Ask an admin to add a camera. Detected motion will show up here."
 msgstr "管理者にカメラの追加を依頼してください。検知した動きがここに表示されます。"
 
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Ask an admin to add a camera. The footage will show up here."
-msgstr "管理者にカメラの追加を依頼してください。録画した映像がここに表示されます。"
-
 #: web/pages/auth/AuthPage.tsx
 #: web/pages/settings-users/UsersPage.tsx
 msgid "At least 8 characters"
@@ -1020,12 +1015,13 @@ msgstr "自動（おすすめ）"
 msgid "available, {total} total"
 msgstr "空き、合計 {total}"
 
+#: web/pages/camera/CameraPage.tsx
 #: web/pages/settings/SettingsLayout.tsx
 #: web/ui/Panel.tsx
 msgid "Back"
 msgstr "戻る"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Back / forward 10 seconds"
 msgstr "10秒戻る／進む"
 
@@ -1039,11 +1035,11 @@ msgstr "カメラ設定に戻る"
 msgid "Back to cameras"
 msgstr "カメラ一覧に戻る"
 
-#: web/pages/recordings/Playback.tsx
-msgid "Back to latest"
-msgstr "最新に戻る"
+#: web/pages/camera/Playback.tsx
+msgid "Back to live"
+msgstr "ライブに戻る"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Back to playhead"
 msgstr "再生位置に戻る"
 
@@ -1205,8 +1201,8 @@ msgstr "ケーキ"
 msgid "Calculating…"
 msgstr "計算中…"
 
+#: web/pages/camera/PtzPanel.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 msgid "Camera"
 msgstr "カメラ"
 
@@ -1388,8 +1384,8 @@ msgid "Can't see the picture"
 msgstr "映像が見えません"
 
 #: web/detect/mask-editor.ts
+#: web/pages/camera/export.tsx
 #: web/pages/camera/PtzPresets.tsx
-#: web/pages/recordings/export.tsx
 #: web/pages/settings-cameras/CameraEditPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 #: web/pages/settings-cameras/CameraLayoutEditor.tsx
@@ -1401,11 +1397,11 @@ msgstr "映像が見えません"
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Cancel export {title}"
 msgstr "エクスポートをキャンセル {title}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Cancel selection"
 msgstr "選択を解除"
 
@@ -1444,9 +1440,9 @@ msgstr "猫 88%"
 msgid "Category"
 msgstr "カテゴリ"
 
-#: web/pages/recordings/Playback.tsx
-msgid "Caught up to live, back to 1× speed"
-msgstr "最新に追いついたため、1倍速に戻しました"
+#: web/pages/camera/Playback.tsx
+msgid "Caught up to live"
+msgstr "ライブに追いつきました"
 
 #: web/detect/label-names.ts
 msgctxt "object category"
@@ -1713,7 +1709,7 @@ msgstr "続ける"
 msgid "Continuous recording"
 msgstr "常時録画"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Continuous recording is off for this camera."
 msgstr "このカメラは常時録画がオフです。"
 
@@ -1904,8 +1900,8 @@ msgstr "カスタム…"
 msgid "Dark"
 msgstr "ダーク"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "Date"
 msgstr "日付"
 
@@ -2213,7 +2209,7 @@ msgstr "ドーナツ"
 msgid "Down"
 msgstr "下"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Download"
 msgstr "ダウンロード"
 
@@ -2221,7 +2217,7 @@ msgstr "ダウンロード"
 msgid "Drag cameras here"
 msgstr "カメラをここにドラッグ"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Drag on the timeline to select a range, or play to the spot you want and press “Set start”."
 msgstr "タイムライン上をドラッグして範囲を選択するか、目的の位置まで再生して「開始に設定」を押してください。"
 
@@ -2375,7 +2371,7 @@ msgstr "エラー：{error}"
 msgid "Even subtle changes are detected. Good for indoors or when you don't want to miss anything."
 msgstr "わずかな変化も検知します。屋内や、見逃したくない場合に向いています。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Event"
 msgstr "イベント"
 
@@ -2391,7 +2387,7 @@ msgstr "イベントを削除しました"
 msgid "Event in progress"
 msgstr "イベント進行中"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Event list"
 msgstr "イベント一覧"
 
@@ -2400,8 +2396,8 @@ msgid "Event not found"
 msgstr "このイベントが見つかりません"
 
 #: web/app/Shell.tsx
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "Events"
 msgstr "イベント"
 
@@ -2445,11 +2441,11 @@ msgstr "サイドバーを開く"
 msgid "Experimental"
 msgstr "試験的"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export"
 msgstr "エクスポート"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export failed"
 msgstr "エクスポートに失敗しました"
 
@@ -2457,11 +2453,11 @@ msgstr "エクスポートに失敗しました"
 msgid "Export failed. Please try again later"
 msgstr "書き出しに失敗しました。しばらくしてからもう一度お試しください"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export finished: {title}"
 msgstr "エクスポート完了：{title}"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export jobs"
 msgstr "エクスポートジョブ"
 
@@ -2469,23 +2465,23 @@ msgstr "エクスポートジョブ"
 msgid "Export not found. It may have expired"
 msgstr "書き出しが見つかりません。期限切れの可能性があります"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Export progress"
 msgstr "エクスポートの進行状況"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Export the event video from {clock}"
 msgstr "{clock}のイベント動画をエクスポート"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Export video (includes 5 seconds before and after)"
 msgstr "動画をエクスポート（前後5秒を含む）"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Exported videos"
 msgstr "エクスポートした動画"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Exporting {pct}%"
 msgstr "エクスポート中 {pct}%"
 
@@ -2638,7 +2634,7 @@ msgstr "ファイルが大きすぎます。上限は 100 MB です"
 msgid "Filter"
 msgstr "フィルター"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Finished videos are kept for 24 hours."
 msgstr "完成した動画は24時間保存されます。"
 
@@ -2725,15 +2721,16 @@ msgstr "フリスビー"
 msgid "From {ip}"
 msgstr "{ip} から"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Full screen"
 msgstr "全画面"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Gap"
 msgstr "欠落"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "gaps are skipped"
 msgstr "欠落区間はスキップ"
 
@@ -2864,7 +2861,7 @@ msgstr "低画質ストリームあり"
 msgid "has ONVIF"
 msgstr "ONVIF あり"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Has recordings"
 msgstr "録画あり"
 
@@ -3005,7 +3002,7 @@ msgid "In \"{name}\""
 msgstr "「{name}」の中"
 
 #: web/health.ts
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "In progress"
 msgstr "進行中"
@@ -3241,6 +3238,10 @@ msgstr "このリンクリクエストが見つかりません。期限切れの
 msgid "Link requests are being created too often. Try again later"
 msgstr "リンクリクエストの作成が頻繁すぎます。しばらくしてからもう一度お試しください"
 
+#: web/pages/camera/live.tsx
+msgid "Live"
+msgstr "ライブ"
+
 #: web/health.ts
 msgid "Live changes unavailable"
 msgstr "ライブの変化を取得できません"
@@ -3269,8 +3270,8 @@ msgstr "モデルを読み込み中…"
 msgid "Loading pictures…"
 msgstr "画像を読み込み中…"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 #: web/pages/settings-cameras/StatesSection.tsx
 #: web/pages/states/SensorPage.tsx
 #: web/ui/states.tsx
@@ -3535,7 +3536,7 @@ msgstr "動かし方"
 msgid "Moving"
 msgstr "移動中"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Mute"
 msgstr "ミュート"
 
@@ -3632,7 +3633,6 @@ msgstr "現在、物体検出をオンにしているカメラはありません
 
 #: web/pages/cameras/CamerasPage.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/RecordingsPage.tsx
 #: web/pages/settings-cameras/CamerasListPage.tsx
 msgid "No cameras yet"
 msgstr "カメラがまだありません"
@@ -3657,8 +3657,8 @@ msgstr "カテゴリ未選択のため、イベントは記録されません"
 msgid "No changes yet. State changes will be logged here."
 msgstr "まだ変化はありません。状態が変わるとここに記録されます。"
 
+#: web/pages/camera/Playback.tsx
 #: web/pages/events/EventsPage.tsx
-#: web/pages/recordings/Playback.tsx
 msgid "No earlier events"
 msgstr "これより前のイベントはありません"
 
@@ -3666,7 +3666,7 @@ msgstr "これより前のイベントはありません"
 msgid "No earlier events on this day"
 msgstr "この日にこれより前のイベントはありません"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No events on this day"
 msgstr "この日のイベントはありません"
 
@@ -3690,7 +3690,7 @@ msgstr "Intel 内蔵グラフィックスが検出されませんでした"
 msgid "No Intel graphics found in the container (/dev/dri). Mount /dev/dri in the container settings"
 msgstr "コンテナー内に Intel 内蔵グラフィックス（/dev/dri）が見つかりません。コンテナーの設定で /dev/dri をマウントしてください"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No later events"
 msgstr "これより後のイベントはありません"
 
@@ -3742,7 +3742,7 @@ msgstr "検証で誤判定した画像はありませんでした。"
 msgid "No presets yet. Turn the camera to the position you want, then press “Save current position”."
 msgstr "プリセットがまだありません。カメラを目的の位置に向けて、「現在位置を保存」を押してください。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "No recordings today yet"
 msgstr "今日の録画はまだありません"
 
@@ -3778,7 +3778,7 @@ msgstr "書き込み権限がありません"
 msgid "None. Previews use the high-quality stream, scaled down."
 msgstr "なし。プレビューは高画質ストリームを縮小して使います"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Normal speed"
 msgstr "通常速度"
 
@@ -3869,7 +3869,7 @@ msgstr "オン"
 msgid "On change only"
 msgstr "変化時のみ"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android."
 msgstr "iPhone では iOS 17.1 以降にアップデートしてください。パソコンまたは Android の Chrome、Edge、Firefox、Safari でも再生できます。"
 
@@ -3877,7 +3877,7 @@ msgstr "iPhone では iOS 17.1 以降にアップデートしてください。�
 msgid "once every {seconds} seconds"
 msgstr "{seconds}秒に1回"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Once motion detection is on, detected events show up here."
 msgstr "動体検知をオンにすると、検知したイベントがここに表示されます。"
 
@@ -3897,17 +3897,13 @@ msgstr "オンにすると、家庭内の他のデバイスにあるメディア
 msgid "Once per second"
 msgstr "毎秒1回"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Once recording starts, you can play it back here within a few minutes."
 msgstr "録画が始まると、数分以内にここで再生できます。"
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Once there are some recordings, this will estimate how many days fit."
 msgstr "録画がたまると、何日分保存できるかをここで見積もります。"
-
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Once you add a camera it starts recording, and the footage shows up here."
-msgstr "カメラを追加すると録画が始まり、録画した映像がここに表示されます。"
 
 #: web/pages/events/EventsPage.tsx
 msgid "Once you add a camera, detected motion shows up here."
@@ -4091,7 +4087,7 @@ msgstr "パスワードは8文字以上にしてください"
 msgid "Paste the classification section of your Frigate config to import the box and detection settings."
 msgstr "Frigate の設定ファイルの classification の部分を貼り付けると、囲んだ範囲と判定の設定を取り込めます。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Pause"
 msgstr "一時停止"
 
@@ -4194,11 +4190,11 @@ msgctxt "object category"
 msgid "Pizza"
 msgstr "ピザ"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Play"
 msgstr "再生"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Play / pause"
 msgstr "再生／一時停止"
 
@@ -4206,15 +4202,24 @@ msgstr "再生／一時停止"
 msgid "Play recording"
 msgstr "録画を再生"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Play the video or click the timeline first, then set the start and end"
 msgstr "先に動画を再生するかタイムラインをクリックしてから、開始と終了を設定してください"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
+msgid "Playback"
+msgstr "再生"
+
+#: web/pages/camera/Playback.tsx
+msgid "Playback · {ago} ago"
+msgstr "再生 · {ago}前"
+
+#: web/pages/camera/Playback.tsx
 msgid "Playback speed"
 msgstr "再生速度"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/CameraPage.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Player"
 msgstr "プレーヤー"
 
@@ -4247,7 +4252,7 @@ msgctxt "object category"
 msgid "Potted plant"
 msgstr "鉢植え"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Preparing"
 msgstr "準備中"
 
@@ -4280,7 +4285,7 @@ msgstr "Space キーか Enter キーで持ち上げ、矢印キーで移動し�
 msgid "Previous"
 msgstr "前へ"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Previous / next event"
 msgstr "前／次のイベント"
 
@@ -4308,7 +4313,7 @@ msgstr "Apple ホームに追加するための QR コード"
 msgid "Quality"
 msgstr "画質"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Queued, {ahead} ahead"
 msgstr "待機中（前に{ahead}件）"
 
@@ -4337,7 +4342,7 @@ msgstr "音声を録音"
 msgid "Record straight from the camera"
 msgstr "カメラから直接録画"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/pages/settings-cameras/CameraEditPage.tsx
 #: web/pages/settings-cameras/CameraFormPage.tsx
 msgid "Recording"
@@ -4401,11 +4406,11 @@ msgstr "このカメラは録画がオフのため、選べる画像がありま
 msgid "Recording keeps working if the video service has problems, but it uses one more connection on the camera."
 msgstr "映像サービスに問題が起きても録画は影響を受けませんが、カメラの接続を 1 本多く使います。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Recording now"
 msgstr "録画中"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Recording of {camName}"
 msgstr "{camName}の録画"
 
@@ -4437,12 +4442,6 @@ msgstr "録画が不安定"
 #: web/pages/status/explain.ts
 msgid "Recording will be interrupted for a few seconds."
 msgstr "録画が数秒間中断されます。"
-
-#: web/app/Shell.tsx
-#: web/pages/recordings/Playback.tsx
-#: web/pages/recordings/RecordingsPage.tsx
-msgid "Recordings"
-msgstr "録画"
 
 #: web/pages/storage/StoragePage.tsx
 msgid "Recordings and appdata are actually on the same disk. If you mounted the recordings folder separately to put it on another disk (for example an Unraid array), check that share's primary storage setting."
@@ -4491,7 +4490,7 @@ msgctxt "object category"
 msgid "Remote"
 msgstr "リモコン"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Remove this export"
 msgstr "このエクスポートを削除"
 
@@ -4636,7 +4635,7 @@ msgstr "rtsp://ユーザー名:パスワード@192.168.1.60:554/stream1"
 msgid "Run benchmark"
 msgstr "測定する"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Running for {elapsed}"
 msgstr "{elapsed}継続中"
 
@@ -4741,11 +4740,11 @@ msgstr "「{name}」を現在位置で上書き"
 msgid "Set “{name}” to where the camera is pointing now? The old position will be replaced."
 msgstr "「{name}」をカメラの現在位置に変更しますか？元の位置は置き換えられます。"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Set end"
 msgstr "終了に設定"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "Set start"
 msgstr "開始に設定"
 
@@ -4797,8 +4796,8 @@ msgid "Show more"
 msgstr "もっと見る"
 
 #: web/pages/settings-cameras/fields.tsx
-msgid "Shown on the home page and the recordings page."
-msgstr "ホームと録画ページに表示されます。"
+msgid "Shown on the home page and on the camera's own page."
+msgstr "ホームとこのカメラのページに表示されます。"
 
 #: web/pages/settings-system/SystemPage.tsx
 msgid "Shown on the sign-in page, in the sidebar and in the browser tab title."
@@ -4851,7 +4850,7 @@ msgctxt "object category"
 msgid "Skateboard"
 msgstr "スケートボード"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Skipped a {gap} gap"
 msgstr "{gap}の欠落をスキップしました"
 
@@ -4873,7 +4872,7 @@ msgstr "スノーボード"
 msgid "Sort the unlabeled pictures below into classes."
 msgstr "下の未ラベルの画像をクラスに分けてください。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Space"
 msgstr "スペース"
 
@@ -5311,7 +5310,7 @@ msgstr "以前選んだデバイスが現在検出できないため、システ
 msgid "The disk holding the recording location <0>{recordPath}</0>"
 msgstr "録画の保存先 <0>{recordPath}</0> があるディスク"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "The event is longer than 2 hours. Only the first 2 hours are exported."
 msgstr "イベントが2時間を超えているため、最初の2時間のみエクスポートします。"
 
@@ -5587,7 +5586,7 @@ msgstr "このブラウザーでは H.265 のライブ映像を再生できま�
 msgid "This browser can't play live video from this camera"
 msgstr "このブラウザーではこのカメラのライブ映像を再生できません"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This browser can't play recordings"
 msgstr "このブラウザーでは録画を再生できません"
 
@@ -5636,7 +5635,7 @@ msgstr "このカメラには ONVIF が設定されていないため、レン�
 msgid "This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset"
 msgstr "このカメラにはまだ抽出できる録画がありません。しばらく録画してからやり直すか、データセットを取り込んでください"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This camera has no recordings yet"
 msgstr "このカメラにはまだ録画がありません"
 
@@ -5652,7 +5651,7 @@ msgstr "このカメラはまだ Apple ホームに追加されていません"
 msgid "This camera is disabled"
 msgstr "このカメラは無効です"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "This camera is disabled."
 msgstr "このカメラは無効です。"
 
@@ -5732,7 +5731,7 @@ msgstr "このイメージには Nvidia 用の推論コンポーネントがあ�
 msgid "This isn't a zip file"
 msgstr "zip ファイルではありません"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "This position is too close to the edge. Try another one."
 msgstr "この位置は端に近すぎます。別の位置をお試しください。"
 
@@ -5801,12 +5800,12 @@ msgstr "上下反転"
 msgid "timeline"
 msgstr "タイムライン"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 #: web/timeline/timeline.ts
 msgid "Timeline"
 msgstr "タイムライン"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Timeline range"
 msgstr "タイムラインの範囲"
 
@@ -5820,7 +5819,7 @@ msgid "Toaster"
 msgstr "トースター"
 
 #: web/detect/model.ts
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 #: web/ui/date-logic.ts
 #: web/ui/DatePicker.tsx
 msgid "Today"
@@ -5951,7 +5950,7 @@ msgstr "ここで使うには、先に<0>設定 → 一般</0>で「Apple ホー
 msgid "Turn on “Detection” in the settings below to resume."
 msgstr "下の設定で「判定」をオンにすると再開します。"
 
-#: web/pages/recordings/RecordingsPage.tsx
+#: web/pages/camera/CameraPage.tsx
 msgid "Turn on in camera settings"
 msgstr "カメラ設定でオンにする"
 
@@ -6026,7 +6025,7 @@ msgstr "無制限"
 msgid "Unlimited"
 msgstr "無制限"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "Unmute"
 msgstr "ミュート解除"
 
@@ -6054,7 +6053,7 @@ msgstr "上"
 msgid "Up to {max} excluded areas."
 msgstr "除外エリアは最大{max}か所です。"
 
-#: web/pages/recordings/export.tsx
+#: web/pages/camera/export.tsx
 msgid "up to now"
 msgstr "現在まで"
 
@@ -6219,10 +6218,6 @@ msgstr "ホームアプリでの追加を待っています"
 msgid "Waits {cooldown} sec before ending"
 msgstr "終了まで {cooldown} 秒待機"
 
-#: web/pages/camera/CameraPage.tsx
-msgid "Watch playback"
-msgstr "再生を見る"
-
 #: web/pages/settings-cameras/HomekitSection.tsx
 msgid "Watch this camera in the Home app on iPhone, iPad, or Mac, and get notified when there is motion."
 msgstr "iPhone、iPad、Mac のホームアプリでこのカメラを見られ、動きがあると通知が届きます。"
@@ -6358,7 +6353,7 @@ msgid "yaml must be a string"
 msgstr "yaml は文字列にしてください"
 
 #: web/detect/model.ts
-#: web/pages/recordings/day.ts
+#: web/pages/camera/day.ts
 #: web/ui/date-logic.ts
 msgid "Yesterday"
 msgstr "昨日"
@@ -6387,7 +6382,7 @@ msgstr "まず保存日数を短くしてみてください"
 msgid "You haven't saved your recent edits. Closing will discard them."
 msgstr "先ほどの変更はまだ保存されていません。閉じると破棄されます。"
 
-#: web/pages/recordings/Playback.tsx
+#: web/pages/camera/Playback.tsx
 msgid "You've reached the latest recording"
 msgstr "最新の録画まで再生しました"
 
