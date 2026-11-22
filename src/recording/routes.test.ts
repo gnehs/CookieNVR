@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { appendFile, chmod, rm } from "node:fs/promises";
 import { openDb } from "../db.ts";
 import type { SegmentDto } from "../api-types.ts";
+import { toErrorResponse } from "../http/respond.ts";
 import type { Route } from "../types.ts";
 import { createIndexer } from "./indexer.ts";
 import { recordingRoutes } from "./routes.ts";
@@ -11,10 +12,14 @@ async function setup() {
   const settings = await tempSettings();
   const db = openDb(":memory:");
   const routes = recordingRoutes({ db, purgeOrphans: async () => ({ segments: 0, events: 0, bytes: 0 }) });
-  const call = (path: string, routePath: string, params: Record<string, string>, headers: HeadersInit = {}) => {
+  const call = async (path: string, routePath: string, params: Record<string, string>, headers: HeadersInit = {}) => {
     const route = routes.find((r) => r.path === routePath) as Route;
     const url = new URL(`http://nvr${path}`);
-    return route.handler({ req: new Request(url, { headers }), url, params, principal: null, ip: "127.0.0.1" });
+    try {
+      return await route.handler({ req: new Request(url, { headers }), url, params, principal: null, ip: "127.0.0.1" });
+    } catch (err) {
+      return toErrorResponse(err);
+    }
   };
   return { settings, db, call, indexer: createIndexer({ db, settings: () => settings }) };
 }
@@ -123,4 +128,33 @@ test("DELETE /api/recordings/orphaned reports what the purge freed", async () =>
   const res = await route.handler({ req: new Request(url, { method: "DELETE" }), url, params: {}, principal: null, ip: "127.0.0.1" });
   expect(res.status).toBe(200);
   expect(await res.json()).toEqual({ segments: 2, events: 1, bytes: 30 });
+});
+
+test("every error path answers with its status and message code", async () => {
+  const { settings, call, indexer, db } = await setup();
+  const failure = async (res: Promise<Response>) => {
+    const r = await res;
+    const body = (await r.json()) as { error: string; code: string; params?: unknown };
+    expect(typeof body.error).toBe("string");
+    return { status: r.status, code: body.code, params: body.params };
+  };
+  const recordings = (qs: string) => failure(call(`/api/cameras/cam1/recordings?${qs}`, "/api/cameras/:id/recordings", { id: "cam1" }));
+  expect(await failure(call("/api/cameras/cam1/days?tz=Nope/Zone", "/api/cameras/:id/days", { id: "cam1" }))).toEqual({ status: 400, code: "recording.badTimeZone", params: { tz: "Nope/Zone" } });
+  expect(await recordings("start=abc&end=1")).toEqual({ status: 400, code: "http.badRange", params: undefined });
+  expect(await recordings("start=10&end=1")).toEqual({ status: 400, code: "http.endBeforeStart", params: undefined });
+  const segment = (id: number | string) => failure(call(`/api/segments/${id}`, "/api/segments/:id", { id: String(id) }));
+  expect(await segment(999)).toEqual({ status: 404, code: "recording.segmentNotFound", params: undefined });
+
+  const t = Date.UTC(2026, 10, 18, 12, 0);
+  const path = await writeSegment(settings, "cam1", t, 0, t);
+  await Bun.write(path, "0123456789");
+  await indexer.scanOnce(t + 1_000);
+  const { id } = db.query("SELECT id FROM segments").get() as { id: number };
+  if (process.getuid?.() !== 0) {
+    await chmod(path, 0o000);
+    expect(await segment(id)).toEqual({ status: 403, code: "recording.segmentFileUnreadable", params: undefined });
+    await chmod(path, 0o644);
+  }
+  await rm(path);
+  expect(await segment(id)).toEqual({ status: 404, code: "recording.segmentFileMissing", params: undefined });
 });

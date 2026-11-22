@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import type { EventDto } from "../api-types.ts";
 import { openDb } from "../db.ts";
+import { toErrorResponse } from "../http/respond.ts";
 import type { Route } from "../types.ts";
 import { eventRoutes, thumbPath } from "./routes.ts";
 import { createEventTracker } from "./tracker.ts";
@@ -12,10 +13,14 @@ async function setup() {
   const dataDir = await mkdtemp(join(tmpdir(), "cookienvr-events-"));
   const db = openDb(":memory:");
   const routes = eventRoutes({ db, dataDir, events: createEventTracker({ db, dataDir }) });
-  const call = (path: string, routePath: string, params: Record<string, string> = {}, method = "GET") => {
+  const call = async (path: string, routePath: string, params: Record<string, string> = {}, method = "GET") => {
     const route = routes.find((r) => r.path === routePath && r.method === method) as Route;
     const url = new URL(`http://nvr${path}`);
-    return route.handler({ req: new Request(url, { method }), url, params, principal: null, ip: "127.0.0.1" });
+    try {
+      return await route.handler({ req: new Request(url, { method }), url, params, principal: null, ip: "127.0.0.1" });
+    } catch (err) {
+      return toErrorResponse(err);
+    }
   };
   const insert = (camera: string, start: number, end: number | null, labels: string[] = [], hasThumb = false) =>
     db
@@ -123,4 +128,26 @@ test("thumbnails are served from the data directory and 404 when missing", async
   expect((await thumb(without)).status).toBe(404);
   expect((await thumb(999)).status).toBe(404);
   expect((await thumb("x")).status).toBe(404);
+});
+
+test("every error path answers with its status and message code", async () => {
+  const { call, insert } = await setup();
+  const running = insert("cam1", 3_000, null).id;
+  const noThumb = insert("cam1", 1_000, 2_000).id;
+  const failure = async (res: Response | Promise<Response>) => {
+    const r = await res;
+    const body = (await r.json()) as { error: string; code: string; params?: unknown };
+    expect(typeof body.error).toBe("string");
+    return { status: r.status, code: body.code, params: body.params };
+  };
+  const list = (qs: string) => failure(call(`/api/events?${qs}`, "/api/events"));
+  expect(await list("start=abc&end=1")).toEqual({ status: 400, code: "http.badRange", params: undefined });
+  expect(await list("limit=0")).toEqual({ status: 400, code: "events.badLimit", params: undefined });
+  expect(await list("before=x")).toEqual({ status: 400, code: "events.badBefore", params: undefined });
+  expect(await list("start=10&end=1")).toEqual({ status: 400, code: "http.endBeforeStart", params: undefined });
+  expect(await failure(call("/api/events/999", "/api/events/:id", { id: "999" }))).toEqual({ status: 404, code: "events.notFound", params: undefined });
+  expect(await failure(call(`/api/events/${running}`, "/api/events/:id", { id: String(running) }, "DELETE"))).toEqual({ status: 409, code: "events.active", params: undefined });
+  expect(await failure(call("/api/events/999", "/api/events/:id", { id: "999" }, "DELETE"))).toEqual({ status: 404, code: "events.notFound", params: undefined });
+  expect(await failure(call("/api/events/999/thumb.jpg", "/api/events/:id/thumb.jpg", { id: "999" }))).toEqual({ status: 404, code: "events.notFound", params: undefined });
+  expect(await failure(call(`/api/events/${noThumb}/thumb.jpg`, "/api/events/:id/thumb.jpg", { id: String(noThumb) }))).toEqual({ status: 404, code: "events.thumbnailMissing", params: undefined });
 });
