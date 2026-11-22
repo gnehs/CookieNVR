@@ -25,7 +25,6 @@ import json
 import os
 import queue
 import secrets
-import socket
 import struct
 import subprocess
 import sys
@@ -36,70 +35,20 @@ from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import statecls as sc  # noqa: E402
+from channel import KIND_JSON, Channel, connect, heartbeat  # noqa: E402
 from fetch_model import manifest  # noqa: E402
 
-KIND_JSON = 1
 KIND_BLOB = 3
-HEARTBEAT_S = 2.0
 
 
-class Channel:
-    def __init__(self, sock: socket.socket):
-        self.sock = sock
-        self.lock = threading.Lock()
-        self.busy_since: float | None = None
+class ClassifyChannel(Channel):
+    def __init__(self, sock):
+        super().__init__(sock)
         self.job = False
-
-    def _send(self, kind: int, payload: bytes) -> None:
-        with self.lock:
-            self.sock.sendall(struct.pack(">BI", kind, len(payload)) + payload)
-
-    def send(self, msg: dict) -> None:
-        self._send(KIND_JSON, json.dumps(msg, ensure_ascii=False).encode())
 
     def send_blob(self, msg: dict, data: bytes) -> None:
         head = json.dumps(msg, ensure_ascii=False).encode()
-        self._send(KIND_BLOB, struct.pack(">I", len(head)) + head + data)
-
-    def recv_exact(self, n: int) -> bytes | None:
-        buf = bytearray()
-        while len(buf) < n:
-            chunk = self.sock.recv(n - len(buf))
-            if not chunk:
-                return None
-            buf += chunk
-        return bytes(buf)
-
-    def recv(self) -> tuple[int, bytes] | None:
-        head = self.recv_exact(5)
-        if head is None:
-            return None
-        kind, length = struct.unpack(">BI", head)
-        body = self.recv_exact(length)
-        return None if body is None else (kind, body)
-
-
-def connect(path: str) -> socket.socket:
-    last: OSError | None = None
-    for _ in range(50):
-        try:
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            s.connect(path)
-            return s
-        except OSError as e:
-            last = e
-            time.sleep(0.1)
-    raise SystemExit(f"cannot connect to {path}: {last}")
-
-
-def heartbeat(ch: Channel) -> None:
-    while True:
-        time.sleep(HEARTBEAT_S)
-        busy = ch.busy_since
-        try:
-            ch.send({"type": "heartbeat", "busyMs": None if busy is None else round((time.monotonic() - busy) * 1000), "job": ch.job})
-        except OSError:
-            os._exit(0)
+        self.send_frame(KIND_BLOB, struct.pack(">I", len(head)) + head + data)
 
 
 class Classifier:
@@ -118,7 +67,7 @@ class Classifier:
         self.models[path] = (mtime, m)
         return m
 
-    def handle(self, ch: Channel, head: dict, jpeg: bytes) -> None:
+    def handle(self, ch: ClassifyChannel, head: dict, jpeg: bytes) -> None:
         req_id = head.get("id")
         sensor = str(head.get("sensor"))
         try:
@@ -158,7 +107,7 @@ def run_ffmpeg(cmd: list[str]) -> bytes | None:
     return r.stdout if r.returncode == 0 else None
 
 
-def run_job(ch: Channel, clf: Classifier, cache: sc.EmbeddingCache, cmd: dict) -> dict:
+def run_job(ch: ClassifyChannel, clf: Classifier, cache: sc.EmbeddingCache, cmd: dict) -> dict:
     job = cmd.get("job")
     last = [0.0]
 
@@ -201,7 +150,7 @@ def run_job(ch: Channel, clf: Classifier, cache: sc.EmbeddingCache, cmd: dict) -
     raise ValueError(f"unknown job {kind}")
 
 
-def job_worker(ch: Channel, clf: Classifier, jobs: "queue.Queue[dict]") -> None:
+def job_worker(ch: ClassifyChannel, clf: Classifier, jobs: "queue.Queue[dict]") -> None:
     cache = sc.EmbeddingCache()
     while True:
         cmd = jobs.get()
@@ -228,8 +177,8 @@ def main() -> None:
     ap.add_argument("--threads", type=int, default=2)
     args = ap.parse_args()
 
-    ch = Channel(connect(args.socket))
-    threading.Thread(target=heartbeat, args=(ch,), daemon=True).start()
+    ch = ClassifyChannel(connect(args.socket))
+    threading.Thread(target=heartbeat, args=(ch, lambda: {"job": ch.job}), daemon=True).start()
     ch.send({"type": "status", "state": "loading"})
     info = manifest("backbone-model.json")
     try:

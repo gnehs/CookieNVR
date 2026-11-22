@@ -22,8 +22,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import select
-import socket
 import struct
 import sys
 import threading
@@ -33,81 +31,25 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import engine as eng  # noqa: E402
 import yolo  # noqa: E402
+from channel import KIND_JSON, Channel, connect, heartbeat  # noqa: E402
 from testimage import test_jpeg  # noqa: E402
 
-KIND_JSON = 1
 KIND_FRAME = 2
-HEARTBEAT_S = 2.0
 GPU_POLL_S = 10.0
 MAX_BENCH_S = 60.0
 
 
-class Channel:
-    def __init__(self, sock: socket.socket):
-        self.sock = sock
-        self.lock = threading.Lock()
-        self.busy_since: float | None = None
+class DetectorChannel(Channel):
+    def __init__(self, sock):
+        super().__init__(sock)
         self.bench = False
         self.gpu: dict | None = None
 
-    def send(self, msg: dict) -> None:
-        payload = json.dumps(msg, ensure_ascii=False).encode()
-        with self.lock:
-            self.sock.sendall(struct.pack(">BI", KIND_JSON, len(payload)) + payload)
 
-    def recv_exact(self, n: int) -> bytes | None:
-        buf = bytearray()
-        while len(buf) < n:
-            chunk = self.sock.recv(n - len(buf))
-            if not chunk:
-                return None
-            buf += chunk
-        return bytes(buf)
-
-    def recv(self) -> tuple[int, bytes] | None:
-        head = self.recv_exact(5)
-        if head is None:
-            return None
-        kind, length = struct.unpack(">BI", head)
-        body = self.recv_exact(length)
-        return None if body is None else (kind, body)
-
-    def readable(self) -> bool:
-        return bool(select.select([self.sock], [], [], 0)[0])
-
-
-def heartbeat(ch: Channel) -> None:
-    while True:
-        time.sleep(HEARTBEAT_S)
-        busy = ch.busy_since
-        try:
-            ch.send({
-                "type": "heartbeat",
-                "busyMs": None if busy is None else round((time.monotonic() - busy) * 1000),
-                "bench": ch.bench,
-                "gpu": ch.gpu,
-            })
-        except OSError:
-            os._exit(0)
-
-
-def gpu_poller(ch: Channel, device: eng.Device) -> None:
+def gpu_poller(ch: DetectorChannel, device: eng.Device) -> None:
     while True:
         ch.gpu = eng.nvidia_usage(device)
         time.sleep(GPU_POLL_S)
-
-
-def connect(path: str) -> socket.socket:
-    last: OSError | None = None
-    for _ in range(50):
-        try:
-            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            s.connect(path)
-            return s
-        except OSError as e:
-            last = e
-            time.sleep(0.1)
-    raise SystemExit(f"cannot connect to {path}: {last}")
 
 
 def describe_model(path: str, layout: yolo.Layout) -> dict:
@@ -128,7 +70,7 @@ def list_devices() -> None:
     print(json.dumps({"devices": [d.to_json() for d in p.devices], "unavailable": unavailable, "probe": p.to_json()}, ensure_ascii=False))
 
 
-def run_bench(ch: Channel, ort, cmd: dict, current: eng.Engine, model_path: str, p: eng.Probe) -> None:
+def run_bench(ch: DetectorChannel, ort, cmd: dict, current: eng.Engine, model_path: str, p: eng.Probe) -> None:
     ids = [d for d in cmd.get("devices", []) if isinstance(d, str)] or [current.device.id]
     seconds = min(MAX_BENCH_S, max(3.0, float(cmd.get("seconds", 10))))
     jpeg = test_jpeg()
@@ -194,8 +136,8 @@ def main() -> None:
     if not args.socket or not args.model:
         ap.error("--socket and --model are required")
 
-    ch = Channel(connect(args.socket))
-    threading.Thread(target=heartbeat, args=(ch,), daemon=True).start()
+    ch = DetectorChannel(connect(args.socket))
+    threading.Thread(target=heartbeat, args=(ch, lambda: {"bench": ch.bench, "gpu": ch.gpu}), daemon=True).start()
     ch.send({"type": "status", "state": "loading", "requested": args.device})
 
     import onnxruntime as ort
