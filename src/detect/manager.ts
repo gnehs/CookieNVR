@@ -305,7 +305,7 @@ export function createDetection(opts: DetectionOptions): Detection {
       const c = camOf(ctx.params.id);
       if (!freshJpeg(c)) await nextJpeg(c, ctx.req.signal);
       const jpeg = freshJpeg(c);
-      if (!jpeg) return Response.json({ error: "目前取不到畫面" }, { status: 503 });
+      if (!jpeg) throw new HttpError(503, msg("live.noFrame"));
       return new Response(jpeg.bytes, {
         headers: { "content-type": "image/jpeg", "cache-control": "no-store", "x-snapshot-at": String(jpeg.at) },
       });
