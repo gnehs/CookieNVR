@@ -85,23 +85,50 @@ export interface RetentionCandidate {
   nearEvent: boolean;
 }
 
-/** Closed segments only, oldest first; recording segments are never candidates. */
+/**
+ * Closed segments only, oldest first; recording segments are never candidates.
+ *
+ * The overlap is computed here, not with a per-segment subquery: the (camera_id, start_ms) index bounds
+ * only one side of the overlap, so SQLite walked every earlier event of the camera for every segment
+ * (8 cameras with a week of segments and a month of events took 29 s, on the main thread).
+ */
 export function retentionCandidates(db: Database, now: number, bufferMs: number): RetentionCandidate[] {
-  const rows = db
+  const segments = db
     .query(
-      `SELECT s.id, s.path, s.end_ms, s.size,
-         EXISTS (
-           SELECT 1 FROM events e
-           WHERE e.camera_id = s.camera_id
-             AND e.start_ms - ?2 < s.end_ms
-             AND COALESCE(e.end_ms, ?1) + ?2 > s.start_ms
-         ) AS near_event
-       FROM segments s
-       WHERE s.end_ms IS NOT NULL
-       ORDER BY s.start_ms, s.id`,
+      `SELECT id, camera_id, path, start_ms, end_ms, size FROM segments
+       WHERE end_ms IS NOT NULL
+       ORDER BY start_ms, id`,
     )
-    .all(now, bufferMs) as { id: number; path: string; end_ms: number; size: number; near_event: number }[];
-  return rows.map((r) => ({ id: r.id, path: r.path, endMs: r.end_ms, size: r.size, nearEvent: r.near_event === 1 }));
+    .all() as (SegmentRow & { end_ms: number })[];
+  const events = db
+    .query(`SELECT camera_id, start_ms, COALESCE(end_ms, ?) AS end_ms FROM events ORDER BY start_ms`)
+    .all(now) as { camera_id: string; start_ms: number; end_ms: number }[];
+
+  // Per camera: event starts in order, and the latest end among the events up to each one.
+  const byCamera = new Map<string, { starts: number[]; latestEnd: number[] }>();
+  for (const e of events) {
+    let c = byCamera.get(e.camera_id);
+    if (!c) byCamera.set(e.camera_id, (c = { starts: [], latestEnd: [] }));
+    c.starts.push(e.start_ms);
+    c.latestEnd.push(Math.max(e.end_ms, c.latestEnd.at(-1) ?? -Infinity));
+  }
+
+  return segments.map((s) => {
+    const c = byCamera.get(s.camera_id);
+    let nearEvent = false;
+    if (c) {
+      // Events starting before the segment's end (widened); one of them overlaps if the latest end reaches the start.
+      let lo = 0;
+      let hi = c.starts.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (c.starts[mid]! - bufferMs < s.end_ms) lo = mid + 1;
+        else hi = mid;
+      }
+      nearEvent = lo > 0 && c.latestEnd[lo - 1]! + bufferMs > s.start_ms;
+    }
+    return { id: s.id, path: s.path, endMs: s.end_ms, size: s.size, nearEvent };
+  });
 }
 
 export interface RootUsage {
