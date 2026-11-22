@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { rm, unlink, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { join } from "node:path";
 import backboneModel from "../../detector/backbone-model.json";
 import {
   MAX_PENDING_STATE_IMAGES,
@@ -17,16 +17,14 @@ import {
   type StateSensorDto,
   type StreamMessage,
 } from "../api-types.ts";
-import { chunksOf } from "../detect/protocol.ts";
 import { encodeJson } from "../workers/framing.ts";
 import { createSocketLink } from "../workers/socket-link.ts";
 import type { Env } from "../env.ts";
 import { HttpError } from "../http/errors.ts";
 import { msg, type Msg, zh } from "../messages/index.ts";
-import { asObject, readJson } from "../http/validate.ts";
-import type { Camera, CameraId, Route, WorkerSpec } from "../types.ts";
+import type { Camera, CameraId, WorkerSpec } from "../types.ts";
 import { samplePoints } from "./collect.ts";
-import { parseClassName, parseFrigateConfig, parseSensorConfig } from "./config.ts";
+import { parseSensorConfig } from "./config.ts";
 import { step, UNKNOWN, type Consensus } from "./consensus.ts";
 import { encodeClassify, parseWorkerMsg, type ClassifyRequest, type Reading, type WorkerJob } from "./protocol.ts";
 import * as store from "./store.ts";
@@ -51,8 +49,6 @@ const LOAD_LIMIT_MS = 120_000;
 const PROGRESS_PUSH_MS = 500;
 const COLLECT_POINTS = 100;
 const COLLECT_COUNT = 24;
-/** Bun.serve 預設的請求本體上限是 128 MB */
-const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 const RECENT_READINGS = 10;
 const TICK_MS = 5_000;
 
@@ -131,13 +127,37 @@ export interface StateClassification {
   /** 刪掉比 cutoff 舊的切換紀錄（保留期限和事件相同） */
   prune(cutoff: number): Promise<number>;
   diagnostics(): StateDiagnostics;
-  routes(): Route[];
+  /** config 照 POST 的規則解析；collect 為 true 時建立後立刻從錄影抽樣 */
+  create(cameraId: CameraId, config: unknown, collect: boolean): StateSensorDto;
+  sensor(id: string): StateSensor | null;
+  changes(q: ChangeQuery): StateChangeDto[];
+  /** 有縮圖的切換紀錄的縮圖路徑（檔案不一定還在） */
+  changeThumb(id: number): string | null;
   stop(): Promise<void>;
+}
+
+export type ChangeQuery = Parameters<typeof store.queryChanges>[1];
+
+/** 拿到時感應器存在；之後被刪掉，操作仍作用在拿到的那份狀態上 */
+export interface StateSensor {
+  dto(): StateSensorDto;
+  /** config 照 PUT 的規則解析，省略的欄位沿用目前的設定 */
+  update(config: unknown): StateSensorDto;
+  remove(): Promise<void>;
+  renameClass(from: string, to: string): StateSensorDto;
+  collect(): StateSensorDto;
+  train(): StateSensorDto;
+  /** write 把上傳的 zip 寫到給它的路徑；它丟錯時刪掉寫了一半的檔案 */
+  importZip(write: (path: string) => Promise<void>): Promise<StateSensorDto>;
+  /** label 是 all、pending 或某個類別 */
+  images(label: string): StateImageDto[];
+  imagePath(imageId: string): string | null;
+  setLabels(ids: string[], label: string | null): StateSensorDto;
+  deleteImages(ids: string[]): StateSensorDto;
 }
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
 const randomId = () => crypto.randomUUID().replaceAll("-", "").slice(0, 16);
-const CONTENT_TYPES: Record<string, string> = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
 
 export function createStateClassification(opts: StateClassificationOptions): StateClassification {
   const { db } = opts;
@@ -613,19 +633,6 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     url: `/api/states/${rt.row.id}/images/${im.id}`,
   });
 
-  function sensorOf(raw: string | undefined): Runtime {
-    const rt = sensors.get((raw ?? "") as SensorId);
-    if (!rt) throw new HttpError(404, msg("states.sensorNotFound"));
-    return rt;
-  }
-
-  function idList(v: unknown): string[] {
-    if (!Array.isArray(v) || v.length === 0 || v.length > 1000 || !v.every((x) => typeof x === "string" && /^[0-9a-f]{1,32}$/.test(x))) {
-      throw new HttpError(400, msg("states.idsInvalid"));
-    }
-    return v as string[];
-  }
-
   function startCollect(rt: Runtime): void {
     const points = samplePoints(opts.segments(rt.row.cameraId), COLLECT_POINTS);
     if (!points.length) {
@@ -638,232 +645,91 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     startJob(rt, "collect", (job) => ({ type: "collect", job, ffmpeg: opts.env.ffmpegBin, points, crop: rt.row.config.crop, outDir, count: COLLECT_COUNT }));
   }
 
-  async function saveUpload(req: Request, path: string): Promise<void> {
-    const declared = Number(req.headers.get("content-length") ?? 0);
-    if (declared > MAX_IMPORT_BYTES) throw new HttpError(413, msg("states.fileTooLarge"));
-    if (!req.body) throw new HttpError(400, msg("states.noFile"));
-    const sink = Bun.file(path).writer();
-    let size = 0;
-    try {
-      for await (const chunk of chunksOf(req.body)) {
-        size += chunk.length;
-        if (size > MAX_IMPORT_BYTES) throw new HttpError(413, msg("states.fileTooLarge"));
-        sink.write(chunk);
-      }
-    } finally {
-      await sink.end();
-    }
-    if (size < 22) throw new HttpError(400, msg("states.notZip"));
-    const head = new Uint8Array(await Bun.file(path).slice(0, 4).arrayBuffer());
-    if (head[0] !== 0x50 || head[1] !== 0x4b) throw new HttpError(400, msg("states.notZip"));
+  function create(cameraId: CameraId, config: unknown, collect: boolean): StateSensorDto {
+    if (!opts.cameras().some((c) => c.id === cameraId)) throw new HttpError(400, msg("states.cameraNotFound"));
+    const row: SensorRow = { id: store.newSensorId(), cameraId, config: parseSensorConfig(config), createdAt: now() };
+    store.insertSensor(db, row);
+    const rt = runtime(row);
+    sensors.set(row.id, rt);
+    if (collect) startCollect(rt);
+    else publishSensor(rt);
+    return dto(rt);
   }
 
-  function json(data: unknown, status = 200): Response {
-    return Response.json(data, { status });
+  function sensor(id: string): StateSensor | null {
+    const rt = sensors.get(id as SensorId);
+    if (!rt) return null;
+    const changed = () => {
+      publishSensor(rt);
+      return dto(rt);
+    };
+    return {
+      dto: () => dto(rt),
+      update(config) {
+        updateConfig(rt, parseSensorConfig(config, rt.row.config));
+        publishSensor(rt);
+        opts.onWorkersChanged();
+        return dto(rt);
+      },
+      remove: () => removeSensor(rt.row.id),
+      renameClass(from, to) {
+        renameClass(rt, from, to);
+        return changed();
+      },
+      collect() {
+        if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
+        startCollect(rt);
+        return dto(rt);
+      },
+      train() {
+        if (!dto(rt).trainable) throw new HttpError(400, msg("states.notTrainable", { min: MIN_STATE_IMAGES_PER_CLASS }));
+        const { classes } = rt.row.config;
+        const items = store
+          .listImages(db, rt.row.id)
+          .filter((im) => im.label !== null && classes.includes(im.label))
+          .map((im) => ({ path: join(imagesDir(rt.row.id), im.file), label: im.label! }));
+        const out = modelPath(rt.row.id);
+        startJob(rt, "train", (job) => ({ type: "train", job, items, classes, out }));
+        return dto(rt);
+      },
+      async importZip(write) {
+        if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
+        mkdirSync(imagesDir(rt.row.id), { recursive: true });
+        const zip = join(sensorDir(rt.row.id), `import-${randomId()}.zip`);
+        try {
+          await write(zip);
+        } catch (e) {
+          await rm(zip, { force: true });
+          throw e;
+        }
+        startJob(rt, "import", (job) => ({ type: "import", job, zip, outDir: imagesDir(rt.row.id) }), () => void rm(zip, { force: true }));
+        return dto(rt);
+      },
+      images(label) {
+        const images = store.listImages(db, rt.row.id).filter((im) => label === "all" || (label === "pending" ? im.label === null : im.label === label));
+        return images.map((im) => imageDto(rt, im));
+      },
+      imagePath(imageId) {
+        const im = store.getImage(db, rt.row.id, imageId);
+        return im ? join(imagesDir(rt.row.id), im.file) : null;
+      },
+      setLabels(ids, label) {
+        if (label !== null && !rt.row.config.classes.includes(label)) throw new HttpError(400, msg("states.classNotFound", { name: label }));
+        store.setImageLabels(db, rt.row.id, ids, label);
+        return changed();
+      },
+      deleteImages(ids) {
+        removeImages(rt.row.id, ids);
+        return changed();
+      },
+    };
   }
 
-  function routes(): Route[] {
-    return [
-      {
-        method: "GET",
-        path: "/api/states",
-        access: "user",
-        handler: ({ url }) => {
-          const cameraId = url.searchParams.get("cameraId");
-          return json(list().filter((s) => !cameraId || s.cameraId === cameraId));
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states",
-        access: "admin",
-        async handler({ req }) {
-          const body = asObject(await readJson(req));
-          const cameraId = body.cameraId as CameraId;
-          if (typeof cameraId !== "string" || !opts.cameras().some((c) => c.id === cameraId)) throw new HttpError(400, msg("states.cameraNotFound"));
-          const config = parseSensorConfig(body.config);
-          const row: SensorRow = { id: store.newSensorId(), cameraId, config, createdAt: now() };
-          store.insertSensor(db, row);
-          const rt = runtime(row);
-          sensors.set(row.id, rt);
-          if (body.collect !== false) startCollect(rt);
-          else publishSensor(rt);
-          return json(dto(rt), 201);
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states/frigate-config",
-        access: "admin",
-        async handler({ req }) {
-          const body = asObject(await readJson(req));
-          if (typeof body.yaml !== "string" || body.yaml.length > 200_000) throw new HttpError(400, msg("states.yamlNotString"));
-          return json(parseFrigateConfig(body.yaml));
-        },
-      },
-      { method: "GET", path: "/api/states/:id", access: "user", handler: ({ params }) => json(dto(sensorOf(params.id))) },
-      {
-        method: "PUT",
-        path: "/api/states/:id",
-        access: "admin",
-        async handler({ req, params }) {
-          const rt = sensorOf(params.id);
-          const body = asObject(await readJson(req));
-          updateConfig(rt, parseSensorConfig(body.config, rt.row.config));
-          publishSensor(rt);
-          opts.onWorkersChanged();
-          return json(dto(rt));
-        },
-      },
-      {
-        method: "DELETE",
-        path: "/api/states/:id",
-        access: "admin",
-        async handler({ params }) {
-          await removeSensor(sensorOf(params.id).row.id);
-          return new Response(null, { status: 204 });
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states/:id/classes/rename",
-        access: "admin",
-        async handler({ req, params }) {
-          const rt = sensorOf(params.id);
-          const body = asObject(await readJson(req));
-          renameClass(rt, parseClassName(body.from), parseClassName(body.to, true));
-          publishSensor(rt);
-          return json(dto(rt));
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states/:id/collect",
-        access: "admin",
-        handler({ params }) {
-          const rt = sensorOf(params.id);
-          if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
-          startCollect(rt);
-          return json(dto(rt), 202);
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states/:id/train",
-        access: "admin",
-        handler({ params }) {
-          const rt = sensorOf(params.id);
-          const d = dto(rt);
-          if (!d.trainable) throw new HttpError(400, msg("states.notTrainable", { min: MIN_STATE_IMAGES_PER_CLASS }));
-          const { classes } = rt.row.config;
-          const items = store
-            .listImages(db, rt.row.id)
-            .filter((im) => im.label !== null && classes.includes(im.label))
-            .map((im) => ({ path: join(imagesDir(rt.row.id), im.file), label: im.label! }));
-          const out = modelPath(rt.row.id);
-          startJob(rt, "train", (job) => ({ type: "train", job, items, classes, out }));
-          return json(dto(rt), 202);
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states/:id/import",
-        access: "admin",
-        accepts: ["application/zip", "application/x-zip-compressed", "application/octet-stream"],
-        async handler({ req, params }) {
-          const rt = sensorOf(params.id);
-          if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
-          mkdirSync(imagesDir(rt.row.id), { recursive: true });
-          const zip = join(sensorDir(rt.row.id), `import-${randomId()}.zip`);
-          try {
-            await saveUpload(req, zip);
-          } catch (e) {
-            await rm(zip, { force: true });
-            throw e;
-          }
-          startJob(rt, "import", (job) => ({ type: "import", job, zip, outDir: imagesDir(rt.row.id) }), () => void rm(zip, { force: true }));
-          return json(dto(rt), 202);
-        },
-      },
-      {
-        method: "GET",
-        path: "/api/states/:id/images",
-        access: "user",
-        handler({ params, url }) {
-          const rt = sensorOf(params.id);
-          const label = url.searchParams.get("label") ?? "all";
-          const images = store.listImages(db, rt.row.id).filter((im) => label === "all" || (label === "pending" ? im.label === null : im.label === label));
-          return json({ images: images.map((im) => imageDto(rt, im)) });
-        },
-      },
-      {
-        method: "GET",
-        path: "/api/states/:id/images/:imageId",
-        access: "user",
-        handler({ params }) {
-          const rt = sensorOf(params.id);
-          const im = store.getImage(db, rt.row.id, params.imageId ?? "");
-          if (!im) throw new HttpError(404, msg("states.imageNotFound"));
-          const file = Bun.file(join(imagesDir(rt.row.id), im.file));
-          return new Response(file, { headers: { "Content-Type": CONTENT_TYPES[extname(im.file).toLowerCase()] ?? "application/octet-stream", "Cache-Control": "private, max-age=86400, immutable" } });
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states/:id/images/label",
-        access: "admin",
-        async handler({ req, params }) {
-          const rt = sensorOf(params.id);
-          const body = asObject(await readJson(req));
-          const ids = idList(body.ids);
-          const label = body.label === null ? null : parseClassName(body.label);
-          if (label !== null && !rt.row.config.classes.includes(label)) throw new HttpError(400, msg("states.classNotFound", { name: label }));
-          store.setImageLabels(db, rt.row.id, ids, label);
-          publishSensor(rt);
-          return json(dto(rt));
-        },
-      },
-      {
-        method: "POST",
-        path: "/api/states/:id/images/delete",
-        access: "admin",
-        async handler({ req, params }) {
-          const rt = sensorOf(params.id);
-          const body = asObject(await readJson(req));
-          removeImages(rt.row.id, idList(body.ids));
-          publishSensor(rt);
-          return json(dto(rt));
-        },
-      },
-      {
-        method: "GET",
-        path: "/api/state-changes",
-        access: "user",
-        handler({ url }) {
-          const q = url.searchParams;
-          const before = q.get("before");
-          const limit = Math.min(500, Math.max(1, Number(q.get("limit") ?? 50) || 50));
-          const rows = store.queryChanges(db, {
-            sensorId: q.get("sensorId"),
-            cameraId: q.get("cameraId"),
-            before: before !== null && /^\d+$/.test(before) ? Number(before) : null,
-            limit,
-          });
-          return json(rows.map(changeDto));
-        },
-      },
-      {
-        method: "GET",
-        path: "/api/state-changes/:id/thumb.jpg",
-        access: "user",
-        async handler({ params }) {
-          const c = /^\d+$/.test(params.id ?? "") ? store.getChange(db, Number(params.id)) : null;
-          const file = c?.hasThumb ? Bun.file(thumbPath(c.sensorId, c.id)) : null;
-          if (!file || !(await file.exists())) throw new HttpError(404, msg("states.noThumb"));
-          return new Response(file, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=86400, immutable" } });
-        },
-      },
-    ];
+  const changes = (q: ChangeQuery): StateChangeDto[] => store.queryChanges(db, q).map(changeDto);
+
+  function changeThumb(id: number): string | null {
+    const c = store.getChange(db, id);
+    return c?.hasThumb ? thumbPath(c.sensorId, c.id) : null;
   }
 
   function list(): StateSensorDto[] {
@@ -915,7 +781,10 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     list,
     prune,
     diagnostics,
-    routes,
+    create,
+    sensor,
+    changes,
+    changeThumb,
     async stop() {
       clearInterval(timer);
       link.stop();

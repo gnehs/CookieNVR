@@ -8,6 +8,7 @@ import { openDb } from "../db.ts";
 import { DEFAULT_DETECT } from "../detect/config.ts";
 import { toErrorResponse } from "../http/respond.ts";
 import type { Camera, CameraId } from "../types.ts";
+import { stateRoutes } from "./routes.ts";
 import { createStateClassification } from "./service.ts";
 import * as store from "./store.ts";
 
@@ -124,7 +125,7 @@ export function harness(o: { segments?: { path: string; startMs: number; endMs: 
   });
   /** 直接呼叫 routes() 的 handler；丟出的錯誤照 HTTP 層的方式轉成回應 */
   const call = async (method: string, path: string, init: CallInit = {}) => {
-    const route = states.routes().find((r) => r.method === method && r.path === path);
+    const route = stateRoutes(states).find((r) => r.method === method && r.path === path);
     if (!route) throw new Error(`no route ${method} ${path}`);
     const params = { id: sensorId, ...init.params };
     const url = new URL(`http://x${path.replace(/:(\w+)/g, (_, k: string) => params[k as keyof typeof params] ?? "")}${init.query ? `?${init.query}` : ""}`);

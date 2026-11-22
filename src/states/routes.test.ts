@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { StateChangeDto, StateImageDto, StateSensorDto } from "../api-types.ts";
+import { stateRoutes } from "./routes.ts";
 import { cam, harness } from "./test-helpers.ts";
 import * as store from "./store.ts";
 
@@ -20,7 +21,7 @@ function addImages(h: ReturnType<typeof harness>, specs: { id: string; label: st
 
 test("every route keeps its method, path and access", () => {
   const h = harness();
-  expect(h.states.routes().map((r) => [r.method, r.path, r.access])).toEqual([
+  expect(stateRoutes(h.states).map((r) => [r.method, r.path, r.access])).toEqual([
     ["GET", "/api/states", "user"],
     ["POST", "/api/states", "admin"],
     ["POST", "/api/states/frigate-config", "admin"],
@@ -38,7 +39,7 @@ test("every route keeps its method, path and access", () => {
     ["GET", "/api/state-changes", "user"],
     ["GET", "/api/state-changes/:id/thumb.jpg", "user"],
   ]);
-  expect(h.states.routes().find((r) => r.path === "/api/states/:id/import")?.accepts).toEqual(["application/zip", "application/x-zip-compressed", "application/octet-stream"]);
+  expect(stateRoutes(h.states).find((r) => r.path === "/api/states/:id/import")?.accepts).toEqual(["application/zip", "application/x-zip-compressed", "application/octet-stream"]);
 });
 
 test("GET /api/states lists sensors, filtered by camera", async () => {

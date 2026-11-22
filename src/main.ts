@@ -43,6 +43,7 @@ import { msg } from "./messages/index.ts";
 import { createPtzHub, ptzRoutes } from "./ptz/index.ts";
 import { createRestream, sourceUrls } from "./restream/index.ts";
 import { createCameraStore, createSettingsStore, followRecordingsDefault } from "./stores/index.ts";
+import { stateRoutes } from "./states/routes.ts";
 import { createStateClassification } from "./states/service.ts";
 import { segmentsInRange } from "./recording/store.ts";
 import { createStreamHub, type StreamClient } from "./stream/hub.ts";
@@ -406,7 +407,7 @@ const routes = [
   ...ptzRoutes({ hub: ptz }),
   ...detection.routes(),
   ...objects.routes(),
-  ...states.routes(),
+  ...stateRoutes(states),
   ...videoCodecs.routes(decodeStatus),
   ...live.routes(),
   ...homekit.routes(),
