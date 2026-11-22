@@ -1733,10 +1733,6 @@ msgstr "CookieNVR 自己的全天候錄影不受影響，家庭 App 裡的錄影
 msgid "Copied"
 msgstr "已複製"
 
-#: web/ui/Button.tsx
-msgid "Copied {label}"
-msgstr "已複製{label}"
-
 #: web/pages/settings-system/ConnectedApps.tsx
 msgid "Copy"
 msgstr "複製"
@@ -1746,8 +1742,7 @@ msgstr "複製"
 msgid "Copy diagnostics"
 msgstr "複製診斷資訊"
 
-#: web/pages/settings-cameras/CameraEditPage.tsx
-#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/ui/FormStatus.tsx
 msgid "Copy error"
 msgstr "複製錯誤內容"
 
@@ -1771,10 +1766,6 @@ msgstr "複製串流網址"
 msgctxt "object category"
 msgid "Couch"
 msgstr "沙發"
-
-#: web/ui/Button.tsx
-msgid "Couldn't copy. Select the text manually."
-msgstr "無法複製，請手動選取"
 
 #: web/ui/Button.tsx
 msgid "Couldn't copy. Try again."
@@ -2362,8 +2353,7 @@ msgstr "請輸入目前密碼"
 msgid "Error {status}"
 msgstr "錯誤 {status}"
 
-#: web/pages/settings-cameras/CameraEditPage.tsx
-#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/ui/FormStatus.tsx
 msgid "Error copied. You can paste it to an AI or a technician."
 msgstr "已複製錯誤內容，可以貼給 AI 或技術人員"
 
@@ -5822,8 +5812,8 @@ msgctxt "object category"
 msgid "Toaster"
 msgstr "烤麵包機"
 
-#: web/detect/model.ts
 #: web/pages/camera/day.ts
+#: web/pages/events/model.ts
 #: web/ui/date-logic.ts
 #: web/ui/DatePicker.tsx
 msgid "Today"
@@ -6037,7 +6027,7 @@ msgstr "開啟聲音"
 msgid "Unnamed"
 msgstr "還沒取名"
 
-#: web/pages/states/SensorPage.tsx
+#: web/ui/FormCard.tsx
 msgid "Unsaved"
 msgstr "未儲存"
 
@@ -6356,8 +6346,8 @@ msgstr "帳號或密碼不對。請用 Tapo App「進階設定 → 相機帳戶�
 msgid "yaml must be a string"
 msgstr "yaml 必須是字串"
 
-#: web/detect/model.ts
 #: web/pages/camera/day.ts
+#: web/pages/events/model.ts
 #: web/ui/date-logic.ts
 msgid "Yesterday"
 msgstr "昨天"

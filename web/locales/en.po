@@ -1733,10 +1733,6 @@ msgstr "CookieNVR's own 24/7 recording is unaffected. Recording settings in the 
 msgid "Copied"
 msgstr "Copied"
 
-#: web/ui/Button.tsx
-msgid "Copied {label}"
-msgstr "Copied {label}"
-
 #: web/pages/settings-system/ConnectedApps.tsx
 msgid "Copy"
 msgstr "Copy"
@@ -1746,8 +1742,7 @@ msgstr "Copy"
 msgid "Copy diagnostics"
 msgstr "Copy diagnostics"
 
-#: web/pages/settings-cameras/CameraEditPage.tsx
-#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/ui/FormStatus.tsx
 msgid "Copy error"
 msgstr "Copy error"
 
@@ -1771,10 +1766,6 @@ msgstr "Copy stream URL"
 msgctxt "object category"
 msgid "Couch"
 msgstr "Couch"
-
-#: web/ui/Button.tsx
-msgid "Couldn't copy. Select the text manually."
-msgstr "Couldn't copy. Select the text manually."
 
 #: web/ui/Button.tsx
 msgid "Couldn't copy. Try again."
@@ -2362,8 +2353,7 @@ msgstr "Enter your current password"
 msgid "Error {status}"
 msgstr "Error {status}"
 
-#: web/pages/settings-cameras/CameraEditPage.tsx
-#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/ui/FormStatus.tsx
 msgid "Error copied. You can paste it to an AI or a technician."
 msgstr "Error copied. You can paste it to an AI or a technician."
 
@@ -5822,8 +5812,8 @@ msgctxt "object category"
 msgid "Toaster"
 msgstr "Toaster"
 
-#: web/detect/model.ts
 #: web/pages/camera/day.ts
+#: web/pages/events/model.ts
 #: web/ui/date-logic.ts
 #: web/ui/DatePicker.tsx
 msgid "Today"
@@ -6037,7 +6027,7 @@ msgstr "Unmute"
 msgid "Unnamed"
 msgstr "Unnamed"
 
-#: web/pages/states/SensorPage.tsx
+#: web/ui/FormCard.tsx
 msgid "Unsaved"
 msgstr "Unsaved"
 
@@ -6356,8 +6346,8 @@ msgstr "Wrong username or password. Use the credentials you created under \"Adva
 msgid "yaml must be a string"
 msgstr "yaml must be a string"
 
-#: web/detect/model.ts
 #: web/pages/camera/day.ts
+#: web/pages/events/model.ts
 #: web/ui/date-logic.ts
 msgid "Yesterday"
 msgstr "Yesterday"

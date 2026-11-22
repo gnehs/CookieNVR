@@ -1733,10 +1733,6 @@ msgstr "CookieNVR 自身の 24 時間録画には影響しません。ホーム�
 msgid "Copied"
 msgstr "コピーしました"
 
-#: web/ui/Button.tsx
-msgid "Copied {label}"
-msgstr "{label}をコピーしました"
-
 #: web/pages/settings-system/ConnectedApps.tsx
 msgid "Copy"
 msgstr "コピー"
@@ -1746,8 +1742,7 @@ msgstr "コピー"
 msgid "Copy diagnostics"
 msgstr "診断情報をコピー"
 
-#: web/pages/settings-cameras/CameraEditPage.tsx
-#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/ui/FormStatus.tsx
 msgid "Copy error"
 msgstr "エラー内容をコピー"
 
@@ -1771,10 +1766,6 @@ msgstr "ストリーム URL をコピー"
 msgctxt "object category"
 msgid "Couch"
 msgstr "ソファ"
-
-#: web/ui/Button.tsx
-msgid "Couldn't copy. Select the text manually."
-msgstr "コピーできませんでした。手動で選択してください"
 
 #: web/ui/Button.tsx
 msgid "Couldn't copy. Try again."
@@ -2362,8 +2353,7 @@ msgstr "現在のパスワードを入力してください"
 msgid "Error {status}"
 msgstr "エラー {status}"
 
-#: web/pages/settings-cameras/CameraEditPage.tsx
-#: web/pages/settings-cameras/CameraFormPage.tsx
+#: web/ui/FormStatus.tsx
 msgid "Error copied. You can paste it to an AI or a technician."
 msgstr "エラー内容をコピーしました。AI や担当者に貼り付けて共有できます。"
 
@@ -5822,8 +5812,8 @@ msgctxt "object category"
 msgid "Toaster"
 msgstr "トースター"
 
-#: web/detect/model.ts
 #: web/pages/camera/day.ts
+#: web/pages/events/model.ts
 #: web/ui/date-logic.ts
 #: web/ui/DatePicker.tsx
 msgid "Today"
@@ -6037,7 +6027,7 @@ msgstr "ミュート解除"
 msgid "Unnamed"
 msgstr "名前未設定"
 
-#: web/pages/states/SensorPage.tsx
+#: web/ui/FormCard.tsx
 msgid "Unsaved"
 msgstr "未保存"
 
@@ -6356,8 +6346,8 @@ msgstr "ユーザー名またはパスワードが違います。TP-Link クラ�
 msgid "yaml must be a string"
 msgstr "yaml は文字列にしてください"
 
-#: web/detect/model.ts
 #: web/pages/camera/day.ts
+#: web/pages/events/model.ts
 #: web/ui/date-logic.ts
 msgid "Yesterday"
 msgstr "昨日"
