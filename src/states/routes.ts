@@ -6,8 +6,9 @@ import { asObject, parseIdParam, readJson } from "../http/validate.ts";
 import { msg } from "../messages/index.ts";
 import type { CameraId, Route } from "../types.ts";
 import { parseClassName, parseFrigateConfig } from "./config.ts";
-import type { StateClassification, StateSensor } from "./service.ts";
+import { StateError, type StateClassification, type StateSensor } from "./service.ts";
 
+const STATUS = { invalid: 400, busy: 409 } as const;
 /** Bun.serve 預設的請求本體上限是 128 MB */
 const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 const CONTENT_TYPES: Record<string, string> = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
@@ -40,13 +41,26 @@ async function saveUpload(req: Request, path: string): Promise<void> {
   if (head[0] !== 0x50 || head[1] !== 0x4b) throw new HttpError(400, msg("states.notZip"));
 }
 
+function withStatus(route: Route): Route {
+  return {
+    ...route,
+    async handler(ctx) {
+      try {
+        return await route.handler(ctx);
+      } catch (e) {
+        throw e instanceof StateError ? new HttpError(STATUS[e.kind], e.msg) : e;
+      }
+    },
+  };
+}
+
 export function stateRoutes(states: StateClassification): Route[] {
   const sensorOf = (id: string | undefined): StateSensor => {
     const s = states.sensor(id ?? "");
     if (!s) throw new HttpError(404, msg("states.sensorNotFound"));
     return s;
   };
-  return [
+  const routes: Route[] = [
     {
       method: "GET",
       path: "/api/states",
@@ -186,4 +200,5 @@ export function stateRoutes(states: StateClassification): Route[] {
       },
     },
   ];
+  return routes.map(withStatus);
 }

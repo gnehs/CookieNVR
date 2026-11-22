@@ -20,7 +20,6 @@ import {
 import { encodeJson } from "../workers/framing.ts";
 import { createSocketLink } from "../workers/socket-link.ts";
 import type { Env } from "../env.ts";
-import { HttpError } from "../http/errors.ts";
 import { msg, type Msg, zh } from "../messages/index.ts";
 import type { Camera, CameraId, WorkerSpec } from "../types.ts";
 import { samplePoints } from "./collect.ts";
@@ -136,7 +135,17 @@ export interface StateClassification {
   stop(): Promise<void>;
 }
 
-export type ChangeQuery = Parameters<typeof store.queryChanges>[1];
+/** invalid：要求和感應器目前的設定不合；busy：感應器正在進行其他工作 */
+export class StateError extends Error {
+  constructor(
+    readonly kind: "invalid" | "busy",
+    readonly msg: Msg,
+  ) {
+    super(zh(msg));
+  }
+}
+
+export type ChangeQuery =Parameters<typeof store.queryChanges>[1];
 
 /** 拿到時感應器存在；之後被刪掉，操作仍作用在拿到的那份狀態上 */
 export interface StateSensor {
@@ -481,7 +490,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
   // ─── 背景工作 ───
 
   function startJob(rt: Runtime, kind: StateJobKind, build: (job: number) => WorkerJob, cleanup: (() => void) | null = null): void {
-    if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
+    if (jobActive(rt)) throw new StateError("busy", msg("states.jobBusy"));
     const job = nextId++;
     rt.job = { kind, state: "queued", startedAt: now() };
     rt.jobId = job;
@@ -591,9 +600,9 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   function renameClass(rt: Runtime, from: string, to: string): void {
     const { config } = rt.row;
-    if (!config.classes.includes(from)) throw new HttpError(400, msg("states.classNotFound", { name: from }));
+    if (!config.classes.includes(from)) throw new StateError("invalid", msg("states.classNotFound", { name: from }));
     if (from === to) return;
-    if (config.classes.includes(to)) throw new HttpError(400, msg("states.classExists", { name: to }));
+    if (config.classes.includes(to)) throw new StateError("invalid", msg("states.classExists", { name: to }));
     const swap = (c: string) => (c === from ? to : c);
     rt.row = { ...rt.row, config: { ...config, classes: config.classes.map(swap) } };
     db.transaction(() => {
@@ -646,7 +655,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
   }
 
   function create(cameraId: CameraId, config: unknown, collect: boolean): StateSensorDto {
-    if (!opts.cameras().some((c) => c.id === cameraId)) throw new HttpError(400, msg("states.cameraNotFound"));
+    if (!opts.cameras().some((c) => c.id === cameraId)) throw new StateError("invalid", msg("states.cameraNotFound"));
     const row: SensorRow = { id: store.newSensorId(), cameraId, config: parseSensorConfig(config), createdAt: now() };
     store.insertSensor(db, row);
     const rt = runtime(row);
@@ -677,12 +686,12 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         return changed();
       },
       collect() {
-        if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
+        if (jobActive(rt)) throw new StateError("busy", msg("states.jobBusy"));
         startCollect(rt);
         return dto(rt);
       },
       train() {
-        if (!dto(rt).trainable) throw new HttpError(400, msg("states.notTrainable", { min: MIN_STATE_IMAGES_PER_CLASS }));
+        if (!dto(rt).trainable) throw new StateError("invalid", msg("states.notTrainable", { min: MIN_STATE_IMAGES_PER_CLASS }));
         const { classes } = rt.row.config;
         const items = store
           .listImages(db, rt.row.id)
@@ -693,7 +702,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         return dto(rt);
       },
       async importZip(write) {
-        if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
+        if (jobActive(rt)) throw new StateError("busy", msg("states.jobBusy"));
         mkdirSync(imagesDir(rt.row.id), { recursive: true });
         const zip = join(sensorDir(rt.row.id), `import-${randomId()}.zip`);
         try {
@@ -714,7 +723,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         return im ? join(imagesDir(rt.row.id), im.file) : null;
       },
       setLabels(ids, label) {
-        if (label !== null && !rt.row.config.classes.includes(label)) throw new HttpError(400, msg("states.classNotFound", { name: label }));
+        if (label !== null && !rt.row.config.classes.includes(label)) throw new StateError("invalid", msg("states.classNotFound", { name: label }));
         store.setImageLabels(db, rt.row.id, ids, label);
         return changed();
       },
