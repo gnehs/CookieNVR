@@ -9,7 +9,7 @@ React 19 + TanStack Router（檔案式路由）+ TanStack Query + Base UI，Vite
 | `routes/` | 檔案式路由。`routeTree.gen.ts` 由 Vite 外掛產生，要 commit。網址參數在路由檔的 `validateSearch` 解析，不合法的值回 `undefined` |
 | `pages/<頁面>/` | 頁面元件，以及只有這頁用的元件與查詢 |
 | `ui/` | 設計系統元件（Base UI 包裝）與它們的 CSS |
-| `data/` | 共用查詢（`queries.ts`）、登入狀態（`session.ts`）、SSE（`status-stream.ts`）、健康狀態（`use-health.ts`） |
+| `data/` | 共用查詢（`queries.ts`）、登入狀態與站台名稱（`session.ts`）、SSE（`status-stream.ts`）、健康狀態（`use-health.ts`）、快取清單的寫入（`cache.ts`）、更新設定（`use-update-settings.ts`）、QueryClient 與 mutation 的錯誤通知規則（`query-client.ts`） |
 | `app/` | 外殼（側欄、底部導覽、使用者選單） |
 | `live/`、`playback/`、`timeline/`、`detect/`、`ptz/`、`*-logic.ts`、`health.ts`、`format.ts`、`api.ts` | 純邏輯與命令式物件 |
 
@@ -17,8 +17,21 @@ React 19 + TanStack Router（檔案式路由）+ TanStack Query + Base UI，Vite
 
 - 用 `useQuery`。兩頁以上用到的查詢放 `data/queries.ts`，只有一頁用的放那頁的目錄。key 是 API 路徑的各段，參數放最後一個物件：`GET /api/cameras/:id/days?tz=` 是 `["cameras", id, "days", { tz }]`。
 - 攝影機、worker 與進行中的事件由全站唯一一條 SSE 寫進快取。頁面不要自己開 `EventSource`，也不要輪詢這三樣。其他要定時更新的用 `refetchInterval`。
-- 變更用 `useMutation`，成功後 invalidate 或 `setQueryData`。沒寫 `onError` 的 mutation 失敗時會自動跳出錯誤通知。
+- 變更一律用 `useMutation`，不在事件處理函式裡自己 `await api.x()` 再手寫 busy、error 與 try/catch。多步驟的流程（先測試連線再儲存、建立後上傳）整段放進 `mutationFn`；處理函式只做驗證與確認對話框，再呼叫 `mutate`。忙碌用 `isPending`，送出期間先照新值畫用 `variables`（範本：`ObjectsGroup.tsx`、`DecodeRow.tsx`）。目前停在 reducer 管階段文字的兩個攝影機表單（`CameraFormPage`、`CameraEditPage`）與標記圖片（`LabelBoard`）沒有改。
+- mutation 失敗時預設跳出錯誤通知（`data/query-client.ts`）。錯誤要顯示在欄位旁、對話框裡或狀態列的，加 `meta: { handlesError: true }` 關掉通知，再用 `onError` 自己顯示。不要寫空的 `onError`。
+- 成功後把結果寫進快取：清單用 `data/cache.ts` 的 `putItem` / `dropItem`（純函式版是 `upsert` / `without`），不要每個地方自己寫 `list.map`、`filter`。更新設定一律用 `data/use-update-settings.ts` 的 `useUpdateSettings`，它成功後自己寫 `settingsQuery`，要額外做的事用 options 補。invalidate 與 `setQueryData` 用 `xxxQuery.queryKey`，不寫字面值的 key。
+- 站台名稱用 `data/session.ts` 的 `useSiteName()`。
 - 載入中用 `<Spinner />`，錯誤用 `<ErrorBox error onRetry />`，找不到資料這類已知錯誤丟 `PageError`（`ui/states.tsx`）。
+
+## 共用的畫面零件
+
+先找 `ui/` 有沒有，不要在頁面裡手刻。
+
+- 送出鈕：`<Button busy={isPending}>`。轉圈、`aria-busy`、停用都由它處理，要換字（「測試連線…」「儲存中…」）由呼叫端換 children。沒有轉圈的場合（對話框的小按鈕）維持原樣，不要為了套用而加轉圈。
+- 表單底部：`FormStatus` 是左邊的錯誤摘要加複製錯誤鈕，錯誤物件是 `{ summary, copy? }`。只在有這個複製鈕的地方使用，其他表單單行錯誤直接寫 `<p className="form-error" role="alert">`。
+- 收合：設定頁卡片裡的進階用 `SettingsDisclosure`（`defaultOpen` 只在第一次畫出來時生效）；表單的卡片用 `FormCard`（`error` 標紅、`dirty` 顯示「未儲存」）。
+- 常用值加自訂：`Choice`（分段控制）與 `PresetPicker`（下拉）共用 `ui/use-preset-choice.ts` 的狀態，新的樣式也用它。
+- 對話框關閉動畫期間要保留最後的內容：`ui/use-retained.ts` 的 `useRetained(value)`，不要手寫 `if (x && x !== shown) setShown(x)`。
 
 ## 命令式物件
 
