@@ -182,12 +182,13 @@ export function UsersPage() {
     if (await confirmDialog(deleteTitle(u.username), t`This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone.`, { confirmLabel: t`Delete`, danger: true })) remove.mutate(u);
   };
 
+  const count = users.data?.length ?? 0;
   const body = (
     <QueryGate queries={[users]}>
       {([list]) => (
         <>
           <div className="list-toolbar">
-            <span className="hint">{plural(list.length, { one: "# user", other: "# users" })}</span>
+            <span className="hint">{plural(count, { one: "# user", other: "# users" })}</span>
             <Button variant="primary" small icon="plus" iconSize={15} onClick={() => open({ kind: "create" })}>
               {t`Add user`}
             </Button>

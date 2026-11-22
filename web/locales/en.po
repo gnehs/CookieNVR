@@ -77,11 +77,6 @@ msgstr "(Username and password omitted)"
 msgid "{0, plural, one {# image} other {# images}}"
 msgstr "{0, plural, one {# image} other {# images}}"
 
-#. placeholder {0}: list.length
-#: web/pages/settings-users/UsersPage.tsx
-msgid "{0, plural, one {# user} other {# users}}"
-msgstr "{0, plural, one {# user} other {# users}}"
-
 #: web/pages/status/StatusPage.tsx
 msgid "{active, plural, one {# camera is connected.} other {All # cameras are connected.}}"
 msgstr "{active, plural, one {# camera is connected.} other {All # cameras are connected.}}"
@@ -210,6 +205,10 @@ msgstr "{count, plural, one {# state sensor isn't trained yet} other {# state se
 #: web/health.ts
 msgid "{count, plural, one {# state sensor needs retraining} other {# state sensors need retraining}}"
 msgstr "{count, plural, one {# state sensor needs retraining} other {# state sensors need retraining}}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "{count, plural, one {# user} other {# users}}"
+msgstr "{count, plural, one {# user} other {# users}}"
 
 #: web/pages/states/LabelBoard.tsx
 msgid "{count, plural, one {Delete # picture?} other {Delete # pictures?}}"

@@ -77,11 +77,6 @@ msgstr "（ユーザー名とパスワードは省略）"
 msgid "{0, plural, one {# image} other {# images}}"
 msgstr "{0, plural, other {#枚}}"
 
-#. placeholder {0}: list.length
-#: web/pages/settings-users/UsersPage.tsx
-msgid "{0, plural, one {# user} other {# users}}"
-msgstr ""
-
 #: web/pages/status/StatusPage.tsx
 msgid "{active, plural, one {# camera is connected.} other {All # cameras are connected.}}"
 msgstr "{active, plural, other {# 台のカメラはすべて接続されています。}}"
@@ -210,6 +205,10 @@ msgstr "{count, plural, other {未学習の状態センサー # 個}}"
 #: web/health.ts
 msgid "{count, plural, one {# state sensor needs retraining} other {# state sensors need retraining}}"
 msgstr "{count, plural, other {再学習が必要な状態センサー # 個}}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "{count, plural, one {# user} other {# users}}"
+msgstr "{count, plural, other {#人}}"
 
 #: web/pages/states/LabelBoard.tsx
 msgid "{count, plural, one {Delete # picture?} other {Delete # pictures?}}"

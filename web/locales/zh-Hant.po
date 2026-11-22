@@ -77,11 +77,6 @@ msgstr "（帳號密碼已省略）"
 msgid "{0, plural, one {# image} other {# images}}"
 msgstr "{0, plural, other {# 張}}"
 
-#. placeholder {0}: list.length
-#: web/pages/settings-users/UsersPage.tsx
-msgid "{0, plural, one {# user} other {# users}}"
-msgstr ""
-
 #: web/pages/status/StatusPage.tsx
 msgid "{active, plural, one {# camera is connected.} other {All # cameras are connected.}}"
 msgstr "{active, plural, other {# 台攝影機都已連線。}}"
@@ -210,6 +205,10 @@ msgstr "{count, plural, other {# 個狀態感應器還沒訓練}}"
 #: web/health.ts
 msgid "{count, plural, one {# state sensor needs retraining} other {# state sensors need retraining}}"
 msgstr "{count, plural, other {# 個狀態感應器要重新訓練}}"
+
+#: web/pages/settings-users/UsersPage.tsx
+msgid "{count, plural, one {# user} other {# users}}"
+msgstr "{count, plural, other {共 # 位}}"
 
 #: web/pages/states/LabelBoard.tsx
 msgid "{count, plural, one {Delete # picture?} other {Delete # pictures?}}"
