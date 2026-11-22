@@ -7,6 +7,7 @@ import { api } from "../../api.ts";
 import { putItem } from "../../data/cache.ts";
 import { camerasQuery, systemQuery } from "../../data/queries.ts";
 import { useSiteName } from "../../data/session.ts";
+import { useRetainedItem } from "../../data/use-retained-item.ts";
 import { errMsg } from "../../format.ts";
 import { Button, ButtonLink } from "../../ui/Button.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
@@ -14,7 +15,7 @@ import { FormCard } from "../../ui/FormCard.tsx";
 import { FormStatus } from "../../ui/FormStatus.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { BrandMark } from "../../ui/Panel.tsx";
-import { ErrorBox, PageError, Spinner } from "../../ui/states.tsx";
+import { ErrorBox, PageError, QueryGate } from "../../ui/states.tsx";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
 import { CameraEditPage } from "./CameraEditPage.tsx";
 import { BasicFields, ConnFields, RecFields, useFocusError } from "./fields.tsx";
@@ -201,12 +202,11 @@ export function CameraFormPage({ id, mode }: { id: string | null; mode: CameraFo
   const cams = useQuery({ ...camerasQuery, enabled: id !== null });
   const [round, setRound] = useState(0);
   // 刪除後快取裡已經沒有這台，但還沒換頁；別閃一下「找不到」
-  const last = useRef<CameraDto | null>(null);
+  const cam = useRetainedItem(cams.data, (c) => c.id === id);
   if (id === null) return <NewCameraForm key={`new-${round}`} welcome={mode === "welcome"} onAgain={() => setRound((n) => n + 1)} />;
-  if (cams.isPending) return <Spinner />;
-  if (cams.isError) return <ErrorBox error={cams.error} onRetry={() => void cams.refetch()} />;
-  const cam = cams.data.find((c) => c.id === id) ?? (last.current?.id === id ? last.current : null);
-  if (!cam) return <ErrorBox error={new PageError(t`Camera not found`, t`It may have been deleted.`, { label: t`Back to cameras`, to: "/settings/cameras" })} />;
-  last.current = cam;
-  return <CameraEditPage key={id} camera={cam} />;
+  return (
+    <QueryGate queries={[cams]}>
+      {() => (cam ? <CameraEditPage key={id} camera={cam} /> : <ErrorBox error={new PageError(t`Camera not found`, t`It may have been deleted.`, { label: t`Back to cameras`, to: "/settings/cameras" })} />)}
+    </QueryGate>
+  );
 }

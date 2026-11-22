@@ -16,7 +16,7 @@ import { classesError, defaultClasses, DEFAULT_CROP, MAX_NAME, pickFrigateSensor
 import { Button } from "../../ui/Button.tsx";
 import { Tiles } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
-import { ErrorBox, PageError, Spinner } from "../../ui/states.tsx";
+import { ErrorBox, PageError, QueryGate } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
 
@@ -31,11 +31,15 @@ type Tuning = Pick<FrigateConfigResultDto["sensors"][number], "threshold" | "int
 export function NewSensorPage({ cameraId }: { cameraId: string }) {
   const { t } = useLingui();
   const cams = useQuery(camerasQuery);
-  if (cams.isPending) return <Spinner />;
-  if (cams.isError) return <ErrorBox error={cams.error} onRetry={() => void cams.refetch()} />;
-  const cam = cams.data.find((c) => c.id === cameraId);
-  if (!cam) return <ErrorBox error={new PageError(t`Camera not found`, t`It may have been deleted.`, { label: t`Back to cameras`, to: "/settings/cameras" })} />;
-  return <Wizard cam={cam} />;
+  return (
+    <QueryGate queries={[cams]}>
+      {([list]) => {
+        const cam = list.find((c) => c.id === cameraId);
+        if (!cam) return <ErrorBox error={new PageError(t`Camera not found`, t`It may have been deleted.`, { label: t`Back to cameras`, to: "/settings/cameras" })} />;
+        return <Wizard cam={cam} />;
+      }}
+    </QueryGate>
+  );
 }
 
 function Wizard({ cam }: { cam: CameraDto }) {

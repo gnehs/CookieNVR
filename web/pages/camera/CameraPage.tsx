@@ -14,7 +14,7 @@ import { ButtonLink } from "../../ui/Button.tsx";
 import { Segmented } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { Badge } from "../../ui/Panel.tsx";
-import { EmptyState, ErrorBox, Spinner } from "../../ui/states.tsx";
+import { EmptyState, QueryGate } from "../../ui/states.tsx";
 import { LiveChip, LivePill, savedQuality, saveQuality, toggleFullscreen, useLiveVideo } from "./live.tsx";
 import { Playback } from "./Playback.tsx";
 import { PtzPanel } from "./PtzPanel.tsx";
@@ -44,11 +44,14 @@ function NotFound() {
 export function CameraPage() {
   const { id } = route.useParams();
   const cams = useQuery(camerasQuery);
-  if (cams.isPending) return <Spinner />;
-  if (cams.isError) return <ErrorBox error={cams.error} onRetry={() => void cams.refetch()} />;
-  const cam = cams.data.find((c) => c.id === id);
-  if (!cam) return <NotFound />;
-  return <CameraScreen key={id} cam={cam} />;
+  return (
+    <QueryGate queries={[cams]}>
+      {([list]) => {
+        const cam = list.find((c) => c.id === id);
+        return cam ? <CameraScreen key={id} cam={cam} /> : <NotFound />;
+      }}
+    </QueryGate>
+  );
 }
 
 function CameraScreen({ cam }: { cam: CameraDto }) {
@@ -62,11 +65,9 @@ function CameraScreen({ cam }: { cam: CameraDto }) {
   const enabled = cam.config.enabled;
   const st = cameraStatus(cam);
 
-  let body;
-  if (daysQ.isPending) body = <Spinner />;
-  else if (daysQ.isError) body = <ErrorBox error={daysQ.error} onRetry={() => void daysQ.refetch()} />;
-  else if (playable) body = <Playback cam={cam} days={daysQ.data} view={view} quality={quality} admin={admin} />;
-  else body = <LiveOnly cam={cam} quality={quality} admin={admin} hasRecordings={daysQ.data.length > 0} />;
+  const body = (
+    <QueryGate queries={[daysQ]}>{([days]) => (playable ? <Playback cam={cam} days={days} view={view} quality={quality} admin={admin} /> : <LiveOnly cam={cam} quality={quality} admin={admin} hasRecordings={days.length > 0} />)}</QueryGate>
+  );
 
   return (
     <div className="pb">

@@ -14,7 +14,7 @@ import { Button } from "../../ui/Button.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { PresetPicker, SettingRow, SettingsDisclosure, SettingsGroup } from "../../ui/SettingRow.tsx";
-import { ErrorBox, Spinner } from "../../ui/states.tsx";
+import { QueryGate } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
 
@@ -53,16 +53,9 @@ export function StoragePage() {
   const settings = useQuery(settingsQuery);
   const sys = useQuery(systemQuery);
   const cams = useQuery(camerasQuery);
-  const failed = [settings, sys, cams].find((q) => q.isError);
   return (
     <SettingsLayout active="storage">
-      {failed ? (
-        <ErrorBox error={failed.error} onRetry={() => void failed.refetch()} />
-      ) : !settings.data || !sys.data || !cams.data ? (
-        <Spinner />
-      ) : (
-        <Content settings={settings.data} sys={sys.data} names={new Map(cams.data.map((c) => [c.id as string, c.config.name]))} />
-      )}
+      <QueryGate queries={[settings, sys, cams]}>{([s, y, c]) => <Content settings={s} sys={y} names={new Map(c.map((cam) => [cam.id as string, cam.config.name]))} />}</QueryGate>
     </SettingsLayout>
   );
 }

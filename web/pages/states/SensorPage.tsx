@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CameraDto, CropBox, StateSensorDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { camerasQuery } from "../../data/queries.ts";
+import { useRetainedItem } from "../../data/use-retained-item.ts";
 import { errMsg, formatDateTime } from "../../format.ts";
 import { serverText } from "../../server-text.ts";
 import { JobBar, StateLine, useNow } from "../../states/bits.tsx";
@@ -20,7 +21,7 @@ import { confirmDialog } from "../../ui/Dialog.tsx";
 import { FormCard } from "../../ui/FormCard.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { SettingRow } from "../../ui/SettingRow.tsx";
-import { ErrorBox, PageError, Spinner } from "../../ui/states.tsx";
+import { ErrorBox, PageError, QueryGate } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
 import { LabelBoard } from "./LabelBoard.tsx";
@@ -31,15 +32,16 @@ export function SensorPage({ cameraId, sensorId }: { cameraId: string; sensorId:
   const sensors = useQuery(statesQuery);
   const cams = useQuery(camerasQuery);
   // 刪除後快取裡已經沒有它，但還沒換頁；別閃一下「找不到」
-  const last = useRef<StateSensorDto | null>(null);
-  if (sensors.isPending || cams.isPending) return <Spinner />;
-  const failed = sensors.isError ? sensors : cams.isError ? cams : null;
-  if (failed) return <ErrorBox error={failed.error} onRetry={() => void failed.refetch()} />;
-  const cam = cams.data!.find((c) => c.id === cameraId);
-  const sensor = sensors.data!.find((s) => s.id === sensorId && s.cameraId === cameraId) ?? (last.current?.id === sensorId ? last.current : null);
-  if (!cam || !sensor) return <ErrorBox error={new PageError(t`Sensor not found`, t`It may have been deleted.`, { label: t`Back to camera settings`, to: cam ? `/settings/cameras/${cam.id}` : "/settings/cameras" })} />;
-  last.current = sensor;
-  return <Sensor key={sensor.id} cam={cam} sensor={sensor} />;
+  const sensor = useRetainedItem(sensors.data, (s) => s.id === sensorId && s.cameraId === cameraId);
+  return (
+    <QueryGate queries={[sensors, cams]}>
+      {([, list]) => {
+        const cam = list.find((c) => c.id === cameraId);
+        if (!cam || !sensor) return <ErrorBox error={new PageError(t`Sensor not found`, t`It may have been deleted.`, { label: t`Back to camera settings`, to: cam ? `/settings/cameras/${cam.id}` : "/settings/cameras" })} />;
+        return <Sensor key={sensor.id} cam={cam} sensor={sensor} />;
+      }}
+    </QueryGate>
+  );
 }
 
 function Sensor({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {

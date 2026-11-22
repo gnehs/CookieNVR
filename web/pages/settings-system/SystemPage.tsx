@@ -9,7 +9,7 @@ import { useUpdateSettings } from "../../data/use-update-settings.ts";
 import { errMsg } from "../../format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { SettingRow, SettingsGroup } from "../../ui/SettingRow.tsx";
-import { ErrorBox, Spinner } from "../../ui/states.tsx";
+import { QueryGate } from "../../ui/states.tsx";
 import { Switch } from "../../ui/controls.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
@@ -106,16 +106,17 @@ function GeneralForm({ settings }: { settings: Settings }) {
 /** 設定 → 一般：站點名稱、其他 App 與 Apple 家庭的開關、連接其他 App 與影像解碼 */
 export function SystemPage() {
   const settings = useQuery(settingsQuery);
-  let body;
-  if (settings.isPending) body = <Spinner />;
-  else if (settings.isError) body = <ErrorBox error={settings.error} onRetry={() => settings.refetch()} />;
-  else
-    body = (
-      <div className="stack">
-        <GeneralForm settings={settings.data} />
-        <ConnectedApps />
-        <DecodeRow settings={settings.data} />
-      </div>
-    );
-  return <SettingsLayout active="system">{body}</SettingsLayout>;
+  return (
+    <SettingsLayout active="system">
+      <QueryGate queries={[settings]}>
+        {([s]) => (
+          <div className="stack">
+            <GeneralForm settings={s} />
+            <ConnectedApps />
+            <DecodeRow settings={s} />
+          </div>
+        )}
+      </QueryGate>
+    </SettingsLayout>
+  );
 }
