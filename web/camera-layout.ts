@@ -1,5 +1,5 @@
-import type { CameraDto, CameraGroupDto, CameraLayoutDto } from "../src/api-types.ts";
-import type { CameraId, GroupId } from "../src/types.ts";
+import type { CameraDto, CameraGroupDto } from "../src/api-types.ts";
+import type { CameraArrangement, CameraId, GroupId } from "../src/types.ts";
 
 /** 沒有分區的那一段在編輯器裡的容器 id；分區 id 是 8 個小寫英數字元，不會撞到 */
 export const UNGROUPED = "~ungrouped";
@@ -28,7 +28,7 @@ export function layoutOf(cams: CameraDto[], groups: CameraGroupDto[]): Layout {
   return { groups: groups.map((g) => g.id), boxes };
 }
 
-export const arrangementOf = (layout: Layout): CameraLayoutDto => ({
+export const arrangementOf = (layout: Layout): CameraArrangement => ({
   groups: layout.groups,
   cameras: ([UNGROUPED, ...layout.groups] as BoxId[]).flatMap((box) => (layout.boxes[box] ?? []).map((id) => ({ id, groupId: box === UNGROUPED ? null : box }))),
 });

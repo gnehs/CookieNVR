@@ -108,7 +108,7 @@ export interface CameraGroup {
   position: number;
 }
 
-/** 一次排好全部：分區的順序，以及每台攝影機依序屬於哪一區 */
+/** PUT /api/camera-layout 的本體，也是 store.arrange 的參數：一次排好全部，分區的順序，以及每台攝影機依序屬於哪一區 */
 export interface CameraArrangement {
   groups: GroupId[];
   cameras: { id: CameraId; groupId: GroupId | null }[];

@@ -50,5 +50,3 @@ export function labelKey(name: string, index = 0): string {
 /** 鍵 → 中文；沒有翻譯就用原名（底線換空白） */
 export const labelName = (key: string): string => ZH[key] ?? key.replace(/_/g, " ");
 
-/** 常用類別與中文（前端的預設勾選清單）；完整清單由 `GET /api/objects/labels` 依目前的模型提供 */
-export const OBJECT_LABELS: Record<(typeof COMMON_LABELS)[number], string> = Object.fromEntries(COMMON_LABELS.map((k) => [k, ZH[k]!])) as never;

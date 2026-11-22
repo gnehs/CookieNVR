@@ -110,12 +110,6 @@ export interface CameraGroupDto {
   name: string;
 }
 
-/** PUT /api/camera-layout：分區的順序，以及每台攝影機依序屬於哪一區 */
-export interface CameraLayoutDto {
-  groups: GroupId[];
-  cameras: { id: CameraId; groupId: GroupId | null }[];
-}
-
 export interface StreamInfo {
   videoCodec: string;
   width: number;
@@ -653,12 +647,6 @@ export interface ObjectLabelsDto {
   known: boolean;
 }
 
-/** POST /api/objects/benchmark（管理員）：devices 省略時測目前使用的裝置；seconds 3 到 60，預設 10 */
-export interface BenchmarkRequestDto {
-  devices?: string[];
-  seconds?: number;
-}
-
 // ─── 狀態辨識（類似 Frigate 的 State Classification）──────────────────────────────
 //
 // 一台攝影機可以有多個「狀態感應器」，例如「鐵捲門」：關／移動中／開。每個感應器框一塊畫面區域，
@@ -816,31 +804,6 @@ export interface StateImageDto {
   url: string;
 }
 
-/** POST /api/states/:id/images/label（管理員）：label 為 null 代表退回待標記 */
-export interface LabelStateImagesDto {
-  ids: string[];
-  label: string | null;
-}
-
-/** POST /api/states/:id/images/delete（管理員） */
-export interface DeleteStateImagesDto {
-  ids: string[];
-}
-
-/** POST /api/states/:id/classes/rename（管理員）：已標記的圖、目前狀態與模型的類別都跟著改名，不用重新訓練 */
-export interface RenameStateClassDto {
-  from: string;
-  to: string;
-}
-
-/**
- * POST /api/states/:id/import（管理員）：請求本體是 zip 檔本身，Content-Type: application/zip，上限 100 MB（超過回 413）。
- * 接受 Frigate 匯出的資料集：`<名稱>/dataset/<類別>/*.png|jpg|webp` 進已標記，`<名稱>/train/*` 進待標記
- * （檔名若是 Frigate 的 `<…>-<類別>-<信心>.webp` 格式，guess 會帶上 Frigate 當時的判斷）。最外層的 `<名稱>/` 可有可無。
- * 感應器沒有的類別會自動加到 config.classes 最後面。回 202 與更新後的 StateSensorDto，進度看 job。
- */
-export type ImportStateDatasetResultDto = StateSensorDto;
-
 /** GET /api/state-changes?sensorId=&cameraId=&before=&limit=（一般使用者）：狀態切換紀錄，新的在前，limit 預設 50、最多 500 */
 export interface StateChangeDto {
   id: number;
@@ -857,14 +820,10 @@ export interface StateChangeDto {
 
 /**
  * POST /api/states/frigate-config（管理員）：把 Frigate 設定檔的片段轉成 CookieNVR 的設定，供建立感應器時預填。
- * 只讀 `classification.custom.<名稱>` 底下的 threshold 與 state_config（cameras.<攝影機>.crop、motion、interval），
+ * 本體為 `{ yaml: string }`。只讀 `classification.custom.<名稱>` 底下的 threshold 與 state_config（cameras.<攝影機>.crop、motion、interval），
  * 也接受直接從 `custom:` 或 `<名稱>:` 開始貼的片段。不會建立任何東西。interval 沒寫（Frigate 預設不定時）轉成 0，
  * motion 沒寫轉成 false（Frigate 的預設）。找不到任何感應器設定或 YAML 壞掉時回 400。
  */
-export interface FrigateConfigRequestDto {
-  yaml: string;
-}
-
 export interface FrigateConfigResultDto {
   sensors: {
     /** Frigate 的模型名稱，例如 "garage" */

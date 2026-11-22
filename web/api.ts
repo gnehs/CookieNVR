@@ -2,7 +2,6 @@ import { t } from "@lingui/core/macro";
 import type {
   CameraDto,
   CameraGroupDto,
-  CameraLayoutDto,
   HomekitActionDto,
   HomekitDto,
   CreatedTokenDto,
@@ -39,7 +38,7 @@ import type {
   StateSensorConfigInput,
   StateSensorDto,
 } from "../src/api-types.ts";
-import type { CameraConfig, CameraConnection, ObjectSettings, Role, Settings } from "../src/types.ts";
+import type { CameraArrangement, CameraConfig, CameraConnection, ObjectSettings, Role, Settings } from "../src/types.ts";
 import { serverText } from "./server-text.ts";
 
 export class ApiError extends Error {
@@ -133,7 +132,7 @@ export const api = {
   renameCameraGroup: (id: string, name: string) => put<CameraGroupDto>(`/camera-groups/${encodeURIComponent(id)}`, { name }),
   deleteCameraGroup: (id: string) => del(`/camera-groups/${encodeURIComponent(id)}`),
   /** 一次排好分區順序與每台攝影機的分區、順序；回傳排好後的分區與攝影機 */
-  arrangeCameras: (layout: CameraLayoutDto) => put<{ groups: CameraGroupDto[]; cameras: CameraDto[] }>("/camera-layout", layout),
+  arrangeCameras: (layout: CameraArrangement) => put<{ groups: CameraGroupDto[]; cameras: CameraDto[] }>("/camera-layout", layout),
   createCamera: (config: CameraConfig) => post<CameraDto>("/cameras", config),
   updateCamera: (id: string, config: CameraConfig) => put<CameraDto>(`/cameras/${encodeURIComponent(id)}`, config),
   deleteCamera: (id: string, deleteRecordings = false) =>
