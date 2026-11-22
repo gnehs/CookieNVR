@@ -105,10 +105,10 @@ export function BenchmarkSection({ data }: { data: ObjectsDto | undefined }) {
     mutationFn: () => api.startBenchmark(multi ? [...selected] : undefined),
     onSuccess: (benchmark) => {
       qc.setQueryData(objectsQuery(true).queryKey, (d: ObjectsDto | undefined) => (d ? { ...d, benchmark } : d));
-      return qc.invalidateQueries({ queryKey: ["objects"] });
+      return qc.invalidateQueries({ queryKey: objectsQuery(false).queryKey });
     },
   });
-  const cancel = useMutation({ mutationFn: api.cancelBenchmark, onSettled: () => qc.invalidateQueries({ queryKey: ["objects"] }) });
+  const cancel = useMutation({ mutationFn: api.cancelBenchmark, onSettled: () => qc.invalidateQueries({ queryKey: objectsQuery(false).queryKey }) });
 
   const ready = data?.status.state === "ready";
   const none = multi && selected.size === 0;

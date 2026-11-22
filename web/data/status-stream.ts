@@ -2,16 +2,12 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { CameraDto, CameraGroupDto, EventDto, StateChangeDto, StateSensorDto, StreamSnapshotDto } from "../../src/api-types.ts";
 import type { WorkerStatus } from "../../src/types.ts";
 import { onSensorMessage, onSensorRemoved, onStateChange, statesQuery } from "../states/queries.ts";
+import { putItem, upsert, without } from "./cache.ts";
 import { activeEventsQuery, cameraGroupsQuery, camerasQuery, systemQuery, workersQuery } from "./queries.ts";
 
 const POLL_MS = 5_000;
 /** 連續這麼多次連線都沒收到完整狀態，就先改成輪詢 */
 const FAILURES_BEFORE_POLLING = 3;
-
-function upsert<T extends { id: string | number }>(list: T[], item: T): T[] {
-  const i = list.findIndex((x) => x.id === item.id);
-  return i < 0 ? [...list, item] : list.map((x, j) => (j === i ? item : x));
-}
 
 const parse = <T,>(e: Event): T => JSON.parse((e as MessageEvent<string>).data) as T;
 
@@ -28,7 +24,6 @@ export function startStatusStream(qc: QueryClient, opts: { admin: boolean }): ()
   let snapshots = 0;
   let running = true;
 
-  const setCams = (fn: (cams: CameraDto[]) => CameraDto[]) => qc.setQueryData(camerasQuery.queryKey, (cams) => (cams ? fn(cams) : cams));
   const setEvents = (fn: (events: EventDto[]) => EventDto[]) => qc.setQueryData(activeEventsQuery.queryKey, (list) => fn(list ?? []));
 
   function connect(): void {
@@ -52,15 +47,15 @@ export function startStatusStream(qc: QueryClient, opts: { admin: boolean }): ()
     });
     es.addEventListener("cameras", (e) => qc.setQueryData(camerasQuery.queryKey, parse<CameraDto[]>(e)));
     es.addEventListener("camera-groups", (e) => qc.setQueryData(cameraGroupsQuery.queryKey, parse<CameraGroupDto[]>(e)));
-    es.addEventListener("camera", (e) => setCams((cams) => upsert(cams, parse<CameraDto>(e))));
+    es.addEventListener("camera", (e) => putItem(qc, camerasQuery, parse<CameraDto>(e)));
     es.addEventListener("worker", (e) => {
       const w = parse<WorkerStatus>(e);
-      qc.setQueryData(workersQuery.queryKey, (list) => list && (w.state === "stopped" ? list.filter((x) => x.id !== w.id) : upsert(list, w)));
+      qc.setQueryData(workersQuery.queryKey, (list) => list && (w.state === "stopped" ? without(list, w.id) : upsert(list, w)));
     });
     es.addEventListener("event", (e) => {
       const { phase, event } = parse<{ phase: "start" | "update" | "end"; event: EventDto }>(e);
       // update：進行中的事件類別變了（物件辨識確認了新的東西），換成最新的那筆
-      setEvents((list) => (phase === "end" ? list.filter((x) => x.id !== event.id) : upsert(list, event)));
+      setEvents((list) => (phase === "end" ? without(list, event.id) : upsert(list, event)));
     });
     es.addEventListener("state-sensor", (e) => onSensorMessage(qc, parse<StateSensorDto>(e)));
     es.addEventListener("state-sensor-removed", (e) => onSensorRemoved(qc, parse<{ id: string }>(e).id));

@@ -6,12 +6,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { CameraDto, CropBox, FrigateConfigResultDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
+import { putItem } from "../../data/cache.ts";
 import { camerasQuery } from "../../data/queries.ts";
 import { errMsg, formatBytes } from "../../format.ts";
+import { statesQuery } from "../../states/queries.ts";
 import { ClassesEditor } from "../../states/ClassesEditor.tsx";
 import { CropEditor } from "../../states/CropEditor.tsx";
 import { classesError, defaultClasses, DEFAULT_CROP, MAX_NAME, pickFrigateSensor, rowsOf, sensorNameError, type ClassRow } from "../../states/model.ts";
-import { putSensor } from "../../states/queries.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Tiles } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
@@ -84,12 +85,12 @@ function Wizard({ cam }: { cam: CameraDto }) {
         config: { name: name.trim(), classes: rows.map((r) => r.name.trim()), crop, ...(tuning ?? {}) },
         collect: source === "recording",
       });
-      putSensor(qc, created);
+      putItem(qc, statesQuery, created);
       if (source !== "import" || !file) return created;
       setUploading(0);
       try {
         const imported = await api.importStateDataset(created.id, file, setUploading);
-        putSensor(qc, imported);
+        putItem(qc, statesQuery, imported);
         return imported;
       } catch (err) {
         const sensorName = created.config.name;

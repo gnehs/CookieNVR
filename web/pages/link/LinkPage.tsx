@@ -7,6 +7,7 @@ import { ApiError, api } from "../../api.ts";
 import { useMe, useSiteName } from "../../data/session.ts";
 import { errMsg } from "../../format.ts";
 import { isLocalAddress } from "../../link-address.ts";
+import { tokensQuery } from "../settings-system/ConnectedApps.tsx";
 import { Button, ButtonLink } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import type { IconName } from "../../ui/icons.ts";
@@ -128,7 +129,7 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
   const decide = useMutation({
     mutationFn: (d: "approve" | "deny") => api.decideLink(code, d).then(() => d),
     onSuccess: (d) => {
-      void qc.invalidateQueries({ queryKey: ["tokens"] });
+      void qc.invalidateQueries({ queryKey: tokensQuery.queryKey });
       onDone(d === "approve" ? "approved" : "denied");
     },
     meta: { handlesError: true },

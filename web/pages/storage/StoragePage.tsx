@@ -6,6 +6,7 @@ import { useRef, useState, type FormEvent } from "react";
 import type { SettingsDto, SystemDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { camerasQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
+import { useUpdateSettings } from "../../data/use-update-settings.ts";
 import { errMsg, formatBytes } from "../../format.ts";
 import { DATA_DISK } from "../../health.ts";
 import { estimateDays } from "../../retention-estimate.ts";
@@ -224,7 +225,7 @@ function Overview({ sys, names, draft, savedMinFreeGb }: { sys: SystemDto; names
     onSuccess: async (res) => {
       const freed = formatBytes(res.bytes);
       toast(t`Cleared, freed ${freed}`);
-      await qc.invalidateQueries({ queryKey: ["system"] });
+      await qc.invalidateQueries({ queryKey: systemQuery.queryKey });
     },
   });
   const clearOrphans = async () => {
@@ -304,11 +305,9 @@ function RetentionForm({ settings, draft, setDraft }: { settings: SettingsDto; d
     (v: Draft[K]) =>
       setDraft((d) => ({ ...d, [k]: v }));
 
-  const save = useMutation({
-    mutationFn: (patch: Partial<SettingsDto>) => api.updateSettings(patch),
-    onSuccess: (next) => {
-      qc.setQueryData(settingsQuery.queryKey, next);
-      void qc.invalidateQueries({ queryKey: ["system"] });
+  const save = useUpdateSettings({
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
       toast(t`Recording and storage settings saved`);
     },
     meta: { handlesError: true },

@@ -1,11 +1,11 @@
 import { useLingui } from "@lingui/react/macro";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { Settings } from "../../../src/types.ts";
 import type { InfoDto } from "../../../src/api-types.ts";
-import { api } from "../../api.ts";
 import { settingsQuery } from "../../data/queries.ts";
 import { infoQuery } from "../../data/session.ts";
+import { useUpdateSettings } from "../../data/use-update-settings.ts";
 import { errMsg } from "../../format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { SettingRow, SettingsGroup } from "../../ui/SettingRow.tsx";
@@ -35,12 +35,10 @@ function GeneralForm({ settings }: { settings: Settings }) {
   const [error, setError] = useState("");
   const dirty = name.trim() !== saved.name || rtsp !== saved.rtsp || homekit !== saved.homekit;
 
-  const save = useMutation({
-    mutationFn: () => api.updateSettings({ siteName: name.trim(), rtsp: { externalEnabled: rtsp }, homekit: { ...settings.homekit, enabled: homekit } }),
+  const save = useUpdateSettings({
     meta: { handlesError: true },
     onError: (e) => setError(errMsg(e)),
     onSuccess: (res) => {
-      qc.setQueryData(settingsQuery.queryKey, res);
       qc.setQueryData(infoQuery.queryKey, (i: InfoDto | undefined) => (i ? { ...i, siteName: res.siteName } : i));
       setName(res.siteName);
       toast(t`General settings saved`);
@@ -51,7 +49,7 @@ function GeneralForm({ settings }: { settings: Settings }) {
     e.preventDefault();
     setError("");
     if (!name.trim()) return setError(t`Enter a site name`);
-    save.mutate();
+    save.mutate({ siteName: name.trim(), rtsp: { externalEnabled: rtsp }, homekit: { ...settings.homekit, enabled: homekit } });
   };
 
   return (

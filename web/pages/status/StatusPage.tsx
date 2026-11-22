@@ -121,7 +121,7 @@ export function StatusPage() {
     },
     onSuccess: async (done) => {
       toast(done);
-      void qc.invalidateQueries({ queryKey: ["system"] });
+      void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
     },
   });
   const onRestart = async (r: Restart) => {

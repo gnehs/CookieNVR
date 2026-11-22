@@ -1,10 +1,10 @@
 import { t as msgT } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ObjectModelDto, ObjectsDto } from "../../../src/api-types.ts";
 import type { ObjectSettings, Settings } from "../../../src/types.ts";
-import { api } from "../../api.ts";
-import { objectsQuery, settingsQuery } from "../../data/queries.ts";
+import { objectsQuery } from "../../data/queries.ts";
+import { useUpdateSettings } from "../../data/use-update-settings.ts";
 import { deviceHint, deviceOptions, FPS_HINT, FPS_OPTIONS, objectsView, unavailableNotes } from "../../detect/object-model.ts";
 import { formatBytes } from "../../format.ts";
 import { Icon } from "../../ui/Icon.tsx";
@@ -14,8 +14,6 @@ import { Switch } from "../../ui/controls.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { BenchmarkSection } from "./BenchmarkSection.tsx";
 import { ObjectsEmpty } from "./ObjectsEmpty.tsx";
-
-type Patch = { objects?: Partial<ObjectSettings>; devices?: { objects: string } };
 
 const missingFile = (model: string): string => msgT`${model} (file not found)`;
 
@@ -101,13 +99,11 @@ export function ObjectsGroup({ settings }: { settings: Settings }) {
   const objects = useQuery(objectsQuery(settings.objects.enabled));
   const data = objects.data;
 
-  const apply = useMutation({
-    mutationFn: (patch: Patch) => api.updateSettings(patch),
-    onSuccess: (res, patch) => {
-      qc.setQueryData(settingsQuery.queryKey, res);
+  const apply = useUpdateSettings({
+    onSuccess: (_res, patch) => {
       if (patch.objects?.enabled === false) toast(t`Object detection turned off`);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["objects"] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: objectsQuery(false).queryKey }),
   });
 
   // 送出期間先照新的值畫，失敗時自然回到伺服器的值

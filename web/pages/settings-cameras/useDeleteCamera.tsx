@@ -4,6 +4,7 @@ import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-q
 import { useRef, useState, type ReactNode } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
+import { dropItem } from "../../data/cache.ts";
 import { camerasQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
 import { formatBytes } from "../../format.ts";
 import { SwitchRow } from "../../ui/controls.tsx";
@@ -50,7 +51,7 @@ export function useDeleteCamera(): { dialog: ReactNode; remove: (cam: CameraDto)
   const del = useMutation({
     mutationFn: ({ cam, purge }: { cam: CameraDto; purge: boolean }) => api.deleteCamera(cam.id, purge),
     onSuccess: (_r, { cam }) => {
-      qc.setQueryData(camerasQuery.queryKey, (list) => list?.filter((c) => c.id !== cam.id));
+      dropItem(qc, camerasQuery, cam.id);
       void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
       const name = cam.config.name;
       toast(t`Deleted "${name}"`);

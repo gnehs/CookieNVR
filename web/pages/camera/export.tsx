@@ -5,6 +5,7 @@ import type { EventDto, ExportDto, SegmentDto } from "../../../src/api-types.ts"
 import type { CameraId } from "../../../src/types.ts";
 import { MAX_EXPORT_MS, planExport } from "../../../src/export/plan.ts";
 import { api } from "../../api.ts";
+import { dropItem } from "../../data/cache.ts";
 import { browserTz, formatBytes, formatClock, formatDuration } from "../../format.ts";
 import { EVENT_PREROLL_MS } from "../../timeline/model.ts";
 import type { Range, Timeline } from "../../timeline/timeline.ts";
@@ -112,7 +113,7 @@ export function useExport(o: ExportOptions) {
 
   const removeJob = useMutation({
     mutationFn: (id: string) => api.deleteExport(id),
-    onMutate: (id) => qc.setQueryData(exportsQuery.queryKey, (list) => list?.filter((j) => j.id !== id)),
+    onMutate: (id) => dropItem(qc, exportsQuery, id),
   });
   const remove = (id: string) => removeJob.mutate(id);
 

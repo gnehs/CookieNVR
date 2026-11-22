@@ -1,6 +1,7 @@
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import type { StateChangeDto, StateSensorDto } from "../../src/api-types.ts";
 import { api } from "../api.ts";
+import { dropItem, putItem } from "../data/cache.ts";
 
 /** 所有狀態感應器；SSE（`status-stream.ts`）的 snapshot 與 state-sensor 一直在更新它 */
 export const statesQuery = queryOptions({ queryKey: ["states"], queryFn: api.states, staleTime: Infinity });
@@ -15,14 +16,6 @@ export const HISTORY_LIMIT = 30;
 export const stateChangesQuery = (sensorId: string) =>
   queryOptions({ queryKey: ["state-changes", { sensorId }], queryFn: () => api.stateChanges(sensorId, HISTORY_LIMIT), staleTime: Infinity });
 
-export function putSensor(qc: QueryClient, s: StateSensorDto): void {
-  qc.setQueryData(statesQuery.queryKey, (list) => {
-    if (!list) return list;
-    const i = list.findIndex((x) => x.id === s.id);
-    return i < 0 ? [...list, s] : list.map((x, j) => (j === i ? s : x));
-  });
-}
-
 /** 圖片張數或背景工作的結果變了：已經抓過的圖片清單過時了 */
 function imagesChanged(prev: StateSensorDto | undefined, next: StateSensorDto): boolean {
   if (!prev) return false;
@@ -33,14 +26,14 @@ function imagesChanged(prev: StateSensorDto | undefined, next: StateSensorDto): 
 /** SSE 的 state-sensor：寫進清單，張數變了就讓圖片清單重抓（標記中的畫面會以伺服器的結果為準） */
 export function onSensorMessage(qc: QueryClient, s: StateSensorDto): void {
   const prev = qc.getQueryData(statesQuery.queryKey)?.find((x) => x.id === s.id);
-  putSensor(qc, s);
+  putItem(qc, statesQuery, s);
   if (imagesChanged(prev, s)) void qc.invalidateQueries({ queryKey: ["states", s.id, "images"] });
   // 類別改名時切換紀錄裡的名稱也跟著改了
   if (prev && prev.config.classes.join("\n") !== s.config.classes.join("\n")) void qc.invalidateQueries({ queryKey: stateChangesQuery(s.id).queryKey });
 }
 
 export function onSensorRemoved(qc: QueryClient, id: string): void {
-  qc.setQueryData(statesQuery.queryKey, (list) => list?.filter((x) => x.id !== id));
+  dropItem(qc, statesQuery, id);
   qc.removeQueries({ queryKey: ["states", id] });
   qc.removeQueries({ queryKey: stateChangesQuery(id).queryKey });
 }

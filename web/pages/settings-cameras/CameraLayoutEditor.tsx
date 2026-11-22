@@ -26,6 +26,7 @@ import type { CameraDto, CameraGroupDto } from "../../../src/api-types.ts";
 import type { CameraId, GroupId } from "../../../src/types.ts";
 import { api } from "../../api.ts";
 import { applyLayout, arrangementOf, boxOf, layoutOf, moveCamera, UNGROUPED, type BoxId, type Layout } from "../../camera-layout.ts";
+import { dropItem, putItem } from "../../data/cache.ts";
 import { cameraGroupsQuery, camerasQuery } from "../../data/queries.ts";
 import { errMsg } from "../../format.ts";
 import { cameraStatus } from "../../health.ts";
@@ -37,7 +38,6 @@ import { MenuButton, type MenuItem } from "../../ui/Menu.tsx";
 import { Badge } from "../../ui/Panel.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { useRetained } from "../../ui/use-retained.ts";
-import { putCamera } from "./cache.ts";
 
 /*
  * dnd-kit 的 id：攝影機用自己的 id，分區卡片用 g:<分區 id>，放攝影機的容器用 box:<BoxId>。
@@ -189,7 +189,7 @@ export function CameraLayoutEditor({ cams, onRemove }: { cams: CameraDto[]; onRe
   const removeGroup = useMutation({
     mutationFn: (g: CameraGroupDto) => api.deleteCameraGroup(g.id),
     onSuccess: (_r, g) => {
-      qc.setQueryData(cameraGroupsQuery.queryKey, (list) => list?.filter((x) => x.id !== g.id));
+      dropItem(qc, cameraGroupsQuery, g.id);
       qc.setQueryData(camerasQuery.queryKey, (list) => list?.map((c) => (c.groupId === g.id ? { ...c, groupId: null } : c)));
       const name = g.name;
       toast(t`Deleted group "${name}". Its cameras were moved to Ungrouped.`);
@@ -321,7 +321,7 @@ function SortableRow({ cam, moves, onRemove }: { cam: CameraDto; moves: MenuItem
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => api.updateCamera(cam.id, { ...c, enabled }),
     onSuccess: (updated, enabled) => {
-      putCamera(qc, updated);
+      putItem(qc, camerasQuery, updated);
       toast(enabled ? t`Enabled "${name}"` : t`Disabled "${name}"`);
     },
   });
@@ -398,10 +398,10 @@ function GroupNameDialog({ state, onClose }: { state: { group: CameraGroupDto | 
     mutationFn: async (name: string) => {
       if (renaming) {
         const g = await api.renameCameraGroup(renaming.id, name);
-        qc.setQueryData(cameraGroupsQuery.queryKey, (list) => list?.map((x) => (x.id === g.id ? g : x)));
+        putItem(qc, cameraGroupsQuery, g);
       } else {
         const g = await api.createCameraGroup(name);
-        qc.setQueryData(cameraGroupsQuery.queryKey, (list) => (list?.some((x) => x.id === g.id) ? list : [...(list ?? []), g]));
+        putItem(qc, cameraGroupsQuery, g);
         const groupName = g.name;
         toast(t`Added group "${groupName}". Drag cameras into it.`);
       }

@@ -6,7 +6,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { useReducer, useRef, useState, type ReactNode } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
-import { ptzQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
+import { putItem } from "../../data/cache.ts";
+import { camerasQuery, ptzQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
 import { modeOf, objectSummary } from "../../detect/object-model.ts";
 import { errMsg } from "../../format.ts";
 import { statesQuery } from "../../states/queries.ts";
@@ -18,7 +19,6 @@ import type { IconName } from "../../ui/icons.ts";
 import { toast } from "../../ui/toast.tsx";
 import { useRetained } from "../../ui/use-retained.ts";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
-import { putCamera } from "./cache.ts";
 import { DetectSection } from "./DetectSection.tsx";
 import { BasicFields, ConnFields, RecFields, useFocusError, type FieldKit } from "./fields.tsx";
 import { basicSummary, connKey, connSummary, DEFAULT_PTZ, detectSummary, draftOf, editReducer, planSave, probeFailure, recSummary, sectionChanged, type Draft, type SectionEdit, type SectionKey } from "./form-model.ts";
@@ -137,7 +137,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
         dispatch({ type: "submit", status: "saving" });
       }
       const cam = await api.updateCamera(camera.id, plan.config);
-      putCamera(qc, cam);
+      putItem(qc, camerasQuery, cam);
       void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
       dispatch({ type: "close" });
       toast(plan.test ? t`Connected and saved` : t`Saved`);

@@ -4,6 +4,7 @@ import { Link, useBlocker } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { CameraDto, ProbeResult } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
+import { putItem } from "../../data/cache.ts";
 import { camerasQuery, systemQuery } from "../../data/queries.ts";
 import { useSiteName } from "../../data/session.ts";
 import { errMsg } from "../../format.ts";
@@ -16,7 +17,6 @@ import { BrandMark } from "../../ui/Panel.tsx";
 import { ErrorBox, PageError, Spinner } from "../../ui/states.tsx";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
 import { CameraEditPage } from "./CameraEditPage.tsx";
-import { putCamera } from "./cache.ts";
 import { BasicFields, ConnFields, RecFields, useFocusError } from "./fields.tsx";
 import { basicSummary, clearsError, connSummary, draftOf, errorCard, probeFailure, recSummary, streamLine, validate, type Draft, type FormError } from "./form-model.ts";
 import { PtzSupportNote } from "./PtzPrefs.tsx";
@@ -133,7 +133,7 @@ function NewCameraForm({ welcome, onAgain }: { welcome: boolean; onAgain: () => 
       if (!probe.ok) return setError(probeFailure(r.conn, probe));
       setPhase({ kind: "saving" });
       const cam = await api.createCamera(r.config);
-      putCamera(qc, cam);
+      putItem(qc, camerasQuery, cam);
       void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
       setPhase({ kind: "done", cam, probe });
     } catch (err) {
