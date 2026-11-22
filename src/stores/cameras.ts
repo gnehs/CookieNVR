@@ -45,8 +45,12 @@ export function createCameraStore(db: Database, now: () => number = Date.now): C
   const listeners = new Set<(cameras: Camera[]) => void>();
   const groupListeners = new Set<(groups: CameraGroup[]) => void>();
 
+  // 每張 JPEG 都會問一次清單，所以讀一次記起來；store 是唯一寫 cameras 表的地方，寫入後作廢。
+  // 凍結回傳的陣列，呼叫端就地排序或改動會直接丟錯，而不是悄悄改壞大家共用的清單。
+  let cached: Camera[] | null = null;
   const list = (): Camera[] =>
-    (db.query("SELECT * FROM cameras ORDER BY position, created_at").all() as CameraRow[]).map(toCamera);
+    (cached ??= Object.freeze((db.query("SELECT * FROM cameras ORDER BY position, created_at").all() as CameraRow[]).map(toCamera)) as Camera[]);
+  const invalidate = () => void (cached = null);
 
   const get = (id: CameraId): Camera | null => {
     const row = db.query("SELECT * FROM cameras WHERE id = ?").get(id) as CameraRow | null;
@@ -89,6 +93,7 @@ export function createCameraStore(db: Database, now: () => number = Date.now): C
         `INSERT INTO cameras (id, position, config, created_at, updated_at)
          VALUES (?, (SELECT COALESCE(MAX(position), -1) + 1 FROM cameras), ?, ?, ?)`,
       ).run(id, JSON.stringify(config), t, t);
+      invalidate();
       const camera = get(id)!;
       notify();
       return camera;
@@ -99,13 +104,16 @@ export function createCameraStore(db: Database, now: () => number = Date.now): C
         .query("UPDATE cameras SET config = ?, updated_at = ? WHERE id = ?")
         .run(JSON.stringify(config), now(), id).changes;
       if (changes === 0) throw new Error(`camera not found: ${id}`);
+      invalidate();
       const camera = get(id)!;
       notify();
       return camera;
     },
 
     remove(id) {
-      if (db.query("DELETE FROM cameras WHERE id = ?").run(id).changes > 0) notify();
+      if (db.query("DELETE FROM cameras WHERE id = ?").run(id).changes === 0) return;
+      invalidate();
+      notify();
     },
 
     subscribe(listener) {
@@ -138,6 +146,7 @@ export function createCameraStore(db: Database, now: () => number = Date.now): C
     removeGroup(id) {
       const inGroup = list().some((c) => c.groupId === id);
       if (db.query("DELETE FROM camera_groups WHERE id = ?").run(id).changes === 0) return;
+      invalidate();
       notifyGroups();
       if (inGroup) notify();
     },
@@ -164,6 +173,7 @@ export function createCameraStore(db: Database, now: () => number = Date.now): C
         const sequence = [null, ...order].flatMap((g) => [...placed].filter(([, groupId]) => groupId === g));
         sequence.forEach(([id, groupId], i) => db.query("UPDATE cameras SET position = ?, group_id = ? WHERE id = ?").run(i, groupId, id));
       })();
+      invalidate();
       if (layoutKey() === before) return;
       notifyGroups();
       notify();

@@ -68,6 +68,33 @@ describe("CameraStore", () => {
   });
 });
 
+describe("CameraStore 清單快取", () => {
+  test("每種寫入之後 list 立刻反映，讀取之間共用同一份", () => {
+    const store = createCameraStore(openDb(":memory:"));
+    const a = store.create(config("a"));
+    expect(store.list()).toBe(store.list());
+    const g = store.createGroup("一樓");
+    store.arrange({ groups: [g.id], cameras: [{ id: a.id, groupId: g.id }] });
+    expect(store.list()[0]?.groupId).toBe(g.id);
+    store.update(a.id, config("renamed"));
+    expect(store.list()[0]?.config.name).toBe("renamed");
+    store.removeGroup(g.id);
+    expect(store.list()[0]?.groupId).toBeNull();
+    const b = store.create(config("b"));
+    expect(store.list().map((c) => c.id)).toEqual([a.id, b.id]);
+    store.remove(a.id);
+    expect(store.list().map((c) => c.id)).toEqual([b.id]);
+  });
+
+  test("回傳的清單不能被呼叫端就地改動", () => {
+    const store = createCameraStore(openDb(":memory:"));
+    store.create(config("a"));
+    store.create(config("b"));
+    expect(() => store.list().reverse()).toThrow();
+    expect(store.list().map((c) => c.config.name)).toEqual(["a", "b"]);
+  });
+});
+
 describe("CameraStore 分區與排列", () => {
   const setup = () => {
     const store = createCameraStore(openDb(":memory:"));
