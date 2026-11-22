@@ -230,7 +230,7 @@ test("the uploaded zip is deleted once its import job finishes", async () => {
   expect(existsSync(cmd.zip as string)).toBe(true);
 
   w.send(jsonFrame({ type: "job-result", job: cmd.job, ok: true, result: { labeled: [], pending: [], skipped: 0 } }));
-  await Bun.sleep(1_200);
+  await h.settle();
   expect(h.sensor().job).toMatchObject({ kind: "import", state: "failed", errorMsg: { code: "states.importNoImages" } });
   expect(readdirSync(h.dir).filter((f) => f.endsWith(".zip"))).toEqual([]);
 

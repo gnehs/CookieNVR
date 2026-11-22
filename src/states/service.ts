@@ -79,12 +79,15 @@ interface Runtime {
   blockedAt: number;
   job: StateJobDto | null;
   jobId: number | null;
+  /** 這個工作結束（完成、失敗或 worker 斷線）時要做的清理 */
+  jobCleanup: (() => void) | null;
   publishedAt: number;
   /** 上次推送時的 problem，變了才推 */
   problemKey: string;
 }
 
 type Queued = { cmd: WorkerJob; sensorId: SensorId };
+type JobOutcome = { ok: true; msg: Msg } | { ok: false; error: Msg };
 
 export interface StateClassificationOptions {
   db: Database;
@@ -177,6 +180,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       blockedAt: 0,
       job: null,
       jobId: null,
+      jobCleanup: null,
       publishedAt: 0,
       problemKey: "",
     };
@@ -456,11 +460,12 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
 
   // ─── 背景工作 ───
 
-  function startJob(rt: Runtime, kind: StateJobKind, build: (job: number) => WorkerJob): void {
+  function startJob(rt: Runtime, kind: StateJobKind, build: (job: number) => WorkerJob, cleanup: (() => void) | null = null): void {
     if (jobActive(rt)) throw new HttpError(409, msg("states.jobBusy"));
     const job = nextId++;
     rt.job = { kind, state: "queued", startedAt: now() };
     rt.jobId = job;
+    rt.jobCleanup = cleanup;
     jobOwners.set(job, rt.row.id);
     jobQueue.push({ cmd: build(job), sensorId: rt.row.id });
     publishSensor(rt);
@@ -468,7 +473,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     pump();
   }
 
-  function finishJob(rt: Runtime, result: { ok: true; msg: Msg } | { ok: false; error: Msg }): void {
+  function finishJob(rt: Runtime, result: JobOutcome): void {
     if (!rt.job) return;
     const base = { kind: rt.job.kind, startedAt: rt.job.startedAt, finishedAt: now() };
     rt.job = result.ok
@@ -479,6 +484,9 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       sentJobs.delete(rt.jobId);
     }
     rt.jobId = null;
+    const cleanup = rt.jobCleanup;
+    rt.jobCleanup = null;
+    cleanup?.();
     publishSensor(rt);
     opts.onWorkersChanged();
   }
@@ -504,22 +512,22 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
     }
     if (!r.ok) return finishJob(rt, { ok: false, error: r.error });
     try {
-      finishJob(rt, { ok: true, msg: applyJobResult(rt, rt.job.kind, r.result) });
+      finishJob(rt, applyJobResult(rt, rt.job.kind, r.result));
     } catch (e) {
-      finishJob(rt, { ok: false, error: e instanceof HttpError ? e.msg : msg("raw", { text: e instanceof Error ? e.message : String(e) }) });
+      finishJob(rt, { ok: false, error: msg("raw", { text: e instanceof Error ? e.message : String(e) }) });
     }
   }
 
-  function applyJobResult(rt: Runtime, kind: StateJobKind, result: Record<string, unknown>): Msg {
+  function applyJobResult(rt: Runtime, kind: StateJobKind, result: Record<string, unknown>): JobOutcome {
     const sensorId = rt.row.id;
     const at = now();
     if (kind === "train") {
       rt.model = readModel(sensorId);
-      if (!rt.model) throw new HttpError(500, msg("states.modelMissing"));
+      if (!rt.model) return { ok: false, error: msg("states.modelMissing") };
       rt.consensus = UNKNOWN;
       rt.fresh = true;
       const v = rt.model.validation;
-      return v ? msg("states.trainDone", { accuracy: Math.round(v.accuracy * 1000) / 10 }) : msg("states.trainDoneNoValidation");
+      return { ok: true, msg: v ? msg("states.trainDone", { accuracy: Math.round(v.accuracy * 1000) / 10 }) : msg("states.trainDoneNoValidation") };
     }
     if (kind === "collect") {
       const images = (result.images as { file: string; at: number | null }[] | undefined) ?? [];
@@ -527,8 +535,8 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
         db,
         images.map((im, i) => ({ id: im.file.replace(/\.[^.]+$/, ""), sensorId, file: im.file, label: null, source: "recording", createdAt: at - i, guess: null })),
       );
-      if (!images.length) throw new HttpError(500, msg("states.collectNoFrames"));
-      return msg("states.collectDone", { count: images.length });
+      if (!images.length) return { ok: false, error: msg("states.collectNoFrames") };
+      return { ok: true, msg: msg("states.collectDone", { count: images.length }) };
     }
     const labeled = (result.labeled as { file: string; label: string }[] | undefined) ?? [];
     const pendingImages = (result.pending as { file: string; guess: { label: string; score: number } | null }[] | undefined) ?? [];
@@ -544,8 +552,8 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       ...pendingImages.map((p, i) => ({ id: p.file.replace(/\.[^.]+$/, ""), sensorId, file: p.file, label: null, source: "import" as const, createdAt: at - labeled.length - i, guess: p.guess })),
     ];
     store.insertImages(db, rows);
-    if (!rows.length) throw new HttpError(500, msg("states.importNoImages"));
-    return msg("states.importDone", { labeled: labeled.length, pending: pendingImages.length, added, skipped });
+    if (!rows.length) return { ok: false, error: msg("states.importNoImages") };
+    return { ok: true, msg: msg("states.importDone", { labeled: labeled.length, pending: pendingImages.length, added, skipped }) };
   }
 
   // ─── 設定與圖片 ───
@@ -773,14 +781,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
             await rm(zip, { force: true });
             throw e;
           }
-          startJob(rt, "import", (job) => ({ type: "import", job, zip, outDir: imagesDir(rt.row.id) }));
-          // 匯入完成或失敗後刪掉上傳的 zip
-          const jobId = rt.jobId;
-          const cleanup = setInterval(() => {
-            if (rt.jobId === jobId && jobActive(rt) && sensors.has(rt.row.id)) return;
-            clearInterval(cleanup);
-            void rm(zip, { force: true });
-          }, 1_000);
+          startJob(rt, "import", (job) => ({ type: "import", job, zip, outDir: imagesDir(rt.row.id) }), () => void rm(zip, { force: true }));
           return json(dto(rt), 202);
         },
       },
