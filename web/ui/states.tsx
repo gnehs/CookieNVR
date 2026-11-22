@@ -1,4 +1,5 @@
 import { useLingui } from "@lingui/react/macro";
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { errMsg } from "../format.ts";
 import { Button, ButtonLink } from "./Button.tsx";
@@ -76,4 +77,17 @@ export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => v
 
 export function EmptyState({ title, body, action, icon = "film" }: { title: string; body?: string; action?: ReactNode; icon?: IconName }) {
   return <StateBox kind="empty" icon={icon} title={title} body={body} actions={action} />;
+}
+
+type Loaded<Q> = Q extends UseQueryResult<infer D, unknown> ? Exclude<D, undefined> : never;
+
+/**
+ * 這幾個查詢都有資料才畫 children，否則畫標準的錯誤（第一個失敗的查詢，重試只重抓它）或載入中。
+ * children 拿到的資料不含 undefined；它不是元件，裡面不能用 hook。
+ */
+export function QueryGate<const T extends readonly UseQueryResult<any, any>[]>({ queries, children }: { queries: T; children: (data: { [K in keyof T]: Loaded<T[K]> }) => ReactNode }) {
+  const failed = queries.find((q) => q.isError);
+  if (failed) return <ErrorBox error={failed.error} onRetry={() => void failed.refetch()} />;
+  if (queries.some((q) => q.data === undefined)) return <Spinner />;
+  return <>{children(queries.map((q) => q.data) as { [K in keyof T]: Loaded<T[K]> })}</>;
 }
