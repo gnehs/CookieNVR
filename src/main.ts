@@ -49,7 +49,7 @@ import { createStreamHub, type StreamClient } from "./stream/hub.ts";
 import type { Camera, CameraConfig, CameraConnection, CameraId, WorkerSpec, WorkerStatus } from "./types.ts";
 import { createMemoryMonitor, type MemoryTarget } from "./workers/memory.ts";
 import { pruneRestartLog, readRestartLog } from "./workers/restart-log.ts";
-import { createFailureLog, REPEAT_MS } from "./workers/failure-log.ts";
+import { createFailureLog, createRepeatLog } from "./workers/failure-log.ts";
 import { createSupervisor } from "./workers/supervisor.ts";
 
 const TICK_MS = 10_000;
@@ -74,6 +74,7 @@ if (previousRecordingsDir) {
   console.log(`[storage] 錄影位置改成 ${recordingsDir}：原本自動放在 ${previousRecordingsDir}，現在有${env.recordingsDir ? "設定 RECORDINGS_DIR" : "另外掛載的 /recordings"}。舊的錄影留在原處，照常可以回放，並照保留天數清除`);
 }
 const settings = createSettingsStore(db, env.dataDir, recordingsDir);
+const repeatLog = createRepeatLog((line) => console.error(line));
 const supervisor = createSupervisor({ logDir, onError: (e) => log("workers", e) });
 const restream = createRestream({
   env,
@@ -184,14 +185,8 @@ function logRestream(e: unknown): void {
   log("restream", refused ? "連不到影像服務（MediaMTX），它啟動後會自動重試" : e);
 }
 
-// 週期性的工作（例如轉發設定同步）失敗時每幾秒就會重來一次；同樣的訊息隔一段時間才再印，免得蓋掉真正的說明
-const loggedAt = new Map<string, number>();
 function log(scope: string, error: unknown): void {
-  const message = `[${scope}] ${error instanceof Error ? error.message : String(error)}`;
-  const last = loggedAt.get(message);
-  if (last !== undefined && Date.now() - last < REPEAT_MS) return;
-  loggedAt.set(message, Date.now());
-  console.error(message);
+  repeatLog(scope, error);
 }
 
 const purgeDeps = { db, storagePath: () => settings.get().storagePath, dataDir: env.dataDir };

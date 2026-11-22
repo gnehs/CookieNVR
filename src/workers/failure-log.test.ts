@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { WorkerStatus } from "../types.ts";
-import { causeLine, createFailureLog, REPEAT_MS } from "./failure-log.ts";
+import { causeLine, createFailureLog, createRepeatLog, REPEAT_MS } from "./failure-log.ts";
 
 const status = (o: Partial<WorkerStatus>): WorkerStatus => ({
   id: "restream",
@@ -62,4 +62,21 @@ test("ffmpeg 收尾的套話不算原因，挑前面真正的錯誤（容器內�
   expect(causeLine(tail)).toBe(tail[1]!);
   expect(causeLine(["Error opening input files: Server returned 400 Bad Request"])).toContain("400");
   expect(causeLine(["INF only info"])).toBe("INF only info");
+});
+
+test("同一則錯誤一段時間內只印一次；每則都不同的錯誤不會讓記住的訊息無限增加", () => {
+  let t = 0;
+  const lines: string[] = [];
+  const log = createRepeatLog((l) => lines.push(l), () => t);
+  log("index", new Error("disk full"));
+  log("index", new Error("disk full"));
+  expect(lines).toEqual(["[index] disk full"]);
+  t += REPEAT_MS;
+  log("index", "disk full");
+  expect(lines).toHaveLength(2);
+
+  for (let i = 0; i < 5_000; i++) log("objects", `frame ${i}`);
+  // 記住的訊息被清過：最早那則在期限內又印得出來
+  log("objects", "frame 0");
+  expect(lines.filter((l) => l === "[objects] frame 0")).toHaveLength(2);
 });

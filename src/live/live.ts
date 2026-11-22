@@ -109,7 +109,8 @@ export function createLive(opts: LiveOptions): Live {
   const maxBacklog = opts.maxBacklogBytes ?? 4 * 1024 * 1024;
   const initTimeoutMs = opts.initTimeoutMs ?? 20_000;
   const stallMs = opts.stallMs ?? 15_000;
-  const now = opts.now ?? Date.now;
+  // 只用來判斷串流有沒有卡住，所以用單調時鐘：系統時間被往回調時，卡住的 worker 不會被當成正常
+  const now = opts.now ?? (() => performance.now());
   const entries = new Map<string, Entry>();
 
   function drop(key: string, entry: Entry): void {

@@ -88,6 +88,8 @@ interface CamState {
   url: string | null;
   paused: boolean;
   lastFrame: FrameResult | null;
+  /** 收到上一張影格的單調時間；判斷 worker 有沒有卡住用它，系統時鐘被調動也不受影響 */
+  frameSeenAt: number | null;
   recentPeak: { at: number; score: number }[];
   jpeg: { bytes: Uint8Array<ArrayBuffer>; at: number } | null;
   jpegWaiters: Set<() => void>;
@@ -144,6 +146,7 @@ export function createDetection(opts: DetectionOptions): Detection {
 
   function onFrame(c: CamState, r: FrameResult): void {
     c.lastFrame = r;
+    c.frameSeenAt = performance.now();
     if (r.score !== null) {
       c.recentPeak.push({ at: r.at, score: r.score });
       while (c.recentPeak.length && r.at - c.recentPeak[0]!.at > 60_000) c.recentPeak.shift();
@@ -204,7 +207,7 @@ export function createDetection(opts: DetectionOptions): Detection {
       const detect = detectConfigOf(camera.config);
       let c = cams.get(camera.id);
       if (!c) {
-        c = { camera, detect, url: null, paused: false, lastFrame: null, recentPeak: [], jpeg: null, jpegWaiters: new Set(), samples: new Set(), controlText: null, decodePlan: null, decodeReport: null };
+        c = { camera, detect, url: null, paused: false, lastFrame: null, frameSeenAt: null, recentPeak: [], jpeg: null, jpegWaiters: new Set(), samples: new Set(), controlText: null, decodePlan: null, decodeReport: null };
         cams.set(camera.id, c);
       }
       const cooldown = detect.cooldownSec * 1000;
@@ -260,8 +263,8 @@ export function createDetection(opts: DetectionOptions): Detection {
           graceMs: STALL_GRACE_MS,
           intervalMs: 5_000,
           healthy: () => {
-            const last = cams.get(id)?.lastFrame?.at ?? 0;
-            return now() - last < STALL_MS;
+            const seen = cams.get(id)?.frameSeenAt ?? null;
+            return seen !== null && performance.now() - seen < STALL_MS;
           },
         },
         readStdout: (stdout) => pump(id, stdout),

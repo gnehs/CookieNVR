@@ -289,7 +289,8 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
         onResult(msg.id, msg.ms, msg.detections);
         break;
       case "result-error":
-        report(new Error(`frame ${msg.id}: ${msg.error}`));
+        // 訊息不帶影格編號：每張都失敗時才會被當成同一則，不會洗版
+        report(new Error(`frame: ${msg.error}`));
         onResult(msg.id, 0, null);
         break;
       case "bench-progress":

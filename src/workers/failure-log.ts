@@ -3,6 +3,28 @@ import type { WorkerStatus } from "../types.ts";
 /** 同一個 worker 的同一則失敗，這段時間內只印一次：重啟迴圈不會洗版，問題持續時仍看得到 */
 export const REPEAT_MS = 10 * 60_000;
 
+const MAX_REMEMBERED = 1_000;
+
+/**
+ * 週期性的工作（例如轉發設定同步）失敗時每幾秒就會重來一次；同樣的訊息隔一段時間才再印，免得蓋掉真正的說明。
+ * 記住的訊息有上限：訊息裡帶著會變的內容時每一則都不同，不清就會一直長下去。
+ */
+export function createRepeatLog(print: (line: string) => void, now: () => number = Date.now): (scope: string, error: unknown) => void {
+  const loggedAt = new Map<string, number>();
+  return (scope, error) => {
+    const message = `[${scope}] ${error instanceof Error ? error.message : String(error)}`;
+    const t = now();
+    const last = loggedAt.get(message);
+    if (last !== undefined && t - last < REPEAT_MS) return;
+    if (loggedAt.size >= MAX_REMEMBERED) {
+      for (const [m, at] of loggedAt) if (t - at >= REPEAT_MS) loggedAt.delete(m);
+      if (loggedAt.size >= MAX_REMEMBERED) loggedAt.clear();
+    }
+    loggedAt.set(message, t);
+    print(message);
+  };
+}
+
 /**
  * 把 worker 進入退避的那一刻換成一行容器日誌，讓只看 `docker logs`（例如 Unraid 的 Logs 視窗）的人
  * 也知道哪個服務停了、為什麼。`explain` 可以把已知的錯誤換成白話的改法。

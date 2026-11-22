@@ -38,7 +38,8 @@ export class Channel {
   private readonly initWaiters = new Set<() => void>();
   /** Bumped per worker run so a late end of an old run cannot reset the new one. */
   private run = 0;
-  lastFragmentAt = 0;
+  /** On the clock passed in; never-seen compares as stalled whatever that clock reads. */
+  lastFragmentAt = Number.NEGATIVE_INFINITY;
 
   constructor(
     private readonly maxBacklog: number,
