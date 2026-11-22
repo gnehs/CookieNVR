@@ -1,37 +1,28 @@
 import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { getRouteApi, Link, useRouter } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
 import { camerasQuery } from "../../data/queries.ts";
 import { useMe } from "../../data/session.ts";
 import { cameraStatus } from "../../health.ts";
 import { LiveFrame } from "../../live/LiveFrame.tsx";
-import { playSingle, type LiveTarget, type Quality } from "../../live/transport.ts";
+import type { Quality } from "../../live/transport.ts";
 import { liveSupported } from "../../live/video.ts";
+import { Player } from "../../playback/player.ts";
 import { ButtonLink } from "../../ui/Button.tsx";
 import { Segmented } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { Badge } from "../../ui/Panel.tsx";
 import { EmptyState, ErrorBox, Spinner } from "../../ui/states.tsx";
+import { LiveChip, LivePill, savedQuality, saveQuality, toggleFullscreen, useLiveVideo } from "./live.tsx";
+import { Playback } from "./Playback.tsx";
 import { PtzPanel } from "./PtzPanel.tsx";
+import { daysQuery } from "./queries.ts";
+import { viewOf } from "./search.ts";
 import { StateChips } from "./StateChips.tsx";
 
-const QUALITY_KEY = "cookienvr.liveQuality";
-
-function savedQuality(): Quality {
-  try {
-    return localStorage.getItem(QUALITY_KEY) === "hd" ? "hd" : "sd";
-  } catch {
-    return "sd";
-  }
-}
-
-function saveQuality(q: Quality): void {
-  try {
-    localStorage.setItem(QUALITY_KEY, q);
-  } catch {}
-}
+const route = getRouteApi("/_authed/_shell/cameras/$id");
 
 function NotFound() {
   const { t } = useLingui();
@@ -49,46 +40,44 @@ function NotFound() {
   );
 }
 
-/** 單台即時畫面：大畫面、畫質切換、去看這台的回放；其他細節不在這裡 */
+/** 單台頁：即時畫面與這台的錄影在同一頁，即時是時間軸的右端 */
 export function CameraPage() {
-  const { id } = useParams({ from: "/_authed/_shell/cameras/$id" });
+  const { id } = route.useParams();
   const cams = useQuery(camerasQuery);
   if (cams.isPending) return <Spinner />;
   if (cams.isError) return <ErrorBox error={cams.error} onRetry={() => void cams.refetch()} />;
   const cam = cams.data.find((c) => c.id === id);
   if (!cam) return <NotFound />;
-  return <Live key={id} cam={cam} />;
+  return <CameraScreen key={id} cam={cam} />;
 }
 
-function Live({ cam }: { cam: CameraDto }) {
+function CameraScreen({ cam }: { cam: CameraDto }) {
   const { t } = useLingui();
-  const isAdmin = useMe().role === "admin";
+  const admin = useMe().role === "admin";
+  const view = viewOf(route.useSearch());
   const [quality, setQuality] = useState<Quality>(savedQuality);
-  const target = useRef<LiveTarget | null>(null);
-  const onTarget = useCallback((next: LiveTarget | null) => {
-    target.current = next;
-  }, []);
+  const daysQ = useQuery(daysQuery(cam.id));
+  const playable = Player.supported() && (daysQ.data?.length ?? 0) > 0;
+  const live = !playable || view.kind === "live";
   const enabled = cam.config.enabled;
-  const id = cam.id;
-  // 子元件的 effect 先跑，這裡拿得到 <video>；啟用狀態或畫質變了才重開
-  useEffect(() => {
-    if (!enabled || !target.current) return;
-    return playSingle(id, quality, target.current);
-  }, [id, enabled, quality]);
-
   const st = cameraStatus(cam);
+
+  let body;
+  if (daysQ.isPending) body = <Spinner />;
+  else if (daysQ.isError) body = <ErrorBox error={daysQ.error} onRetry={() => void daysQ.refetch()} />;
+  else if (playable) body = <Playback cam={cam} days={daysQ.data} view={view} quality={quality} admin={admin} />;
+  else body = <LiveOnly cam={cam} quality={quality} admin={admin} hasRecordings={daysQ.data.length > 0} />;
+
   return (
-    <div className="live-page">
-      <header className="page-head sub-head live-head">
-        <Link to="/cameras" className="back-btn" aria-label={t`Back to cameras`}>
-          <Icon name="left" />
-        </Link>
+    <div className="pb">
+      <header className="page-head sub-head live-head pb-head">
+        <BackButton />
         <div className="live-title">
           <h1>{cam.config.name}</h1>
           <span className="live-pill">{st.quiet ? null : <Badge kind={st.tone}>{st.label}</Badge>}</span>
         </div>
-        <div className="page-actions">
-          {enabled ? (
+        {live && enabled ? (
+          <div className="page-actions">
             <Segmented
               label={t`Quality`}
               options={[
@@ -101,31 +90,90 @@ function Live({ cam }: { cam: CameraDto }) {
                 saveQuality(q);
               }}
             />
-          ) : null}
-          <ButtonLink to="/recordings" search={{ camera: id }} variant="primary" icon="film">
-            {t`Watch playback`}
-          </ButtonLink>
-        </div>
+          </div>
+        ) : null}
       </header>
-      <LivePtzBody cam={cam} isAdmin={isAdmin} onTarget={onTarget} />
-      {liveSupported() ? null : (
-        <p className="live-fallback-note below">
+      {live && !liveSupported() ? (
+        <p className="live-fallback-note">
           <Icon name="info" size={16} />
           {t`This browser doesn't support live video. The picture refreshes every 3 seconds.`}
         </p>
-      )}
+      ) : null}
+      {live ? <StateChips cam={cam} admin={admin} /> : null}
+      {body}
     </div>
   );
 }
 
-function LivePtzBody({ cam, isAdmin, onTarget }: { cam: CameraDto; isAdmin: boolean; onTarget: (t: LiveTarget | null) => void }) {
-  // PtzPanel 回報有沒有面板，外層的 data-ptz 決定版面（左右分欄）
-  const [mode, setMode] = useState<"panel" | "note" | undefined>();
+/** 從站內別頁（例如事件）進來就回那一頁，連同這頁自己多出來的回放紀錄一起退掉；直接開網址進來時回攝影機列表 */
+function BackButton() {
+  const { t } = useLingui();
+  const router = useRouter();
+  const entry = useRef(router.state.location.state.__TSR_index);
+  const inApp = entry.current > 0;
   return (
-    <div className="live-body" data-ptz={mode}>
-      <LiveFrame cam={cam} onTarget={onTarget} className="live-stage" />
-      <StateChips cam={cam} admin={isAdmin} />
-      {cam.config.enabled ? <PtzPanel cam={cam} admin={isAdmin} onMode={setMode} /> : null}
+    <Link
+      to="/cameras"
+      className="back-btn"
+      aria-label={inApp ? t`Back` : t`Back to cameras`}
+      onClick={(e) => {
+        if (!inApp || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        router.history.go(entry.current - router.state.location.state.__TSR_index - 1);
+      }}
+    >
+      <Icon name="left" />
+    </Link>
+  );
+}
+
+/** 沒有錄影可播（這台還沒錄過，或瀏覽器不能播）：只有即時畫面，時間軸的位置放一句說明 */
+function LiveOnly({ cam, quality, admin, hasRecordings }: { cam: CameraDto; quality: Quality; admin: boolean; hasRecordings: boolean }) {
+  const { t } = useLingui();
+  const live = useLiveVideo(cam, quality, true);
+  const [ptzSlot, setPtzSlot] = useState<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const { enabled, record } = cam.config;
+  const off = !enabled || !record.enabled;
+  return (
+    <div className="pb-grid pb-live-only">
+      <section className="card pb-player" aria-label={t`Player`}>
+        <div className="pb-stage" ref={stageRef} data-view="live">
+          <LiveFrame cam={cam} onTarget={live.onTarget} className="live-stage" />
+          <LiveChip />
+          <div className="ptz-ov" ref={setPtzSlot} />
+        </div>
+        {enabled ? <PtzPanel cam={cam} admin={admin} overlay={ptzSlot} /> : null}
+        <div className="pb-controls">
+          <div className="pb-actions">
+            <LivePill />
+            <button className="pb-ctl" type="button" aria-label={t`Full screen`} onClick={() => toggleFullscreen(stageRef.current, live.video())}>
+              <Icon name="expand" size={18} />
+            </button>
+          </div>
+        </div>
+      </section>
+      <div className="pb-timeline">
+        {hasRecordings ? (
+          <EmptyState
+            title={t`This browser can't play recordings`}
+            body={t`On iPhone, update to iOS 17.1 or later. You can also use Chrome, Edge, Firefox or Safari on a computer or Android.`}
+            icon="alert"
+          />
+        ) : (
+          <EmptyState
+            title={t`This camera has no recordings yet`}
+            body={!enabled ? t`This camera is disabled.` : record.enabled ? t`Once recording starts, you can play it back here within a few minutes.` : t`Continuous recording is off for this camera.`}
+            action={
+              admin && off ? (
+                <ButtonLink to="/settings/cameras/$id" params={{ id: cam.id }} icon="edit">
+                  {t`Turn on in camera settings`}
+                </ButtonLink>
+              ) : undefined
+            }
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ export function BasicFields({ kit, existing, nameRef }: { kit: FieldKit; existin
     <>
       <SettingRow
         title={t`Name`}
-        desc={t`Shown on the home page and the recordings page.`}
+        desc={t`Shown on the home page and on the camera's own page.`}
         wide
         error={c.fieldError("name")}
         control={(a) => <input ref={nameRef} type="text" autoComplete="off" spellCheck={false} autoCapitalize="off" placeholder={t`For example: Living room, Front door`} maxLength={60} {...c.inputProps("name", a)} value={kit.draft.name} onChange={(e) => kit.set({ name: e.currentTarget.value })} />}

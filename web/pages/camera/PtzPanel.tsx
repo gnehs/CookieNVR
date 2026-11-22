@@ -4,6 +4,7 @@ import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { KeyHints } from "../../ui/Kbd.tsx";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import type { CameraDto, PtzDto } from "../../../src/api-types.ts";
 import { ptzQuery } from "../../data/queries.ts";
 import { errMsg } from "../../format.ts";
@@ -13,6 +14,7 @@ import { Button } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { Slider } from "../../ui/Slider.tsx";
 import type { IconName } from "../../ui/icons.ts";
+import { useMedia } from "../../ui/useMedia.ts";
 import { PtzPresets } from "./PtzPresets.tsx";
 
 type Dir = "up" | "down" | "left" | "right" | "zoomIn" | "zoomOut";
@@ -34,10 +36,10 @@ const realClock: Clock = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTime
 type Supported = Extract<PtzDto, { supported: true }>;
 
 /**
- * 單台頁旁的鏡頭控制。相機不支援時什麼都不畫；暫時連不上時只放一行可重試的提示。
- * onMode 讓外層依有沒有面板調整版面。
+ * 單台頁即時畫面的鏡頭控制：方向與縮放鍵經由 portal 疊在畫面上（overlay），預置點、速度與狀態在畫面正下方這一排。
+ * 相機不支援時什麼都不畫；暫時連不上時只在那一排放一行可重試的提示。onMode 讓外層知道方向鍵歸不歸鏡頭。
  */
-export function PtzPanel({ cam, admin, onMode }: { cam: CameraDto; admin: boolean; onMode: (m: "panel" | "note" | undefined) => void }) {
+export function PtzPanel({ cam, admin, onMode, overlay }: { cam: CameraDto; admin: boolean; onMode?: (m: "panel" | "note" | undefined) => void; overlay: HTMLElement | null }) {
   const { t } = useLingui();
   // 每次進頁面都重抓（預置點可能被別處改過）；面板開著時不因為視窗重新聚焦而重抓，免得中途換掉 driver
   const q = useQuery({
@@ -52,6 +54,7 @@ export function PtzPanel({ cam, admin, onMode }: { cam: CameraDto; admin: boolea
   const usable = caps !== null && planMotion(caps, caps.prefs.mode) !== null;
   const mode = q.isError ? "note" : usable ? "panel" : undefined;
   useEffect(() => {
+    if (!onMode) return;
     onMode(mode);
     return () => onMode(undefined);
   }, [mode, onMode]);
@@ -71,11 +74,30 @@ export function PtzPanel({ cam, admin, onMode }: { cam: CameraDto; admin: boolea
       </div>
     );
   }
-  return caps && usable ? <Panel cam={cam} caps={caps} admin={admin} /> : null;
+  return caps && usable ? <Panel cam={cam} caps={caps} admin={admin} overlay={overlay} /> : null;
 }
 
-function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: boolean }) {
+const SHOWN_KEY = "cookienvr.ptzShown";
+
+function savedShown(): boolean {
+  try {
+    return localStorage.getItem(SHOWN_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function saveShown(on: boolean): void {
+  try {
+    localStorage.setItem(SHOWN_KEY, on ? "on" : "off");
+  } catch {}
+}
+
+function Panel({ cam, caps, admin, overlay }: { cam: CameraDto; caps: Supported; admin: boolean; overlay: HTMLElement | null }) {
   const { t, i18n } = useLingui();
+  const [shown, setShown] = useState(savedShown);
+  // 手機上畫面太矮，右下角放不下縮放鍵，移到畫面下方那一排
+  const narrow = useMedia("(max-width: 760px)");
   const [speed, setSpeed] = useState(() => Math.min(1, Math.max(0.1, caps.prefs.speed)));
   const speedRef = useRef(speed);
   speedRef.current = speed;
@@ -182,53 +204,70 @@ function Panel({ cam, caps, admin }: { cam: CameraDto; caps: Supported; admin: b
           driverRef.current?.release(`a:${dir}`);
         }}
       >
-        <Icon name={ICON[dir]} size={22} />
-        {dir.startsWith("zoom") ? (
-          <span className="ptz-key-label" aria-hidden="true">
-            {i18n._(LABEL[dir])}
-          </span>
-        ) : null}
+        <Icon name={ICON[dir]} size={20} />
       </button>
     );
   };
 
   const speedId = `ptz-speed-${cam.id}`;
   const pct = `${Math.round(speed * 100)}%`;
-  return (
-    <section className="ptz" aria-label={t`Camera control`}>
-      <div className="ptz-head">
-        <h2>{t`Camera control`}</h2>
-        <span className="ptz-state" aria-live="polite" role="status" data-tone={statusTone}>
-          {statusText}
-        </span>
-      </div>
-      <div className="ptz-ctl" data-zoom={hasZoom ? "on" : "off"}>
-        <div className="ptz-pad" role="group" aria-label={t`Camera direction`}>
+  const zoom = hasZoom ? (
+    <div className="ptz-zoom" role="group" aria-label={t`Zoom`}>
+      {key("zoomIn")}
+      {key("zoomOut")}
+    </div>
+  ) : null;
+  const toggle = () => {
+    driverRef.current?.cancel();
+    setShown(!shown);
+    saveShown(!shown);
+  };
+  // 畫面中間留空：方向鍵貼著四邊，縮放鍵與開關在右下角
+  const onVideo = (
+    <>
+      {shown ? (
+        <div className="ptz-dirs" role="group" aria-label={t`Camera direction`}>
           {key("up")}
           {key("left")}
-          <button type="button" className="ptz-key ptz-stop" aria-label={t`Stop`} title={t`Stop`} onClick={() => driverRef.current?.halt()}>
-            <Icon name="stop" size={20} />
-          </button>
           {key("right")}
           {key("down")}
         </div>
-        {hasZoom ? (
-          <div className="ptz-zoom" role="group" aria-label={t`Zoom`}>
-            {key("zoomIn")}
-            {key("zoomOut")}
+      ) : null}
+      <div className="ptz-corner">
+        {shown && !narrow ? zoom : null}
+        <button type="button" className="ptz-toggle" aria-pressed={shown} onClick={toggle}>
+          <Icon name="camera" size={16} />
+          <span>{t`Camera`}</span>
+        </button>
+      </div>
+    </>
+  );
+  return (
+    <>
+      {overlay ? createPortal(onVideo, overlay) : null}
+      {shown ? (
+        <section className="ptz" aria-label={t`Camera control`}>
+          <PtzPresets cameraId={cam.id} initial={caps.presets} max={caps.maxPresets} admin={admin} speed={() => speedRef.current} beforeGo={() => driverRef.current?.cancel()} say={say} />
+          <div className="ptz-tools">
+            {narrow ? zoom : null}
+            <button type="button" className="ptz-key ptz-stop" aria-label={t`Stop`} title={t`Stop`} onClick={() => driverRef.current?.halt()}>
+              <Icon name="stop" size={18} />
+            </button>
+            <div className="ptz-speed">
+              <span id={speedId}>{t`Speed`}</span>
+              <Slider min={0.1} max={1} step={0.05} aria-labelledby={speedId} aria-valuetext={pct} value={speed} onChange={setSpeed} />
+              <output className="num">{pct}</output>
+            </div>
+            <span className="ptz-state" aria-live="polite" role="status" data-tone={statusTone}>
+              {statusText}
+            </span>
+            <p className="ptz-hint ptz-keys" hidden={statusText !== ""}>
+              {plan.hold ? t`Hold to keep turning, tap to nudge.` : t`Tap to move one step.`}
+              <KeyHints className="ptz-kbd" hints={[{ keys: ["↑", "↓", "←", "→"], label: t`Turn camera` }]} />
+            </p>
           </div>
-        ) : null}
-      </div>
-      <div className="ptz-speed">
-        <span id={speedId}>{t`Speed`}</span>
-        <Slider min={0.1} max={1} step={0.05} aria-labelledby={speedId} aria-valuetext={pct} value={speed} onChange={setSpeed} />
-        <output className="num">{pct}</output>
-      </div>
-      <p className="ptz-hint ptz-keys">
-        {plan.hold ? t`Hold to keep turning, tap to nudge.` : t`Tap to move one step.`}
-        <KeyHints className="ptz-kbd" hints={[{ keys: ["↑", "↓", "←", "→"], label: t`Turn camera` }]} />
-      </p>
-      <PtzPresets cameraId={cam.id} initial={caps.presets} max={caps.maxPresets} admin={admin} speed={() => speedRef.current} beforeGo={() => driverRef.current?.cancel()} say={say} />
-    </section>
+        </section>
+      ) : null}
+    </>
   );
 }

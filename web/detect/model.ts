@@ -129,7 +129,7 @@ export function groupByDay(events: readonly EventDto[]): { key: string; events: 
   return out;
 }
 
-/** 回放頁（`/recordings`）的 search：從事件開始前 5 秒播起 */
-export function playbackSearch(e: Pick<EventDto, "cameraId" | "startMs">): { camera: string; date: DayKey; t: number } {
-  return { camera: e.cameraId, date: dayOf(e.startMs), t: e.startMs - EVENT_PREROLL_MS };
+/** 單台頁（`/cameras/$id`）回放的 search：從事件開始前 5 秒播起 */
+export function playbackSearch(e: Pick<EventDto, "startMs">): { date: DayKey; t: number } {
+  return { date: dayOf(e.startMs), t: e.startMs - EVENT_PREROLL_MS };
 }

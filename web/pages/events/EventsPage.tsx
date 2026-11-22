@@ -366,7 +366,8 @@ function EventCard({ e, now, name, admin, onRemove }: { e: EventDto; now: number
     <li className="ev-card" ref={li} data-live={live ? "" : undefined}>
       <Link
         className="ev-card-link"
-        to="/recordings"
+        to="/cameras/$id"
+        params={{ id: e.cameraId }}
         search={playbackSearch(e)}
         aria-label={label}
       >

@@ -75,6 +75,8 @@ export class Player {
   /** no segment follows the last one loaded (yet) */
   private exhausted = false;
   private wantPlay = false;
+  /** stop() ended the loading loop, so what is buffered no longer grows: the next seek has to reload */
+  private stopped = false;
   private lastWall: number | null = null;
   private status: PlayerStatus = { kind: "loading" };
   private recoveries = 0;
@@ -155,6 +157,15 @@ export class Player {
     this.video.pause();
   }
 
+  /** Pauses and stops fetching; the next seek reloads from its target. */
+  stop() {
+    this.gen++;
+    this.ctrl.abort();
+    this.pending = null;
+    this.stopped = true;
+    this.pause();
+  }
+
   toggle() {
     if (this.wantPlay && !this.video.paused) this.pause();
     else this.play();
@@ -168,7 +179,7 @@ export class Player {
     this.wantPlay = play;
     this.lastWall = w;
     const t = wallToBuf(this.map, w);
-    if (!fresh && t !== null && this.isBuffered(t)) {
+    if (!fresh && !this.stopped && t !== null && this.isBuffered(t)) {
       this.pending = null;
       this.video.currentTime = t;
       if (play) this.video.play().catch(() => this.blocked());
@@ -246,6 +257,7 @@ export class Player {
 
   private async reset(w: number) {
     const gen = ++this.gen;
+    this.stopped = false;
     this.ctrl.abort();
     this.ctrl = new AbortController();
     const signal = this.ctrl.signal;

@@ -261,10 +261,3 @@ a.st-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px;
 @media (hover: hover) { a.st-chip:hover { background: var(--fill); } }
 .st-chip .st-line { font-size: 14px; }
 .wiz-title:focus, .wiz-title:focus-visible { outline: none; box-shadow: none; }
-@media (min-width: 900px), (min-width: 640px) and (orientation: landscape) {
-  .live-body[data-ptz="panel"] > .st-chips { grid-column: 1; grid-row: 2; }
-  .live-body[data-ptz="panel"]:has(> .st-chips) > .ptz { grid-column: 2; grid-row: 1 / span 2; }
-}
-@media (max-width: 760px) and (orientation: portrait) {
-  .live-body[data-ptz="panel"]:has(> .st-chips) { grid-template-rows: auto auto 1fr; }
-}

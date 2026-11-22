@@ -820,7 +820,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 
 /* ---------- playback ---------- */
 .pb-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
-.pb-toolbar > .sel { max-width: 240px; }
+.pb > .st-chips { margin-bottom: 14px; }
 
 .pb-grid {
   display: grid; gap: 16px; min-width: 0;
@@ -830,6 +830,7 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-player { grid-area: player; }
 .pb-events { grid-area: events; display: flex; flex-direction: column; contain: size; min-height: 0; }
 .pb-timeline { grid-area: timeline; }
+.pb-live-only { grid-template-columns: minmax(0, 1fr); grid-template-areas: "player" "timeline"; }
 @media (max-width: 1100px) {
   .pb-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "player" "timeline" "events"; }
   .pb-events { contain: none; }
@@ -838,8 +839,24 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 
 .pb-player { padding: 6px; overflow: hidden; }
 .pb-stage { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; }
-.pb-stage video { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+/* 即時那格、錄影與換手時的最後一格疊在同一個位置；看的是哪一個由 data-view 決定 */
+.pb-stage > video, .pb-stage > .live-stage, .pb-freeze { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pb-stage > video { object-fit: contain; background: #000; }
+.pb-stage:not([data-view="playback"]) > video { visibility: hidden; }
+.pb-freeze { object-fit: contain; pointer-events: none; display: none; }
+.pb-stage[data-view="handoff"] > .pb-freeze { display: block; }
 .pb-stage:fullscreen { border-radius: 0; aspect-ratio: auto; }
+.pb-chip {
+  position: absolute; left: 10px; top: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px;
+  background: #fbd38d; color: #3b2a00; font-size: 12.5px; font-weight: 650; pointer-events: none;
+}
+.pb-chip.live { background: #18181b; color: #fafafa; }
+.pb-chip.live::before, .pb-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp-bad); }
+.pb-pill {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; margin-right: 4px; border-radius: 99px;
+  background: var(--bad-soft); color: var(--bad-text); font-size: 13.5px; font-weight: 650; white-space: nowrap;
+}
+.pb-golive { margin-right: 4px; }
 .pb-overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; pointer-events: none; }
 .pb-overlay:empty { display: none; }
 .pb-overlay .loading { padding: 8px 14px; border-radius: 99px; background: #18181b; color: #e4e4e7; font-size: 13px; }
@@ -867,9 +884,8 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .pb-sub .badge { padding: 0 8px; font-size: 11.5px; line-height: 18px; }
 .pb-clock { font-size: 19px; font-weight: 700; letter-spacing: 0.01em; }
 .pb-time small { color: var(--muted); font-size: 12px; }
-.pb-ctl-text { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 600; }
 /* 跳過缺片的提示浮在畫面左下角，不佔控制列的位置 */
-.pb-note { position: absolute; left: 10px; bottom: 10px; padding: 5px 11px; border-radius: 99px; background: #18181b; color: #f6c46b; font-size: 12.5px; font-weight: 600; pointer-events: none; }
+.pb-note { position: absolute; z-index: 2; left: 10px; bottom: 10px; padding: 5px 11px; border-radius: 99px; background: #18181b; color: #f6c46b; font-size: 12.5px; font-weight: 600; pointer-events: none; }
 
 .pb-timeline .panel-head { gap: 8px 12px; }
 .pb-timeline .panel-head h2 { flex: 1 1 auto; }
@@ -964,23 +980,24 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .ev-text span { color: var(--muted); font-size: 12.5px; }
 
 @media (max-width: 760px) {
-  /* 標題留給螢幕閱讀器；攝影機、日期、播放器在同一個黏在頂端的容器裡，中間沒有縫 */
-  .pb-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }
-  .main:has(> .page > .pb) { padding-top: 0; }
+  /* 日期與播放器在同一個黏在頂端的容器裡，中間沒有縫 */
   .pb-player > .pb-toolbar { flex-wrap: nowrap; gap: 6px; padding: calc(4px + env(safe-area-inset-top)) 0 8px; }
-  .pb-toolbar > .sel { flex: 1 1 0; max-width: none; }
-  .pb-toolbar .sel-trigger { flex: 1; }
-  /* 一排要放攝影機、日期與前後一天：圖示收起來，字留給名稱與日期 */
-  .pb-toolbar .sel-trigger > .icon:first-child { display: none; }
-  .pb-date { flex: 1.5 1 0; gap: 2px; }
+  .pb-date { flex: 1 1 0; gap: 2px; }
+  .pb-date > .sel, .pb-date .sel-trigger { flex: 1; min-width: 0; }
   .pb-date .btn.icon-only { width: 40px; flex: none; padding: 0; }
-  .pb-ctl-text > span:not(.icon) { display: none; }
-  .pb-ctl-text { padding: 0; justify-content: center; }
   .pb-actions { gap: 0; }
+  /* 一排要放播放鍵、時鐘、回到即時、倍速、靜音與全螢幕：回到即時只留字，再放不下時整組換到下一行 */
+  .pb-controls { flex-wrap: wrap; row-gap: 4px; }
+  .pb-time { min-width: 4.8em; }
+  .pb-golive { padding-inline: 12px; }
+  .pb-golive > .icon { display: none; }
+  .pb-pill { padding: 0 12px; }
   .pb-clock { font-size: 17px; }
   .pb-grid { gap: 12px; }
   /* 黏在頂端的是一條平的工具列：圓角底下會露出捲過去的內容，看起來像兩層疊在一起 */
   .pb-player { position: sticky; top: 0; z-index: 8; margin: 0 -16px; border-radius: 0; border-width: 0 0 1px; box-shadow: none; padding: 6px 12px 8px; }
+  /* 鏡頭控制那一排展開時播放器太高，黏住會把時間軸擠得只剩一條縫 */
+  .pb-player:has(> .ptz) { position: relative; }
   /* 時間軸與事件拿掉外框，只留內面板；標題列變成段落標題，不再是卡片裡的卡片 */
   .pb-timeline, .pb-events { background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0; }
   .pb-events .panel-head { padding: 4px 4px 8px; min-height: 0; }
@@ -999,8 +1016,6 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 @media (max-height: 520px) and (min-width: 761px) {
   .main:has(> .page > .pb) { padding-top: 10px; padding-bottom: 24px; }
   .pb-head { margin-bottom: 8px; }
-  .pb-head h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-  .pb-toolbar { flex-wrap: nowrap; }
   .pb-stage { max-height: calc(100dvh - 140px); margin-inline: auto; }
   .pb-controls { padding-top: 2px; }
 }
@@ -1279,94 +1294,107 @@ a.menu-item { text-decoration: none; }
 .live-fallback-note { display: flex; align-items: center; gap: 8px; margin: -6px 0 18px; color: var(--muted); font-size: 13.5px; }
 .live-fallback-note .icon { color: var(--muted); flex: none; }
 
-/* 單台頁：返回＋名稱＋狀態，右邊畫質與回放；下面是盡量大的畫面 */
+/* 單台頁：返回＋名稱＋狀態，右邊是即時的畫質 */
 .live-head { flex-wrap: wrap; }
 .live-title { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
 .live-title h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .live-pill:empty { display: none; }
-.live-stage {
-  width: 100%; max-height: calc(100dvh - 170px); border-radius: var(--r-xl);
-  background: #0c0c0e; border-color: transparent;
-}
+.live-stage { aspect-ratio: auto; border-radius: 0; background: #0c0c0e; }
 .live-stage video, .live-stage img { object-fit: contain; }
 .live-stage .cam-ph { color: #75757f; }
-.live-stage .cam-note { left: 50%; right: auto; transform: translateX(-50%); bottom: 14px; font-size: 13px; }
+/* 下緣中間是鏡頭的「下」鍵，提示放到上緣 */
+.live-stage .cam-note { left: 50%; right: auto; top: 14px; bottom: auto; transform: translateX(-50%); font-size: 13px; }
 @media (max-width: 760px) {
   .live-head .page-actions { width: 100%; }
-  .live-head .page-actions .btn { flex: 1; justify-content: center; }
-  .live-stage { border-radius: var(--r-lg); max-height: none; }
+  .live-head .page-actions .segmented { flex: 1; }
+  .live-head .page-actions .segmented label { flex: 1; text-align: center; }
 }
-.live-fallback-note.below { margin: 12px 0 0; }
 
-/* ---------- 鏡頭控制：大畫面旁的面板；窄直向螢幕時移到畫面下方、貼近拇指 ---------- */
-.live-body { display: grid; gap: 14px; align-items: start; }
-.live-body > .cam-frame { min-width: 0; }
-.ptz { display: grid; gap: 14px; min-width: 0; padding: 14px; border-radius: var(--r-xl); background: var(--surface); border: 1px solid var(--border); }
-.ptz-head { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; flex-wrap: wrap; min-height: 24px; }
-.ptz-head h2 { font-size: 15px; font-weight: 650; }
-.ptz-state { margin-left: auto; font-size: 13.5px; font-weight: 600; color: var(--accent-text); text-align: right; overflow-wrap: anywhere; }
-.ptz-state[data-tone="error"] { color: var(--bad-text); }
-.ptz-ctl { display: flex; gap: 12px; justify-content: center; align-items: stretch; }
-.ptz-pad { --key: 56px; display: grid; grid-template-columns: repeat(3, var(--key)); grid-template-rows: repeat(3, var(--key)); gap: 6px; flex: none; }
-.ptz-up { grid-area: 1 / 2; } .ptz-left { grid-area: 2 / 1; } .ptz-stop { grid-area: 2 / 2; } .ptz-right { grid-area: 2 / 3; } .ptz-down { grid-area: 3 / 2; }
-.ptz-zoom { display: grid; grid-template-rows: 1fr 1fr; gap: 6px; flex: 1 1 0; min-width: 56px; max-width: 128px; }
+/* ---------- 鏡頭控制：方向鍵貼著畫面四邊、縮放在右下角，畫面中間不擋；預置點與速度在畫面正下方 ---------- */
+.ptz-ov { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.ptz-ov button { pointer-events: auto; }
 .ptz-key {
-  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 100%; min-width: 44px; min-height: 44px; padding: 0;
-  border-radius: 16px; border: 1px solid var(--border); background: var(--fill); color: var(--text-2); cursor: pointer;
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; flex: none;
+  border: 1px solid var(--border); background: var(--fill); color: var(--text-2); cursor: pointer;
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   transition: transform var(--dur-1) var(--ease-out), background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 .ptz-key .icon { color: inherit; }
-.ptz-key-label { font-size: 14px; font-weight: 600; }
-.ptz-stop { border-radius: 50%; background: transparent; color: var(--muted); }
-@media (hover: hover) { .ptz-key:hover { background: var(--fill-2); color: var(--text); } }
-.ptz-key[data-pressed], .ptz-key:active { transform: scale(0.95); background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); }
-.ptz-speed { display: grid; grid-template-columns: auto minmax(0, 1fr) 4ch; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; color: var(--text-2); }
+/* 疊在畫面上的鍵：底色半透明，圖示與字是實色 */
+.ptz-ov .ptz-key, .ptz-toggle { border: 0; background: rgb(12 12 14 / 0.58); color: #fafafa; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ptz-dirs .ptz-key { position: absolute; }
+.ptz-up { top: 10px; left: 50%; translate: -50% 0; }
+.ptz-down { bottom: 10px; left: 50%; translate: -50% 0; }
+.ptz-left { left: 10px; top: 50%; translate: 0 -50%; }
+.ptz-right { right: 10px; top: 50%; translate: 0 -50%; }
+.ptz-corner { position: absolute; right: 10px; bottom: 10px; display: grid; justify-items: end; gap: 8px; }
+/* 放大縮小橫排在開關上面：直排會頂到右邊的「右」鍵 */
+.ptz-zoom { display: flex; gap: 8px; }
+.ptz-toggle {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 99px; cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: background-color 140ms ease, transform var(--dur-1) var(--ease-out);
+}
+.ptz-toggle .icon { color: inherit; }
+.ptz-toggle:active { transform: scale(0.96); }
+.ptz-toggle[aria-pressed="true"] { background: #fafafa; color: #18181b; }
+@media (hover: hover) {
+  .ptz-key:hover { background: var(--fill-2); color: var(--text); }
+  .ptz-ov .ptz-key:hover { background: rgb(12 12 14 / 0.82); color: #fff; }
+}
+.ptz-key[data-pressed], .ptz-key:active, .ptz-ov .ptz-key[data-pressed], .ptz-ov .ptz-key:active { transform: scale(0.94); background: var(--accent-fill); border-color: transparent; color: var(--accent-fg); }
+.ptz-key:focus-visible, .ptz-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ptz { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; padding: 10px 6px 4px; }
+.ptz-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-width: 0; flex: 1 1 360px; }
+.ptz-tools .ptz-key { width: 40px; height: 40px; }
+.ptz-state { font-size: 13.5px; font-weight: 600; color: var(--accent-text); overflow-wrap: anywhere; }
+.ptz-state:empty { display: none; }
+.ptz-state[data-tone="error"] { color: var(--bad-text); }
+.ptz-speed { display: grid; grid-template-columns: auto minmax(90px, 1fr) 4ch; align-items: center; gap: 10px; flex: 0 1 260px; font-size: 13.5px; font-weight: 600; color: var(--text-2); }
 .ptz-speed output { text-align: right; color: var(--muted); font-weight: 550; }
 .ptz-hint { margin: 0; color: var(--muted); font-size: 13px; text-wrap: balance; }
-.ptz-keys { margin-top: -4px; }
-.ptz-section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
-.ptz-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+.ptz-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.ptz-keys[hidden] { display: none; }
+/* 預置點一排：標題、名稱、管理員的工具；編輯時名稱改成直的清單 */
+.ptz-section { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; flex: 1 1 100%; }
+.ptz-sub { display: contents; }
 .ptz-sub h3 { font-size: 13.5px; font-weight: 650; color: var(--text-2); }
-.ptz-presets { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ptz-sub-tools { order: 2; display: flex; align-items: center; gap: 4px; }
+.ptz-presets { order: 1; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.ptz-section > .ptz-hint { order: 3; flex-basis: 100%; }
+.ptz-section > .ptz-hint[hidden] { display: none; }
 .ptz-preset { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .ptz-preset-go {
-  min-height: 40px; max-width: 100%; padding: 0 14px; border-radius: 99px; border: 1px solid var(--border); background: var(--fill); color: var(--text);
+  min-height: 36px; max-width: 100%; padding: 0 14px; border-radius: 99px; border: 1px solid var(--border); background: var(--fill); color: var(--text);
   font-weight: 550; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   transition: transform var(--dur-1) var(--ease-out), background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 @media (hover: hover) { .ptz-preset-go:hover { background: var(--fill-2); } }
 .ptz-preset-go:active { transform: scale(0.97); }
 .ptz-preset-go[aria-busy="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); cursor: progress; }
-.ptz-section[data-editing="true"] .ptz-presets { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+.ptz-section[data-editing="true"] .ptz-presets { flex-basis: 100%; flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
 .ptz-section[data-editing="true"] .ptz-preset { justify-content: space-between; }
 .ptz-section[data-editing="true"] .ptz-preset-go { flex: 1; min-width: 0; text-align: left; border-radius: 12px; }
 .ptz-preset-tools { display: flex; flex: none; }
-.ptz-sub-tools { display: flex; align-items: center; gap: 4px; }
-.ptz-note { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r); background: var(--fill); color: var(--text-2); font-size: 13.5px; }
+.ptz-note { display: flex; align-items: center; gap: 10px; margin: 8px 2px 0; padding: 10px 12px; border-radius: var(--r); background: var(--fill); color: var(--text-2); font-size: 13.5px; }
 .ptz-note > .icon { color: var(--muted); }
 .ptz-note-text { flex: 1; display: grid; min-width: 0; }
 .ptz-note-text small { color: var(--muted); font-size: 13px; }
 
-@media (min-width: 900px), (min-width: 640px) and (orientation: landscape) {
-  .live-body[data-ptz="panel"] { grid-template-columns: minmax(0, 1fr) 296px; gap: 18px; }
-  .live-body[data-ptz="panel"] .ptz { position: sticky; top: 20px; }
-}
-/* 直向手機：控制盤貼在底部導覽列上方，單手拇指就按得到 */
-@media (max-width: 760px) and (orientation: portrait) {
-  .live-page:has(> .live-body[data-ptz="panel"]) { display: flex; flex-direction: column; min-height: calc(100dvh - 124px - env(safe-area-inset-bottom)); }
-  .live-body[data-ptz="panel"] { flex: 1; grid-template-rows: auto 1fr; }
-  .live-body[data-ptz="panel"] > .ptz { align-self: end; }
-  .ptz { padding: 12px; gap: 10px; }
-  .ptz-pad { --key: 52px; }
+@media (max-width: 760px) {
+  .ptz-dirs .ptz-key { width: 38px; height: 38px; }
+  .ptz-up { top: 6px; }
+  .ptz-down { bottom: 6px; }
+  .ptz-left { left: 6px; }
+  .ptz-right { right: 6px; }
+  .ptz-corner { right: 6px; bottom: 6px; }
+  .ptz-toggle { height: 32px; padding: 0 10px; }
+  .ptz { padding: 8px 0 2px; }
   .ptz-keys { display: none; }
-  .ptz-section { padding-top: 8px; gap: 6px; }
-  .ptz-section[data-editing="false"] .ptz-presets {
-    flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin-inline: -12px; padding-inline: 12px; scroll-padding-inline: 12px;
-  }
+  .ptz-speed { flex: 1 1 160px; }
+  .ptz-section[data-editing="false"] .ptz-presets { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
   .ptz-section[data-editing="false"] .ptz-preset { flex: none; scroll-snap-align: start; }
 }
-@media (max-height: 520px) { .ptz-pad { --key: 48px; } .ptz-keys { display: none; } .ptz { gap: 10px; } }
 @media (pointer: coarse), (max-width: 760px) {
   .ptz-preset-go { min-height: 44px; }
   .ptz-sub .btn.small, .ptz-note .btn.small { min-height: 36px; }

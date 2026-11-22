@@ -17,26 +17,20 @@ import { useMedia } from "../ui/useMedia.ts";
 import { Tooltip, TooltipGroup } from "../ui/Tooltip.tsx";
 import { getSidebarCollapsed, setSidebarCollapsed } from "../theme.ts";
 
-type Section = "cameras" | "events" | "recordings" | "settings" | "account";
+type Section = "cameras" | "events" | "settings" | "account";
 
 const NAV: {
   section: Section;
-  to: "/cameras" | "/events" | "/recordings";
+  to: "/cameras" | "/events";
   label: MessageDescriptor;
   icon: IconName;
 }[] = [
   { section: "cameras", to: "/cameras", label: msg`Cameras`, icon: "camera" },
   { section: "events", to: "/events", label: msg`Events`, icon: "activity" },
-  {
-    section: "recordings",
-    to: "/recordings",
-    label: msg`Recordings`,
-    icon: "film",
-  },
 ];
 
 const sectionOf = (path: string): Section | undefined =>
-  (["cameras", "events", "recordings", "settings", "account"] as const).find((s) => path === `/${s}` || path.startsWith(`/${s}/`));
+  (["cameras", "events", "settings", "account"] as const).find((s) => path === `/${s}` || path.startsWith(`/${s}/`));
 
 /** 外殼：桌面是左側欄，手機（≤760px）由 CSS 改成底部導覽列 */
 export function Shell() {
