@@ -2,13 +2,11 @@ import type { Database } from "bun:sqlite";
 import { constants } from "node:fs";
 import { access, stat } from "node:fs/promises";
 import type { PurgeDto, SegmentDto } from "../api-types.ts";
-import { msg, type Msg } from "../messages/index.ts";
-import { errorResponse } from "../http/respond.ts";
+import { msg } from "../messages/index.ts";
+import { HttpError } from "../http/errors.ts";
+import { json } from "../http/respond.ts";
 import type { CameraId, Route, Segment } from "../types.ts";
 import { getSegment, quarterHourBuckets, segmentsInRange } from "./store.ts";
-
-const json = (body: unknown, status = 200) => Response.json(body, { status });
-const fail = (status: number, m: Msg) => errorResponse(status, m);
 
 const toDto = (s: Segment): SegmentDto => ({
   id: s.id,
@@ -74,7 +72,7 @@ export function recordingRoutes(deps: { db: Database; purgeOrphans: () => Promis
       handler({ url, params }) {
         const tz = url.searchParams.get("tz") ?? "UTC";
         const fmt = dayFormatter(tz);
-        if (!fmt) return fail(400, msg("recording.badTimeZone", { tz }));
+        if (!fmt) throw new HttpError(400, msg("recording.badTimeZone", { tz }));
         // Every IANA offset is a multiple of 15 minutes, so a quarter-hour bucket never straddles a local midnight.
         const days = new Set(quarterHourBuckets(db, params.id as CameraId).map((ms) => fmt.format(ms)));
         return json([...days].sort());
@@ -87,8 +85,8 @@ export function recordingRoutes(deps: { db: Database; purgeOrphans: () => Promis
       handler({ url, params }) {
         const start = parseMs(url.searchParams.get("start"));
         const end = parseMs(url.searchParams.get("end"));
-        if (start === null || end === null) return fail(400, msg("http.badRange"));
-        if (end < start) return fail(400, msg("http.endBeforeStart"));
+        if (start === null || end === null) throw new HttpError(400, msg("http.badRange"));
+        if (end < start) throw new HttpError(400, msg("http.endBeforeStart"));
         return json(segmentsInRange(db, params.id as CameraId, start, end).map(toDto));
       },
     },
@@ -99,13 +97,13 @@ export function recordingRoutes(deps: { db: Database; purgeOrphans: () => Promis
       async handler({ req, params }) {
         const id = Number(params.id);
         const segment = Number.isSafeInteger(id) ? getSegment(db, id) : null;
-        if (!segment) return fail(404, msg("recording.segmentNotFound"));
+        if (!segment) throw new HttpError(404, msg("recording.segmentNotFound"));
         // A recording segment keeps growing, so the size is read per request rather than from the index.
         const size = await stat(segment.path).then((s) => s.size, () => null);
-        if (size === null) return fail(404, msg("recording.segmentFileMissing"));
+        if (size === null) throw new HttpError(404, msg("recording.segmentFileMissing"));
         // A file the server may not read (for example written by root before PUID was set) would otherwise fail
         // halfway through the stream; answer up front so the player skips it instead of retrying.
-        if (!(await access(segment.path, constants.R_OK).then(() => true, () => false))) return fail(403, msg("recording.segmentFileUnreadable"));
+        if (!(await access(segment.path, constants.R_OK).then(() => true, () => false))) throw new HttpError(403, msg("recording.segmentFileUnreadable"));
 
         const headers = new Headers({
           "Content-Type": "video/mp4",
