@@ -12,7 +12,8 @@ import type { DecodePlan } from "../hwcodec/plan.ts";
 import { HW_DECODE_ENV } from "./command.ts";
 import { detectConfigOf, usesOnvif, usesPixel } from "./config.ts";
 import { createOnvifSources, type OnvifSourceStatus } from "./onvif-source.ts";
-import { chunksOf, MsgKind, MsgReader, type DecodeReport, type DetectControl, type FrameResult } from "./protocol.ts";
+import { MsgReader } from "../workers/framing.ts";
+import { chunksOf, MsgKind, type DecodeReport, type DetectControl, type FrameResult } from "./protocol.ts";
 import { msg } from "../messages/index.ts";
 import { msgOrRaw } from "../messages/external.ts";
 

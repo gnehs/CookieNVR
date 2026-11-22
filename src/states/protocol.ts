@@ -1,7 +1,7 @@
 import { isMsgCode, msg, type Msg } from "../messages/index.ts";
+import { encodeMsg, KIND_JSON } from "../workers/framing.ts";
 
-/** 主程序與狀態辨識 worker（detector/classify.py）之間的訊息，框架同 detector：「1 位元組種類＋4 位元組長度＋內容」 */
-export const KIND_JSON = 1;
+/** 主程序與狀態辨識 worker（detector/classify.py）之間的訊息，訊框見 workers/framing.ts */
 /** 「4 位元組 JSON 長度＋JSON＋二進位」 */
 export const KIND_BLOB = 3;
 
@@ -39,23 +39,13 @@ export type WorkerMsg =
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
-function frame(kind: number, body: Uint8Array): Uint8Array {
-  const out = new Uint8Array(5 + body.length);
-  out[0] = kind;
-  new DataView(out.buffer).setUint32(1, body.length);
-  out.set(body, 5);
-  return out;
-}
-
-export const encodeJob = (job: WorkerJob) => frame(KIND_JSON, enc.encode(JSON.stringify(job)));
-
 export function encodeClassify(req: ClassifyRequest, jpeg: Uint8Array): Uint8Array {
   const head = enc.encode(JSON.stringify(req));
   const body = new Uint8Array(4 + head.length + jpeg.length);
   new DataView(body.buffer).setUint32(0, head.length);
   body.set(head, 4);
   body.set(jpeg, 4 + head.length);
-  return frame(KIND_BLOB, body);
+  return encodeMsg(KIND_BLOB, body);
 }
 
 type Obj = Record<string, unknown>;

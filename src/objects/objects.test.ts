@@ -4,7 +4,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_DETECT } from "../detect/config.ts";
-import { MsgReader } from "../detect/protocol.ts";
+import { MsgReader } from "../workers/framing.ts";
 import type { Signal } from "../events/lifecycle.ts";
 import type { Camera, CameraId, ObjectSettings } from "../types.ts";
 import { STATIONARY_MS, StationaryFilter, toHits, type Detection } from "./hits.ts";

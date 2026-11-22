@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { parseCameraConfig, parseSettingsPatch } from "../http/parse.ts";
 import { defaultSettings } from "../types.ts";
 import { detectConfigOf, DEFAULT_DETECT } from "./config.ts";
-import { encodeMsg, JpegSplitter, MsgKind, MsgReader } from "./protocol.ts";
+import { encodeMsg, MsgReader } from "../workers/framing.ts";
+import { JpegSplitter, MsgKind } from "./protocol.ts";
 
 test("messages survive arbitrary chunking", () => {
   const a = encodeMsg(MsgKind.frame, new TextEncoder().encode('{"x":1}'));

@@ -37,7 +37,7 @@ export function parseControl(text: string): DetectControl | null {
   }
 }
 
-/** worker stdout 的訊息：1 位元組種類 + 4 位元組長度（big-endian）+ 內容 */
+/** worker stdout 的訊息種類，訊框見 workers/framing.ts */
 export const enum MsgKind {
   /** JSON 的 FrameResult */
   frame = 1,
@@ -60,35 +60,6 @@ export interface FrameResult {
 }
 
 export type WorkerMsg = { kind: "frame"; result: FrameResult } | { kind: "jpeg"; at: number; bytes: Uint8Array };
-
-export function encodeMsg(kind: MsgKind, payload: Uint8Array): Uint8Array {
-  const out = new Uint8Array(5 + payload.length);
-  out[0] = kind;
-  new DataView(out.buffer).setUint32(1, payload.length);
-  out.set(payload, 5);
-  return out;
-}
-
-/** 把任意切開的位元組流拆回訊息 */
-export class MsgReader {
-  private buf = new Uint8Array(0);
-
-  push(chunk: Uint8Array): { kind: MsgKind; payload: Uint8Array<ArrayBuffer> }[] {
-    const merged = new Uint8Array(this.buf.length + chunk.length);
-    merged.set(this.buf);
-    merged.set(chunk, this.buf.length);
-    const out: { kind: MsgKind; payload: Uint8Array<ArrayBuffer> }[] = [];
-    let p = 0;
-    while (merged.length - p >= 5) {
-      const len = new DataView(merged.buffer, p + 1, 4).getUint32(0);
-      if (merged.length - p - 5 < len) break;
-      out.push({ kind: merged[p] as MsgKind, payload: merged.slice(p + 5, p + 5 + len) });
-      p += 5 + len;
-    }
-    this.buf = merged.slice(p);
-    return out;
-  }
-}
 
 /** 從 image2pipe 的 MJPEG 流切出完整的 JPEG（SOI 到 EOI；ffmpeg 不嵌縮圖，EOI 不會出現在中間） */
 export class JpegSplitter {

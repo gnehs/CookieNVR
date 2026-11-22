@@ -1,11 +1,11 @@
 import type { BenchmarkResultDto, GpuUsageDto, InferenceDeviceDto, InferenceDeviceKind } from "../api-types.ts";
 import { msg, type Msg } from "../messages/index.ts";
 import { externalMsg, msgOrRaw } from "../messages/external.ts";
+import { encodeMsg } from "../workers/framing.ts";
 import type { Detection } from "./hits.ts";
 
-/** detector 與主程序之間的 Unix socket：「1 位元組種類＋4 位元組長度＋內容」，見 detector/main.py */
-export const KIND_JSON = 1;
-export const KIND_FRAME = 2;
+/** detector 與主程序之間的 Unix socket，訊框見 workers/framing.ts、detector/main.py；種類 2 是「4 位元組影格編號＋JPEG」 */
+const KIND_FRAME = 2;
 
 export interface ReadyInfo {
   device: InferenceDeviceDto;
@@ -164,21 +164,9 @@ export function parseDetectorMsg(raw: string): DetectorMsg | null {
   }
 }
 
-export function encodeJson(msg: object): Uint8Array {
-  const body = new TextEncoder().encode(JSON.stringify(msg));
-  const out = new Uint8Array(5 + body.length);
-  out[0] = KIND_JSON;
-  new DataView(out.buffer).setUint32(1, body.length);
-  out.set(body, 5);
-  return out;
-}
-
 export function encodeFrame(id: number, jpeg: Uint8Array): Uint8Array {
-  const out = new Uint8Array(9 + jpeg.length);
-  const view = new DataView(out.buffer);
-  out[0] = KIND_FRAME;
-  view.setUint32(1, 4 + jpeg.length);
-  view.setUint32(5, id);
-  out.set(jpeg, 9);
-  return out;
+  const body = new Uint8Array(4 + jpeg.length);
+  new DataView(body.buffer).setUint32(0, id);
+  body.set(jpeg, 4);
+  return encodeMsg(KIND_FRAME, body);
 }

@@ -9,7 +9,8 @@ import type { HwDecode } from "../hwcodec/plan.ts";
 import { detectCommand, HW_DECODE_ENV, parseHwDecode } from "./command.ts";
 import { PREVIEW_THRESHOLDS } from "./config.ts";
 import { FRAME_BYTES, MotionDetector } from "./motion.ts";
-import { chunksOf, encodeMsg, IDLE_CONTROL, JpegSplitter, MsgKind, parseControl, type DecodeReport, type DetectControl, type FrameResult } from "./protocol.ts";
+import { encodeMsg } from "../workers/framing.ts";
+import { chunksOf, IDLE_CONTROL, JpegSplitter, MsgKind, parseControl, type DecodeReport, type DetectControl, type FrameResult } from "./protocol.ts";
 
 const [ffmpegBin, url, controlPath, fpsArg] = process.argv.slice(2);
 // 解碼本身是每秒 5 張，JPEG 最多也是 5 張

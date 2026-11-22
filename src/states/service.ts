@@ -18,7 +18,8 @@ import {
   type StateSensorDto,
   type StreamMessage,
 } from "../api-types.ts";
-import { chunksOf, MsgReader } from "../detect/protocol.ts";
+import { chunksOf } from "../detect/protocol.ts";
+import { encodeJson, MsgReader } from "../workers/framing.ts";
 import type { Env } from "../env.ts";
 import { HttpError } from "../http/errors.ts";
 import { msg, type Msg, zh } from "../messages/index.ts";
@@ -27,7 +28,7 @@ import type { Camera, CameraId, Route, WorkerSpec } from "../types.ts";
 import { samplePoints } from "./collect.ts";
 import { parseClassName, parseFrigateConfig, parseSensorConfig } from "./config.ts";
 import { step, UNKNOWN, type Consensus } from "./consensus.ts";
-import { encodeClassify, encodeJob, parseWorkerMsg, type ClassifyRequest, type Reading, type WorkerJob } from "./protocol.ts";
+import { encodeClassify, parseWorkerMsg, type ClassifyRequest, type Reading, type WorkerJob } from "./protocol.ts";
 import * as store from "./store.ts";
 import type { ImageRow, SensorId, SensorRow } from "./store.ts";
 
@@ -218,7 +219,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       const q = jobQueue.shift()!;
       if (!sensors.has(q.sensorId)) continue;
       sentJobs.add(q.cmd.job);
-      write(encodeJob(q.cmd));
+      write(encodeJson(q.cmd));
     }
     if (inFlight) return;
     const next = pending.entries().next();

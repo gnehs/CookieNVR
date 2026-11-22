@@ -16,7 +16,6 @@ import type {
   ObjectsStatusDto,
 } from "../api-types.ts";
 import { detectConfigOf } from "../detect/config.ts";
-import { MsgReader } from "../detect/protocol.ts";
 import type { Env } from "../env.ts";
 import type { EventTracker } from "../events/tracker.ts";
 import { HttpError } from "../http/errors.ts";
@@ -28,7 +27,8 @@ import type { Camera, CameraId, DeviceRef, ObjectSettings, Route, WorkerSpec } f
 import { camerasSupported, DROP_WARN_RATIO, loadSample, verdict } from "./capacity.ts";
 import { StationaryFilter, toHits, type Detection } from "./hits.ts";
 import { COCO_LABELS, COMMON_LABELS, labelName } from "./labels.ts";
-import { cpuShareOf, encodeFrame, encodeJson, KIND_JSON, parseDetectorMsg, type ReadyInfo } from "./protocol.ts";
+import { encodeJson, KIND_JSON, MsgReader } from "../workers/framing.ts";
+import { cpuShareOf, encodeFrame, parseDetectorMsg, type ReadyInfo } from "./protocol.ts";
 import { FrameQueue } from "./queue.ts";
 
 const DETECTOR_SCRIPT = join(import.meta.dir, "../../detector/main.py");
