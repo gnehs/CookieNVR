@@ -1201,10 +1201,14 @@ msgstr "ケーキ"
 msgid "Calculating…"
 msgstr "計算中…"
 
-#: web/pages/camera/PtzPanel.tsx
 #: web/pages/events/EventsPage.tsx
 msgid "Camera"
 msgstr "カメラ"
+
+#: web/pages/camera/PtzPanel.tsx
+msgctxt "button that shows or hides the pan-tilt-zoom controls"
+msgid "Camera"
+msgstr "カメラ操作"
 
 #: web/pages/camera/PtzPanel.tsx
 #: web/pages/settings-cameras/CameraEditPage.tsx

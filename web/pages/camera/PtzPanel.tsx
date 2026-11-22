@@ -237,7 +237,7 @@ function Panel({ cam, caps, admin, overlay }: { cam: CameraDto; caps: Supported;
         {shown && !narrow ? zoom : null}
         <button type="button" className="ptz-toggle" aria-pressed={shown} onClick={toggle}>
           <Icon name="camera" size={16} />
-          <span>{t`Camera`}</span>
+          <span>{t({ message: "Camera", context: "button that shows or hides the pan-tilt-zoom controls" })}</span>
         </button>
       </div>
     </>

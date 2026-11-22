@@ -1201,8 +1201,12 @@ msgstr "Cake"
 msgid "Calculating…"
 msgstr "Calculating…"
 
-#: web/pages/camera/PtzPanel.tsx
 #: web/pages/events/EventsPage.tsx
+msgid "Camera"
+msgstr "Camera"
+
+#: web/pages/camera/PtzPanel.tsx
+msgctxt "button that shows or hides the pan-tilt-zoom controls"
 msgid "Camera"
 msgstr "Camera"
 
