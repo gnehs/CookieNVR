@@ -13,7 +13,7 @@ import { playGrid, type LiveTarget } from "../../live/transport.ts";
 import { liveSupported } from "../../live/video.ts";
 import { ButtonLink } from "../../ui/Button.tsx";
 import { Icon } from "../../ui/Icon.tsx";
-import { EmptyState, ErrorBox, Spinner } from "../../ui/states.tsx";
+import { EmptyState, QueryGate } from "../../ui/states.tsx";
 
 function CameraTile({ cam, eventActive, register }: { cam: CameraDto; eventActive: boolean; register: (id: string, t: LiveTarget | null) => void }) {
   const st = cameraStatus(cam);
@@ -97,45 +97,45 @@ export function CamerasPage() {
         </p>
       )}
       <div>
-        {cams.isPending ? (
-          <Spinner />
-        ) : cams.isError ? (
-          <ErrorBox error={cams.error} onRetry={() => void cams.refetch()} />
-        ) : list!.length === 0 ? (
-          <EmptyState
-            title={t`No cameras yet`}
-            body={isAdmin ? t`Add your first camera and it starts recording right away.` : t`Ask an admin to add a camera.`}
-            icon="camera"
-            action={
-              isAdmin ? (
-                <ButtonLink to="/settings/cameras/new" variant="primary" icon="plus" iconSize={18}>
-                  {t`Add camera`}
-                </ButtonLink>
-              ) : undefined
-            }
-          />
-        ) : (
-          <div className="cam-sections">
-            {/* 沒有分區時只有一段、不放標題；空的分區在首頁不顯示 */}
-            {sectionsOf(list!, groups)
-              .filter((s) => s.cameras.length > 0)
-              .map((s) => (
-                <section key={s.group?.id ?? "ungrouped"} className="cam-section" aria-label={groups.length ? (s.group?.name ?? t`Ungrouped`) : undefined}>
-                  {groups.length ? (
-                    <h2 className="cam-section-title">
-                      {s.group?.name ?? t`Ungrouped`}
-                      <span className="cam-section-count num">{s.cameras.length}</span>
-                    </h2>
-                  ) : null}
-                  <div className="cam-grid">
-                    {s.cameras.map((c) => (
-                      <CameraTile key={c.id} cam={c} eventActive={events.some((e) => e.cameraId === c.id)} register={register} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-          </div>
-        )}
+        <QueryGate queries={[cams]}>
+          {([cs]) =>
+            cs.length === 0 ? (
+              <EmptyState
+                title={t`No cameras yet`}
+                body={isAdmin ? t`Add your first camera and it starts recording right away.` : t`Ask an admin to add a camera.`}
+                icon="camera"
+                action={
+                  isAdmin ? (
+                    <ButtonLink to="/settings/cameras/new" variant="primary" icon="plus" iconSize={18}>
+                      {t`Add camera`}
+                    </ButtonLink>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <div className="cam-sections">
+                {/* 沒有分區時只有一段、不放標題；空的分區在首頁不顯示 */}
+                {sectionsOf(cs, groups)
+                  .filter((s) => s.cameras.length > 0)
+                  .map((s) => (
+                    <section key={s.group?.id ?? "ungrouped"} className="cam-section" aria-label={groups.length ? (s.group?.name ?? t`Ungrouped`) : undefined}>
+                      {groups.length ? (
+                        <h2 className="cam-section-title">
+                          {s.group?.name ?? t`Ungrouped`}
+                          <span className="cam-section-count num">{s.cameras.length}</span>
+                        </h2>
+                      ) : null}
+                      <div className="cam-grid">
+                        {s.cameras.map((c) => (
+                          <CameraTile key={c.id} cam={c} eventActive={events.some((e) => e.cameraId === c.id)} register={register} />
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+              </div>
+            )
+          }
+        </QueryGate>
       </div>
     </div>
   );

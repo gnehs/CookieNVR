@@ -9,7 +9,7 @@ import { Button, CopyButton } from "../../ui/Button.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
 import { Field } from "../../ui/Field.tsx";
 import { Icon } from "../../ui/Icon.tsx";
-import { ErrorBox, Spinner } from "../../ui/states.tsx";
+import { QueryGate } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 
 const lastUsed = (ago: string): string => msgT`Last used ${ago}`;
@@ -30,42 +30,44 @@ function TokenList() {
       return qc.invalidateQueries({ queryKey: tokensQuery.queryKey });
     },
   });
-  if (q.isPending) return <Spinner />;
-  if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />;
-  if (q.data.length === 0)
-    return (
-      <p className="muted" style={{ padding: "16px 22px" }}>
-        {t`No apps are connected yet.`}
-      </p>
-    );
   return (
-    <div className="row-list">
-      {q.data.map((tok) => (
-        <div className="row-item" key={tok.id}>
-          <div className="row-main">
-            <span className="row-ico">
-              <Icon name="key" size={18} />
-            </span>
-            <div className="row-text">
-              <b>{tok.name}</b>
-              <small>{tok.lastUsedAt ? lastUsed(formatAgo(tok.lastUsedAt)) : createdUnused(formatAgo(tok.createdAt))}</small>
+    <QueryGate queries={[q]}>
+      {([tokens]) =>
+        tokens.length === 0 ? (
+          <p className="muted" style={{ padding: "16px 22px" }}>
+            {t`No apps are connected yet.`}
+          </p>
+        ) : (
+        <div className="row-list">
+          {tokens.map((tok) => (
+            <div className="row-item" key={tok.id}>
+              <div className="row-main">
+                <span className="row-ico">
+                  <Icon name="key" size={18} />
+                </span>
+                <div className="row-text">
+                  <b>{tok.name}</b>
+                  <small>{tok.lastUsedAt ? lastUsed(formatAgo(tok.lastUsedAt)) : createdUnused(formatAgo(tok.createdAt))}</small>
+                </div>
+              </div>
+              <Button
+                small
+                variant="danger"
+                icon="trash"
+                iconSize={15}
+                onClick={async () => {
+                  if (!(await confirmDialog(revokeTitle(tok.name), t`Apps connected with this key lose access immediately.`, { confirmLabel: t`Revoke`, danger: true }))) return;
+                  revoke.mutate({ id: tok.id, name: tok.name });
+                }}
+              >
+                {t`Revoke`}
+              </Button>
             </div>
-          </div>
-          <Button
-            small
-            variant="danger"
-            icon="trash"
-            iconSize={15}
-            onClick={async () => {
-              if (!(await confirmDialog(revokeTitle(tok.name), t`Apps connected with this key lose access immediately.`, { confirmLabel: t`Revoke`, danger: true }))) return;
-              revoke.mutate({ id: tok.id, name: tok.name });
-            }}
-          >
-            {t`Revoke`}
-          </Button>
+          ))}
         </div>
-      ))}
-    </div>
+        )
+      }
+    </QueryGate>
   );
 }
 

@@ -12,7 +12,7 @@ import { Button } from "../../ui/Button.tsx";
 import { Dialog, confirmDialog } from "../../ui/Dialog.tsx";
 import { Field } from "../../ui/Field.tsx";
 import { MenuButton } from "../../ui/Menu.tsx";
-import { ErrorBox, Spinner } from "../../ui/states.tsx";
+import { QueryGate } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { Tiles } from "../../ui/controls.tsx";
 import { useRetained } from "../../ui/use-retained.ts";
@@ -182,27 +182,25 @@ export function UsersPage() {
     if (await confirmDialog(deleteTitle(u.username), t`This account can no longer sign in right away, and any API tokens it created stop working. This can't be undone.`, { confirmLabel: t`Delete`, danger: true })) remove.mutate(u);
   };
 
-  let body;
-  if (users.isPending) body = <Spinner />;
-  else if (users.isError) body = <ErrorBox error={users.error} onRetry={() => users.refetch()} />;
-  else {
-    const count = users.data.length;
-    body = (
-      <>
-        <div className="list-toolbar">
-          <span className="hint">{plural(count, { one: "# user", other: "# users" })}</span>
-          <Button variant="primary" small icon="plus" iconSize={15} onClick={() => open({ kind: "create" })}>
-            {t`Add user`}
-          </Button>
-        </div>
-        <div className="card row-list" role="list">
-          {users.data.map((u) => (
-            <UserRow key={u.id} user={u} self={u.id === me.id} onReset={() => open({ kind: "reset", user: u })} onRole={(role) => setRole.mutate({ user: u, role })} onDelete={() => void confirmRemove(u)} />
-          ))}
-        </div>
-      </>
-    );
-  }
+  const body = (
+    <QueryGate queries={[users]}>
+      {([list]) => (
+        <>
+          <div className="list-toolbar">
+            <span className="hint">{plural(list.length, { one: "# user", other: "# users" })}</span>
+            <Button variant="primary" small icon="plus" iconSize={15} onClick={() => open({ kind: "create" })}>
+              {t`Add user`}
+            </Button>
+          </div>
+          <div className="card row-list" role="list">
+            {list.map((u) => (
+              <UserRow key={u.id} user={u} self={u.id === me.id} onReset={() => open({ kind: "reset", user: u })} onRole={(role) => setRole.mutate({ user: u, role })} onDelete={() => void confirmRemove(u)} />
+            ))}
+          </div>
+        </>
+      )}
+    </QueryGate>
+  );
 
   const close = () => setTarget(null);
   return (

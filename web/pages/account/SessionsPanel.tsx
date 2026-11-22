@@ -8,7 +8,7 @@ import { Button } from "../../ui/Button.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { Panel } from "../../ui/Panel.tsx";
-import { ErrorBox, Spinner } from "../../ui/states.tsx";
+import { QueryGate } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 
 export const sessionsQuery = queryOptions({ queryKey: ["me", "sessions"], queryFn: api.sessions });
@@ -77,7 +77,7 @@ export function SessionsPanel() {
   const q = useQuery(sessionsQuery);
   return (
     <Panel title={t`Signed-in devices`}>
-      {q.isPending ? <Spinner /> : q.isError ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : <List sessions={q.data} />}
+      <QueryGate queries={[q]}>{([sessions]) => <List sessions={sessions} />}</QueryGate>
     </Panel>
   );
 }
