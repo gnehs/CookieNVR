@@ -1,4 +1,5 @@
 import { useLingui } from "@lingui/react/macro";
+import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { PtzPresetDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
@@ -30,51 +31,55 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
   const { t } = useLingui();
   const [presets, setPresets] = useState(initial);
   const [editing, setEditing] = useState(false);
-  const [goingTo, setGoingTo] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const flash = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(flash.current), []);
 
   const full = max !== null && presets.length >= max;
 
-  async function go(p: PtzPresetDto) {
+  // 前往的結果顯示在面板的狀態列，不跳通知
+  const goTo = useMutation({
+    mutationFn: (p: PtzPresetDto) => api.ptzGotoPreset(cameraId, p.token, speed()),
+    meta: { handlesError: true },
+    onSuccess: () => {
+      flash.current = setTimeout(() => say(null), 1800);
+    },
+    onError: (e) => say(errMsg(e), "error"),
+  });
+  const goingTo = goTo.isPending ? goTo.variables.token : null;
+  const go = (p: PtzPresetDto) => {
     beforeGo();
-    setGoingTo(p.token);
     clearTimeout(flash.current);
     const name = p.name;
     say(t`Going to “${name}”`);
-    try {
-      await api.ptzGotoPreset(cameraId, p.token, speed());
-      flash.current = setTimeout(() => say(null), 1800);
-    } catch (e) {
-      say(errMsg(e), "error");
-    } finally {
-      setGoingTo(null);
-    }
-  }
+    goTo.mutate(p);
+  };
 
+  const overwritePreset = useMutation({
+    mutationFn: (p: PtzPresetDto) => api.ptzSavePreset(cameraId, { name: p.name, token: p.token }),
+    onSuccess: (res, p) => {
+      setPresets(res.presets);
+      const name = p.name;
+      toast(t`Updated “${name}” to the current position`);
+    },
+  });
   async function overwrite(p: PtzPresetDto) {
     const name = p.name;
-    if (!(await confirmDialog(t`Overwrite preset`, t`Set “${name}” to where the camera is pointing now? The old position will be replaced.`, { confirmLabel: t`Overwrite` }))) return;
-    try {
-      setPresets((await api.ptzSavePreset(cameraId, { name: p.name, token: p.token })).presets);
-      toast(t`Updated “${name}” to the current position`);
-    } catch (e) {
-      toast(errMsg(e), "error");
-    }
+    if (await confirmDialog(t`Overwrite preset`, t`Set “${name}” to where the camera is pointing now? The old position will be replaced.`, { confirmLabel: t`Overwrite` })) overwritePreset.mutate(p);
   }
 
+  const removePreset = useMutation({
+    mutationFn: (p: PtzPresetDto) => api.ptzRemovePreset(cameraId, { token: p.token }),
+    onSuccess: (res, p) => {
+      setPresets(res.presets);
+      if (res.presets.length === 0) setEditing(false);
+      const name = p.name;
+      toast(t`Deleted “${name}”`);
+    },
+  });
   async function remove(p: PtzPresetDto) {
     const name = p.name;
-    if (!(await confirmDialog(t`Delete preset`, t`Delete “${name}”? The preset will be removed from the camera.`, { confirmLabel: t`Delete`, danger: true }))) return;
-    try {
-      const next = (await api.ptzRemovePreset(cameraId, { token: p.token })).presets;
-      setPresets(next);
-      if (next.length === 0) setEditing(false);
-      toast(t`Deleted “${name}”`);
-    } catch (e) {
-      toast(errMsg(e), "error");
-    }
+    if (await confirmDialog(t`Delete preset`, t`Delete “${name}”? The preset will be removed from the camera.`, { confirmLabel: t`Delete`, danger: true })) removePreset.mutate(p);
   }
 
   if (!admin && presets.length === 0) return null;
@@ -107,7 +112,7 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
           const name = p.name;
           return (
             <li className="ptz-preset" key={p.token}>
-              <button className="ptz-preset-go" type="button" aria-busy={goingTo === p.token ? "true" : undefined} onClick={() => void go(p)}>
+              <button className="ptz-preset-go" type="button" aria-busy={goingTo === p.token ? "true" : undefined} onClick={() => go(p)}>
                 <span>{p.name}</span>
               </button>
               {editing ? (
@@ -125,24 +130,27 @@ export function PtzPresets({ cameraId, initial, max, admin, speed, beforeGo, say
         })}
       </ul>
       {admin && presets.length === 0 ? <p className="ptz-hint">{t`No presets yet. Turn the camera to the position you want, then press “Save current position”.`}</p> : null}
-      <AddPresetDialog
-        open={adding}
-        onOpenChange={setAdding}
-        save={async (name) => {
-          setPresets((await api.ptzSavePreset(cameraId, { name })).presets);
-          toast(t`Saved “${name}”`);
-        }}
-      />
+      <AddPresetDialog cameraId={cameraId} open={adding} onOpenChange={setAdding} onSaved={setPresets} />
     </div>
   );
 }
 
-function AddPresetDialog({ open, onOpenChange, save }: { open: boolean; onOpenChange: (o: boolean) => void; save: (name: string) => Promise<void> }) {
+function AddPresetDialog({ cameraId, open, onOpenChange, onSaved }: { cameraId: string; open: boolean; onOpenChange: (o: boolean) => void; onSaved: (presets: PtzPresetDto[]) => void }) {
   const { t } = useLingui();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const submit = async (e: FormEvent) => {
+  const save = useMutation({
+    mutationFn: (name: string) => api.ptzSavePreset(cameraId, { name }),
+    meta: { handlesError: true },
+    onSuccess: (res, name) => {
+      onSaved(res.presets);
+      toast(t`Saved “${name}”`);
+      onOpenChange(false);
+    },
+    onError: (err) => setError(errMsg(err)),
+  });
+  const busy = save.isPending;
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     const value = input.current!.value.trim();
     if (!value) {
@@ -150,15 +158,7 @@ function AddPresetDialog({ open, onOpenChange, save }: { open: boolean; onOpenCh
       return input.current!.focus();
     }
     setError("");
-    setBusy(true);
-    try {
-      await save(value);
-      onOpenChange(false);
-    } catch (err) {
-      setError(errMsg(err));
-    } finally {
-      setBusy(false);
-    }
+    save.mutate(value);
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={t`Save current position`} initialFocus={input} onClosed={() => setError("")}>

@@ -1,11 +1,11 @@
 import { useLingui } from "@lingui/react/macro";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import type { EventDto, ExportDto, SegmentDto } from "../../../src/api-types.ts";
 import type { CameraId } from "../../../src/types.ts";
 import { MAX_EXPORT_MS, planExport } from "../../../src/export/plan.ts";
 import { api } from "../../api.ts";
-import { browserTz, errMsg, formatBytes, formatClock, formatDuration } from "../../format.ts";
+import { browserTz, formatBytes, formatClock, formatDuration } from "../../format.ts";
 import { EVENT_PREROLL_MS } from "../../timeline/model.ts";
 import type { Range, Timeline } from "../../timeline/timeline.ts";
 import { Button } from "../../ui/Button.tsx";
@@ -38,7 +38,6 @@ export function useExport(o: ExportOptions) {
   const qc = useQueryClient();
   const [selecting, setSelectingState] = useState(false);
   const [sel, setSel] = useState<Range | null>(null);
-  const [sending, setSending] = useState(false);
   const jobsQ = useQuery({ ...exportsQuery, refetchInterval: (q) => (q.state.data?.some(active) ? POLL_MS : false) });
   const jobs = jobsQ.data ?? [];
 
@@ -96,42 +95,42 @@ export function useExport(o: ExportOptions) {
     setSel(next);
   }
 
-  async function start() {
-    if (!sel) return;
-    setSending(true);
-    try {
-      addJob(await api.createExport({ cameraId: o.cameraId, startMs: sel.start, endMs: sel.end, tz: browserTz() }));
+  const createJob = (r: { cameraId: CameraId; startMs: number; endMs: number }) => api.createExport({ ...r, tz: browserTz() });
+
+  const startSelection = useMutation({
+    mutationFn: createJob,
+    onSuccess: (job) => {
+      addJob(job);
       setSel(null);
       setSelectingState(false);
-    } catch (e) {
-      toast(errMsg(e), "error");
-    } finally {
-      setSending(false);
-    }
-  }
+    },
+  });
+  const sending = startSelection.isPending;
+  const start = () => {
+    if (sel) startSelection.mutate({ cameraId: o.cameraId, startMs: sel.start, endMs: sel.end });
+  };
 
-  async function remove(id: string) {
-    qc.setQueryData(exportsQuery.queryKey, (list) => list?.filter((j) => j.id !== id));
-    try {
-      await api.deleteExport(id);
-    } catch (e) {
-      toast(errMsg(e), "error");
-    }
-  }
+  const removeJob = useMutation({
+    mutationFn: (id: string) => api.deleteExport(id),
+    onMutate: (id) => qc.setQueryData(exportsQuery.queryKey, (list) => list?.filter((j) => j.id !== id)),
+  });
+  const remove = (id: string) => removeJob.mutate(id);
 
-  async function exportEvent(e: EventDto) {
+  const eventJob = useMutation({
+    mutationFn: createJob,
+    onSuccess: (job) => {
+      addJob(job);
+      toast(t`Added to exports. You can download it below the timeline when it's done.`);
+    },
+  });
+  function exportEvent(e: EventDto) {
     const startMs = e.startMs - EVENT_PREROLL_MS;
     let endMs = (e.endMs ?? Date.now()) + EVENT_PREROLL_MS;
     if (endMs - startMs > MAX_EXPORT_MS) {
       endMs = startMs + MAX_EXPORT_MS;
       toast(t`The event is longer than 2 hours. Only the first 2 hours are exported.`);
     }
-    try {
-      addJob(await api.createExport({ cameraId: e.cameraId, startMs, endMs, tz: browserTz() }));
-      toast(t`Added to exports. You can download it below the timeline when it's done.`);
-    } catch (err) {
-      toast(errMsg(err), "error");
-    }
+    eventJob.mutate({ cameraId: e.cameraId, startMs, endMs });
   }
 
   return {
@@ -200,7 +199,7 @@ export function ExportPick({ ui }: { ui: ExportUi }) {
           {t`Set end`}
         </Button>
         <span className="ex-grow" />
-        <Button small variant="primary" icon="download" disabled={!plan?.ok || ui.sending} onClick={() => void ui.start()}>
+        <Button small variant="primary" icon="download" disabled={!plan?.ok || ui.sending} onClick={() => ui.start()}>
           {t`Export`}
         </Button>
       </div>
@@ -266,7 +265,7 @@ export function ExportJobs({ ui }: { ui: ExportUi }) {
     <section className="ex ex-list" hidden={ui.jobs.length === 0} aria-label={t`Exported videos`}>
       <ul className="ex-jobs" aria-label={t`Export jobs`}>
         {ui.jobs.map((j) => (
-          <JobRow key={j.id} job={j} onRemove={(id) => void ui.remove(id)} />
+          <JobRow key={j.id} job={j} onRemove={ui.remove} />
         ))}
       </ul>
       <p className="hint ex-keep" hidden={!ui.jobs.some((j) => j.state === "done")}>

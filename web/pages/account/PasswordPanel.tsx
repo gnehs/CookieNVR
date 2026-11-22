@@ -21,6 +21,7 @@ export function PasswordPanel() {
       form.current?.reset();
       toast(t`Password changed`);
     },
+    meta: { handlesError: true },
     onError: (e) => setError(errMsg(e)),
   });
 

@@ -1,11 +1,11 @@
 import { plural, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ReactNode } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { camerasQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
-import { errMsg, formatBytes } from "../../format.ts";
+import { formatBytes } from "../../format.ts";
 import { SwitchRow } from "../../ui/controls.tsx";
 import { Dialog } from "../../ui/Dialog.tsx";
 import { toast } from "../../ui/toast.tsx";
@@ -47,6 +47,15 @@ export function useDeleteCamera(): { dialog: ReactNode; remove: (cam: CameraDto)
   const [open, setOpen] = useState(false);
   const [purge, setPurge] = useState(false);
   const confirmBtn = useRef<HTMLButtonElement>(null);
+  const del = useMutation({
+    mutationFn: ({ cam, purge }: { cam: CameraDto; purge: boolean }) => api.deleteCamera(cam.id, purge),
+    onSuccess: (_r, { cam }) => {
+      qc.setQueryData(camerasQuery.queryKey, (list) => list?.filter((c) => c.id !== cam.id));
+      void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
+      const name = cam.config.name;
+      toast(t`Deleted "${name}"`);
+    },
+  });
 
   const answer = (v: boolean | null) => {
     ask?.resolve(v);
@@ -64,17 +73,10 @@ export function useDeleteCamera(): { dialog: ReactNode; remove: (cam: CameraDto)
       setOpen(true);
     });
     if (chosen === null) return false;
-    try {
-      await api.deleteCamera(cam.id, chosen);
-    } catch (e) {
-      toast(errMsg(e), "error");
-      return false;
-    }
-    qc.setQueryData(camerasQuery.queryKey, (list) => list?.filter((c) => c.id !== cam.id));
-    void qc.invalidateQueries({ queryKey: systemQuery.queryKey });
-    const name = cam.config.name;
-    toast(t`Deleted "${name}"`);
-    return true;
+    return del.mutateAsync({ cam, purge: chosen }).then(
+      () => true,
+      () => false,
+    );
   };
 
   const askName = ask?.name ?? "";

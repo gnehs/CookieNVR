@@ -29,7 +29,6 @@ function List({ sessions }: { sessions: SessionDto[] }) {
       toast(t`Signed out that device`);
       return qc.invalidateQueries({ queryKey: sessionsQuery.queryKey });
     },
-    onError: (e) => toast(e instanceof Error ? e.message : String(e), "error"),
   });
   // 目前這台置頂；其他裝置用瀏覽器與系統命名，同名時在副標題補上來源位址分辨
   const list = sessions.slice().sort((a, b) => Number(b.current) - Number(a.current) || b.lastSeenAt - a.lastSeenAt);

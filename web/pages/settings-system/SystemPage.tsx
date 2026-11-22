@@ -37,6 +37,7 @@ function GeneralForm({ settings }: { settings: Settings }) {
 
   const save = useMutation({
     mutationFn: () => api.updateSettings({ siteName: name.trim(), rtsp: { externalEnabled: rtsp }, homekit: { ...settings.homekit, enabled: homekit } }),
+    meta: { handlesError: true },
     onError: (e) => setError(errMsg(e)),
     onSuccess: (res) => {
       qc.setQueryData(settingsQuery.queryKey, res);

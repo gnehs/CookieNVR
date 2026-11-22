@@ -1,6 +1,6 @@
 import { plural, t as tc } from "@lingui/core/macro";
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { i18n } from "@lingui/core";
 import { useEffect, useRef, useState } from "react";
@@ -121,7 +121,10 @@ function heroHint(s: StateSensorDto): string {
 function TrainCard({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
   const { t } = useLingui();
   const qc = useQueryClient();
-  const [starting, setStarting] = useState(false);
+  const train = useMutation({
+    mutationFn: () => api.trainState(sensor.id),
+    onSuccess: (s) => onSensorMessage(qc, s),
+  });
   const status = trainStatus(sensor);
   const job = sensor.job;
   const training = job?.kind === "train" && (job.state === "queued" || job.state === "running") ? job : null;
@@ -130,21 +133,10 @@ function TrainCard({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) 
   const needs = needsText(sensor);
   const m = sensor.model;
   const result = m ? resultSummary(m) : null;
-  const busy = jobActive(sensor) || starting;
+  const busy = jobActive(sensor) || train.isPending;
   const trainedAt = m ? formatDateTime(m.trainedAt) : "";
   const trainedCount = m ? m.counts.reduce((n, c) => n + c.count, 0) : 0;
   const primary = status !== "current";
-
-  const train = async () => {
-    setStarting(true);
-    try {
-      onSensorMessage(qc, await api.trainState(sensor.id));
-    } catch (e) {
-      toast(errMsg(e), "error");
-    } finally {
-      setStarting(false);
-    }
-  };
 
   return (
     <section className="card st-train" aria-labelledby="train-title">
@@ -152,7 +144,7 @@ function TrainCard({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) 
         <h2 id="train-title" className="card-title">
           {m ? t`Detection accuracy` : t`Training`}
         </h2>
-        <Button variant={primary ? "primary" : undefined} small={!primary} icon="refresh" iconSize={15} disabled={busy || !sensor.trainable} onClick={() => void train()}>
+        <Button variant={primary ? "primary" : undefined} small={!primary} icon="refresh" iconSize={15} disabled={busy || !sensor.trainable} onClick={() => train.mutate()}>
           {m ? t`Retrain` : t`Start training`}
         </Button>
       </header>
@@ -308,8 +300,26 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
   const [draft, setDraft] = useState(base);
   const [cropOpen, setCropOpen] = useState(false);
   const [error, setError] = useState<{ message: string; index?: number | null } | null>(null);
-  const [saving, setSaving] = useState(false);
   const dirty = !sameDraft(draft, base);
+  const save = useMutation({
+    mutationFn: async ({ plan, original, common }: { plan: ReturnType<typeof planClassEdit>; original: string[]; common: Omit<StateSensorDto["config"], "classes"> }) => {
+      if (plan.removed.length) onSensorMessage(qc, await api.updateState(sensor.id, { ...sensor.config, classes: original.filter((x) => !plan.removed.includes(x)) }));
+      for (const r of plan.renames) onSensorMessage(qc, await api.renameStateClass(sensor.id, r.from, r.to));
+      const saved = await api.updateState(sensor.id, { ...common, classes: plan.classes });
+      onSensorMessage(qc, saved);
+      return saved;
+    },
+    meta: { handlesError: true },
+    onSuccess: (saved) => {
+      const next = draftOf(saved);
+      setBase(next);
+      setDraft(next);
+      setCropOpen(false);
+      toast(t`Saved`);
+    },
+    onError: (e) => setError({ message: errMsg(e) }),
+  });
+  const saving = save.isPending;
   // 別處改了設定（例如匯入時加了類別）：還沒動過就跟著更新
   const seen = useRef(JSON.stringify(sensor.config));
   useEffect(() => {
@@ -327,7 +337,7 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
   };
   const counts = new Map(sensor.images.labeled.map((l) => [l.label, l.count]));
 
-  const save = async () => {
+  const submit = async () => {
     const n = sensorNameError(draft.name);
     if (n) return setError({ message: n });
     const c = classesError(draft.rows.map((r) => r.name));
@@ -345,23 +355,8 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
     });
     if (plan.removed.length && !(await confirmDialog(t`Delete “${removedList}”?`, lost ? lostMessage : t`After deleting classes, retrain to resume detection.`, { confirmLabel: t`Delete and save`, danger: true }))) return;
     if (!plan.removed.length && added && sensor.model && !(await confirmDialog(t`Add a class?`, t`After adding a class, label pictures for it and retrain. Detection stays paused until then.`, { confirmLabel: t`Save` }))) return;
-    setSaving(true);
-    try {
-      const common = { name: draft.name.trim(), crop: draft.crop, threshold: draft.threshold, intervalSec: draft.intervalSec, onMotion: draft.onMotion, enabled: draft.enabled };
-      if (plan.removed.length) onSensorMessage(qc, await api.updateState(sensor.id, { ...sensor.config, classes: original.filter((x) => !plan.removed.includes(x)) }));
-      for (const r of plan.renames) onSensorMessage(qc, await api.renameStateClass(sensor.id, r.from, r.to));
-      const saved = await api.updateState(sensor.id, { ...common, classes: plan.classes });
-      onSensorMessage(qc, saved);
-      const next = draftOf(saved);
-      setBase(next);
-      setDraft(next);
-      setCropOpen(false);
-      toast(t`Saved`);
-    } catch (e) {
-      setError({ message: errMsg(e) });
-    } finally {
-      setSaving(false);
-    }
+    const common = { name: draft.name.trim(), crop: draft.crop, threshold: draft.threshold, intervalSec: draft.intervalSec, onMotion: draft.onMotion, enabled: draft.enabled };
+    save.mutate({ plan, original, common });
   };
 
   return (
@@ -428,7 +423,7 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
         <Button disabled={!dirty || saving} onClick={() => (setDraft(base), setError(null), setCropOpen(false))}>
           <Trans>Revert</Trans>
         </Button>
-        <Button variant="primary" disabled={!dirty} busy={saving} onClick={() => void save()}>
+        <Button variant="primary" disabled={!dirty} busy={saving} onClick={() => void submit()}>
           <Trans>Save</Trans>
         </Button>
       </div>
@@ -456,17 +451,17 @@ function Danger({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
   const sensorName = sensor.config.name;
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const remove = async () => {
-    const ok = await confirmDialog(t`Delete “${sensorName}”?`, t`Labeled pictures, training results and the change history will all be deleted. This can’t be undone.`, { confirmLabel: t`Delete`, danger: true });
-    if (!ok) return;
-    try {
-      await api.deleteState(sensor.id);
+  const del = useMutation({
+    mutationFn: () => api.deleteState(sensor.id),
+    onSuccess: () => {
       onSensorRemoved(qc, sensor.id);
       toast(t`Deleted “${sensorName}”`);
       void navigate({ to: "/settings/cameras/$id", params: { id: cam.id }, replace: true });
-    } catch (e) {
-      toast(errMsg(e), "error");
-    }
+    },
+  });
+  const remove = async () => {
+    const ok = await confirmDialog(t`Delete “${sensorName}”?`, t`Labeled pictures, training results and the change history will all be deleted. This can’t be undone.`, { confirmLabel: t`Delete`, danger: true });
+    if (ok) del.mutate();
   };
   return (
     <section className="danger-zone">

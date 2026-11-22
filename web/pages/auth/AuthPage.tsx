@@ -1,5 +1,5 @@
 import { useLingui } from "@lingui/react/macro";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useRef, useState, type FormEvent } from "react";
 import type { MeDto } from "../../../src/api-types.ts";
@@ -14,12 +14,18 @@ function AuthForm(props: { title: string; intro?: string; submitLabel: string; c
   const { t } = useLingui();
   const siteName = useSiteName();
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const submitting = useMutation({
+    mutationFn: ({ username, password }: { username: string; password: string }) => props.onSubmit(username, password),
+    meta: { handlesError: true },
+    onError: (err) => setError(errMsg(err)),
+  });
+  // 成功後馬上換頁，按鈕維持停用到畫面換掉
+  const busy = submitting.isPending || submitting.isSuccess;
   const username = useRef<HTMLInputElement>(null);
   const password = useRef<HTMLInputElement>(null);
   const confirm = useRef<HTMLInputElement>(null);
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     setError("");
     const u = username.current!.value.trim();
@@ -35,13 +41,7 @@ function AuthForm(props: { title: string; intro?: string; submitLabel: string; c
         return confirm.current!.focus();
       }
     }
-    setBusy(true);
-    try {
-      await props.onSubmit(u, p);
-    } catch (err) {
-      setError(errMsg(err));
-      setBusy(false);
-    }
+    submitting.mutate({ username: u, password: p });
   };
 
   return (

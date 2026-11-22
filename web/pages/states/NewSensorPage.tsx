@@ -1,7 +1,7 @@
 import type { MessageDescriptor } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { CameraDto, CropBox, FrigateConfigResultDto } from "../../../src/api-types.ts";
@@ -26,8 +26,6 @@ const STEPS: readonly MessageDescriptor[] = [msg`What to detect`, msg`Box the ar
 /** 從 Frigate 設定帶進來的值：建立時一起送出 */
 type Tuning = Pick<FrigateConfigResultDto["sensors"][number], "threshold" | "intervalSec" | "onMotion">;
 
-type Phase = { kind: "editing" } | { kind: "creating" } | { kind: "uploading"; progress: number };
-
 /** 新增狀態感應器：三步（名稱與類別 → 框區域 → 訓練畫面的來源），建立後直接到感應器頁標記 */
 export function NewSensorPage({ cameraId }: { cameraId: string }) {
   const { t } = useLingui();
@@ -51,7 +49,8 @@ function Wizard({ cam }: { cam: CameraDto }) {
   const [source, setSource] = useState<Source>(cam.config.record.enabled ? "recording" : "import");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<{ message: string; field?: "name" | "classes" | "file"; index?: number | null } | null>(null);
-  const [phase, setPhase] = useState<Phase>({ kind: "editing" });
+  // 建立之後上傳 Frigate 資料集的進度（0 到 1）；null 表示還沒到上傳
+  const [uploading, setUploading] = useState<number | null>(null);
   const head = useRef<HTMLHeadingElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
   const first = useRef(true);
@@ -78,11 +77,37 @@ function Wizard({ cam }: { cam: CameraDto }) {
     return true;
   };
 
-  const busy = phase.kind !== "editing";
+  const create = useMutation({
+    mutationFn: async () => {
+      const created = await api.createState({
+        cameraId: cam.id,
+        config: { name: name.trim(), classes: rows.map((r) => r.name.trim()), crop, ...(tuning ?? {}) },
+        collect: source === "recording",
+      });
+      putSensor(qc, created);
+      if (source !== "import" || !file) return created;
+      setUploading(0);
+      try {
+        const imported = await api.importStateDataset(created.id, file, setUploading);
+        putSensor(qc, imported);
+        return imported;
+      } catch (err) {
+        const sensorName = created.config.name;
+        const reason = errMsg(err);
+        toast(t`“${sensorName}” was created, but the import failed: ${reason}`, "error");
+        return created;
+      }
+    },
+    meta: { handlesError: true },
+    onSuccess: (sensor) => void navigate({ to: "/settings/cameras/$id/states/$sensorId", params: { id: cam.id, sensorId: sensor.id }, replace: true }),
+    onError: (err) => setError({ message: errMsg(err) }),
+  });
+  // 成功後馬上換頁，按鈕維持忙碌到畫面換掉
+  const busy = create.isPending || create.isSuccess;
   const trimmedName = name.trim();
-  const uploadPct = phase.kind === "uploading" ? Math.round(phase.progress * 100) : 0;
+  const uploadPct = Math.round((uploading ?? 0) * 100);
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
     if (step < 2) {
@@ -90,33 +115,7 @@ function Wizard({ cam }: { cam: CameraDto }) {
       return;
     }
     if (!checkStep(2)) return;
-    setPhase({ kind: "creating" });
-    try {
-      const created = await api.createState({
-        cameraId: cam.id,
-        config: { name: name.trim(), classes: rows.map((r) => r.name.trim()), crop, ...(tuning ?? {}) },
-        collect: source === "recording",
-      });
-      putSensor(qc, created);
-      let sensor = created;
-      if (source === "import" && file) {
-        setPhase({ kind: "uploading", progress: 0 });
-        try {
-          sensor = await api.importStateDataset(created.id, file, (progress) => setPhase({ kind: "uploading", progress }));
-          putSensor(qc, sensor);
-        } catch (err) {
-          {
-            const sensorName = created.config.name;
-            const reason = errMsg(err);
-            toast(t`“${sensorName}” was created, but the import failed: ${reason}`, "error");
-          }
-        }
-      }
-      void navigate({ to: "/settings/cameras/$id/states/$sensorId", params: { id: cam.id, sensorId: sensor.id }, replace: true });
-    } catch (err) {
-      setError({ message: errMsg(err) });
-      setPhase({ kind: "editing" });
-    }
+    create.mutate();
   };
 
   return (
@@ -225,7 +224,7 @@ function Wizard({ cam }: { cam: CameraDto }) {
               </Button>
             ) : null}
             <Button variant="primary" type="submit" busy={busy}>
-              <span>{phase.kind === "uploading" ? t`Uploading ${uploadPct}%` : phase.kind === "creating" ? t`Creating…` : step < 2 ? t`Next` : t`Create and start labeling`}</span>
+              <span>{uploading !== null ? t`Uploading ${uploadPct}%` : busy ? t`Creating…` : step < 2 ? t`Next` : t`Create and start labeling`}</span>
             </Button>
           </div>
         </section>
@@ -240,22 +239,18 @@ function FrigatePaste({ cameraName, tuning, onApply }: { cameraName: string; tun
   const [yaml, setYaml] = useState("");
   const [found, setFound] = useState<FrigateConfigResultDto["sensors"] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const foundCount = found?.length ?? 0;
-  const read = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const r = await api.frigateConfig(yaml);
+  const read = useMutation({
+    mutationFn: () => api.frigateConfig(yaml),
+    meta: { handlesError: true },
+    onSuccess: (r) => {
       setFound(r.sensors);
       if (r.sensors.length === 1) onApply(r.sensors[0]!);
       else onApply(pickFrigateSensor(r, cameraName));
-    } catch (e) {
-      setError(errMsg(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+    },
+    onError: (e) => setError(errMsg(e)),
+  });
+  const busy = read.isPending;
   return (
     <details className="more frigate-paste">
       <summary>{t`Import from Frigate settings`}</summary>
@@ -263,7 +258,15 @@ function FrigatePaste({ cameraName, tuning, onApply }: { cameraName: string; tun
         <p className="hint"><Trans>Paste the classification section of your Frigate config to import the box and detection settings.</Trans></p>
         <textarea rows={6} spellCheck={false} placeholder={"classification:\n  custom:\n    garage:\n      state_config:\n        cameras:\n          …"} value={yaml} onChange={(e) => setYaml(e.currentTarget.value)} aria-label={t`Frigate settings`} />
         <div className="frigate-actions">
-          <Button small onClick={() => void read()} disabled={!yaml.trim()} busy={busy}>
+          <Button
+            small
+            onClick={() => {
+              setError(null);
+              read.mutate();
+            }}
+            disabled={!yaml.trim()}
+            busy={busy}
+          >
             <Trans>Import</Trans>
           </Button>
           {error ? <span className="form-error">{error}</span> : tuning ? <span className="hint ok-text">{t`Imported`}</span> : null}

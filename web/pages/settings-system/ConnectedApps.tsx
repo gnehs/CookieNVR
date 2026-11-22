@@ -29,7 +29,6 @@ function TokenList() {
       toast(t`Revoked "${name}"`);
       return qc.invalidateQueries({ queryKey: tokensQuery.queryKey });
     },
-    onError: (e) => toast(errMsg(e), "error"),
   });
   if (q.isPending) return <Spinner />;
   if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />;
@@ -84,6 +83,7 @@ export function ConnectedApps() {
       setCreated(t);
       return qc.invalidateQueries({ queryKey: tokensQuery.queryKey });
     },
+    meta: { handlesError: true },
     onError: (e) => setError(errMsg(e)),
   });
 

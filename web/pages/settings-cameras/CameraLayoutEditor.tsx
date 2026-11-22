@@ -19,7 +19,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import { plural } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { CameraDto, CameraGroupDto } from "../../../src/api-types.ts";
@@ -83,23 +83,29 @@ export function CameraLayoutEditor({ cams, onRemove }: { cams: CameraDto[]; onRe
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
-  const save = async (next: Layout) => {
-    const body = arrangementOf(next);
-    if (JSON.stringify(body) === JSON.stringify(arrangementOf(server))) return;
-    const applied = applyLayout(cams, groups, next);
-    qc.setQueryData(camerasQuery.queryKey, applied.cams);
-    qc.setQueryData(cameraGroupsQuery.queryKey, applied.groups);
-    try {
+  const arrange = useMutation({
+    mutationFn: async ({ next }: { next: Layout; done?: string }) => {
+      const body = arrangementOf(next);
+      if (JSON.stringify(body) === JSON.stringify(arrangementOf(server))) return;
+      const applied = applyLayout(cams, groups, next);
+      qc.setQueryData(camerasQuery.queryKey, applied.cams);
+      qc.setQueryData(cameraGroupsQuery.queryKey, applied.groups);
       const res = await api.arrangeCameras(body);
       qc.setQueryData(camerasQuery.queryKey, res.cameras);
       qc.setQueryData(cameraGroupsQuery.queryKey, res.groups);
-    } catch (e) {
+    },
+    meta: { handlesError: true },
+    onSuccess: (_r, { done }) => {
+      if (done) toast(done);
+    },
+    onError: (e) => {
       const reason = errMsg(e);
       toast(t`The arrangement wasn't saved: ${reason}`, "error");
       void qc.invalidateQueries({ queryKey: camerasQuery.queryKey });
       void qc.invalidateQueries({ queryKey: cameraGroupsQuery.queryKey });
-    }
-  };
+    },
+  });
+  const save = (next: Layout, done?: string) => arrange.mutate({ next, done });
 
   const boxOfKey = (l: Layout, id: UniqueIdentifier): BoxId | null => (isBoxKey(id) ? (String(id).slice(4) as BoxId) : boxOf(l, id as CameraId));
 
@@ -129,14 +135,14 @@ export function CameraLayoutEditor({ cams, onRemove }: { cams: CameraDto[]; onRe
       const from = ids.indexOf(String(active.id));
       const to = ids.indexOf(String(over.id));
       if (from < 0 || to < 0) return;
-      void save({ ...base, groups: arrayMove(base.groups, from, to) });
+      save({ ...base, groups: arrayMove(base.groups, from, to) });
       return;
     }
     const box = boxOf(base, active.id as CameraId);
     if (box === null) return;
     const list = base.boxes[box]!;
     const to = isBoxKey(over.id) ? list.length - 1 : list.indexOf(over.id as CameraId);
-    void save(to < 0 ? base : moveCamera(base, active.id as CameraId, box, to));
+    save(to < 0 ? base : moveCamera(base, active.id as CameraId, box, to));
   };
 
   const onDragCancel = () => {
@@ -177,20 +183,18 @@ export function CameraLayoutEditor({ cams, onRemove }: { cams: CameraDto[]; onRe
     const next = moveCamera(server, cam.id, box, Infinity);
     const name = cam.config.name;
     const to = boxName(box);
-    void save(next).then(() => toast(t`Moved "${name}" to "${to}"`));
+    save(next, t`Moved "${name}" to "${to}"`);
   };
 
-  const removeGroup = async (g: CameraGroupDto) => {
-    try {
-      await api.deleteCameraGroup(g.id);
+  const removeGroup = useMutation({
+    mutationFn: (g: CameraGroupDto) => api.deleteCameraGroup(g.id),
+    onSuccess: (_r, g) => {
       qc.setQueryData(cameraGroupsQuery.queryKey, (list) => list?.filter((x) => x.id !== g.id));
       qc.setQueryData(camerasQuery.queryKey, (list) => list?.map((c) => (c.groupId === g.id ? { ...c, groupId: null } : c)));
       const name = g.name;
       toast(t`Deleted group "${name}". Its cameras were moved to Ungrouped.`);
-    } catch (e) {
-      toast(errMsg(e), "error");
-    }
-  };
+    },
+  });
 
   const hasGroups = layout.groups.length > 0;
   const totalCameras = cams.length;
@@ -244,7 +248,7 @@ export function CameraLayoutEditor({ cams, onRemove }: { cams: CameraDto[]; onRe
               const g = groupById.get(id);
               if (!g) return null;
               return (
-                <SortableGroup key={id} group={g} count={layout.boxes[id]?.length ?? 0} onRename={() => setNaming({ group: g })} onRemove={() => void removeGroup(g)}>
+                <SortableGroup key={id} group={g} count={layout.boxes[id]?.length ?? 0} onRename={() => setNaming({ group: g })} onRemove={() => removeGroup.mutate(g)}>
                   {rowsOf(id)}
                 </SortableGroup>
               );
@@ -255,21 +259,7 @@ export function CameraLayoutEditor({ cams, onRemove }: { cams: CameraDto[]; onRe
           {activeCam ? <RowBody cam={activeCam} overlay /> : activeGroup ? <GroupOverlay group={activeGroup} count={layout.boxes[activeGroup.id]?.length ?? 0} /> : null}
         </DragOverlay>
       </DndContext>
-      <GroupNameDialog
-        state={naming}
-        onClose={() => setNaming(null)}
-        onSubmit={async (name) => {
-          if (naming?.group) {
-            const g = await api.renameCameraGroup(naming.group.id, name);
-            qc.setQueryData(cameraGroupsQuery.queryKey, (list) => list?.map((x) => (x.id === g.id ? g : x)));
-          } else {
-            const g = await api.createCameraGroup(name);
-            qc.setQueryData(cameraGroupsQuery.queryKey, (list) => (list?.some((x) => x.id === g.id) ? list : [...(list ?? []), g]));
-            const groupName = g.name;
-            toast(t`Added group "${groupName}". Drag cameras into it.`);
-          }
-        }}
-      />
+      <GroupNameDialog state={naming} onClose={() => setNaming(null)} />
     </>
   );
 }
@@ -328,14 +318,13 @@ function SortableRow({ cam, moves, onRemove }: { cam: CameraDto; moves: MenuItem
   const c = cam.config;
   const name = c.name;
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: cam.id });
-  const toggle = async () => {
-    try {
-      putCamera(qc, await api.updateCamera(cam.id, { ...c, enabled: !c.enabled }));
-      toast(c.enabled ? t`Disabled "${name}"` : t`Enabled "${name}"`);
-    } catch (e) {
-      toast(errMsg(e), "error");
-    }
-  };
+  const toggle = useMutation({
+    mutationFn: (enabled: boolean) => api.updateCamera(cam.id, { ...c, enabled }),
+    onSuccess: (updated, enabled) => {
+      putCamera(qc, updated);
+      toast(enabled ? t`Enabled "${name}"` : t`Disabled "${name}"`);
+    },
+  });
   return (
     <div ref={setNodeRef} className="row-item cam-row" role="listitem" style={{ transform: CSS.Translate.toString(transform), transition }} data-placeholder={isDragging ? "" : undefined}>
       <RowBody
@@ -351,7 +340,7 @@ function SortableRow({ cam, moves, onRemove }: { cam: CameraDto; moves: MenuItem
           label={t`More actions for "${name}"`}
           items={[
             ...moves,
-            { label: c.enabled ? t`Disable` : t`Enable`, icon: "power", onSelect: () => void toggle() },
+            { label: c.enabled ? t`Disable` : t`Enable`, icon: "power", onSelect: () => toggle.mutate(!c.enabled) },
             { label: t`Delete`, icon: "trash", danger: true, onSelect: () => onRemove(cam) },
           ]}
         />
@@ -397,15 +386,32 @@ function GroupOverlay({ group, count }: { group: CameraGroupDto; count: number }
   );
 }
 
-function GroupNameDialog({ state, onClose, onSubmit }: { state: { group: CameraGroupDto | null } | null; onClose: () => void; onSubmit: (name: string) => Promise<void> }) {
+function GroupNameDialog({ state, onClose }: { state: { group: CameraGroupDto | null } | null; onClose: () => void }) {
   const { t } = useLingui();
+  const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
   // 關閉動畫播放時 state 已經是 null，標題與預設值沿用最後一次的
   const [shown] = useRetained(state);
   const renaming = shown?.group ?? null;
-  const submit = async (e: FormEvent) => {
+  const save = useMutation({
+    mutationFn: async (name: string) => {
+      if (renaming) {
+        const g = await api.renameCameraGroup(renaming.id, name);
+        qc.setQueryData(cameraGroupsQuery.queryKey, (list) => list?.map((x) => (x.id === g.id ? g : x)));
+      } else {
+        const g = await api.createCameraGroup(name);
+        qc.setQueryData(cameraGroupsQuery.queryKey, (list) => (list?.some((x) => x.id === g.id) ? list : [...(list ?? []), g]));
+        const groupName = g.name;
+        toast(t`Added group "${groupName}". Drag cameras into it.`);
+      }
+    },
+    meta: { handlesError: true },
+    onSuccess: onClose,
+    onError: (err) => setError(errMsg(err)),
+  });
+  const busy = save.isPending;
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     const value = input.current!.value.trim();
     if (!value) {
@@ -413,15 +419,7 @@ function GroupNameDialog({ state, onClose, onSubmit }: { state: { group: CameraG
       return input.current!.focus();
     }
     setError("");
-    setBusy(true);
-    try {
-      await onSubmit(value);
-      onClose();
-    } catch (err) {
-      setError(errMsg(err));
-    } finally {
-      setBusy(false);
-    }
+    save.mutate(value);
   };
   return (
     <Dialog open={state !== null} onOpenChange={(o) => !o && onClose()} title={renaming ? t`Rename group` : t`Add group`} initialFocus={input} onClosed={() => setError("")}>

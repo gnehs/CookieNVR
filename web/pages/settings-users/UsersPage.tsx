@@ -154,7 +154,7 @@ export function UsersPage() {
   const create = useMutation({
     mutationFn: (v: Submitted) => api.createUser(v.username, v.password, v.role),
     // 錯誤由對話框自己顯示
-    onError: () => {},
+    meta: { handlesError: true },
     onSuccess: (_u, v) => {
       toast(userAdded(v.username));
       return refresh();
@@ -162,7 +162,7 @@ export function UsersPage() {
   });
   const reset = useMutation({
     mutationFn: ({ user, password }: { user: UserDto; password: string }) => api.updateUser(user.id, { password }),
-    onError: () => {},
+    meta: { handlesError: true },
     onSuccess: (_r, { user }) => toast(passwordReset(user.username)),
   });
   const setRole = useMutation({

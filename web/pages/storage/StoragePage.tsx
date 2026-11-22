@@ -311,6 +311,7 @@ function RetentionForm({ settings, draft, setDraft }: { settings: SettingsDto; d
       void qc.invalidateQueries({ queryKey: ["system"] });
       toast(t`Recording and storage settings saved`);
     },
+    meta: { handlesError: true },
     onError: (e) => setError(errMsg(e)),
   });
 

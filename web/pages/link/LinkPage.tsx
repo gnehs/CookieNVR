@@ -131,6 +131,7 @@ function Ask({ code, app, ip, expiresIn, onDone }: { code: string; app: string; 
       void qc.invalidateQueries({ queryKey: ["tokens"] });
       onDone(d === "approve" ? "approved" : "denied");
     },
+    meta: { handlesError: true },
     onError: (e) => {
       if (e instanceof ApiError && e.status === 410) return onDone("expired");
       if (e instanceof ApiError && e.status === 409) return onDone("used");
