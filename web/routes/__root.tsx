@@ -1,7 +1,7 @@
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Navigate, Outlet, redirect, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { infoQuery } from "../data/session.ts";
+import { infoQuery, useSiteName } from "../data/session.ts";
 import { ConfirmHost } from "../ui/Dialog.tsx";
 import { ErrorBox } from "../ui/states.tsx";
 
@@ -17,7 +17,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function Root() {
-  const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+  const siteName = useSiteName();
   useEffect(() => {
     document.title = siteName;
   }, [siteName]);

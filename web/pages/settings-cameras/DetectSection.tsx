@@ -12,8 +12,8 @@ import { modeOf } from "../../detect/object-model.ts";
 import { areaToPos, formatArea, posToArea, posToThreshold, sensitivityOf, thresholdToPos, type Sensitivity } from "../../detect/model.ts";
 import { Choice, Segmented, Switch } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
-import { SettingRow } from "../../ui/SettingRow.tsx";
-import { Disclosure, Range } from "./bits.tsx";
+import { SettingRow, SettingsDisclosure } from "../../ui/SettingRow.tsx";
+import { Range } from "./bits.tsx";
 import { ObjectSection } from "./ObjectSection.tsx";
 import { ScoreMeter } from "./ScoreMeter.tsx";
 
@@ -201,7 +201,7 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
               </div>
             </div>
           </div>
-          <Disclosure
+          <SettingsDisclosure
             title={t`More options`}
             summary={`${d.source !== "onvif" ? `${t`Change area ${area}`} · ` : ""}${t`Waits ${cooldown} sec before ending`}`}
             defaultOpen={d.minArea !== DEFAULT_DETECT.minArea || d.cooldownSec !== DEFAULT_DETECT.cooldownSec}
@@ -234,7 +234,7 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
                 />
               }
             />
-          </Disclosure>
+          </SettingsDisclosure>
         </div>
       </div>
       {objects && d.enabled ? (

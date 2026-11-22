@@ -2,6 +2,7 @@ import { useLingui } from "@lingui/react/macro";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon.tsx";
 import { Select } from "./Select.tsx";
+import { usePresetChoice } from "./use-preset-choice.ts";
 
 /**
  * 設定頁的版面：一組設定是一張卡片，卡片裡每一列左邊是標題與一行說明、右邊是控制項。
@@ -97,10 +98,12 @@ export function SettingRow({ title, desc, control, toggle, wide, className, erro
 /**
  * 卡片裡收合的一段（例如進階設定）：收合時是一列，標題旁邊顯示目前的值；展開後裡面的設定列跟上面同一種樣式。
  * 原生 details（`.disclosure`），展開狀態與鍵盤操作是瀏覽器內建的。
+ * defaultOpen 用在有不是預設值的進階設定時一打開就展開，只在第一次畫出來時生效。
  */
-export function SettingsDisclosure({ title, summary, children }: { title: string; summary: string; children?: ReactNode }) {
+export function SettingsDisclosure({ title, summary, defaultOpen, children }: { title: string; summary: string; defaultOpen?: boolean; children?: ReactNode }) {
+  const [initial] = useState(defaultOpen);
   return (
-    <details className="disclosure set-disclosure">
+    <details className="disclosure set-disclosure" open={initial}>
       <summary>
         <span className="set-disclosure-text">
           <b>{title}</b>
@@ -135,10 +138,7 @@ export function PresetPicker({
   onChange: (v: number) => void;
 } & Partial<RowA11y>) {
   const { t } = useLingui();
-  const [picked, setPicked] = useState(presets.some((p) => p.value === initial) ? String(initial) : "custom");
-  const [custom, setCustom] = useState(String(initial));
-  const input = useRef<HTMLInputElement>(null);
-  const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
+  const { picked, custom, input, pick, type } = usePresetChoice({ presets, initial, onChange, selectOnFocus: true });
   return (
     <span className="preset-pick">
       <Select
@@ -148,19 +148,7 @@ export function PresetPicker({
         entries={[...presets.map((p) => ({ value: String(p.value), label: p.label })), "separator", { value: "custom", label: t`Custom…` }]}
         value={picked}
         display={(o) => (o.value === "custom" ? t`Custom` : o.label)}
-        onChange={(v) => {
-          setPicked(v);
-          if (v === "custom") {
-            requestAnimationFrame(() => {
-              input.current?.focus();
-              input.current?.select();
-            });
-            onChange(toNumber(custom));
-          } else {
-            setCustom(v);
-            onChange(Number(v));
-          }
-        }}
+        onChange={pick}
       />
       <span className="preset-custom-wrap" hidden={picked !== "custom"}>
         <input
@@ -172,10 +160,7 @@ export function PresetPicker({
           className="preset-custom"
           aria-label={t`${label} (custom, unit: ${unit})`}
           value={custom}
-          onChange={(e) => {
-            setCustom(e.currentTarget.value);
-            onChange(toNumber(e.currentTarget.value));
-          }}
+          onChange={(e) => type(e.currentTarget.value)}
         />
         <span className="unit">{unit}</span>
       </span>

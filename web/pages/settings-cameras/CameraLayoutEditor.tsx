@@ -36,6 +36,7 @@ import { Icon } from "../../ui/Icon.tsx";
 import { MenuButton, type MenuItem } from "../../ui/Menu.tsx";
 import { Badge } from "../../ui/Panel.tsx";
 import { toast } from "../../ui/toast.tsx";
+import { useRetained } from "../../ui/use-retained.ts";
 import { putCamera } from "./cache.ts";
 
 /*
@@ -402,8 +403,7 @@ function GroupNameDialog({ state, onClose, onSubmit }: { state: { group: CameraG
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   // 關閉動畫播放時 state 已經是 null，標題與預設值沿用最後一次的
-  const [shown, setShown] = useState(state);
-  if (state && state !== shown) setShown(state);
+  const [shown] = useRetained(state);
   const renaming = shown?.group ?? null;
   const submit = async (e: FormEvent) => {
     e.preventDefault();

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { camerasQuery } from "../data/queries.ts";
-import { infoQuery, logout, useMe } from "../data/session.ts";
+import { logout, useMe, useSiteName } from "../data/session.ts";
 import { usePosterPreload } from "../live/posters.ts";
 import { useHealth } from "../data/use-health.ts";
 import { Icon } from "../ui/Icon.tsx";
@@ -39,7 +39,7 @@ export function Shell() {
   // 換頁整頁重新掛載，狀態不會帶到下一頁。key 跟著「已經畫出來的」頁面走：location 在新頁面的程式碼載完前就變了，拿它當 key 會讓舊頁面多掛載一次
   const shown = useRouterState({ select: (s) => s.matches.at(-1)?.pathname });
   const active = sectionOf(path);
-  const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+  const siteName = useSiteName();
   const cams = useQuery(camerasQuery).data;
   usePosterPreload(cams?.filter((c) => c.config.enabled).map((c) => c.id) ?? []);
   const [collapsed, setCollapsed] = useSidebarCollapsed();

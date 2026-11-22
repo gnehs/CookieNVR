@@ -7,7 +7,7 @@ import type { IconName } from "./icons.ts";
  * 表單裡可以收合的一張卡片：標題列是 `<summary>`（展開狀態由瀏覽器提供），收合時顯示一行摘要，
  * 右邊是錯誤的標示。以共用的 details.disclosure 為基礎，展開動畫一致。
  */
-export function FormCard(props: { title: string; icon: IconName; defaultOpen?: boolean; summary?: string; error?: boolean; className?: string; children?: ReactNode }) {
+export function FormCard(props: { title: string; icon: IconName; defaultOpen?: boolean; summary?: string; error?: boolean; dirty?: boolean; className?: string; children?: ReactNode }) {
   const { t } = useLingui();
   return (
     <details className={`disclosure fcard${props.className ? ` ${props.className}` : ""}`} open={props.defaultOpen} data-error={props.error ? "" : undefined}>
@@ -24,6 +24,12 @@ export function FormCard(props: { title: string; icon: IconName; defaultOpen?: b
             <Icon name="alert-circle" size={14} />
             {t`Has errors`}
           </span>
+          {props.dirty === undefined ? null : (
+            <span className="fcard-flag dirty" hidden={!props.dirty}>
+              <i aria-hidden="true" />
+              {t`Unsaved`}
+            </span>
+          )}
         </span>
         <span className="fcard-chevron">
           <Icon name="down" size={18} />

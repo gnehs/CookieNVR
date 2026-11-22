@@ -2,8 +2,9 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { Dialog as Base } from "@base-ui/react/dialog";
 import { Drawer } from "@base-ui/react/drawer";
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { createContext, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { PHONE, useMedia } from "./useMedia.ts";
+import { useRetained } from "./use-retained.ts";
 
 export interface DialogProps {
   open: boolean;
@@ -181,8 +182,7 @@ export function ConfirmHost() {
     () => pending,
   );
   // 關閉動畫期間保留最後一次的內容
-  const [shown, setShown] = useState<ConfirmRequest | null>(null);
-  if (req && req !== shown) setShown(req);
+  const [shown, clearShown] = useRetained(req);
   const confirmBtn = useRef<HTMLButtonElement>(null);
   const answer = (ok: boolean) => {
     if (!req) return;
@@ -191,7 +191,7 @@ export function ConfirmHost() {
     emit();
   };
   return (
-    <Dialog open={req !== null} onOpenChange={(o) => !o && answer(false)} title={shown?.title ?? ""} initialFocus={confirmBtn} onClosed={() => setShown(null)}>
+    <Dialog open={req !== null} onOpenChange={(o) => !o && answer(false)} title={shown?.title ?? ""} initialFocus={confirmBtn} onClosed={clearShown}>
       <p className="dlg-text">{shown?.message}</p>
       <div className="dlg-actions">
         <button className="btn" type="button" onClick={() => answer(false)}>

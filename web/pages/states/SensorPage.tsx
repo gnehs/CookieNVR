@@ -17,6 +17,7 @@ import { onSensorMessage, onSensorRemoved, stateChangesQuery, statesQuery } from
 import { Button, CopyButton } from "../../ui/Button.tsx";
 import { Choice, Switch } from "../../ui/controls.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
+import { FormCard } from "../../ui/FormCard.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { SettingRow } from "../../ui/SettingRow.tsx";
 import { ErrorBox, PageError, Spinner } from "../../ui/states.tsx";
@@ -364,95 +365,74 @@ function Settings({ cam, sensor }: { cam: CameraDto; sensor: StateSensorDto }) {
   };
 
   return (
-    <details className="disclosure fcard st-settings">
-      <summary>
-        <span className="fcard-ico">
-          <Icon name="settings" size={18} />
-        </span>
-        <span className="fcard-text">
-          <b>{t`Settings`}</b>
-          <small className="fcard-sub">{settingsSummary(sensor)}</small>
-        </span>
-        <span className="fcard-flags">
-          <span className="fcard-flag dirty" hidden={!dirty}>
-            <i aria-hidden="true" />
-            <Trans>Unsaved</Trans>
-          </span>
-        </span>
-        <span className="fcard-chevron">
-          <Icon name="down" size={18} />
-        </span>
-      </summary>
-      <div className="fcard-body">
-        <SettingRow title={t`Recognition`} desc={t`When off, labels and training results are kept; detection just pauses.`} toggle control={(a) => <Switch {...a} checked={draft.enabled} onChange={(enabled) => set({ enabled })} />} />
-        <SettingRow title={t`Name`} wide control={(a) => <input {...a} type="text" autoComplete="off" spellCheck={false} maxLength={MAX_NAME} value={draft.name} onChange={(e) => set({ name: e.currentTarget.value })} />} />
-        <div className="set-block">
-          <p className="set-row-title">{t`Classes`}</p>
-          <p className="set-row-desc st-cls-desc"><Trans>Renaming doesn’t need retraining; adding or deleting a class does.</Trans></p>
-          <ClassesEditor rows={draft.rows} onRows={(rows) => set({ rows })} invalid={error?.index ?? null} counts={counts} />
-        </div>
-        <div className="set-block">
-          <div className="st-crop-row">
-            <div>
-              <p className="set-row-title">{t`Detection area`}</p>
-              <p className="set-row-desc"><Trans>After moving the area, the labeled pictures still show the old area. It’s best to pick new pictures and retrain.</Trans></p>
-            </div>
-            {cropOpen ? null : (
-              <Button small icon="crosshair" iconSize={15} onClick={() => setCropOpen(true)}>
-                <Trans>Adjust area</Trans>
-              </Button>
-            )}
-          </div>
-          {cropOpen ? <CropEditor cameraId={cam.id} value={draft.crop} onChange={(crop) => set({ crop })} /> : null}
-        </div>
-        <SettingRow
-          title={t`How sure it must be`}
-          desc={t`Stricter means fewer false detections, but it may take longer to settle in poor light.`}
-          wide
-          control={
-            <Choice
-              label={t`How sure it must be`}
-              presets={THRESHOLD_PRESETS.map((p) => ({ value: p.value * 100, label: t(p.label) }))}
-              initial={Math.round(draft.threshold * 100)}
-              unit="%"
-              onChange={(v) => set({ threshold: v / 100 })}
-            />
-          }
-        />
-        <SettingRow
-          title={t`How often to check`}
-          desc={t`With “On change only”, it checks only when the picture inside the area changes.`}
-          wide
-          control={
-            <Choice
-              label={t`How often to check`}
-              presets={[
-                { value: 5, label: t`5 sec` },
-                { value: 10, label: t`10 sec` },
-                { value: 60, label: t`1 min` },
-                { value: 0, label: t`On change only` },
-              ]}
-              initial={draft.intervalSec}
-              unit={t`sec`}
-              onChange={(intervalSec) => set({ intervalSec })}
-            />
-          }
-        />
-        <SettingRow title={t`Check right away on change`} desc={t`Checks immediately when something moves in the area, so it switches faster.`} toggle control={(a) => <Switch {...a} checked={draft.onMotion} onChange={(onMotion) => set({ onMotion })} />} />
-        <div className="set-block st-save">
-          <p className="form-error" role="alert">
-            {error?.message}
-          </p>
-          <Button disabled={!dirty || saving} onClick={() => (setDraft(base), setError(null), setCropOpen(false))}>
-            <Trans>Revert</Trans>
-          </Button>
-          <Button variant="primary" disabled={!dirty || saving} aria-busy={saving || undefined} onClick={() => void save()}>
-            {saving ? <span className="spin" aria-hidden="true" /> : null}
-            <Trans>Save</Trans>
-          </Button>
-        </div>
+    <FormCard title={t`Settings`} icon="settings" summary={settingsSummary(sensor)} dirty={dirty} className="st-settings">
+      <SettingRow title={t`Recognition`} desc={t`When off, labels and training results are kept; detection just pauses.`} toggle control={(a) => <Switch {...a} checked={draft.enabled} onChange={(enabled) => set({ enabled })} />} />
+      <SettingRow title={t`Name`} wide control={(a) => <input {...a} type="text" autoComplete="off" spellCheck={false} maxLength={MAX_NAME} value={draft.name} onChange={(e) => set({ name: e.currentTarget.value })} />} />
+      <div className="set-block">
+        <p className="set-row-title">{t`Classes`}</p>
+        <p className="set-row-desc st-cls-desc"><Trans>Renaming doesn’t need retraining; adding or deleting a class does.</Trans></p>
+        <ClassesEditor rows={draft.rows} onRows={(rows) => set({ rows })} invalid={error?.index ?? null} counts={counts} />
       </div>
-    </details>
+      <div className="set-block">
+        <div className="st-crop-row">
+          <div>
+            <p className="set-row-title">{t`Detection area`}</p>
+            <p className="set-row-desc"><Trans>After moving the area, the labeled pictures still show the old area. It’s best to pick new pictures and retrain.</Trans></p>
+          </div>
+          {cropOpen ? null : (
+            <Button small icon="crosshair" iconSize={15} onClick={() => setCropOpen(true)}>
+              <Trans>Adjust area</Trans>
+            </Button>
+          )}
+        </div>
+        {cropOpen ? <CropEditor cameraId={cam.id} value={draft.crop} onChange={(crop) => set({ crop })} /> : null}
+      </div>
+      <SettingRow
+        title={t`How sure it must be`}
+        desc={t`Stricter means fewer false detections, but it may take longer to settle in poor light.`}
+        wide
+        control={
+          <Choice
+            label={t`How sure it must be`}
+            presets={THRESHOLD_PRESETS.map((p) => ({ value: p.value * 100, label: t(p.label) }))}
+            initial={Math.round(draft.threshold * 100)}
+            unit="%"
+            onChange={(v) => set({ threshold: v / 100 })}
+          />
+        }
+      />
+      <SettingRow
+        title={t`How often to check`}
+        desc={t`With “On change only”, it checks only when the picture inside the area changes.`}
+        wide
+        control={
+          <Choice
+            label={t`How often to check`}
+            presets={[
+              { value: 5, label: t`5 sec` },
+              { value: 10, label: t`10 sec` },
+              { value: 60, label: t`1 min` },
+              { value: 0, label: t`On change only` },
+            ]}
+            initial={draft.intervalSec}
+            unit={t`sec`}
+            onChange={(intervalSec) => set({ intervalSec })}
+          />
+        }
+      />
+      <SettingRow title={t`Check right away on change`} desc={t`Checks immediately when something moves in the area, so it switches faster.`} toggle control={(a) => <Switch {...a} checked={draft.onMotion} onChange={(onMotion) => set({ onMotion })} />} />
+      <div className="set-block st-save">
+        <p className="form-error" role="alert">
+          {error?.message}
+        </p>
+        <Button disabled={!dirty || saving} onClick={() => (setDraft(base), setError(null), setCropOpen(false))}>
+          <Trans>Revert</Trans>
+        </Button>
+        <Button variant="primary" disabled={!dirty} busy={saving} onClick={() => void save()}>
+          <Trans>Save</Trans>
+        </Button>
+      </div>
+    </FormCard>
   );
 }
 

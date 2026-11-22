@@ -5,8 +5,7 @@ import { maskedField } from "../../camera-form-logic.ts";
 import { CopyButton } from "../../ui/Button.tsx";
 import { Segmented, Switch, Tiles } from "../../ui/controls.tsx";
 import { Icon } from "../../ui/Icon.tsx";
-import { SettingRow, type RowA11y } from "../../ui/SettingRow.tsx";
-import { Disclosure } from "./bits.tsx";
+import { SettingRow, SettingsDisclosure, type RowA11y } from "../../ui/SettingRow.tsx";
 import { connAdvancedOpen, connAdvancedSummary, invalidFields, type Draft, type FieldKey, type FlagKey, type FormError, type TextKey } from "./form-model.ts";
 
 /** 新增頁與編輯頁的對話框共用的欄位：draft 是目前的值，set 改值，error 決定哪些欄位標紅 */
@@ -121,7 +120,7 @@ export function ConnFields({ kit, existing }: { kit: FieldKit; existing: CameraD
         <SettingRow title={t`Stream URL`} desc={t`Starts with rtsp://, usually found in the camera's manual or app. You can put the username and password in the URL.`} wide error={c.fieldError("mainUrl")} control={c.url("mainUrl", t`rtsp://username:password@192.168.1.60:554/stream1`)} />
         <SettingRow title={t`Low-quality stream URL`} desc={t`Optional. If provided, home page previews and motion detection use fewer resources.`} wide error={c.fieldError("subUrl")} control={c.url("subUrl", "rtsp://…/stream2")} />
       </div>
-      <Disclosure title={t`Advanced`} summary={connAdvancedSummary(draft)} defaultOpen={connAdvancedOpen(draft)}>
+      <SettingsDisclosure title={t`Advanced`} summary={connAdvancedSummary(draft)} defaultOpen={connAdvancedOpen(draft)}>
         <div className="set-rows" hidden={!rtsp}>
           <SettingRow
             title={t`Transport`}
@@ -160,7 +159,7 @@ export function ConnFields({ kit, existing }: { kit: FieldKit; existing: CameraD
             }
           />
         ) : null}
-      </Disclosure>
+      </SettingsDisclosure>
     </>
   );
 }

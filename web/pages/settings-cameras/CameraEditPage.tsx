@@ -10,11 +10,13 @@ import { ptzQuery, settingsQuery, systemQuery } from "../../data/queries.ts";
 import { modeOf, objectSummary } from "../../detect/object-model.ts";
 import { errMsg } from "../../format.ts";
 import { statesQuery } from "../../states/queries.ts";
-import { CopyButton } from "../../ui/Button.tsx";
+import { Button } from "../../ui/Button.tsx";
 import { Dialog, DialogClose } from "../../ui/Dialog.tsx";
+import { FormStatus } from "../../ui/FormStatus.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import type { IconName } from "../../ui/icons.ts";
 import { toast } from "../../ui/toast.tsx";
+import { useRetained } from "../../ui/use-retained.ts";
 import { SettingsSubpage } from "../settings/SettingsLayout.tsx";
 import { putCamera } from "./cache.ts";
 import { DetectSection } from "./DetectSection.tsx";
@@ -99,9 +101,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
   const navigate = useNavigate();
   const [edit, dispatch] = useReducer(editReducer, null);
   const [info, setInfo] = useState<InfoKey | null>(null);
-  // 關閉動畫期間保留最後打開的內容
-  const [shownInfo, setShownInfo] = useState<InfoKey | null>(null);
-  if (info && info !== shownInfo) setShownInfo(info);
+  const [shownInfo, clearShownInfo] = useRetained(info);
   const fields = useRef<HTMLFormElement>(null);
   useFocusError(fields, edit?.error ?? null);
 
@@ -157,23 +157,11 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
   const needsTest = edit?.key === "conn" && connKey(edit.draft) !== connKey(current);
   const footer = edit ? (
     <>
-      <div className="foot-status">
-        <p className="form-error" role="alert">
-          {edit.error?.summary}
-        </p>
-        <span className="copy-slot">{edit.error?.copy ? <CopyButton label={t`Copy error`} className="small ghost" done={t`Error copied. You can paste it to an AI or a technician.`} getText={() => edit.error!.copy!} /> : null}</span>
-      </div>
+      <FormStatus error={edit.error} />
       <DialogClose disabled={busy}>{t`Cancel`}</DialogClose>
-      <button className="btn primary" type="button" disabled={busy || !dirty} aria-busy={busy || undefined} onClick={() => void save()}>
-        {busy ? (
-          <>
-            <span className="spin" aria-hidden="true" />
-            <span>{edit.status === "testing" ? t`Testing connection…` : t`Saving…`}</span>
-          </>
-        ) : (
-          <span>{needsTest ? t`Test and save` : t`Save`}</span>
-        )}
-      </button>
+      <Button variant="primary" busy={busy} disabled={!dirty} onClick={() => void save()}>
+        <span>{busy ? (edit.status === "testing" ? t`Testing connection…` : t`Saving…`) : needsTest ? t`Test and save` : t`Save`}</span>
+      </Button>
     </>
   ) : null;
 
@@ -212,7 +200,7 @@ export function CameraEditPage({ camera }: { camera: CameraDto }) {
           {edit ? <SectionFields edit={edit} camera={camera} set={(patch) => dispatch({ type: "patch", patch })} objects={objectsOn} /> : null}
         </form>
       </Dialog>
-      <Dialog open={info !== null} onOpenChange={(o) => !o && setInfo(null)} title={shownInfo ? i18n._(TITLE[shownInfo]) : ""} footer={<DialogClose className="btn primary">{t`Done`}</DialogClose>} onClosed={() => setShownInfo(null)}>
+      <Dialog open={info !== null} onOpenChange={(o) => !o && setInfo(null)} title={shownInfo ? i18n._(TITLE[shownInfo]) : ""} footer={<DialogClose className="btn primary">{t`Done`}</DialogClose>} onClosed={clearShownInfo}>
         <div className="dlg-fields">{shownInfo ? infoBody[shownInfo] : null}</div>
       </Dialog>
       {del.dialog}

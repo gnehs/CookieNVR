@@ -1,4 +1,3 @@
-import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { createLink } from "@tanstack/react-router";
 import { forwardRef, useRef, useState, type ButtonHTMLAttributes, type AnchorHTMLAttributes } from "react";
@@ -17,14 +16,20 @@ interface Look {
   iconSize?: number;
 }
 
+interface BusyProps {
+  /** 送出中：前面轉圈、`aria-busy`、停用。children 照原樣留著，要換字就由呼叫端換 */
+  busy?: boolean;
+}
+
 function cls({ variant, small, iconOnly }: Look, extra?: string): string {
   return ["btn", variant, small && "small", iconOnly && "icon-only", extra].filter(Boolean).join(" ");
 }
 
 /** `.btn` 按鈕；變體就是 style.css 裡的 class：primary、danger、danger solid、ghost，加上 small、icon-only */
-export function Button({ variant, small, iconOnly, icon, iconSize = 16, className, type = "button", children, ...rest }: Look & ButtonHTMLAttributes<HTMLButtonElement>) {
+export function Button({ variant, small, iconOnly, icon, iconSize = 16, className, type = "button", busy, disabled, children, ...rest }: Look & BusyProps & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type={type} className={cls({ variant, small, iconOnly }, className)} {...rest}>
+    <button type={type} className={cls({ variant, small, iconOnly }, className)} disabled={disabled || busy} aria-busy={busy || undefined} {...rest}>
+      {busy ? <span className="spin" aria-hidden="true" /> : null}
       {icon ? <Icon name={icon} size={iconSize} /> : null}
       {children}
     </button>
@@ -66,11 +71,6 @@ export async function copyText(text: string): Promise<boolean> {
   } catch {}
   ta.remove();
   return ok;
-}
-
-export async function copyWithToast(text: string, label: string) {
-  if (await copyText(text)) toast(t`Copied ${label}`);
-  else toast(t`Couldn't copy. Select the text manually.`, "error");
 }
 
 /**

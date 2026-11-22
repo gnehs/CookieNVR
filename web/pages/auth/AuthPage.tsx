@@ -1,10 +1,10 @@
 import { useLingui } from "@lingui/react/macro";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useRef, useState, type FormEvent } from "react";
 import type { MeDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
-import { infoQuery, meQuery } from "../../data/session.ts";
+import { infoQuery, meQuery, useSiteName } from "../../data/session.ts";
 import { errMsg } from "../../format.ts";
 import { Button } from "../../ui/Button.tsx";
 import { Field } from "../../ui/Field.tsx";
@@ -12,7 +12,7 @@ import { BrandMark } from "../../ui/Panel.tsx";
 
 function AuthForm(props: { title: string; intro?: string; submitLabel: string; confirm: boolean; onSubmit: (username: string, password: string) => Promise<void> }) {
   const { t } = useLingui();
-  const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+  const siteName = useSiteName();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const username = useRef<HTMLInputElement>(null);

@@ -15,6 +15,7 @@ import { MenuButton } from "../../ui/Menu.tsx";
 import { ErrorBox, Spinner } from "../../ui/states.tsx";
 import { toast } from "../../ui/toast.tsx";
 import { Tiles } from "../../ui/controls.tsx";
+import { useRetained } from "../../ui/use-retained.ts";
 import { SettingsLayout } from "../settings/SettingsLayout.tsx";
 
 const ROLE_LABEL: Record<Role, MessageDescriptor> = { admin: msg`Administrator`, user: msg`Regular user` };
@@ -142,12 +143,10 @@ export function UsersPage() {
   const me = useMe();
   const users = useQuery(usersQuery);
   const [target, setTarget] = useState<Target | null>(null);
-  // 關閉動畫期間保留對話框內容
-  const [shown, setShown] = useState<Target | null>(null);
+  const [shown, clearShown] = useRetained(target);
   const [round, setRound] = useState(0);
   const open = (next: Target) => {
     setRound((n) => n + 1);
-    setShown(next);
     setTarget(next);
   };
   const refresh = () => qc.invalidateQueries({ queryKey: usersQuery.queryKey });
@@ -209,7 +208,7 @@ export function UsersPage() {
   return (
     <SettingsLayout active="users">
       <div>{body}</div>
-      <Dialog open={target !== null} onOpenChange={(o) => !o && close()} title={shown?.kind === "reset" ? resetTitle(shown.user.username) : t`Add user`} onClosed={() => setShown(null)}>
+      <Dialog open={target !== null} onOpenChange={(o) => !o && close()} title={shown?.kind === "reset" ? resetTitle(shown.user.username) : t`Add user`} onClosed={clearShown}>
         {shown ? (
           <PasswordForm
             key={round}

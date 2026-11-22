@@ -1,8 +1,9 @@
 import { useLingui } from "@lingui/react/macro";
-import { useId, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import { useId, type InputHTMLAttributes, type ReactNode } from "react";
 import { Icon } from "./Icon.tsx";
 import type { IconName } from "./icons.ts";
 import { useIndicator } from "./indicator.ts";
+import { usePresetChoice } from "./use-preset-choice.ts";
 
 /** 開關：role="switch" 的原生 checkbox（`.switch`），表單與鍵盤行為都是瀏覽器內建的 */
 export function Switch({
@@ -105,23 +106,14 @@ export function Choice({
   onChange: (v: number) => void;
 }) {
   const { t } = useLingui();
-  const [picked, setPicked] = useState(presets.some((p) => p.value === initial) ? String(initial) : "custom");
-  const [custom, setCustom] = useState(String(initial));
-  const input = useRef<HTMLInputElement>(null);
-  const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
+  const { picked, custom, input, pick, type } = usePresetChoice({ presets, initial, onChange });
   return (
     <div className="choice">
       <Segmented
         label={label}
         options={[...presets.map((p) => ({ value: String(p.value), label: p.label })), { value: "custom", label: t`Custom` }]}
         value={picked}
-        onChange={(v) => {
-          setPicked(v);
-          // 欄位要等這次重畫才出現，下一個畫面再移焦點
-          if (v === "custom") requestAnimationFrame(() => input.current?.focus());
-          else setCustom(v);
-          onChange(v === "custom" ? toNumber(custom) : Number(v));
-        }}
+        onChange={pick}
       />
       <div className="choice-custom" hidden={picked !== "custom"}>
         <input
@@ -132,10 +124,7 @@ export function Choice({
           aria-label={t`${label} (custom, unit: ${unit})`}
           value={custom}
           ref={input}
-          onChange={(e) => {
-            setCustom(e.currentTarget.value);
-            onChange(toNumber(e.currentTarget.value));
-          }}
+          onChange={(e) => type(e.currentTarget.value)}
         />
         <span className="unit">{unit}</span>
       </div>

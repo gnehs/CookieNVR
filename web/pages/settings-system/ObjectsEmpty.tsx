@@ -90,8 +90,7 @@ export function ObjectsEmpty({ busy, onEnable }: { busy: boolean; onEnable: () =
       <p>
         <Trans>Once on, each camera can choose to record events only when it sees a person, vehicle or animal, so wind in the leaves and changing light no longer fill up the event list. It uses some extra computer resources.</Trans>
       </p>
-      <Button variant="primary" disabled={busy} aria-busy={busy || undefined} onClick={onEnable}>
-        {busy ? <span className="spin" /> : null}
+      <Button variant="primary" busy={busy} onClick={onEnable}>
         {t`Turn on object detection`}
       </Button>
     </section>

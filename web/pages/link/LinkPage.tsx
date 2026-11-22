@@ -4,8 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, api } from "../../api.ts";
-import { infoQuery } from "../../data/session.ts";
-import { useMe } from "../../data/session.ts";
+import { useMe, useSiteName } from "../../data/session.ts";
 import { errMsg } from "../../format.ts";
 import { isLocalAddress } from "../../link-address.ts";
 import { Button, ButtonLink } from "../../ui/Button.tsx";
@@ -17,7 +16,7 @@ import { Spinner } from "../../ui/states.tsx";
 type View = "approved" | "denied" | "expired" | "used";
 
 function Frame({ children }: { children: ReactNode }) {
-  const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+  const siteName = useSiteName();
   return (
     <main className="auth link-page">
       <div className="brand">

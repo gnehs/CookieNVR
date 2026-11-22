@@ -5,11 +5,12 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { CameraDto, ProbeResult } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { camerasQuery, systemQuery } from "../../data/queries.ts";
-import { infoQuery } from "../../data/session.ts";
+import { useSiteName } from "../../data/session.ts";
 import { errMsg } from "../../format.ts";
-import { ButtonLink, CopyButton } from "../../ui/Button.tsx";
+import { Button, ButtonLink } from "../../ui/Button.tsx";
 import { confirmDialog } from "../../ui/Dialog.tsx";
 import { FormCard } from "../../ui/FormCard.tsx";
+import { FormStatus } from "../../ui/FormStatus.tsx";
 import { Icon } from "../../ui/Icon.tsx";
 import { BrandMark } from "../../ui/Panel.tsx";
 import { ErrorBox, PageError, Spinner } from "../../ui/states.tsx";
@@ -86,7 +87,7 @@ function NewCameraForm({ welcome, onAgain }: { welcome: boolean; onAgain: () => 
   const { t } = useLingui();
   const qc = useQueryClient();
   const listHref = welcome ? "/cameras" : "/settings/cameras";
-  const siteName = useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+  const siteName = useSiteName();
 
   const [saved] = useState(() => draftOf(null));
   const [draft, setDraft] = useState(saved);
@@ -158,25 +159,13 @@ function NewCameraForm({ welcome, onAgain }: { welcome: boolean; onAgain: () => 
         </FormCard>
       </div>
       <div className="form-bar">
-        <div className="foot-status">
-          <p className="form-error" role="alert">
-            {error?.summary}
-          </p>
-          <span className="copy-slot">{error?.copy ? <CopyButton label={t`Copy error`} className="small ghost" done={t`Error copied. You can paste it to an AI or a technician.`} getText={() => error.copy!} /> : null}</span>
-        </div>
+        <FormStatus error={error} />
         <Link className="btn" to={listHref}>
           {welcome ? t`Maybe later` : t`Cancel`}
         </Link>
-        <button className="btn primary" type="submit" disabled={busy} aria-busy={busy || undefined}>
-          {busy ? (
-            <>
-              <span className="spin" aria-hidden="true" />
-              <span>{phase.kind === "testing" ? t`Testing connection…` : t`Saving…`}</span>
-            </>
-          ) : (
-            <span>{t`Test and save`}</span>
-          )}
-        </button>
+        <Button variant="primary" type="submit" busy={busy}>
+          <span>{busy ? (phase.kind === "testing" ? t`Testing connection…` : t`Saving…`) : t`Test and save`}</span>
+        </Button>
       </div>
     </form>
   );

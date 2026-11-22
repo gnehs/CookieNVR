@@ -224,10 +224,9 @@ function Wizard({ cam }: { cam: CameraDto }) {
                 <Trans>Previous</Trans>
               </Button>
             ) : null}
-            <button className="btn primary" type="submit" disabled={busy} aria-busy={busy || undefined}>
-              {busy ? <span className="spin" aria-hidden="true" /> : null}
+            <Button variant="primary" type="submit" busy={busy}>
               <span>{phase.kind === "uploading" ? t`Uploading ${uploadPct}%` : phase.kind === "creating" ? t`Creating…` : step < 2 ? t`Next` : t`Create and start labeling`}</span>
-            </button>
+            </Button>
           </div>
         </section>
       </form>
@@ -264,8 +263,7 @@ function FrigatePaste({ cameraName, tuning, onApply }: { cameraName: string; tun
         <p className="hint"><Trans>Paste the classification section of your Frigate config to import the box and detection settings.</Trans></p>
         <textarea rows={6} spellCheck={false} placeholder={"classification:\n  custom:\n    garage:\n      state_config:\n        cameras:\n          …"} value={yaml} onChange={(e) => setYaml(e.currentTarget.value)} aria-label={t`Frigate settings`} />
         <div className="frigate-actions">
-          <Button small onClick={() => void read()} disabled={busy || !yaml.trim()}>
-            {busy ? <span className="spin" aria-hidden="true" /> : null}
+          <Button small onClick={() => void read()} disabled={!yaml.trim()} busy={busy}>
             <Trans>Import</Trans>
           </Button>
           {error ? <span className="form-error">{error}</span> : tuning ? <span className="hint ok-text">{t`Imported`}</span> : null}

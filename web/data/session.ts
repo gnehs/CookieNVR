@@ -1,9 +1,14 @@
-import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, type QueryClient } from "@tanstack/react-query";
 import { redirect, useRouteContext } from "@tanstack/react-router";
 import type { MeDto } from "../../src/api-types.ts";
 import { api, ApiError } from "../api.ts";
 
 export const infoQuery = queryOptions({ queryKey: ["info"], queryFn: api.info, staleTime: Infinity });
+
+/** 站台名稱；資訊還沒載入時先用預設名稱 */
+export function useSiteName(): string {
+  return useQuery(infoQuery).data?.siteName ?? "CookieNVR";
+}
 
 /** 目前登入的使用者；沒登入是 null（不是錯誤） */
 export const meQuery = queryOptions({
