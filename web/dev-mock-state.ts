@@ -81,7 +81,7 @@ const COLLECT_COUNT = 24;
 const CONFIDENCE_STEPS = 3;
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
-const json = (data: unknown, status = 200) => Response.json(data, { status });
+const json = <T>(data: T, status = 200) => Response.json(data, { status });
 const err = (status: number, m: Msg) => Response.json(errorBody(m), { status });
 /** 假後端自己才有的訊息：沒有 code，各語言原文顯示 */
 const raw = (text: string) => msg("raw", { text });
@@ -470,7 +470,7 @@ export function createMockStates(deps: MockStatesDeps) {
 
     if (path === "/states" && method === "GET") {
       const cameraId = url.searchParams.get("cameraId");
-      return json([...sensors.values()].filter((s) => !cameraId || s.cameraId === cameraId).map(dto));
+      return json<StateSensorDto[]>([...sensors.values()].filter((s) => !cameraId || s.cameraId === cameraId).map(dto));
     }
     if (path === "/states" && method === "POST") {
       if (!isRecord(body)) return err(400, msg("http.bodyNotObject"));
@@ -481,12 +481,12 @@ export function createMockStates(deps: MockStatesDeps) {
       const s = createSensor(cam.id, parsed.value);
       if (body.collect !== false) runCollect(s);
       emitSensor(s);
-      return json(dto(s), 201);
+      return json<StateSensorDto>(dto(s), 201);
     }
     if (path === "/states/frigate-config" && method === "POST") {
       if (!isRecord(body) || typeof body.yaml !== "string" || !body.yaml.trim()) return err(400, msg("states.yamlNotString"));
       const result = parseFrigate(body.yaml);
-      return result.ok ? json(result.value) : err(400, result.error);
+      return result.ok ? json<FrigateConfigResultDto>(result.value) : err(400, result.error);
     }
 
     if (path === "/state-changes" && method === "GET") {
@@ -498,7 +498,7 @@ export function createMockStates(deps: MockStatesDeps) {
         .filter((c) => (!q.get("sensorId") || c.sensorId === q.get("sensorId")) && (!q.get("cameraId") || c.cameraId === q.get("cameraId")) && c.at < before)
         .sort((a, b) => b.at - a.at || b.id - a.id)
         .slice(0, limit);
-      return json(list);
+      return json<StateChangeDto[]>(list);
     }
     const thumb = path.match(/^\/state-changes\/(\d+)\/thumb\.jpg$/);
     if (thumb && method === "GET") {
@@ -512,7 +512,7 @@ export function createMockStates(deps: MockStatesDeps) {
     if (!s) return err(404, msg("states.sensorNotFound"));
     const sub = m[2] ?? "";
 
-    if (sub === "" && method === "GET") return json(dto(s));
+    if (sub === "" && method === "GET") return json<StateSensorDto>(dto(s));
     if (sub === "" && method === "PUT") {
       const parsed = parseConfig(isRecord(body) ? body.config : undefined, s.config);
       if (!parsed.ok) return err(400, parsed.error);
@@ -521,7 +521,7 @@ export function createMockStates(deps: MockStatesDeps) {
       s.config = parsed.value;
       if (problemOf(s)) resetRecognition(s);
       emitSensor(s);
-      return json(dto(s));
+      return json<StateSensorDto>(dto(s));
     }
     if (sub === "" && method === "DELETE") {
       if (s.jobTimer) clearInterval(s.jobTimer);
@@ -553,31 +553,31 @@ export function createMockStates(deps: MockStatesDeps) {
       }
       for (const c of changes) if (c.dto.sensorId === s.id) c.dto = { ...c.dto, from: c.dto.from && swap(c.dto.from), to: swap(c.dto.to) };
       emitSensor(s);
-      return json(dto(s));
+      return json<StateSensorDto>(dto(s));
     }
 
     if (sub === "collect" && method === "POST") {
       if (busy(s)) return err(409, msg("states.jobBusy"));
       runCollect(s);
-      return json(dto(s), 202);
+      return json<StateSensorDto>(dto(s), 202);
     }
     if (sub === "train" && method === "POST") {
       if (busy(s)) return err(409, msg("states.jobBusy"));
       if (!dto(s).trainable) return err(400, msg("states.notTrainable", { min: MIN_STATE_IMAGES_PER_CLASS }));
       runTrain(s);
-      return json(dto(s), 202);
+      return json<StateSensorDto>(dto(s), 202);
     }
     if (sub === "import" && method === "POST") {
       if (busy(s)) return err(409, msg("states.jobBusy"));
       runImport(s);
-      return json(dto(s), 202);
+      return json<StateSensorDto>(dto(s), 202);
     }
 
     if (sub === "images" && method === "GET") {
       const label = url.searchParams.get("label") ?? "all";
       if (label !== "all" && label !== "pending" && !s.config.classes.includes(label)) return err(400, msg("states.classNotFound", { name: label }));
       const list = s.images.filter((i) => (label === "all" ? true : label === "pending" ? i.label === null : i.label === label)).sort((a, b) => b.createdAt - a.createdAt);
-      return json({ images: list.map((i) => imageDto(s, i)) });
+      return json<{ images: StateImageDto[] }>({ images: list.map((i) => imageDto(s, i)) });
     }
     const one = sub.match(/^images\/([^/]+)$/);
     if (one && method === "GET") {
@@ -592,14 +592,14 @@ export function createMockStates(deps: MockStatesDeps) {
       if (targets.length !== new Set(body.ids as string[]).size) return err(404, msg("states.imageNotFound"));
       for (const img of targets) img.label = label;
       emitSensor(s);
-      return json(dto(s));
+      return json<StateSensorDto>(dto(s));
     }
     if (sub === "images/delete" && method === "POST") {
       if (!isRecord(body) || !Array.isArray(body.ids) || !body.ids.every((x) => typeof x === "string")) return err(400, msg("http.bodyNotObject"));
       const ids = new Set(body.ids as string[]);
       s.images = s.images.filter((i) => !ids.has(i.id));
       emitSensor(s);
-      return json(dto(s));
+      return json<StateSensorDto>(dto(s));
     }
     return err(404, msg("http.notFound"));
   }

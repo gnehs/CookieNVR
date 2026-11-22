@@ -5,7 +5,7 @@ const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { BenchmarkDto, BenchmarkResultDto, CameraDto, CameraGroupDto, HomekitDto, EventDto, GpuDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
+import type { BenchmarkDto, CreatedTokenDto, InfoDto, MeDto, PtzMoveResultDto, PtzPresetSavedDto, PtzPresetsDto, PurgeDto, MetricsDto, SessionDto, SettingsDto, TokenDto, VideoDevicesDto, BenchmarkResultDto, CameraDto, CameraGroupDto, HomekitDto, EventDto, GpuDto, InferenceDeviceDto, ObjectLabelsDto, ObjectModelDto, ObjectsDto, ObjectsStatusDto, ExportDto, MotionSampleDto, OnvifProbeDto, ProbeResult, PtzDto, PtzPresetDto, SegmentDto, SystemDto, UserDto } from "../src/api-types.ts";
 import { detectConfigOf, PREVIEW_THRESHOLDS, usesPixel } from "../src/detect/config.ts";
 import type { CameraConfig, CameraId, GroupId, Role, Settings, WorkerStatus } from "../src/types.ts";
 import { buildDiagnostics } from "../src/diagnostics.ts";
@@ -578,7 +578,8 @@ function camDto(c: (typeof cams)[number], admin: boolean): CameraDto {
   };
 }
 
-const json = (data: unknown, status = 200) => Response.json(data, { status });
+/** 回應內容要標上 `src/api-types.ts` 的型別，真後端改了形狀這裡才會報錯 */
+const json = <T>(data: T, status = 200) => Response.json(data, { status });
 const err = (status: number, m: Msg) => Response.json(errorBody(m), { status });
 const noContent = () => new Response(null, { status: 204 });
 
@@ -654,7 +655,7 @@ function exportView(job: MockExport): ExportDto {
 
 async function exportApi(req: Request, url: URL, path: string, body: any): Promise<Response | null> {
   const m = req.method;
-  if (path === "/exports" && m === "GET") return json(exportJobs.map(exportView).reverse());
+  if (path === "/exports" && m === "GET") return json<ExportDto[]>(exportJobs.map(exportView).reverse());
   if (path === "/exports" && m === "POST") {
     const c = cams.find((x) => x.id === body.cameraId);
     if (!c) return errorResponse(404, msg("export.cameraNotFound"));
@@ -682,7 +683,7 @@ async function exportApi(req: Request, url: URL, path: string, body: any): Promi
       expiresAt: null,
     };
     exportJobs.push({ dto, runMs: EXPORT_RUN_MS });
-    return json(exportView(exportJobs[exportJobs.length - 1]!), 201);
+    return json<ExportDto>(exportView(exportJobs[exportJobs.length - 1]!), 201);
   }
   const mm = path.match(/^\/exports\/([\w-]+)(\/file)?$/);
   if (!mm) return null;
@@ -693,7 +694,7 @@ async function exportApi(req: Request, url: URL, path: string, body: any): Promi
     const name = job.dto.fileName;
     return new Response(Bun.file(segFiles[0]!), { headers: { "content-type": "video/mp4", "content-disposition": `attachment; filename="export.mp4"; filename*=UTF-8''${encodeURIComponent(name)}` } });
   }
-  if (!mm[2] && m === "GET") return json(exportView(job));
+  if (!mm[2] && m === "GET") return json<ExportDto>(exportView(job));
   if (!mm[2] && m === "DELETE") {
     exportJobs.splice(exportJobs.indexOf(job), 1);
     return noContent();
@@ -757,7 +758,7 @@ async function homekitApi(path: string, m: string, body: any): Promise<Response 
   if (!cam) return err(404, msg("http.cameraNotFound"));
   if (m === "GET") {
     await Bun.sleep(400);
-    return json(homekitDto(cam));
+    return json<HomekitDto>(homekitDto(cam));
   }
   if (m !== "POST") return null;
   const dto = homekitDto(cam);
@@ -771,7 +772,7 @@ async function homekitApi(path: string, m: string, body: any): Promise<Response 
   } else if (body.action === "reset") {
     homekitState.set(cam.id, newPairing());
   } else return err(400, msg("field.oneOf", { path: "action", values: ["enable", "disable", "reset"] }));
-  return json(homekitDto(cam));
+  return json<HomekitDto>(homekitDto(cam));
 }
 
 const ptzRoute = (path: string) => path.match(/^\/cameras\/([^/]+)\/ptz(\/presets)?$/);
@@ -793,9 +794,9 @@ async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): 
   if (!mm[2]) {
     if (m === "GET") {
       if (ptzFault.down && found.kind === "ok") return errorResponse(503, msg("ptz.onvifUnreachable"));
-      if (found.kind !== "ok") return json({ supported: false, reason: found.kind } satisfies PtzDto);
+      if (found.kind !== "ok") return json<PtzDto>({ supported: false, reason: found.kind });
       const { continuous, relative, zoom, maxPresets, presets } = found.ptz;
-      return json({ supported: true, continuous, relative, zoom, maxPresets, presets, prefs: { mode: c.config.ptz?.mode ?? "auto", speed: c.config.ptz?.speed ?? 0.5 } } satisfies PtzDto);
+      return json<PtzDto>({ supported: true, continuous, relative, zoom, maxPresets, presets, prefs: { mode: c.config.ptz?.mode ?? "auto", speed: c.config.ptz?.speed ?? 0.5 } });
     }
     if (m !== "POST") return null;
     const b: any = parsed ?? (await req.json().catch(() => ({})));
@@ -808,7 +809,7 @@ async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): 
     if (Number(b.zoom ?? 0) !== 0 && !found.ptz.zoom) return errorResponse(409, msg("ptz.noZoom"));
     const mode = b.mode ?? c.config.ptz?.mode ?? "auto";
     if (mode === "continuous" && !found.ptz.continuous) return errorResponse(409, msg("ptz.noContinuous"));
-    return json({ mode: mode === "auto" ? (found.ptz.continuous ? "continuous" : "relative") : mode });
+    return json<PtzMoveResultDto>({ mode: mode === "auto" ? (found.ptz.continuous ? "continuous" : "relative") : mode });
   }
   if (!admin) return err(403, msg("http.adminRequired"));
   if (found.kind !== "ok") return errorResponse(409, msg(found.kind === "no-onvif" ? "ptz.noOnvif" : "ptz.noPtz"));
@@ -821,18 +822,18 @@ async function ptzApi(req: Request, path: string, admin: boolean, parsed: any): 
       const p = ptz.presets.find((x) => x.token === b.token);
       if (!p) return err(404, msg("ptz.presetNotFound"));
       p.name = name;
-      return json({ token: p.token, presets: ptz.presets });
+      return json<PtzPresetSavedDto>({ token: p.token, presets: ptz.presets });
     }
     if (ptz.presets.length >= ptz.maxPresets) return errorResponse(409, msg("ptz.presetsFull", { max: ptz.maxPresets }));
     const token = String(ptz.nextToken++);
     ptz.presets.push({ token, name });
-    return json({ token, presets: ptz.presets }, 201);
+    return json<PtzPresetSavedDto>({ token, presets: ptz.presets }, 201);
   }
   if (m === "DELETE") {
     const i = ptz.presets.findIndex((x) => x.token === b.token);
     if (i < 0) return err(404, msg("ptz.presetNotFound"));
     ptz.presets.splice(i, 1);
-    return json({ presets: ptz.presets });
+    return json<PtzPresetsDto>({ presets: ptz.presets });
   }
   return null;
 }
@@ -906,7 +907,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   const body: any = m === "GET" || m === "DELETE" ? null : await req.json().catch(() => ({}));
   await Bun.sleep(80);
 
-  if (path === "/info" && m === "GET") return json({ version: "0.1.0-mock", apiVersion: 1, needsSetup: users.length === 0, siteName: settings.siteName, instanceId: "00000000-0000-4000-8000-000000000000" });
+  if (path === "/info" && m === "GET") return json<InfoDto>({ version: "0.1.0-mock", apiVersion: 1, needsSetup: users.length === 0, siteName: settings.siteName, instanceId: "00000000-0000-4000-8000-000000000000" });
   if (path === "/link" && m === "POST") return linkCall(() => links.create({ app: String(body.app ?? "App"), ip: "192.168.1.50", origin: url.origin }), 201);
   if (path === "/link/poll" && m === "POST") return linkCall(() => links.poll(String(body.pollSecret ?? ""), "192.168.1.50"));
   if (path === "/auth/setup" && m === "POST") {
@@ -914,7 +915,7 @@ async function route(req: Request, url: URL): Promise<Response> {
     if (!body.username || String(body.password ?? "").length < 8) return err(400, msg("auth.passwordTooShort", { min: 8 }));
     const u: MockUser = { id: nextUserId++, username: body.username, password: hash(body.password), role: "admin", createdAt: now(), lastLoginAt: null };
     users.push(u);
-    return withCookie(json({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
+    return withCookie(json<MeDto>({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
   }
   if (path === "/auth/login" && m === "POST") {
     const key = String(body.username);
@@ -925,7 +926,7 @@ async function route(req: Request, url: URL): Promise<Response> {
       return err(401, msg("auth.badCredentials"));
     }
     fails.delete(key);
-    return withCookie(json({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
+    return withCookie(json<MeDto>({ id: u.id, username: u.username, role: u.role }), startSession(req, u));
   }
   if (path === "/auth/logout" && m === "POST") {
     const sid = cookieOf(req, "sid");
@@ -941,7 +942,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (stateRes) return stateRes;
 
   if (path === "/me") {
-    if (m === "GET") return json({ id: me.id, username: me.username, role: me.role });
+    if (m === "GET") return json<MeDto>({ id: me.id, username: me.username, role: me.role });
     if (m === "PUT") {
       if (me.password !== hash(String(body.currentPassword))) return err(403, msg("auth.wrongCurrentPassword"));
       if (String(body.newPassword ?? "").length < 8) return err(400, msg("auth.passwordTooShort", { min: 8 }));
@@ -953,7 +954,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   }
   if (path === "/me/sessions" && m === "GET") {
     const cur = cookieOf(req, "sid");
-    return json([...sessions].filter(([, s]) => s.userId === me.id).map(([id, s]) => ({ id, current: id === cur, userAgent: s.ua, ip: s.ip, lastSeenAt: s.lastSeenAt })));
+    return json<SessionDto[]>([...sessions].filter(([, s]) => s.userId === me.id).map(([id, s]) => ({ id, current: id === cur, userAgent: s.ua, ip: s.ip, lastSeenAt: s.lastSeenAt })));
   }
   let mm = path.match(/^\/me\/sessions\/(\w+)$/);
   if (mm && m === "DELETE") {
@@ -968,14 +969,14 @@ async function route(req: Request, url: URL): Promise<Response> {
     if (m === "POST") return linkCall(() => links.decide(code, who, body.decision === "approve" ? "approve" : "deny"));
   }
   if (path === "/tokens") {
-    if (m === "GET") return json(tokens.filter((t) => t.userId === me.id));
+    if (m === "GET") return json<TokenDto[]>(tokens.filter((t) => t.userId === me.id));
     if (m === "POST") {
       const denied = needAdmin();
       if (denied) return denied;
       const raw = `cnvr_${crypto.randomUUID().replaceAll("-", "")}`;
       const t = { id: nextTokenId++, userId: me.id, name: String(body.name), prefix: raw.slice(0, 9), createdAt: now(), lastUsedAt: null };
       tokens.push(t);
-      return json({ ...t, token: raw }, 201);
+      return json<CreatedTokenDto>({ ...t, token: raw }, 201);
     }
   }
   mm = path.match(/^\/tokens\/(\d+)$/);
@@ -985,8 +986,8 @@ async function route(req: Request, url: URL): Promise<Response> {
     return noContent();
   }
 
-  if (path === "/cameras" && m === "GET") return json(ordered().map((c) => camDto(c, admin)));
-  if (path === "/camera-groups" && m === "GET") return json(groups);
+  if (path === "/cameras" && m === "GET") return json<CameraDto[]>(ordered().map((c) => camDto(c, admin)));
+  if (path === "/camera-groups" && m === "GET") return json<CameraGroupDto[]>(groups);
   if (path === "/stream" && m === "GET") return streamResponse(admin);
   // 假後端沒有即時影像：每台都回「沒有串流」，介面退回快照
   if (path === "/live" && m === "GET") {
@@ -1012,9 +1013,9 @@ async function route(req: Request, url: URL): Promise<Response> {
     return motionResponse(c);
   }
   mm = path.match(/^\/cameras\/([^/]+)\/days$/);
-  if (mm && m === "GET") return json(recordedDays(mm[1]!, url.searchParams.get("tz") ?? "UTC"));
+  if (mm && m === "GET") return json<string[]>(recordedDays(mm[1]!, url.searchParams.get("tz") ?? "UTC"));
   mm = path.match(/^\/cameras\/([^/]+)\/recordings$/);
-  if (mm && m === "GET") return json(segmentsIn(mm[1]!, Number(url.searchParams.get("start")), Number(url.searchParams.get("end"))));
+  if (mm && m === "GET") return json<SegmentDto[]>(segmentsIn(mm[1]!, Number(url.searchParams.get("start")), Number(url.searchParams.get("end"))));
   mm = path.match(/^\/segments\/(\d+)$/);
   if (mm && m === "GET") return serveSegment(req, Number(mm[1]));
   const exported = await exportApi(req, url, path, body);
@@ -1022,13 +1023,13 @@ async function route(req: Request, url: URL): Promise<Response> {
   if (path === "/events" && m === "GET") {
     const q = url.searchParams;
     const labels = q.get("label")?.split(",").filter(Boolean) ?? null;
-    if (q.has("before")) return json(eventsBefore(q.get("camera"), Number(q.get("before")), Number(q.get("limit") ?? 50), labels));
-    return json(eventsIn(q.get("camera"), Number(q.get("start") ?? 0), Number(q.get("end") ?? Number.MAX_SAFE_INTEGER), Number(q.get("limit") ?? 1000)));
+    if (q.has("before")) return json<EventDto[]>(eventsBefore(q.get("camera"), Number(q.get("before")), Number(q.get("limit") ?? 50), labels));
+    return json<EventDto[]>(eventsIn(q.get("camera"), Number(q.get("start") ?? 0), Number(q.get("end") ?? Number.MAX_SAFE_INTEGER), Number(q.get("limit") ?? 1000)));
   }
   mm = path.match(/^\/events\/(\d+)$/);
   if (mm) {
     const e = allEvents(null).find((x) => x.id === Number(mm![1]));
-    if (m === "GET") return e ? json(e) : err(404, msg("events.notFound"));
+    if (m === "GET") return e ? json<EventDto>(e) : err(404, msg("events.notFound"));
     if (m === "DELETE") {
       if (!admin) return err(403, msg("http.adminRequired"));
       if (!e) return err(404, msg("events.notFound"));
@@ -1052,13 +1053,13 @@ async function route(req: Request, url: URL): Promise<Response> {
   const homekitResponse = await homekitApi(path, m, body);
   if (homekitResponse) return homekitResponse;
 
-  if (path === "/cameras" && m === "POST") return json(camDto(addCam(body), true), 201);
+  if (path === "/cameras" && m === "POST") return json<CameraDto>(camDto(addCam(body), true), 201);
   if (path === "/camera-groups" && m === "POST") {
     const name = String(body?.name ?? "").trim();
     if (!name) return err(400, msg("field.empty", { path: "name" }));
     const g = { id: `grp${groupSeq++}` as GroupId, name };
     groups.push(g);
-    return json(g, 201);
+    return json<CameraGroupDto>(g, 201);
   }
   const gm = path.match(/^\/camera-groups\/([^/]+)$/);
   if (gm) {
@@ -1068,7 +1069,7 @@ async function route(req: Request, url: URL): Promise<Response> {
       const name = String(body?.name ?? "").trim();
       if (!name) return err(400, msg("field.empty", { path: "name" }));
       g.name = name;
-      return json(g);
+      return json<CameraGroupDto>(g);
     }
     if (m === "DELETE") {
       groups.splice(groups.indexOf(g), 1);
@@ -1078,7 +1079,7 @@ async function route(req: Request, url: URL): Promise<Response> {
   }
   if (path === "/camera-layout" && m === "PUT") {
     arrange(body);
-    return json({ groups, cameras: ordered().map((c) => camDto(c, true)) });
+    return json<{ groups: CameraGroupDto[]; cameras: CameraDto[] }>({ groups, cameras: ordered().map((c) => camDto(c, true)) });
   }
   if (path === "/cameras/test" && m === "POST") {
     // 失敗訊息走真後端同一個 explainFailure，兩邊看到的措辭一致：
@@ -1112,7 +1113,7 @@ async function route(req: Request, url: URL): Promise<Response> {
     if (!c) return err(404, msg("http.cameraNotFound"));
     if (m === "PUT") {
       c.config = body;
-      return json(camDto(c, true));
+      return json<CameraDto>(camDto(c, true));
     }
     if (m === "DELETE") {
       const recordings = url.searchParams.get("recordings");
@@ -1124,12 +1125,12 @@ async function route(req: Request, url: URL): Promise<Response> {
   }
 
   if (path === "/users") {
-    if (m === "GET") return json(users.map(userDto));
+    if (m === "GET") return json<UserDto[]>(users.map(userDto));
     if (m === "POST") {
       if (users.some((u) => u.username === body.username)) return err(409, msg("auth.usernameTaken"));
       const u: MockUser = { id: nextUserId++, username: body.username, password: hash(body.password), role: body.role, createdAt: now(), lastLoginAt: null };
       users.push(u);
-      return json(userDto(u), 201);
+      return json<UserDto>(userDto(u), 201);
     }
   }
   mm = path.match(/^\/users\/(\d+)$/);
@@ -1140,7 +1141,7 @@ async function route(req: Request, url: URL): Promise<Response> {
       if (body.role && u.role === "admin" && body.role !== "admin" && users.filter((x) => x.role === "admin").length === 1) return err(409, msg("auth.lastAdmin"));
       if (body.role) u.role = body.role;
       if (body.password) u.password = hash(body.password);
-      return json(userDto(u));
+      return json<UserDto>(userDto(u));
     }
     if (m === "DELETE") {
       if (u.id === me.id) return err(409, msg("raw", { text: "不能刪除自己" }));
@@ -1150,19 +1151,19 @@ async function route(req: Request, url: URL): Promise<Response> {
   }
 
   if (path === "/settings") {
-    if (m === "GET") return json(settings);
+    if (m === "GET") return json<SettingsDto>(settings);
     if (m === "PUT") {
       const wasOn = settings.objects.enabled;
       const loadChanged = (body.objects && body.objects.model !== undefined) || (body.devices && body.devices.objects !== undefined);
       settings = { ...settings, ...body, retention: { ...settings.retention, ...body.retention }, rtsp: { ...settings.rtsp, ...body.rtsp }, objects: { ...settings.objects, ...body.objects }, devices: { ...settings.devices, ...body.devices } };
       if ((!wasOn && settings.objects.enabled) || (settings.objects.enabled && loadChanged)) objectsOnAt = now();
-      return json(settings);
+      return json<SettingsDto>(settings);
     }
   }
   if (path === "/objects" && m === "GET") {
     return json({ status: objectsStatus(), models: OBJECT_MODELS, modelsDir: "/data/models", devices: DEVICES, unavailable: DEVICES_UNAVAILABLE, unavailableMsg: DEVICES_UNAVAILABLE_MSG, benchmark: benchDto() } satisfies ObjectsDto);
   }
-  if (path === "/objects/labels" && m === "GET") return json(objectLabels());
+  if (path === "/objects/labels" && m === "GET") return json<ObjectLabelsDto>(objectLabels());
   if (path === "/objects/benchmark" && m === "POST") {
     if (objectsStatus().state !== "ready") return err(409, msg("objects.notReady"));
     if (benchDto()?.state === "running") return err(409, msg("objects.benchRunning"));
@@ -1170,7 +1171,7 @@ async function route(req: Request, url: URL): Promise<Response> {
     const picked = ids.filter((id) => DEVICES.some((d) => d.id === id));
     if (picked.length === 0) return err(400, msg("objects.unknownDevices", { devices: ids }));
     bench = { state: "running", startedAt: now(), finishedAt: null, model: settings.objects.model, perCameraFps: settings.objects.fps, progress: { device: picked[0]!, index: 0, total: picked.length, fraction: 0 }, results: [], error: null, errorMsg: null, stale: false, verdict: null, devices: picked, seconds: Number(body.seconds) || 10 };
-    return json(benchDto(), 202);
+    return json<BenchmarkDto>(benchDto()!, 202);
   }
   if (path === "/objects/benchmark" && m === "DELETE") {
     if (benchDto()?.state === "running") bench = { ...bench!, state: "cancelled", finishedAt: now(), progress: null };
@@ -1186,7 +1187,7 @@ async function route(req: Request, url: URL): Promise<Response> {
     }
     if (!e.labels.includes(label)) e.labels = [...e.labels, label];
     broadcast("event", { phase: "update", event: e });
-    return json(e);
+    return json<EventDto>(e);
   }
   if (path === "/recordings/orphaned" && m === "DELETE") {
     let bytes = 0;
@@ -1197,7 +1198,7 @@ async function route(req: Request, url: URL): Promise<Response> {
       segments += Math.round(u.bytes / 1_800_000);
       usage.delete(id);
     }
-    return json({ segments, events: 0, bytes });
+    return json<PurgeDto>({ segments, events: 0, bytes });
   }
   // 儲存空間頁的各種情況：POST /api/mock/storage?free=<GB>&orphan=1&disks=<情境>（空間不夠、有已刪除攝影機的錄影、兩顆硬碟）
   if (path === "/mock/storage" && m === "POST") {
@@ -1219,10 +1220,10 @@ async function route(req: Request, url: URL): Promise<Response> {
       logs: Array.from({ length: 60 }, (_, i) => `${new Date(now() - (60 - i) * 5000).toISOString()} INFO tick ${i} worker ok`),
       decode: mockDecodeStatus(settings.devices.decode, decodeCams()),
     };
-    return json(sys);
+    return json<SystemDto>(sys);
   }
-  if (path === "/video-devices" && m === "GET") return json(mockVideoDevices(settings.devices.decode, decodeCams()));
-  if (path === "/system/metrics" && m === "GET") return json(mockMetrics(
+  if (path === "/video-devices" && m === "GET") return json<VideoDevicesDto>(mockVideoDevices(settings.devices.decode, decodeCams()));
+  if (path === "/system/metrics" && m === "GET") return json<MetricsDto>(mockMetrics(
         cams.filter((c) => c.config.enabled).map((c) => c.id),
         Date.now(),
         objectsGpuExtras(),
