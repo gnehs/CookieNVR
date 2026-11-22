@@ -21,8 +21,8 @@ jobs:
     # The tests take about 4 minutes; the margin covers a slow Ubuntu mirror (ffmpeg's install once took 12 minutes).
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - name: Install ffmpeg
         timeout-minutes: 15
         run: |
@@ -41,7 +41,7 @@ jobs:
       - run: bun run build
       - run: bun test
       # 物件辨識 worker：與映像同一份釘住的相依（amd64 會連 OpenVINO plugin 一起裝），下載內建模型後跑單元測試與 CPU 自我檢查。
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.13"
           cache: pip
@@ -59,6 +59,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       - run: bun scripts/docker-e2e.ts
