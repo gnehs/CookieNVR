@@ -1,6 +1,6 @@
 // 開發用假後端（純 API）：bun run dev:mock 會同時開它與 Vite，網頁開 Vite 的網址（預設 http://localhost:48765）
 // 開發用假後端的示範登入：啟動時就建好這兩個帳號，不會進到初始設定頁（MOCK_FRESH=1 時不建，用來測初始設定）
-const DEMO_ADMIN = { username: "admin", password: "admin1234" };
+export const DEMO_ADMIN = { username: "admin", password: "admin1234" };
 const DEMO_USER = { username: "viewer", password: "viewer1234" };
 import { mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -869,7 +869,7 @@ function streamResponse(admin: boolean): Response {
   return new Response(body, { headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-store" } });
 }
 
-async function api(req: Request, url: URL): Promise<Response> {
+export async function api(req: Request, url: URL): Promise<Response> {
   const res = await route(req, url);
   if (/^\/api\/camera(s|-groups|-layout)\b/.test(url.pathname) && req.method !== "GET" && res.ok) broadcastCameras();
   if (/^\/api\/camera-(groups|layout)\b/.test(url.pathname) && req.method !== "GET" && res.ok) broadcast("camera-groups", groups);
@@ -1263,23 +1263,26 @@ async function route(req: Request, url: URL): Promise<Response> {
   return err(404, msg("http.notFound"));
 }
 
-Bun.serve({
-  port: PORT,
-  idleTimeout: 60,
-  async fetch(req) {
-    const url = new URL(req.url);
-    if (url.pathname.startsWith("/api/")) {
-      try {
-        return await api(req, url);
-      } catch (e) {
-        return err(500, msg("raw", { text: String(e) }));
+// 測試會匯入 api() 直接呼叫，只有 `bun web/dev-mock.ts` 才開 server
+if (import.meta.main) {
+  Bun.serve({
+    port: PORT,
+    idleTimeout: 60,
+    async fetch(req) {
+      const url = new URL(req.url);
+      if (url.pathname.startsWith("/api/")) {
+        try {
+          return await api(req, url);
+        } catch (e) {
+          return err(500, msg("raw", { text: String(e) }));
+        }
       }
-    }
-    return err(404, msg("http.notFound"));
-  },
-});
-console.log(`mock NVR API on http://localhost:${PORT}（網頁：${ORIGIN}）`);
-if (FRESH) console.log("MOCK_FRESH=1：沒有預建帳號，開啟後會進到初始設定");
-else console.log(`示範登入：${DEMO_ADMIN.username} / ${DEMO_ADMIN.password}（管理員），${DEMO_USER.username} / ${DEMO_USER.password}（一般使用者）`);
-const demoLink = links.create({ app: "Home Assistant", ip: "192.168.1.50", origin: ORIGIN });
-console.log(`示範核准頁（10 分鐘內有效）：${demoLink.approveUrl}`);
+      return err(404, msg("http.notFound"));
+    },
+  });
+  console.log(`mock NVR API on http://localhost:${PORT}（網頁：${ORIGIN}）`);
+  if (FRESH) console.log("MOCK_FRESH=1：沒有預建帳號，開啟後會進到初始設定");
+  else console.log(`示範登入：${DEMO_ADMIN.username} / ${DEMO_ADMIN.password}（管理員），${DEMO_USER.username} / ${DEMO_USER.password}（一般使用者）`);
+  const demoLink = links.create({ app: "Home Assistant", ip: "192.168.1.50", origin: ORIGIN });
+  console.log(`示範核准頁（10 分鐘內有效）：${demoLink.approveUrl}`);
+}
