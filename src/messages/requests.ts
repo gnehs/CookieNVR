@@ -10,6 +10,7 @@ export const requests = {
   "http.adminRequired": () => "需要管理員權限",
   "http.contentType": ({ types }: { types: string[] }) => `請求的 Content-Type 必須是 ${types.join("、")}`,
   "http.invalidJson": () => "請求內容不是有效的 JSON",
+  "http.bodyTooLarge": () => "請求內容太大，上限 1 MB",
   "http.bodyNotObject": () => "請求內容必須是物件",
   "http.cameraNotFound": () => "找不到攝影機",
   "http.cameraNotFoundOrDisabled": () => "找不到攝影機，或這台已停用",

@@ -128,6 +128,12 @@ describe("login 限流", () => {
     await expect(auth.login("root", "password1", client)).rejects.toMatchObject({ status: 429 });
   });
 
+  test("同時送出的猜測也只有 5 次會真的驗密碼", async () => {
+    const statuses = await Promise.all(Array.from({ length: 20 }, () => fail()));
+    expect(statuses.filter((s) => s === 401)).toHaveLength(5);
+    expect(statuses.filter((s) => s === 429)).toHaveLength(15);
+  });
+
   test("鎖定時間指數增加，最長 15 分鐘", async () => {
     for (let i = 0; i < 5; i++) await fail();
     const waits: number[] = [];

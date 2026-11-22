@@ -4512,6 +4512,10 @@ msgid "Request body is not valid JSON"
 msgstr "リクエスト本文が有効な JSON ではありません"
 
 #: web/server-messages/requests.ts
+msgid "Request body is too large. The limit is 1 MB"
+msgstr "リクエスト本文が大きすぎます。上限は 1 MB です"
+
+#: web/server-messages/requests.ts
 msgid "Request body must be an object"
 msgstr "リクエスト本文はオブジェクトである必要があります"
 

@@ -420,7 +420,7 @@ const routes = [
   ...metricsRoutes(metrics),
   hub.route(),
   restream.rtspAuthRoute({
-    verify: async (username, secret) => (await auth.verifyCredentials(username, secret)) !== null,
+    verify: async (username, secret, ip) => (await auth.verifyCredentials(username, secret, ip)) !== null,
     externalEnabled: () => settings.get().rtsp.externalEnabled,
   }),
 ];

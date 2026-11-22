@@ -4512,6 +4512,10 @@ msgid "Request body is not valid JSON"
 msgstr "請求內容不是有效的 JSON"
 
 #: web/server-messages/requests.ts
+msgid "Request body is too large. The limit is 1 MB"
+msgstr "請求內容太大，上限 1 MB"
+
+#: web/server-messages/requests.ts
 msgid "Request body must be an object"
 msgstr "請求內容必須是物件"
 

@@ -2,7 +2,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { Route } from "../types.ts";
 
 export interface RtspAuthDeps {
-  verify(username: string, secret: string): Promise<boolean>;
+  /** `ip` is the RTSP client's address as MediaMTX reports it; failed attempts are rate-limited per address and account. */
+  verify(username: string, secret: string, ip: string): Promise<boolean>;
   externalEnabled(): boolean;
 }
 
@@ -34,7 +35,7 @@ export function buildRtspAuthRoute(internal: InternalCredentials, deps: RtspAuth
         return text(400);
       }
       if (typeof body !== "object" || body === null) return text(400);
-      const { user, password, action } = body as Record<string, unknown>;
+      const { user, password, action, ip } = body as Record<string, unknown>;
       const username = typeof user === "string" ? user : "";
       const secret = typeof password === "string" ? password : "";
 
@@ -47,7 +48,7 @@ export function buildRtspAuthRoute(internal: InternalCredentials, deps: RtspAuth
       if (isInternal) return text(200);
       if (!deps.externalEnabled()) return text(403);
       if (username === "") return text(401);
-      return (await deps.verify(username, secret)) ? text(200) : text(401);
+      return (await deps.verify(username, secret, typeof ip === "string" && ip !== "" ? ip : "unknown")) ? text(200) : text(401);
     },
   };
 }

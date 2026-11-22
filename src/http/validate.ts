@@ -7,9 +7,24 @@ export function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** JSON bodies are settings and form values; the cap keeps a large upload out of memory (login is reachable without an account). */
+export const MAX_JSON_BYTES = 1024 * 1024;
+
 export async function readJson(req: Request): Promise<unknown> {
+  const tooLarge = () => new HttpError(413, msg("http.bodyTooLarge"));
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_JSON_BYTES) throw tooLarge();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (req.body) {
+    // Content-Length can be absent (chunked), so count what actually arrives
+    for await (const chunk of req.body as unknown as AsyncIterable<Uint8Array>) {
+      size += chunk.length;
+      if (size > MAX_JSON_BYTES) throw tooLarge();
+      chunks.push(chunk);
+    }
+  }
   try {
-    return await req.json();
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
     throw new HttpError(400, msg("http.invalidJson"));
   }

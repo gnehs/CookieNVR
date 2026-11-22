@@ -262,11 +262,10 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
           "Retry-After": String(Math.ceil(wait / 1000)),
         });
       }
+      // 先記一次失敗再驗密碼：驗證要等 argon2，同時送來的請求否則全都會在記到失敗之前通過上面的檢查
+      limiter.recordFailure(key);
       const user = await checkPassword(username, password);
-      if (!user) {
-        limiter.recordFailure(key);
-        throw new HttpError(401, msg("auth.badCredentials"));
-      }
+      if (!user) throw new HttpError(401, msg("auth.badCredentials"));
       limiter.recordSuccess(key);
       return startSession(user, client);
     },
@@ -289,6 +288,7 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
     async verifyCredentials(username, secret, ip) {
       const key = ip === undefined ? null : limiterKey(ip, username);
       if (key !== null && limiter.retryAfterMs(key) > 0) return null;
+      if (key !== null) limiter.recordFailure(key);
 
       let principal: Principal | null = null;
       if (secret.startsWith(TOKEN_PREFIX)) {
@@ -300,10 +300,7 @@ export function createAuth(opts: { db: Database; now?: () => number }): Auth {
         if (user) principal = principalOf(user, "session");
       }
 
-      if (key !== null) {
-        if (principal) limiter.recordSuccess(key);
-        else limiter.recordFailure(key);
-      }
+      if (key !== null && principal) limiter.recordSuccess(key);
       return principal;
     },
 

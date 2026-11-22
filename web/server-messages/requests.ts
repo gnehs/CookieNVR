@@ -15,6 +15,7 @@ export const requests: Translations<typeof zh> = {
     return t`The request Content-Type must be ${list}`;
   },
   "http.invalidJson": () => t`Request body is not valid JSON`,
+  "http.bodyTooLarge": () => t`Request body is too large. The limit is 1 MB`,
   "http.bodyNotObject": () => t`Request body must be an object`,
   "http.cameraNotFound": () => t`Camera not found`,
   "http.cameraNotFoundOrDisabled": () => t`Camera not found, or it is disabled`,

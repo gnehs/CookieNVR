@@ -42,6 +42,16 @@ test("外部讀取：帳密正確放行，錯誤或沒帶帳密拒絕", async ()
   expect(await auth(read("", ""))).toBe(401);
 });
 
+test("把 MediaMTX 回報的用戶端位址交給 verify，讓失敗的嘗試能依位址限流", async () => {
+  const seen: string[] = [];
+  const route = buildRtspAuthRoute(internal, { externalEnabled: () => true, verify: async (_u, _s, ip) => (seen.push(ip), false) });
+  for (const extra of [{ ip: "192.168.1.50" }, {}]) {
+    const req = new Request("http://127.0.0.1/internal/rtsp-auth", { method: "POST", body: JSON.stringify({ ...read("alice", "bad"), ...extra }) });
+    await route.handler({ req, url: new URL(req.url), params: {}, principal: null, ip: "127.0.0.1" });
+  }
+  expect(seen).toEqual(["192.168.1.50", "unknown"]);
+});
+
 test("關閉對外 RTSP 時拒絕所有非內部連線", async () => {
   expect(await setup({ externalEnabled: false })(read("alice", "pw"))).toBe(403);
 });
