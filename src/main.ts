@@ -105,7 +105,7 @@ const live = createLive({
     const stream = quality === "hd" || !hasSub ? "main" : "sub";
     return { stream, url: restream.internalUrl(id, stream) };
   },
-  onChange: () => void reconcileWorkers().catch((e) => log("workers", e)),
+  onChange: () => requestReconcile(),
 });
 const indexer = createIndexer({ db, settings: settings.get });
 const retention = createRetention({ db, settings: settings.get, dataDir: env.dataDir });
@@ -128,7 +128,7 @@ const detectStream = (camera: Camera) => (sourceUrls(camera.config.connection).s
 const videoCodecs = createVideoCodecs({
   env,
   tmpDir: join(env.dataDir, "tmp", "hwcodec"),
-  onProbed: () => void reconcileWorkers().catch((e) => log("workers", e)),
+  onProbed: () => requestReconcile(),
   onError: (e) => log("hwcodec", e),
 });
 /** 每台 detect 碼流的影像格式（MediaMTX 回報）；只有選了硬體解碼才查 */
@@ -161,7 +161,7 @@ const states = createStateClassification({
   },
   segments: (id) => segmentsInRange(db, id, 0, Date.now()),
   publish: (msg) => hub.publish(() => msg),
-  onWorkersChanged: () => void reconcileWorkers().catch((e) => log("workers", e)),
+  onWorkersChanged: () => requestReconcile(),
   onError: log,
 });
 
@@ -173,7 +173,7 @@ const homekit = createHomekit({
   events,
   mainUrl: (id) => restream.internalUrl(id, "main"),
   latestJpeg: (id) => detection.latestJpeg(id),
-  onChange: () => void reconcileWorkers().catch((e) => log("workers", e)),
+  onChange: () => requestReconcile(),
   onError: log,
 });
 
@@ -237,6 +237,10 @@ function desiredWorkers(): WorkerSpec[] {
 async function reconcileWorkers(): Promise<void> {
   for (const e of await ensureDayDirs(cameras.list(), settings.get(), Date.now())) log("record", e);
   supervisor.apply(desiredWorkers());
+}
+
+function requestReconcile(): void {
+  void reconcileWorkers().catch((e) => log("workers", e));
 }
 
 const online = new Map<CameraId, boolean>();
@@ -314,6 +318,10 @@ const hub = createStreamHub({
     stateSensors: states.list(),
   }),
 });
+
+function publishCameras(list: Camera[]): void {
+  hub.publish((client) => ({ type: "cameras", data: list.map((c) => clientCameraDto(c, client)) }));
+}
 
 // 只推有變的那幾台；上線狀態每 5 秒更新一次，錄影狀態跟著 worker 狀態走
 const sentStatus = new Map<CameraId, string>();
@@ -469,8 +477,8 @@ cameras.subscribe((list) => {
   states.sync(list);
   homekit.sync();
   for (const c of list) sentStatus.set(c.id, JSON.stringify(cameraStatus(c.id)));
-  hub.publish((client) => ({ type: "cameras", data: list.map((c) => clientCameraDto(c, client)) }));
-  void reconcileWorkers().catch((e) => log("workers", e));
+  publishCameras(list);
+  requestReconcile();
   void restream.sync(list).catch((e) => logRestream(e));
 });
 // 背景服務停下來時印到容器日誌（Unraid 的 Logs 視窗只看得到這裡）；RTSP port 被佔用時直接說改法
@@ -509,12 +517,12 @@ let objectsWasEnabled = settings.get().objects.enabled;
 settings.subscribe((s) => {
   homekit.sync();
   if (s.devices.decode !== "cpu" && !videoCodecs.current()) void videoCodecs.probe().catch((e) => log("hwcodec", e));
-  void reconcileWorkers().catch((e) => log("workers", e));
+  requestReconcile();
   mdns?.refresh();
   if (s.objects.enabled === objectsWasEnabled) return;
   objectsWasEnabled = s.objects.enabled;
   const list = cameras.list();
-  hub.publish((client) => ({ type: "cameras", data: list.map((c) => clientCameraDto(c, client)) }));
+  publishCameras(list);
 });
 const stopSync = restream.keepSynced(() => cameras.list(), ONLINE_POLL_MS, (e) => logRestream(e));
 
