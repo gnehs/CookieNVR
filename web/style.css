@@ -955,10 +955,9 @@ fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .ev-thumb { width: 96px; height: 54px; flex: none; border-radius: 9px; overflow: hidden; background: var(--fill); display: grid; place-items: center; color: var(--muted); }
 .ev-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ev-row { position: relative; }
-.ev-row .ev-item { padding-right: 40px; }
+.ev-row .ev-item { padding-right: 48px; }
 /* 兩個 class：材質層的 .btn { position: relative } 排在後面，單一 class 會被蓋掉 */
-/* 圖示離右緣 6px，跟縮圖離左緣的 .ev-item padding 一樣，整列才會左右對稱 */
-.ev-row > .ev-export { position: absolute; right: 0; top: 50%; translate: 0 -50%; width: 28px; min-height: 28px; }
+.ev-row > .ev-export { position: absolute; right: 6px; top: 50%; translate: 0 -50%; width: 36px; min-height: 36px; }
 .ev-row .badge.live { margin-right: 4px; }
 .ev-text { display: grid; min-width: 0; flex: 1; line-height: 1.35; }
 .ev-text b { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
