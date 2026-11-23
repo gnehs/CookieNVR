@@ -12,7 +12,7 @@ import { createEventTracker } from "./tracker.ts";
 async function setup() {
   const dataDir = await mkdtemp(join(tmpdir(), "cookienvr-events-"));
   const db = openDb(":memory:");
-  const routes = eventRoutes({ db, dataDir, events: createEventTracker({ db, dataDir }) });
+  const routes = eventRoutes({ db, dataDir, ffmpegBin: "ffmpeg", events: createEventTracker({ db, dataDir }) });
   const call = async (path: string, routePath: string, params: Record<string, string> = {}, method = "GET") => {
     const route = routes.find((r) => r.path === routePath && r.method === method) as Route;
     const url = new URL(`http://nvr${path}`);
@@ -30,7 +30,7 @@ async function setup() {
     const res = await call(`/api/events?${qs}`, "/api/events");
     return { status: res.status, body: (await res.json()) as EventDto[] };
   };
-  return { dataDir, call, insert, list, routes };
+  return { db, dataDir, call, insert, list, routes };
 }
 
 test("reading needs a signed-in user, deleting an admin", async () => {
@@ -150,4 +150,47 @@ test("every error path answers with its status and message code", async () => {
   expect(await failure(call("/api/events/999", "/api/events/:id", { id: "999" }, "DELETE"))).toEqual({ status: 404, code: "events.notFound", params: undefined });
   expect(await failure(call("/api/events/999/thumb.jpg", "/api/events/:id/thumb.jpg", { id: "999" }))).toEqual({ status: 404, code: "events.notFound", params: undefined });
   expect(await failure(call(`/api/events/${noThumb}/thumb.jpg`, "/api/events/:id/thumb.jpg", { id: String(noThumb) }))).toEqual({ status: 404, code: "events.thumbnailMissing", params: undefined });
+});
+
+/** A grey 160x120 JPEG; the drawn box is the only red in the picture. */
+async function greyJpeg(): Promise<Uint8Array<ArrayBuffer>> {
+  const proc = Bun.spawn(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=gray:size=160x120", "-frames:v", "1", "-f", "image2pipe", "-c:v", "mjpeg", "pipe:1"], { stdout: "pipe" });
+  return new Response(proc.stdout).bytes();
+}
+
+/** Pixel (x, y) of a JPEG as RGB. */
+async function pixel(jpeg: Uint8Array, x: number, y: number): Promise<[number, number, number]> {
+  const proc = Bun.spawn(["ffmpeg", "-v", "error", "-f", "image2pipe", "-c:v", "mjpeg", "-i", "pipe:0", "-vf", `format=rgb24,crop=1:1:${x}:${y}`, "-f", "rawvideo", "pipe:1"], { stdin: jpeg, stdout: "pipe" });
+  const [r, g, b] = await new Response(proc.stdout).bytes();
+  return [r!, g!, b!];
+}
+
+test("boxes=1 draws the thumbnail's boxes; without it, or for a thumbnail without boxes, the stored file comes back as is", async () => {
+  const { db, dataDir, call, insert } = await setup();
+  const jpeg = await greyJpeg();
+  const boxed = insert("cam1", 1_000, 2_000, ["person"], true).id;
+  const plain = insert("cam1", 3_000, 4_000, [], true).id;
+  db.query(`UPDATE events SET thumb_boxes = ? WHERE id = ?`).run(JSON.stringify([{ label: "person", score: 0.9, box: [0.25, 0.25, 0.75, 0.75] }]), boxed);
+  for (const id of [boxed, plain]) {
+    await mkdir(dirname(thumbPath(dataDir, id)), { recursive: true });
+    await Bun.write(thumbPath(dataDir, id), jpeg);
+  }
+  const thumb = async (id: number, qs = "") => {
+    const res = await call(`/api/events/${id}/thumb.jpg${qs}`, "/api/events/:id/thumb.jpg", { id: String(id) });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    return res.bytes();
+  };
+
+  expect((await call(`/api/events/${boxed}`, "/api/events/:id", { id: String(boxed) }).then((r) => r.json())).thumbBoxes).toEqual([{ label: "person", score: 0.9, box: [0.25, 0.25, 0.75, 0.75] }]);
+  expect(await thumb(boxed)).toEqual(jpeg);
+  expect(await thumb(plain, "?boxes=1")).toEqual(jpeg);
+  const drawn = await thumb(boxed, "?boxes=1");
+  expect(drawn).not.toEqual(jpeg);
+  expect([drawn[0], drawn[1]]).toEqual([0xff, 0xd8]);
+  const [r, g, b] = await pixel(drawn, 41, 60);
+  expect(r).toBeGreaterThan(200);
+  expect(Math.max(g, b)).toBeLessThan(100);
+  const inside = await pixel(drawn, 80, 60);
+  expect(Math.abs(inside[0] - inside[1])).toBeLessThan(20);
 });

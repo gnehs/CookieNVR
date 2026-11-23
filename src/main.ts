@@ -402,7 +402,7 @@ const routes = [
       indexer.exclusive(() => purgeOrphans(purgeDeps, (id) => cameras.get(id) !== null || hasRecordWorker(id))),
   }),
   ...linkRoutes(links, { proveToken: auth.proveToken, instanceId }),
-  ...eventRoutes({ db, dataDir: env.dataDir, events }),
+  ...eventRoutes({ db, dataDir: env.dataDir, ffmpegBin: env.ffmpegBin, events }),
   ...exportRoutes(exportJobs),
   ...ptzRoutes({ hub: ptz }),
   ...detection.routes(),

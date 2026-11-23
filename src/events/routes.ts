@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { msg } from "../messages/index.ts";
 import { HttpError } from "../http/errors.ts";
+import { drawBoxesOnJpeg } from "../objects/draw.ts";
 import type { CameraId, Route } from "../types.ts";
 import { thumbPath } from "./paths.ts";
 import { eventsBefore, getEvent, queryEvents } from "./store.ts";
@@ -22,7 +23,7 @@ const eventOf = (db: Database, raw: string | undefined) => {
   return Number.isSafeInteger(id) ? getEvent(db, id) : null;
 };
 
-export function eventRoutes(deps: { db: Database; dataDir: string; events: Pick<EventTracker, "remove"> }): Route[] {
+export function eventRoutes(deps: { db: Database; dataDir: string; ffmpegBin: string; events: Pick<EventTracker, "remove"> }): Route[] {
   const { db, dataDir } = deps;
   return [
     {
@@ -78,14 +79,22 @@ export function eventRoutes(deps: { db: Database; dataDir: string; events: Pick<
       method: "GET",
       path: "/api/events/:id/thumb.jpg",
       access: "user",
-      async handler({ params }) {
+      async handler({ params, url }) {
         const event = eventOf(db, params.id);
         if (!event) throw new HttpError(404, msg("events.notFound"));
         const file = Bun.file(thumbPath(dataDir, event.id));
         if (!(await file.exists())) throw new HttpError(404, msg("events.thumbnailMissing"));
         // An event in progress replaces its thumbnail whenever the score peaks.
-        const cache = event.endMs === null ? "no-store" : "private, max-age=86400";
-        return new Response(file, { headers: { "Content-Type": "image/jpeg", "Cache-Control": cache } });
+        const headers = { "Content-Type": "image/jpeg", "Cache-Control": event.endMs === null ? "no-store" : "private, max-age=86400" };
+        const boxes = url.searchParams.get("boxes") === "1" ? event.thumbBoxes : null;
+        if (!boxes?.length) return new Response(file, { headers });
+        try {
+          return new Response(await drawBoxesOnJpeg(deps.ffmpegBin, await file.bytes(), boxes), { headers });
+        } catch (e) {
+          // 通知裡沒框的縮圖總比沒有縮圖好
+          console.error(`[events] thumbnail boxes for ${event.id}`, e);
+          return new Response(file, { headers });
+        }
       },
     },
   ];
