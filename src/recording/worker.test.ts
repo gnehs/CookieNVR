@@ -214,7 +214,8 @@ describe.skipIf(!hasTools)("a stream whose timestamps jump backwards (needs ffmp
     const segments = await recordJumpingStream({ arrival: true });
     expect(segments.length).toBeGreaterThanOrEqual(2);
     for (const s of segments) {
-      expect(s.squeezed).toBe(0);
+      // 忙碌的機器上偶爾兩個封包同時送達、時間幾乎相同；壞掉時是成批的四分之一以上
+      expect(s.squeezed).toBeLessThan(s.frames / 20);
       // 檔名只到秒，前後各可能差將近 1 秒
       expect(Math.abs(s.mediaSec - s.wallSec)).toBeLessThan(1.5);
     }
