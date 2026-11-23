@@ -254,15 +254,20 @@ export function createExports(opts: ExportsOptions): Exports {
     const filterPath = join(dir, "boxes.filter");
     if (overlay.length) await Bun.write(filterPath, overlayFilter(overlay));
     // Drawing boxes is the one place an export re-encodes; -copyts keeps the timeline overlayFilter expects.
+    // Two threads each way and a short lookahead keep a 4K HEVC source at about 275 MB (measured), where the defaults
+    // took 760 MB on 18 cores.
     const codec = overlay.length
-      ? ["-/filter:v", filterPath, "-af", "atrim=start=0,asetpts=PTS-STARTPTS", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-c:a", "aac"]
+      ? [
+          ...["-/filter:v", filterPath, "-af", "atrim=start=0,asetpts=PTS-STARTPTS"],
+          ...["-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-threads", "2", "-x264-params", "rc-lookahead=10", "-c:a", "aac"],
+        ]
       : ["-c", "copy"];
 
     const proc = Bun.spawn(
       [
         opts.env.ffmpegBin,
         ...["-hide_banner", "-nostdin", "-loglevel", "warning", "-nostats", "-progress", "pipe:1"],
-        ...(overlay.length ? ["-copyts"] : []),
+        ...(overlay.length ? ["-copyts", "-threads", "2"] : []),
         ...["-f", "concat", "-safe", "0", "-i", listPath],
         ...codec,
         ...["-movflags", "+faststart", "-f", "mp4", "-y", partial],

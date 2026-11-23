@@ -13,7 +13,8 @@ export const MEMORY_LIMIT_BYTES: Record<WorkerKind, number> = {
   live: 128 * MB,
   homekit: 256 * MB,
   "hksv-stream": 256 * MB,
-  export: 256 * MB,
+  // A boxed event clip re-encodes: a 4K HEVC source measured about 275 MB.
+  export: 512 * MB,
 };
 
 export const SAMPLE_INTERVAL_MS = 5_000;
