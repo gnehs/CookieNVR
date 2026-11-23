@@ -1,13 +1,14 @@
 import { expect, test } from "bun:test";
-import { FILTER_WINDOW_MS, initialState, MAX_EVENT_MS, step, wantsObjects, type Effect, type ObjectHit, type Signal } from "./lifecycle.ts";
+import { FILTER_WINDOW_MS, initialState, step, wantsObjects, type Effect, type ObjectHit, type Signal } from "./lifecycle.ts";
 
 const COOLDOWN = 10_000;
+const MAX_EVENT_MS = 10 * 60_000;
 
 function run(signals: Signal[], filter: boolean | ((s: Signal) => boolean) = false) {
   const state = initialState();
   const fx: Effect[] = [];
   const window = (s: Signal) => ((typeof filter === "function" ? filter(s) : filter) ? FILTER_WINDOW_MS : null);
-  for (const s of signals) fx.push(...step(state, s, { cooldownMs: COOLDOWN, filterWindowMs: window(s) }));
+  for (const s of signals) fx.push(...step(state, s, { cooldownMs: COOLDOWN, filterWindowMs: window(s), maxEventMs: MAX_EVENT_MS }));
   return { state, fx };
 }
 
@@ -147,7 +148,7 @@ test("filter: stop while waiting announces nothing", () => {
 
 test("frames are wanted while waiting or recording, not while idle", () => {
   const state = initialState();
-  const policy = { cooldownMs: COOLDOWN, filterWindowMs: FILTER_WINDOW_MS };
+  const policy = { cooldownMs: COOLDOWN, filterWindowMs: FILTER_WINDOW_MS, maxEventMs: MAX_EVENT_MS };
   expect(wantsObjects(state)).toBe(false);
   step(state, px(0, 0.02), policy);
   step(state, px(200, 0.02), policy);
@@ -156,7 +157,7 @@ test("frames are wanted while waiting or recording, not while idle", () => {
 
 test("filter: a longer window (slow recognition) keeps waiting past 3 seconds", () => {
   const state = initialState();
-  const policy = { cooldownMs: COOLDOWN, filterWindowMs: 5_000 };
+  const policy = { cooldownMs: COOLDOWN, filterWindowMs: 5_000, maxEventMs: MAX_EVENT_MS };
   const fx: Effect[] = [];
   for (const s of [...moving(0, 4000), tick(4000), obj(4100, person(0.9)), obj(4600, person(0.9))]) fx.push(...step(state, s, policy));
   expect(fx).toEqual([{ type: "start", at: 0, source: "pixel", score: 0.02, labels: ["person"], thumb: "frame" }]);

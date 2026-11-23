@@ -596,6 +596,10 @@ msgid "{username} {role}, {menuName} menu, {issueText}"
 msgstr "{username} {role}, {menuName} menu, {issueText}"
 
 #: web/pages/settings-cameras/DetectSection.tsx
+msgid "{v} min"
+msgstr "{v} min"
+
+#: web/pages/settings-cameras/DetectSection.tsx
 msgid "{v} sec"
 msgstr "{v} sec"
 
@@ -3272,6 +3276,10 @@ msgstr "Loading pictures…"
 msgid "Loading…"
 msgstr "Loading…"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Longest event"
+msgstr "Longest event"
+
 #: web/detect/object-model.ts
 msgid "Loose"
 msgstr "Loose"
@@ -3378,6 +3386,10 @@ msgctxt "object category"
 msgid "Microwave"
 msgstr "Microwave"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "min"
+msgstr "min"
+
 #: web/pages/storage/StoragePage.tsx
 msgid "Minimum free space"
 msgstr "Minimum free space"
@@ -3463,6 +3475,10 @@ msgstr "Motion detection"
 #: web/pages/settings-cameras/DetectSection.tsx
 msgid "Motion during the wait counts toward the same event."
 msgstr "Motion during the wait counts toward the same event."
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Motion that lasts longer is split into a new event, which notifies again. Shorter events give shorter clips to send."
+msgstr "Motion that lasts longer is split into a new event, which notifies again. Shorter events give shorter clips to send."
 
 #: web/detect/label-names.ts
 msgctxt "object category"

@@ -596,6 +596,10 @@ msgid "{username} {role}, {menuName} menu, {issueText}"
 msgstr "{username}（{role}）、{menuName}メニュー、{issueText}"
 
 #: web/pages/settings-cameras/DetectSection.tsx
+msgid "{v} min"
+msgstr "{v} 分"
+
+#: web/pages/settings-cameras/DetectSection.tsx
 msgid "{v} sec"
 msgstr "{v} 秒"
 
@@ -3272,6 +3276,10 @@ msgstr "画像を読み込み中…"
 msgid "Loading…"
 msgstr "読み込み中…"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Longest event"
+msgstr "イベントの最大時間"
+
 #: web/detect/object-model.ts
 msgid "Loose"
 msgstr "ゆるめ"
@@ -3378,6 +3386,10 @@ msgctxt "object category"
 msgid "Microwave"
 msgstr "電子レンジ"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "min"
+msgstr "分"
+
 #: web/pages/storage/StoragePage.tsx
 msgid "Minimum free space"
 msgstr "最低空き容量"
@@ -3463,6 +3475,10 @@ msgstr "モーション検出"
 #: web/pages/settings-cameras/DetectSection.tsx
 msgid "Motion during the wait counts toward the same event."
 msgstr "待機中にまた動きがあると、同じイベントとして扱われます。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Motion that lasts longer is split into a new event, which notifies again. Shorter events give shorter clips to send."
+msgstr "動きがこれより長く続くと新しいイベントに分割され、もう一度通知します。イベントが短いほど、送る動画も短くなります。"
 
 #: web/detect/label-names.ts
 msgctxt "object category"

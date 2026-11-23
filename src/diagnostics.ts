@@ -165,7 +165,7 @@ function detectLines(d: NonNullable<DiagnosticsCamera["detect"]>, now: number): 
   if (!st) return ["- 動作偵測：攝影機停用，沒有執行"];
   const c = st.config;
   const lines = [
-    `- 動作偵測：${c.enabled ? `開啟，來源 ${SOURCE_TEXT[c.source]}` : "關閉（仍解碼供快照）"}；像素門檻 ${c.threshold}，最小面積 ${(c.minArea * 100).toFixed(2)}%，冷卻 ${c.cooldownSec} 秒，遮罩 ${c.masks.length} 個，物件排除區域 ${c.objectMasks.length} 個`,
+    `- 動作偵測：${c.enabled ? `開啟，來源 ${SOURCE_TEXT[c.source]}` : "關閉（仍解碼供快照）"}；像素門檻 ${c.threshold}，最小面積 ${(c.minArea * 100).toFixed(2)}%，冷卻 ${c.cooldownSec} 秒，事件最長 ${c.maxEventSec} 秒，遮罩 ${c.masks.length} 個，物件排除區域 ${c.objectMasks.length} 個`,
     `- 偵測畫面：${st.lastFrame ? `最近一張 ${duration(now - st.lastFrame.at)}前，狀態 ${st.lastFrame.state}，分數 ${st.lastFrame.score?.toFixed(4) ?? "—"}；60 秒內最高 ${st.peakScore?.toFixed(4) ?? "—"}` : "還沒收到畫面"}${st.paused ? "；鏡頭移動中暫停" : ""}`,
     `- 快照：${st.jpegAt ? `${duration(now - st.jpegAt)}前更新` : "還沒有"}`,
   ];

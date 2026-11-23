@@ -1,7 +1,5 @@
 import type { EventSourceKind } from "../api-types.ts";
 
-/** 事件最長 10 分鐘，超過就切成新事件 */
-export const MAX_EVENT_MS = 10 * 60_000;
 /** 連續這麼多張畫面有動作才開始 */
 export const START_FRAMES = 2;
 /** 同一類別連續這麼多張辨識結果超過門檻，才算確認 */
@@ -81,6 +79,8 @@ export interface LifecycleState {
 export interface Policy {
   cooldownMs: number;
   filterWindowMs: number | null;
+  /** 事件最長多久，超過就在當下切成新事件（每台的 detect.maxEventSec） */
+  maxEventMs: number;
 }
 
 export const initialState = (): LifecycleState => ({ streak: 0, streakStart: 0, onvifActive: new Set(), objectStreak: new Map(), event: null });
@@ -203,7 +203,7 @@ export function step(state: LifecycleState, signal: Signal, policy: Policy): Eff
         }
         break;
       }
-      if (signal.at - e.startMs >= MAX_EVENT_MS) {
+      if (signal.at - e.startMs >= policy.maxEventMs) {
         fx.push({ type: "end", at: signal.at });
         state.event = null;
         // 還在動就接著開新的一筆，來源與標籤延續

@@ -56,6 +56,8 @@ export interface DetectConfig {
   minArea: number;
   /** 連續這麼多秒沒有動作，事件才結束 */
   cooldownSec: number;
+  /** 事件最長這麼多秒，超過就在當下切成新事件；舊資料沒有這個欄位，視為 600 */
+  maxEventSec: number;
   /** 排除區域：畫面差分不看這些範圍，框中心落在裡面的物件也不算 */
   masks: MaskPolygon[];
   /** 只排除物件辨識的區域（例如停車格）：裡面照樣偵測動作，只是框中心落在裡面的物件不算；舊資料沒有這個欄位，視為空 */

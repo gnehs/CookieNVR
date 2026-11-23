@@ -3,7 +3,8 @@ import { mkdirSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import type { EventBoxDto, EventDto } from "../api-types.ts";
 import type { CameraId, Unsubscribe } from "../types.ts";
-import { initialState, MAX_EVENT_MS, step, wantsObjects, type LifecycleState, type Signal } from "./lifecycle.ts";
+import { DEFAULT_DETECT } from "../detect/config.ts";
+import { initialState, step, wantsObjects, type LifecycleState, type Signal } from "./lifecycle.ts";
 import { activeEvents, closeDangling, deleteEventRow, getEvent, insertEvent, insertEventBoxes, updateEvent } from "./store.ts";
 import { thumbPath } from "./paths.ts";
 
@@ -60,6 +61,8 @@ export interface TrackerDeps {
   onError?: (e: unknown) => void;
   /** 這台現在要不要先等辨識才建立事件、最多等多久（過濾模式且 detector 可用）；null 或沒給就是不等 */
   filterWindow?: (cameraId: CameraId) => number | null;
+  /** 這台的事件最長多久（毫秒）；沒給就是預設的 10 分鐘 */
+  maxEventMs?: (cameraId: CameraId) => number;
 }
 
 export function createEventTracker(deps: TrackerDeps): EventTracker {
@@ -69,8 +72,10 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
   const listeners = new Set<(n: EventNotice) => void>();
   mkdirSync(`${dataDir}/thumbs`, { recursive: true });
 
+  const maxEventMs = (id: CameraId) => deps.maxEventMs?.(id) ?? DEFAULT_DETECT.maxEventSec * 1000;
+
   // 上次沒正常結束（當機、斷電）留下的進行中事件
-  closeDangling(db, now(), MAX_EVENT_MS);
+  closeDangling(db, now(), maxEventMs);
 
   function emit(phase: EventNotice["phase"], event: EventDto | null): void {
     if (!event) return;
@@ -98,7 +103,7 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
 
   function signal(cameraId: CameraId, sig: Signal, cooldownMs: number, frame?: ObjectFrame): void {
     const t = track(cameraId);
-    const policy = { cooldownMs, filterWindowMs: deps.filterWindow?.(cameraId) ?? null };
+    const policy = { cooldownMs, filterWindowMs: deps.filterWindow?.(cameraId) ?? null, maxEventMs: maxEventMs(cameraId) };
     // A failed write (database disk full) drops this signal's effects; callers are timers and stream readers that must keep running.
     try {
       for (const fx of step(t.state, sig, policy)) {

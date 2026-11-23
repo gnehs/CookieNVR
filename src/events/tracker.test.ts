@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDb } from "../db.ts";
 import type { CameraId } from "../types.ts";
-import { MAX_EVENT_MS } from "./lifecycle.ts";
 import { thumbPath } from "./paths.ts";
 import type { EventBoxDto } from "../api-types.ts";
 import { purgeCamera } from "../recording/purge.ts";
@@ -18,9 +17,11 @@ const px = (at: number, score: number) => ({ type: "pixel", at, score, motion: t
 const person: EventBoxDto = { label: "person", score: 0.8, box: [0.1, 0.2, 0.3, 0.6] };
 const frame = (bytes: number[], boxes: EventBoxDto[]): ObjectFrame => ({ jpeg: new Uint8Array(bytes), boxes });
 
-async function setup(db = openDb(":memory:"), now = () => 100_000, filterWindow?: () => number | null) {
+const MAX_EVENT_MS = 10 * 60_000;
+
+async function setup(db = openDb(":memory:"), now = () => 100_000, filterWindow?: () => number | null, maxEventMs?: (id: CameraId) => number) {
   const dataDir = await mkdtemp(join(tmpdir(), "cookienvr-tracker-"));
-  const tracker = createEventTracker({ db, dataDir, now, filterWindow });
+  const tracker = createEventTracker({ db, dataDir, now, filterWindow, maxEventMs });
   const notices: EventNotice[] = [];
   tracker.subscribe((n) => notices.push(n));
   return { db, dataDir, tracker, notices };
@@ -67,6 +68,31 @@ test("events left open by a crash are closed on start, capped at the maximum len
   await setup(db, () => 100_000 + MAX_EVENT_MS);
   expect(getEvent(db, recent.id)!.endMs).toBe(95_000 + MAX_EVENT_MS);
   expect(getEvent(db, old.id)!.endMs).toBe(1_000 + MAX_EVENT_MS);
+});
+
+test("crash leftovers are capped at each camera's own maximum length", async () => {
+  const db = openDb(":memory:");
+  const other = "cam2" as CameraId;
+  const short = insertEvent(db, { cameraId: other, source: "pixel", startMs: 1_000, score: 0, labels: [] });
+  const long = insertEvent(db, { cameraId: cam, source: "pixel", startMs: 1_000, score: 0, labels: [] });
+  await setup(db, () => 10_000_000, undefined, (id) => (id === other ? 60_000 : 30 * 60_000));
+  expect(getEvent(db, short.id)!.endMs).toBe(61_000);
+  expect(getEvent(db, long.id)!.endMs).toBe(1_000 + 30 * 60_000);
+});
+
+test("continuous motion is split at the camera's maximum length", async () => {
+  const { tracker, notices } = await setup(undefined, undefined, undefined, () => 60_000);
+  for (let t = 0; t <= 65_000; t += 1_000) {
+    tracker.signal(cam, px(t, 0.02), 10_000);
+    tracker.signal(cam, px(t + 200, 0.02), 10_000);
+    tracker.signal(cam, { type: "tick", at: t + 500 }, 10_000);
+  }
+  const phases = notices.filter((n) => n.phase !== "update").map((n) => [n.phase, n.event.startMs, n.event.endMs]);
+  expect(phases).toEqual([
+    ["start", 0, null],
+    ["end", 0, 60_500],
+    ["start", 60_500, null],
+  ]);
 });
 
 test("stopAll closes what is running", async () => {

@@ -141,9 +141,12 @@ export function eventBoxes(db: Database, eventId: number): BoxSample[] {
   return rows.map((r) => ({ atMs: r.at_ms, boxes: parseBoxes(r.boxes) }));
 }
 
-/** 上次主程序沒收尾的事件：結束時間取現在，但不超過事件長度上限 */
-export function closeDangling(db: Database, now: number, maxMs: number): number {
-  return db.query(`UPDATE events SET end_ms = MAX(start_ms, MIN(?1, start_ms + ?2)) WHERE end_ms IS NULL`).run(now, maxMs).changes;
+/** 上次主程序沒收尾的事件：結束時間取現在，但不超過這台的事件長度上限 */
+export function closeDangling(db: Database, now: number, maxMsOf: (cameraId: CameraId) => number): number {
+  const open = db.query(`SELECT id, camera_id, start_ms FROM events WHERE end_ms IS NULL`).all() as { id: number; camera_id: string; start_ms: number }[];
+  const close = db.query(`UPDATE events SET end_ms = ?2 WHERE id = ?1`);
+  for (const e of open) close.run(e.id, Math.max(e.start_ms, Math.min(now, e.start_ms + maxMsOf(e.camera_id as CameraId))));
+  return open.length;
 }
 
 export function deleteEventRow(db: Database, id: number): void {

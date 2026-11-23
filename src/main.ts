@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { statfs } from "node:fs/promises";
 import { join } from "node:path";
+import { DEFAULT_DETECT, detectConfigOf } from "./detect/config.ts";
 import pkg from "../package.json";
 import { backupOnce } from "./backup/index.ts";
 import { API_VERSION, type CameraDto, type ProbeResult, type SystemDto } from "./api-types.ts";
@@ -115,6 +116,10 @@ const events = createEventTracker({
   dataDir: env.dataDir,
   onError: (e) => log("events", e),
   filterWindow: (id) => objects.filterWindow(id),
+  maxEventMs: (id) => {
+    const camera = cameras.get(id);
+    return (camera ? detectConfigOf(camera.config) : DEFAULT_DETECT).maxEventSec * 1000;
+  },
 });
 const objects = createObjectDetection({
   env,

@@ -596,6 +596,10 @@ msgid "{username} {role}, {menuName} menu, {issueText}"
 msgstr "{username} {role}，{menuName}選單，有 {issueText}"
 
 #: web/pages/settings-cameras/DetectSection.tsx
+msgid "{v} min"
+msgstr "{v} 分鐘"
+
+#: web/pages/settings-cameras/DetectSection.tsx
 msgid "{v} sec"
 msgstr "{v} 秒"
 
@@ -3272,6 +3276,10 @@ msgstr "正在讀取畫面…"
 msgid "Loading…"
 msgstr "載入中…"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Longest event"
+msgstr "事件最長時間"
+
 #: web/detect/object-model.ts
 msgid "Loose"
 msgstr "寬鬆"
@@ -3378,6 +3386,10 @@ msgctxt "object category"
 msgid "Microwave"
 msgstr "微波爐"
 
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "min"
+msgstr "分鐘"
+
 #: web/pages/storage/StoragePage.tsx
 msgid "Minimum free space"
 msgstr "最低剩餘空間"
@@ -3463,6 +3475,10 @@ msgstr "動作偵測"
 #: web/pages/settings-cameras/DetectSection.tsx
 msgid "Motion during the wait counts toward the same event."
 msgstr "等待期間又有動作，會算在同一筆事件裡。"
+
+#: web/pages/settings-cameras/DetectSection.tsx
+msgid "Motion that lasts longer is split into a new event, which notifies again. Shorter events give shorter clips to send."
+msgstr "動作持續超過這個時間，就切成新的事件並再通知一次。事件越短，傳送的影片也越短。"
 
 #: web/detect/label-names.ts
 msgctxt "object category"

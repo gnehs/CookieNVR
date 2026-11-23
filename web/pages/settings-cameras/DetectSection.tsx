@@ -3,7 +3,7 @@ import { useLingui } from "@lingui/react/macro";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CameraDto } from "../../../src/api-types.ts";
-import { DEFAULT_DETECT, SENSITIVITY_PRESETS } from "../../../src/detect/config.ts";
+import { DEFAULT_DETECT, LIMITS, SENSITIVITY_PRESETS } from "../../../src/detect/config.ts";
 import type { DetectConfig, DetectSource } from "../../../src/types.ts";
 import { api } from "../../api.ts";
 import { ptzQuery } from "../../data/queries.ts";
@@ -204,7 +204,7 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
           <SettingsDisclosure
             title={t`More options`}
             summary={`${d.source !== "onvif" ? `${t`Change area ${area}`} · ` : ""}${t`Waits ${cooldown} sec before ending`}`}
-            defaultOpen={d.minArea !== DEFAULT_DETECT.minArea || d.cooldownSec !== DEFAULT_DETECT.cooldownSec}
+            defaultOpen={d.minArea !== DEFAULT_DETECT.minArea || d.cooldownSec !== DEFAULT_DETECT.cooldownSec || d.maxEventSec !== DEFAULT_DETECT.maxEventSec}
           >
             <div className="set-block" hidden={!pixel}>
               <div className="range-field">
@@ -231,6 +231,20 @@ export function DetectSection({ camera, value, saved, onChange, onvif, active, o
                   initial={d.cooldownSec}
                   unit={t`sec`}
                   onChange={(v) => Number.isFinite(v) && onChange({ cooldownSec: Math.min(300, Math.max(1, Math.round(v))) })}
+                />
+              }
+            />
+            <SettingRow
+              title={t`Longest event`}
+              desc={t`Motion that lasts longer is split into a new event, which notifies again. Shorter events give shorter clips to send.`}
+              wide
+              control={
+                <Choice
+                  label={t`Longest event`}
+                  presets={[2, 5, 10, 30].map((v) => ({ value: v, label: t`${v} min` }))}
+                  initial={d.maxEventSec / 60}
+                  unit={t`min`}
+                  onChange={(v) => Number.isFinite(v) && onChange({ maxEventSec: Math.min(LIMITS.maxEventSec.max, Math.max(LIMITS.maxEventSec.min, Math.round(v * 60))) })}
                 />
               }
             />

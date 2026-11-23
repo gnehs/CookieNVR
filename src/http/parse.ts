@@ -113,6 +113,8 @@ function parseDetect(value: unknown): DetectConfig {
     threshold: int(o, "threshold", LIMITS.threshold.min, LIMITS.threshold.max, "detect.threshold"),
     minArea: num(o, "minArea", LIMITS.minArea.min, LIMITS.minArea.max, "detect.minArea"),
     cooldownSec: int(o, "cooldownSec", LIMITS.cooldownSec.min, LIMITS.cooldownSec.max, "detect.cooldownSec"),
+    // 事件最長時間是後來才加的，舊的用戶端送來的設定沒有
+    maxEventSec: o.maxEventSec === undefined ? DEFAULT_DETECT.maxEventSec : int(o, "maxEventSec", LIMITS.maxEventSec.min, LIMITS.maxEventSec.max, "detect.maxEventSec"),
     masks: masks.map((m, i) => parseMask(m, `detect.masks[${i}]`)),
     // 物件專用的排除區域是後來才加的，舊的用戶端送來的設定沒有
     objectMasks: objectMasks.map((m, i) => parseMask(m, `detect.objectMasks[${i}]`)),
