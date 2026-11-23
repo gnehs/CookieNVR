@@ -14,7 +14,7 @@ describe("planExport", () => {
   test("a range inside one segment trims both ends and estimates its share of the bytes", () => {
     const plan = planExport([seg(1, 0, 60)], T + 10_000, T + 40_000, NOW);
     if (!plan.ok) throw new Error(plan.message);
-    expect(plan.parts).toEqual([{ segmentId: 1, open: false, inpointMs: 10_000, outpointMs: 40_000, coveredMs: 30_000, bytes: 3_000 }]);
+    expect(plan.parts).toEqual([{ segmentId: 1, startMs: T + 10_000, open: false, inpointMs: 10_000, outpointMs: 40_000, coveredMs: 30_000, bytes: 3_000 }]);
     expect(plan.durationMs).toBe(30_000);
     expect(plan.estimatedBytes).toBe(3_000);
   });

@@ -8,6 +8,8 @@ import { getSegment, segmentsInRange } from "../recording/store.ts";
 import type { CameraId, CameraStore } from "../types.ts";
 import { processStartToken, reapOrphans, signalGroup, writePidFile } from "../workers/process-group.ts";
 import { exportFileName } from "./filename.ts";
+import type { BoxSample } from "../events/store.ts";
+import { overlayBoxes, overlayFilter } from "./overlay.ts";
 import { planExport, type ExportPlan, type PlanPart } from "./plan.ts";
 
 export const EXPORT_TIMEOUT_MS = 10 * 60_000;
@@ -57,13 +59,16 @@ interface Job {
   durationMs: number;
   estimatedBytes: number;
   includesRecording: boolean;
+  /** Detections to burn into the clip; null = a plain copy of the recording. */
+  boxes: readonly BoxSample[] | null;
   phase: Phase;
 }
 
 export interface Exports {
   /** Resolves once leftovers of a previous run are gone; create and list work before that, but nothing starts. */
   readonly ready: Promise<void>;
-  create(request: ExportRequestDto): Promise<ExportDto>;
+  /** boxes: detections to draw, which re-encodes the clip; without them the recording is copied as is. */
+  create(request: ExportRequestDto, opts?: { boxes?: readonly BoxSample[] }): Promise<ExportDto>;
   list(): ExportDto[];
   get(id: string): ExportDto | null;
   /** The finished file, or null while the job is not done. */
@@ -85,12 +90,18 @@ const newId = () => [...crypto.getRandomValues(new Uint8Array(8))].map(pad).join
 const quote = (path: string) => `'${path.replace(/'/g, `'\\''`)}'`;
 const secs = (ms: number) => (ms / 1000).toFixed(3);
 
-export function concatList(files: { path: string; part: PlanPart }[]): string {
+/**
+ * exactEnds: every part ends at its planned length even when it runs to the end of the file. Without it the concat
+ * demuxer starts the next file where this one's longest stream ends, which drifts from the plan by a few frames per
+ * file; drawn boxes are timed by the plan.
+ */
+export function concatList(files: { path: string; part: PlanPart }[], exactEnds = false): string {
   const lines = ["ffconcat version 1.0"];
   for (const { path, part } of files) {
     lines.push(`file ${quote(path)}`);
     if (part.inpointMs > 0) lines.push(`inpoint ${secs(part.inpointMs)}`);
-    if (part.outpointMs !== null) lines.push(`outpoint ${secs(part.outpointMs)}`);
+    const outpointMs = part.outpointMs ?? (exactEnds ? part.inpointMs + part.coveredMs : null);
+    if (outpointMs !== null) lines.push(`outpoint ${secs(outpointMs)}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -147,7 +158,7 @@ export function createExports(opts: ExportsOptions): Exports {
     return planExport(segments, request.startMs, request.endMs, now());
   }
 
-  async function create(request: ExportRequestDto): Promise<ExportDto> {
+  async function create(request: ExportRequestDto, createOpts: { boxes?: readonly BoxSample[] } = {}): Promise<ExportDto> {
     if (closed) throw new ExportError("busy", msg("export.shuttingDown"));
     const camera = opts.cameras.get(request.cameraId);
     if (!camera) throw new ExportError("not-found", msg("export.cameraNotFound"));
@@ -170,6 +181,7 @@ export function createExports(opts: ExportsOptions): Exports {
       durationMs: plan.durationMs,
       estimatedBytes: plan.estimatedBytes,
       includesRecording: plan.includesRecording,
+      boxes: createOpts.boxes?.length ? createOpts.boxes : null,
       phase: { tag: "queued" },
     };
     jobs.set(job.id, job);
@@ -234,17 +246,26 @@ export function createExports(opts: ExportsOptions): Exports {
     const files = await stage(job, plan.parts);
     if (files.length === 0) throw new ExportError("empty", msg("export.purged"));
     const dir = dirOf(job);
+    const overlay = job.boxes ? overlayBoxes(job.boxes, files.map((f) => f.part)) : [];
     const listPath = join(dir, "list.txt");
-    await Bun.write(listPath, concatList(files));
+    await Bun.write(listPath, concatList(files, overlay.length > 0));
     const partial = join(dir, "export.partial.mp4");
     const expectedMs = files.reduce((n, f) => n + f.part.coveredMs, 0);
+    const filterPath = join(dir, "boxes.filter");
+    if (overlay.length) await Bun.write(filterPath, overlayFilter(overlay));
+    // Drawing boxes is the one place an export re-encodes; -copyts keeps the timeline overlayFilter expects.
+    const codec = overlay.length
+      ? ["-/filter:v", filterPath, "-af", "atrim=start=0,asetpts=PTS-STARTPTS", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-c:a", "aac"]
+      : ["-c", "copy"];
 
     const proc = Bun.spawn(
       [
         opts.env.ffmpegBin,
         ...["-hide_banner", "-nostdin", "-loglevel", "warning", "-nostats", "-progress", "pipe:1"],
+        ...(overlay.length ? ["-copyts"] : []),
         ...["-f", "concat", "-safe", "0", "-i", listPath],
-        ...["-c", "copy", "-movflags", "+faststart", "-f", "mp4", "-y", partial],
+        ...codec,
+        ...["-movflags", "+faststart", "-f", "mp4", "-y", partial],
       ],
       { detached: true, stdin: "ignore", stdout: "pipe", stderr: "pipe" },
     );
@@ -307,7 +328,7 @@ export function createExports(opts: ExportsOptions): Exports {
       throw new ExportError("busy", msg("export.unplayable"));
     }
     await rename(partial, outPath(job));
-    await Promise.all([rm(listPath, { force: true }), ...files.filter((f) => f.part.open).map((f) => rm(f.path, { force: true }))]);
+    await Promise.all([rm(listPath, { force: true }), rm(filterPath, { force: true }), ...files.filter((f) => f.part.open).map((f) => rm(f.path, { force: true }))]);
     job.phase = { tag: "done", finishedAt: now(), sizeBytes: size };
   }
 

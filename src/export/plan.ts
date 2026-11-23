@@ -18,6 +18,8 @@ export interface PlanSegment {
 
 export interface PlanPart {
   segmentId: number;
+  /** Wall-clock time (UTC ms) of the inpoint. */
+  startMs: number;
   /** The segment is still being written; the exporter takes what is on disk now. */
   open: boolean;
   /** Seek into the file before the first kept packet; the actual cut snaps back to a keyframe. */
@@ -60,6 +62,7 @@ export function planExport(segments: readonly PlanSegment[], startMs: number, en
     const span = Math.max(1, segEnd - s.startMs);
     parts.push({
       segmentId: s.id,
+      startMs: lo,
       open: s.endMs === null,
       inpointMs: lo - s.startMs,
       outpointMs: hi < segEnd ? hi - s.startMs : null,
