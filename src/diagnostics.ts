@@ -18,6 +18,8 @@ export interface DiagnosticsCamera {
   recording: boolean;
   /** 最近一次用相同連線設定測試的結果，本次啟動後沒測過就是 null */
   probe: { at: number; result: ProbeResult } | null;
+  /** 串流時間戳記會倒退，改用收到畫面的時間錄影 */
+  arrivalTimestamps?: boolean;
   /** ONVIF 與 PTZ 的現況；沒有提供時報告不列這一項 */
   ptz?: PtzDiagnostics;
   /** 動作偵測的現況；沒有提供時報告不列這一項 */
@@ -221,6 +223,7 @@ function cameraBlock(c: DiagnosticsCamera, input: DiagnosticsInput): string[] {
     `- 連線狀態：${!cfg.enabled ? "已停用" : c.online ? "上線（轉發層已收到影像）" : "離線（轉發層沒有收到影像）"}`,
     `- 錄影設定：${rec.enabled ? `開啟，${rec.audio ? "含音訊" : "不含音訊"}，${rec.direct ? "直連相機" : "經轉發層"}` : "關閉"}`,
     `- 目前是否錄影中：${c.recording ? "是" : "否"}`,
+    ...(c.arrivalTimestamps ? ["- 錄影時間戳記：串流的時間戳記會倒退（常見於訊號不穩），本次啟動後改用收到畫面的時間錄影"] : []),
   ];
   if (c.probe) {
     const r = c.probe.result;

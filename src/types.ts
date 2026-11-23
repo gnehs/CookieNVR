@@ -247,6 +247,8 @@ export interface WorkerSpec {
    * 讀取要跟得上輸出，否則子程序會卡在寫入。
    */
   readStdout?: (stdout: ReadableStream<Uint8Array>) => Promise<void>;
+  /** 輸出尾端的每一行也交給它（readStdout 讀走的資料不算）；丟出的錯誤會被吞掉 */
+  onOutputLine?: (line: string) => void;
 }
 
 export type WorkerState = "starting" | "running" | "backoff" | "stopped";

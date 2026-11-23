@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { readdir, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { readEnv } from "../env.ts";
 import { parseSegmentPath } from "./layout.ts";
 import { camera, tempSettings, writeSegment } from "./test-helpers.ts";
-import { ensureDayDirs, recordWorkerSpec } from "./worker.ts";
+import { BROKEN_TIMESTAMP_LINES, ensureDayDirs, recordWorkerSpec, type RecordTiming } from "./worker.ts";
 
 const env = readEnv({ FFMPEG_BIN: "/usr/bin/ffmpeg" });
 
@@ -46,6 +46,27 @@ test("direct recording of a UDP camera keeps its transport", async () => {
   const cam = camera("c", { direct: true });
   cam.config.connection = { type: "rtsp", mainUrl: "rtsp://cam/main", transport: "udp" };
   expect(flag(recordWorkerSpec(cam, settings, "rtsp://cam/main", env).cmd, "-rtsp_transport")).toBe("udp");
+});
+
+test("a camera whose timestamps go backwards switches to arrival time once", async () => {
+  const settings = await tempSettings();
+  let broken = 0;
+  const timing: RecordTiming = { arrival: false, onBroken: () => broken++ };
+  const spec = recordWorkerSpec(camera("c", { audio: true }), settings, "rtsp://x", env, Date.now, timing);
+  expect(spec.cmd).not.toContain("-use_wallclock_as_timestamps");
+  spec.onOutputLine!("[vost#0:0/copy @ 0x1] Non-monotonic DTS; previous: 4992646, current: 3247327; changing to 4992647.");
+  for (let i = 1; i < BROKEN_TIMESTAMP_LINES; i++) spec.onOutputLine!("frame=  12 fps=0.0");
+  expect(broken).toBe(0);
+  for (let i = 0; i < BROKEN_TIMESTAMP_LINES * 3; i++) spec.onOutputLine!("[aost#0:1/aac @ 0x2] Non-monotonic DTS; previous: 479004, current: 250853");
+  expect(broken).toBe(1);
+
+  const arrival = recordWorkerSpec(camera("c", { audio: true }), settings, "rtsp://x", env, Date.now, { ...timing, arrival: true });
+  expect(flag(arrival.cmd, "-use_wallclock_as_timestamps")).toBe("1");
+  expect(arrival.cmd.indexOf("-use_wallclock_as_timestamps")).toBeLessThan(arrival.cmd.indexOf("-i"));
+  expect(flag(arrival.cmd, "-af")).toBe("aresample=async=1");
+  for (let i = 0; i < BROKEN_TIMESTAMP_LINES * 3; i++) arrival.onOutputLine!("Non-monotonic DTS");
+  expect(broken).toBe(1);
+  expect(recordWorkerSpec(camera("c", { audio: false }), settings, "rtsp://x", env, Date.now, { arrival: true }).cmd).not.toContain("-af");
 });
 
 test("stall check fails once the newest file stops growing for 30 s", async () => {
@@ -125,6 +146,77 @@ describe.skipIf(!hasTools)("against a live RTSP camera (needs ffmpeg, ffprobe an
       fake.kill("SIGTERM");
       await fake.exited;
       await rm(settings.storagePath, { recursive: true, force: true });
+    }
+  }, 30_000);
+});
+
+/** 推一條每 6 秒倒退 5 秒的 RTP 串流（模擬 Wi-Fi 不穩的 Tapo），用錄影指令錄 14 秒；segment 縮成 4 秒 */
+async function recordJumpingStream(timing: RecordTiming): Promise<{ wallSec: number; mediaSec: number; frames: number; squeezed: number }[]> {
+  const settings = await tempSettings();
+  const probe = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
+  const port = probe.port + (probe.port % 2);
+  probe.stop(true);
+  await mkdir(settings.storagePath, { recursive: true });
+  const sdp = join(settings.storagePath, "in.sdp");
+  const jump = "PTS-floor(PTS*TB/6)*5/TB";
+  const pub = Bun.spawn(
+    [realEnv.ffmpegBin, "-hide_banner", "-loglevel", "error", "-re", "-f", "lavfi", "-i", "testsrc=size=320x180:rate=15", "-re", "-f", "lavfi", "-i", "sine=r=8000",
+      "-map", "0:v", "-c:v", "libx264", "-preset", "ultrafast", "-bf", "0", "-g", "15", "-bsf:v", `setts=pts=${jump}:dts=${jump}`, "-f", "rtp", `rtp://127.0.0.1:${port}`,
+      "-map", "1:a", "-c:a", "pcm_alaw", "-bsf:a", `setts=pts=${jump}:dts=${jump}`, "-f", "rtp", `rtp://127.0.0.1:${port + 2}`, "-sdp_file", sdp],
+    { stdout: "ignore", stderr: "ignore" },
+  );
+  try {
+    while (!(await Bun.file(sdp).exists())) await Bun.sleep(50);
+    const cam = camera("cam1", { audio: true });
+    await ensureDayDirs([cam], settings, Date.now());
+    const spec = recordWorkerSpec(cam, settings, sdp, realEnv, Date.now, timing);
+    const cmd = [...spec.cmd];
+    cmd[cmd.indexOf("-segment_time") + 1] = "4";
+    for (const name of ["-rtsp_transport", "-timeout"]) cmd.splice(cmd.indexOf(name), 2);
+    cmd.splice(cmd.indexOf("-i"), 0, "-protocol_whitelist", "file,udp,rtp");
+    const recorder = Bun.spawn(cmd, { env: { ...process.env, ...spec.env }, stdout: "ignore", stderr: "pipe" });
+    const lines = (async () => {
+      for (const line of (await new Response(recorder.stderr).text()).split("\n")) spec.onOutputLine?.(line);
+    })();
+    await Bun.sleep(14_000);
+    recorder.kill("SIGINT");
+    await recorder.exited;
+    await lines;
+
+    const dir = join(settings.storagePath, "cam1");
+    const files = (await Promise.all((await readdir(dir)).map(async (d) => (await readdir(join(dir, d))).map((f) => join(dir, d, f))))).flat().sort();
+    // 第一段含連線前的時間、最後一段被中斷，只看中間的
+    return files.slice(1, -1).map((f, i) => {
+      const pts = Bun.spawnSync([realEnv.ffprobeBin, "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time", "-of", "csv=p=0", f]).stdout.toString().trim().split("\n").map(Number);
+      return {
+        wallSec: (parseSegmentPath(files[i + 2]!)!.startMs - parseSegmentPath(f)!.startMs) / 1000,
+        mediaSec: pts.at(-1)! - pts[0]!,
+        frames: pts.length,
+        squeezed: pts.slice(1).filter((t, j) => t - pts[j]! < 0.005).length,
+      };
+    });
+  } finally {
+    pub.kill();
+    await pub.exited;
+    await rm(settings.storagePath, { recursive: true, force: true });
+  }
+}
+
+describe.skipIf(!hasTools)("a stream whose timestamps jump backwards (needs ffmpeg and ffprobe)", () => {
+  test("stream timestamps squeeze the footage and report the camera broken", async () => {
+    let broken = 0;
+    const segments = await recordJumpingStream({ arrival: false, onBroken: () => broken++ });
+    expect(broken).toBe(1);
+    expect(segments.reduce((n, s) => n + s.squeezed, 0)).toBeGreaterThan(segments.reduce((n, s) => n + s.frames, 0) / 4);
+  }, 30_000);
+
+  test("arrival time keeps every segment as long as the wall time its name gives", async () => {
+    const segments = await recordJumpingStream({ arrival: true });
+    expect(segments.length).toBeGreaterThanOrEqual(2);
+    for (const s of segments) {
+      expect(s.squeezed).toBe(0);
+      // 檔名只到秒，前後各可能差將近 1 秒
+      expect(Math.abs(s.mediaSec - s.wallSec)).toBeLessThan(1.5);
     }
   }, 30_000);
 });

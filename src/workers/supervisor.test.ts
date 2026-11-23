@@ -103,6 +103,21 @@ describe("apply", () => {
     await until(() => one(sup, "a")?.restarts === 2 && one(sup, "a")?.state === "running");
   });
 
+  test("hands every output line to the current spec's line hook, and a throwing hook changes nothing", async () => {
+    const { sup } = makeSupervisor();
+    const first: string[] = [];
+    const second: string[] = [];
+    const script = "echo one >&2; sleep 0.3; printf 'two\\rthree\\n' >&2; sleep 5";
+    sup.apply([sh("a", script, { onOutputLine: (l) => { first.push(l); throw new Error("hook failed"); } })]);
+    await until(() => first.includes("one"));
+    sup.apply([sh("a", script, { onOutputLine: (l) => second.push(l) })]);
+    await until(() => second.includes("three"));
+    expect(first).toEqual(["one"]);
+    expect(second).toEqual(["two", "three"]);
+    expect(one(sup, "a")?.stderrTail).toEqual(["one", "two", "three"]);
+    expect(one(sup, "a")?.restarts).toBe(0);
+  });
+
   test("swaps in a new stall function without restarting", async () => {
     const { sup } = makeSupervisor();
     let calls = { old: 0, new: 0 };

@@ -200,12 +200,19 @@ export function createSupervisor(opts: SupervisorOptions): CookieSupervisor {
         // ffmpeg rewrites its progress line with bare \r.
         const parts = (partial + decoder.decode(value, { stream: true })).split(/\r\n|\r|\n/);
         partial = (parts.pop() ?? "").slice(-4096);
-        for (const p of parts) if (p) pushTail(w, p);
+        for (const p of parts) if (p) outputLine(w, p);
       }
     } catch {
       // Stream torn down with the process.
     }
-    if (partial) pushTail(w, partial);
+    if (partial) outputLine(w, partial);
+  }
+
+  function outputLine(w: Worker, line: string): void {
+    pushTail(w, line);
+    try {
+      w.spec.onOutputLine?.(line);
+    } catch {}
   }
 
   function isCurrent(w: Worker, run: Run): boolean {

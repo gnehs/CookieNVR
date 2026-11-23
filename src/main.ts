@@ -227,6 +227,9 @@ function purgeCameraRecordings(id: CameraId): void {
     .catch((e) => log("purge", e));
 }
 
+/** 串流時間戳記會倒退的攝影機改用收到畫面的時間錄影；只記在記憶體，重啟後第一次倒退時再切換 */
+const arrivalTimestamps = new Set<CameraId>();
+
 function desiredWorkers(): WorkerSpec[] {
   const specs = [restream.workerSpec(), ...live.workerSpecs(), ...detection.workerSpecs(), ...homekit.workerSpecs(), ...objects.workerSpecs(), ...states.workerSpecs()];
   for (const camera of cameras.list()) {
@@ -234,7 +237,15 @@ function desiredWorkers(): WorkerSpec[] {
     const input = camera.config.record.direct
       ? sourceUrls(camera.config.connection).main
       : restream.internalUrl(camera.id, "main");
-    specs.push(recordWorkerSpec(camera, settings.get(), input, env));
+    const timing = {
+      arrival: arrivalTimestamps.has(camera.id),
+      onBroken() {
+        arrivalTimestamps.add(camera.id);
+        console.log(`[record] ${camera.config.name}（${camera.id}）的串流時間戳記倒退，改用收到畫面的時間錄影`);
+        requestReconcile();
+      },
+    };
+    specs.push(recordWorkerSpec(camera, settings.get(), input, env, Date.now, timing));
   }
   return specs;
 }
@@ -361,6 +372,7 @@ async function diagnostics(only: string | null): Promise<string> {
         camera,
         ...cameraStatus(camera.id),
         probe: probes.get(JSON.stringify(camera.config.connection)) ?? null,
+        arrivalTimestamps: arrivalTimestamps.has(camera.id),
         ptz: await ptz.inspect(camera.id, PTZ_INSPECT_MS),
         detect: { state: detection.diagnostics(camera.id), eventsLast24h: countEventsSince(db, camera.id, Date.now() - 86_400_000) },
         homekit: hk.cameras.get(camera.id),
