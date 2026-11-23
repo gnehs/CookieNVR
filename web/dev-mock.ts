@@ -653,37 +653,46 @@ function exportView(job: MockExport): ExportDto {
   return { ...d, state: "queued", progress: 0, ahead };
 }
 
+function createExport(cameraId: unknown, startMs: number, endMs: number, tz: unknown): Response {
+  const c = cams.find((x) => x.id === cameraId);
+  if (!c) return errorResponse(404, msg("export.cameraNotFound"));
+  const plan = planExport(segmentsIn(c.id, startMs - MIN, endMs + MIN), startMs, endMs, now());
+  if (!plan.ok) return errorResponse(plan.reason === "empty" ? 422 : 400, plan.msg);
+  const id = crypto.randomUUID().slice(0, 16);
+  const dto: ExportDto = {
+    id,
+    cameraId: c.id,
+    cameraName: c.config.name,
+    startMs: plan.startMs,
+    endMs: plan.endMs,
+    durationMs: plan.durationMs,
+    estimatedBytes: plan.estimatedBytes,
+    includesRecording: plan.includesRecording,
+    state: "queued",
+    progress: 0,
+    ahead: 0,
+    sizeBytes: null,
+    error: null,
+    errorMsg: null,
+    fileName: exportFileName(c.config.name, plan.startMs, String(tz ?? "UTC")),
+    createdAt: now(),
+    finishedAt: null,
+    expiresAt: null,
+  };
+  exportJobs.push({ dto, runMs: EXPORT_RUN_MS });
+  return json<ExportDto>(exportView(exportJobs[exportJobs.length - 1]!), 201);
+}
+
 async function exportApi(req: Request, url: URL, path: string, body: any): Promise<Response | null> {
   const m = req.method;
   if (path === "/exports" && m === "GET") return json<ExportDto[]>(exportJobs.map(exportView).reverse());
-  if (path === "/exports" && m === "POST") {
-    const c = cams.find((x) => x.id === body.cameraId);
-    if (!c) return errorResponse(404, msg("export.cameraNotFound"));
-    const plan = planExport(segmentsIn(c.id, Number(body.startMs) - MIN, Number(body.endMs) + MIN), Number(body.startMs), Number(body.endMs), now());
-    if (!plan.ok) return errorResponse(plan.reason === "empty" ? 422 : 400, plan.msg);
-    const id = crypto.randomUUID().slice(0, 16);
-    const dto: ExportDto = {
-      id,
-      cameraId: c.id,
-      cameraName: c.config.name,
-      startMs: plan.startMs,
-      endMs: plan.endMs,
-      durationMs: plan.durationMs,
-      estimatedBytes: plan.estimatedBytes,
-      includesRecording: plan.includesRecording,
-      state: "queued",
-      progress: 0,
-      ahead: 0,
-      sizeBytes: null,
-      error: null,
-      errorMsg: null,
-      fileName: exportFileName(c.config.name, plan.startMs, String(body.tz ?? "UTC")),
-      createdAt: now(),
-      finishedAt: null,
-      expiresAt: null,
-    };
-    exportJobs.push({ dto, runMs: EXPORT_RUN_MS });
-    return json<ExportDto>(exportView(exportJobs[exportJobs.length - 1]!), 201);
+  if (path === "/exports" && m === "POST") return createExport(body.cameraId, Number(body.startMs), Number(body.endMs), body.tz);
+  const clip = path.match(/^\/events\/(\d+)\/clip$/);
+  if (clip && m === "POST") {
+    // 假後端不畫框，boxes 只影響真後端
+    const e = allEvents(null).find((x) => x.id === Number(clip[1]));
+    if (!e) return errorResponse(404, msg("events.notFound"));
+    return createExport(e.cameraId, e.startMs - 5_000, (e.endMs ?? now()) + 5_000, body.tz);
   }
   const mm = path.match(/^\/exports\/([\w-]+)(\/file)?$/);
   if (!mm) return null;
