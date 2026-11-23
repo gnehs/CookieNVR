@@ -121,6 +121,16 @@ const MIGRATIONS: string[] = [
   );
   ALTER TABLE cameras ADD COLUMN group_id TEXT REFERENCES camera_groups (id) ON DELETE SET NULL;
   `,
+  // 物件框：縮圖那張畫面的框（JSON），以及事件期間每張辨識結果的框（匯出加框影片用）
+  `
+  ALTER TABLE events ADD COLUMN thumb_boxes TEXT;
+  CREATE TABLE event_boxes (
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    at_ms INTEGER NOT NULL,
+    boxes TEXT NOT NULL
+  );
+  CREATE INDEX event_boxes_event_at ON event_boxes (event_id, at_ms);
+  `,
 ];
 
 /** 開啟資料庫並升級到最新 schema。測試可傳 ":memory:"。 */

@@ -6,21 +6,23 @@ import { join } from "node:path";
 import { DEFAULT_DETECT } from "../detect/config.ts";
 import { MsgReader } from "../workers/framing.ts";
 import type { Signal } from "../events/lifecycle.ts";
+import type { ObjectFrame } from "../events/tracker.ts";
 import type { Camera, CameraId, ObjectSettings } from "../types.ts";
-import { STATIONARY_MS, StationaryFilter, toHits, type Detection } from "./hits.ts";
+import { qualifying, STATIONARY_MS, StationaryFilter, toHits, type Detection } from "./hits.ts";
 import { parseDetectorMsg } from "./protocol.ts";
 import { FrameQueue } from "./queue.ts";
 import { createObjectDetection } from "./service.ts";
 
 const det = (label: string, score: number, box: [number, number, number, number] = [0.4, 0.4, 0.6, 0.6]): Detection => ({ label, score, box });
 
-test("hits keep watched labels above the threshold, best one per label, and skip boxes centred in a mask", () => {
+test("qualifying boxes are watched labels above the threshold whose centre is outside every mask, and hits keep the best one per label", () => {
   const detect = { labels: ["person", "car"], objectScore: 0.5, masks: [{ points: [[0, 0], [0.3, 0], [0.3, 0.3], [0, 0.3]] as [number, number][] }], objectMasks: [] };
-  const hits = toHits(
+  const boxes = qualifying(
     [det("person", 0.6), det("person", 0.9), det("dog", 0.99), det("car", 0.4), det("car", 0.95, [0.05, 0.05, 0.2, 0.2]), det("car", 0.7, [0.1, 0.1, 0.9, 0.9])],
     detect,
   );
-  expect(hits).toEqual([
+  expect(boxes).toEqual([det("person", 0.6), det("person", 0.9), det("car", 0.7, [0.1, 0.1, 0.9, 0.9])]);
+  expect(toHits(boxes)).toEqual([
     { label: "person", score: 0.9 },
     { label: "car", score: 0.7 },
   ]);
@@ -29,8 +31,9 @@ test("hits keep watched labels above the threshold, best one per label, and skip
 test("object-only zones drop objects centred inside them, like the motion masks do", () => {
   const parkingBay = { points: [[0, 0.5], [0.4, 0.5], [0.4, 1], [0, 1]] as [number, number][] };
   const detect = { labels: ["person", "car"], objectScore: 0.5, masks: [], objectMasks: [parkingBay] };
-  const hits = toHits([det("car", 0.9, [0.05, 0.6, 0.35, 0.9]), det("car", 0.8, [0.6, 0.6, 0.9, 0.9]), det("person", 0.7, [0.1, 0.55, 0.2, 0.95])], detect);
-  expect(hits).toEqual([{ label: "car", score: 0.8 }]);
+  const boxes = qualifying([det("car", 0.9, [0.05, 0.6, 0.35, 0.9]), det("car", 0.8, [0.6, 0.6, 0.9, 0.9]), det("person", 0.7, [0.1, 0.55, 0.2, 0.95])], detect);
+  expect(boxes).toEqual([det("car", 0.8, [0.6, 0.6, 0.9, 0.9])]);
+  expect(toHits(boxes)).toEqual([{ label: "car", score: 0.8 }]);
 });
 
 test("a car parked in the same spot stops counting, while one that moves or a new arrival still counts", () => {
@@ -112,7 +115,7 @@ const camera = (objectMode: "off" | "annotate" | "filter"): Camera => ({
 /** 用 Bun 假裝成 detector：連上 socket、照協定回訊息 */
 async function harness(mode: "off" | "annotate" | "filter" = "annotate") {
   const settings: { objects: ObjectSettings; devices: { objects: string } } = { objects: { enabled: true, model: "builtin", fps: 2 }, devices: { objects: "auto" } };
-  const signals: { signal: Signal; frame?: Uint8Array }[] = [];
+  const signals: { signal: Signal; frame?: ObjectFrame }[] = [];
   let t = 10_000;
   const socketPath = join(mkdtempSync("/tmp/cnvr-"), "d.sock");
   const objects = createObjectDetection({
@@ -190,7 +193,7 @@ test("frames go to the detector one at a time and results become object signals 
   expect(h.frames.map((f) => [...f.jpeg])).toEqual([[2]]);
   h.send({ type: "result", id: h.frames[0]!.id, ms: 11.5, detections: [{ label: "person", score: 0.8, box: [0.4, 0.4, 0.6, 0.6] }, { label: "cat", score: 0.9, box: [0, 0, 1, 1] }] });
   await h.settle();
-  expect(h.signals).toEqual([{ signal: { type: "objects", at: 10_000, hits: [{ label: "person", score: 0.8 }] }, frame: new Uint8Array([2]) }]);
+  expect(h.signals).toEqual([{ signal: { type: "objects", at: 10_000, hits: [{ label: "person", score: 0.8 }] }, frame: { jpeg: new Uint8Array([2]), boxes: [{ label: "person", score: 0.8, box: [0.4, 0.4, 0.6, 0.6] }] } }]);
   expect(h.frames.map((f) => [...f.jpeg])).toEqual([[2], [3]]);
   expect(h.objects.status().latencyMs).toEqual({ last: 11.5, avg: 11.5, max: 11.5 });
   h.client.end();

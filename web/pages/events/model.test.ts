@@ -3,7 +3,7 @@ import type { EventDto } from "../../../src/api-types.ts";
 import type { CameraId } from "../../../src/types.ts";
 import { dayTitle, groupByDay, mergeEvents, playbackSearch } from "./model.ts";
 
-const ev = (id: number, startMs: number, endMs: number | null = startMs + 5_000): EventDto => ({ id, cameraId: "c1" as CameraId, source: "pixel", startMs, endMs, score: 0.1, labels: [], hasThumb: true });
+const ev = (id: number, startMs: number, endMs: number | null = startMs + 5_000): EventDto => ({ id, cameraId: "c1" as CameraId, source: "pixel", startMs, endMs, score: 0.1, labels: [], hasThumb: true, thumbBoxes: null });
 const at = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m - 1, d, h, min).getTime();
 
 describe("事件清單", () => {

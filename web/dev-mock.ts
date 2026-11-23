@@ -406,7 +406,7 @@ function dayEvents(camIdx: number, dayStart: number): EventDto[] {
   const push = (start: number, length: number) => {
     if (!recorded(camIdx, start)) return;
     const labels = LABEL_SETS[Math.floor(r() * LABEL_SETS.length)]!;
-    out.push({ id: 0, cameraId, source: r() < 0.8 ? "pixel" : "onvif", startMs: start, endMs: start + length, score: Math.round((0.05 + r() * 0.55) * 100) / 100, labels, hasThumb: r() < 0.9 });
+    out.push({ id: 0, cameraId, source: r() < 0.8 ? "pixel" : "onvif", startMs: start, endMs: start + length, score: Math.round((0.05 + r() * 0.55) * 100) / 100, labels, hasThumb: r() < 0.9, thumbBoxes: null });
   };
   const length = () => {
     const x = r();
@@ -435,7 +435,7 @@ const activeEvents = () => simEvents.filter((e) => e.endMs === null && !deletedE
 
 function startSimEvent(c: (typeof cams)[number], lengthMs: number) {
   const d = detectConfigOf(c.config);
-  const e: EventDto = { id: 5_000_000 + simSeq++, cameraId: c.id, source: d.source, startMs: now(), endMs: null, score: Math.round((0.02 + Math.random() * 0.2) * 100) / 100, labels: [], hasThumb: true };
+  const e: EventDto = { id: 5_000_000 + simSeq++, cameraId: c.id, source: d.source, startMs: now(), endMs: null, score: Math.round((0.02 + Math.random() * 0.2) * 100) / 100, labels: [], hasThumb: true, thumbBoxes: null };
   simEvents.push(e);
   broadcast("event", { phase: "start", event: e });
   broadcast("motion", { cameraId: c.id, active: true });
@@ -469,7 +469,7 @@ function frontDoorEvents(dayStart: number): EventDto[] {
   if (cam) {
     for (let i = 0; i < 32; i++) {
       const start = dayStart + Math.floor(r() * 1440) * MIN + Math.floor(r() * 60_000);
-      out.push({ id: 3_000_000 + daysAgo(dayStart) * 1_000 + i, cameraId: cam.id, source: r() < 0.5 ? "both" : "onvif", startMs: start, endMs: start + 4_000 + Math.round(r() * 50_000), score: Math.round((0.02 + r() * 0.3) * 100) / 100, labels: LABEL_SETS[Math.floor(r() * LABEL_SETS.length)]!, hasThumb: r() < 0.92 });
+      out.push({ id: 3_000_000 + daysAgo(dayStart) * 1_000 + i, cameraId: cam.id, source: r() < 0.5 ? "both" : "onvif", startMs: start, endMs: start + 4_000 + Math.round(r() * 50_000), score: Math.round((0.02 + r() * 0.3) * 100) / 100, labels: LABEL_SETS[Math.floor(r() * LABEL_SETS.length)]!, hasThumb: r() < 0.92, thumbBoxes: null });
     }
   }
   frontDoorCache.set(dayStart, out);

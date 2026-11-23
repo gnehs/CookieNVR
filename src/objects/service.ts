@@ -24,7 +24,7 @@ import { msg as mk, zh, type Msg } from "../messages/index.ts";
 import { normalizePciId } from "../metrics/parse.ts";
 import type { Camera, CameraId, DeviceRef, ObjectSettings, Route, WorkerSpec } from "../types.ts";
 import { camerasSupported, DROP_WARN_RATIO, loadSample, verdict } from "./capacity.ts";
-import { StationaryFilter, toHits, type Detection } from "./hits.ts";
+import { qualifying, StationaryFilter, toHits, type Detection } from "./hits.ts";
 import { COCO_LABELS, COMMON_LABELS, labelName } from "./labels.ts";
 import { encodeJson, KIND_JSON } from "../workers/framing.ts";
 import { createSocketLink } from "../workers/socket-link.ts";
@@ -247,8 +247,8 @@ export function createObjectDetection(opts: ObjectDetectionOptions): ObjectDetec
         const detect = detectConfigOf(camera.config);
         let still = stationary.get(job.cameraId);
         if (!still) stationary.set(job.cameraId, (still = new StationaryFilter()));
-        const hits = toHits(still.moving(detections, job.at), detect);
-        opts.events.signal(job.cameraId, { type: "objects", at: job.at, hits }, detect.cooldownSec * 1000, job.jpeg);
+        const boxes = qualifying(still.moving(detections, job.at), detect);
+        opts.events.signal(job.cameraId, { type: "objects", at: job.at, hits: toHits(boxes) }, detect.cooldownSec * 1000, { jpeg: job.jpeg, boxes });
       }
     }
     pump();

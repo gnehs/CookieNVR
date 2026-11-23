@@ -1,10 +1,10 @@
 import type { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
-import type { EventDto } from "../api-types.ts";
+import type { EventBoxDto, EventDto } from "../api-types.ts";
 import type { CameraId, Unsubscribe } from "../types.ts";
 import { initialState, MAX_EVENT_MS, step, wantsObjects, type LifecycleState, type Signal } from "./lifecycle.ts";
-import { activeEvents, closeDangling, deleteEventRow, getEvent, insertEvent, updateEvent } from "./store.ts";
+import { activeEvents, closeDangling, deleteEventRow, getEvent, insertEvent, insertEventBoxes, updateEvent } from "./store.ts";
 import { thumbPath } from "./paths.ts";
 
 /**
@@ -25,9 +25,15 @@ export interface EventFeed {
   active(): EventDto[];
 }
 
+/** objects 訊號所屬的那張畫面與上面算數的物件框 */
+export interface ObjectFrame {
+  jpeg: Uint8Array;
+  boxes: EventBoxDto[];
+}
+
 export interface EventTracker extends EventFeed {
-  /** frame：objects 訊號所屬的那張 JPEG，狀態機要拿它當縮圖時寫入 */
-  signal(cameraId: CameraId, signal: Signal, cooldownMs: number, frame?: Uint8Array): void;
+  /** frame：狀態機要拿它當縮圖時寫入；事件進行中的框另外記下來，給匯出加框影片用 */
+  signal(cameraId: CameraId, signal: Signal, cooldownMs: number, frame?: ObjectFrame): void;
   /** 這台在等辨識（過濾模式）或有進行中的事件；只有這段時間需要送畫面去辨識 */
   wantsObjects(cameraId: CameraId): boolean;
   /** 每張新的快照都交給它；有等縮圖的事件就寫入 */
@@ -83,14 +89,14 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
     return t;
   }
 
-  function setThumb(t: Track, id: number, change: "none" | "next" | "frame", frame: Uint8Array | undefined): void {
+  function setThumb(t: Track, id: number, change: "none" | "next" | "frame", frame: ObjectFrame | undefined): void {
     if (change === "frame" && frame) {
       if (t.wantThumb === id) t.wantThumb = null;
-      writeThumb(id, frame).catch((e) => deps.onError?.(e));
+      writeThumb(id, frame.jpeg, frame.boxes).catch((e) => deps.onError?.(e));
     } else if (change !== "none") t.wantThumb = id;
   }
 
-  function signal(cameraId: CameraId, sig: Signal, cooldownMs: number, frame?: Uint8Array): void {
+  function signal(cameraId: CameraId, sig: Signal, cooldownMs: number, frame?: ObjectFrame): void {
     const t = track(cameraId);
     const policy = { cooldownMs, filterWindowMs: deps.filterWindow?.(cameraId) ?? null };
     // A failed write (database disk full) drops this signal's effects; callers are timers and stream readers that must keep running.
@@ -111,6 +117,7 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
           emit("end", updateEvent(db, id, { endMs: fx.at }));
         }
       }
+      if (sig.type === "objects" && frame?.boxes.length && t.eventId !== null) insertEventBoxes(db, t.eventId, sig.at, frame.boxes);
     } catch (e) {
       deps.onError?.(e);
     }
@@ -118,7 +125,8 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
   }
 
   let thumbSeq = 0;
-  async function writeThumb(id: number, jpeg: Uint8Array): Promise<void> {
+  /** boxes：這張畫面上的物件框；一般快照為 null */
+  async function writeThumb(id: number, jpeg: Uint8Array, boxes: EventBoxDto[] | null): Promise<void> {
     const path = thumbPath(dataDir, id);
     // 辨識換縮圖可能和快照縮圖同時寫，暫存檔不能共用
     const tmp = `${path}.${++thumbSeq}.tmp`;
@@ -126,7 +134,7 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
     await rename(tmp, path);
     // 寫入期間事件可能已被刪除
     if (!getEvent(db, id)) return void (await rm(path, { force: true }));
-    const event = updateEvent(db, id, { hasThumb: true });
+    const event = updateEvent(db, id, { hasThumb: true, thumbBoxes: boxes });
     emit("update", event);
   }
 
@@ -137,7 +145,7 @@ export function createEventTracker(deps: TrackerDeps): EventTracker {
       if (!t || t.wantThumb === null) return;
       const id = t.wantThumb;
       t.wantThumb = null;
-      writeThumb(id, jpeg).catch((e) => deps.onError?.(e));
+      writeThumb(id, jpeg, null).catch((e) => deps.onError?.(e));
     },
     wantsObjects(cameraId) {
       const t = tracks.get(cameraId);

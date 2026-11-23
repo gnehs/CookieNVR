@@ -375,6 +375,13 @@ export type EventSourceKind = "pixel" | "onvif" | "both";
  *   相機事件（ONVIF）的人形、車輛、寵物寫成 person、vehicle、pet：person 與物件辨識的 person 合併，
  *   vehicle、pet 是相機自己的分類，和物件辨識的 car、dog 等各自獨立。
  */
+/** 一個辨識到的物件框；box 是相對於畫面的 0 到 1 座標 (x1, y1, x2, y2) */
+export interface EventBoxDto {
+  label: string;
+  score: number;
+  box: [number, number, number, number];
+}
+
 export interface EventDto {
   id: number;
   cameraId: CameraId;
@@ -385,6 +392,8 @@ export interface EventDto {
   score: number;
   labels: string[];
   hasThumb: boolean;
+  /** 縮圖那張畫面上的物件框；縮圖是一般快照或還沒有縮圖時為 null */
+  thumbBoxes: EventBoxDto[] | null;
 }
 
 export type ExportState = "queued" | "running" | "done" | "failed";
