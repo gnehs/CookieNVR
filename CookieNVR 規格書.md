@@ -266,7 +266,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 4. 事件最長 10 分鐘，超過就在當下切成新事件，避免一整晚只有一筆。
 5. 同一台同一時間只有一筆事件：畫面差分與相機事件並用時，任一來源先觸發就建立，另一來源在進行中觸發就併入，`source` 記為 `both`。相機事件的人形、車輛、寵物記進 `labels`（person、vehicle、pet）。
 6. 關閉偵測或拿掉某個來源、刪除攝影機、主程序結束時，進行中的事件立刻收尾。主程序當機留下沒結束的事件，下次啟動時以「現在」收尾，但不超過開始後 10 分鐘。
-7. 狀態機是純函式（`src/events/lifecycle.ts`），資料庫、縮圖與通知在 `src/events/tracker.ts`。
+7. 狀態機是純函式（`src/events/lifecycle.ts`），資料庫、縮圖、物件框與通知在 `src/events/tracker.ts`。縮圖從辨識畫面來時一併存下那張畫面的框，從一般快照來時框清為 NULL；事件進行中的每張辨識結果另存一列框（見「物件辨識 → 流程」）。
 
 ### 相機事件（ONVIF）
 
@@ -314,6 +314,7 @@ CookieNVR 對每台攝影機的每個碼流只開一條連線，再由內建的�
 1. 物件辨識開啟、且這台不是「不辨識」時，detect worker 依辨識頻率輸出 640 寬 JPEG（每秒 1 到 5 張；沒開的攝影機維持每秒 1 張，不多編碼）。主程序已經收這些 JPEG 當快照，所以畫面由主程序轉交 detector（不另開一條 detect → detector 的通道），只在這台有動作（等待辨識或有進行中的事件）時才送，並依頻率節流。
 2. detector worker（`detector/main.py`，Python）由所有攝影機共用，經本機 Unix socket（`/tmp/cookienvr-<pid>-detector.sock`，路徑放 `/tmp` 是因為 macOS 的 socket 路徑上限約 104 字元）與主程序交換「1 位元組種類＋4 位元組長度＋內容」的訊息。一次處理一張；佇列在主程序，排隊超過 1 秒的畫面直接丟掉並計數。
 3. 某類別的信心值超過門檻（預設 0.5）且連續 2 張出現，才寫入事件的 `labels`，並立刻發出事件的 update（SSE 也推送）。縮圖換成信心值最高的那一張辨識畫面；之後動作分數再高也不換。
+   - 物件框也存下來（座標是相對畫面的 0 到 1，與 detector 回傳的相同）：縮圖那張辨識畫面上算數的框（關注的類別、超過門檻、中心不在遮罩內、不是靜止物件）存在 `events.thumb_boxes`，縮圖是一般快照時為 NULL；事件進行中每張有算數物件的辨識結果各存一列 `event_boxes`，給加框的事件影片用。選框的規則只寫一次（`src/objects/hits.ts` 的 `qualifying`），`labels` 用的「每類別最高信心」也從同一組框取。
 4. 物件框的中心落在遮罩內就忽略，與動作偵測共用同一組遮罩。
 5. 卡死判定：心跳每 2 秒一次，10 秒沒有訊息、或一張推論超過 10 秒就重啟；載入模型最多等 3 分鐘（GPU 第一次編譯）。模型格式錯誤時 worker 只回報錯誤並持續心跳，不讓 supervisor 反覆重啟。
 
@@ -441,8 +442,14 @@ GPU 路徑在開發機（arm64 Mac）無法執行。`detector/README.md` 是實�
 - 選取：時間軸卡片標題列的「匯出」開啟選取模式，預設選播放位置起 1 分鐘；桌面在時間軸上拖曳選取，拖曳兩端的把手微調；手機（或不想拖曳時）用「設為開始」「設為結束」把目前播放位置當作起訖。選取列顯示長度與預估大小。事件清單每一筆有一鍵匯出按鈕，範圍為事件前後各 5 秒。
 - 後端用 ffmpeg concat＋`-c copy` 接成一個一般 MP4（`+faststart`），不重新編碼，所以音訊保留，切點對齊關鍵幀：開頭可能早到一個 GOP，長度與選取範圍的誤差約 1–2 秒。檔名為 `<攝影機名稱>_<YYYYMMDD>-<HHMMSS>.mp4`，時間是開始時間（依瀏覽器時區）。
 - 跨缺片的範圍直接把前後兩段接起來，缺片不補，匯出長度只計有錄影的部分。包含錄製中片段的範圍匯出到當下已寫入的部分，結束時間超過現在則收到現在。範圍內完全沒有錄影回 422「這段時間沒有錄影」。
-- 單次上限 2 小時，同時只跑一個匯出，其餘排隊（最多 10 筆未完成）。匯出是 export worker（ffmpeg 子程序，自成程序群組）：10 分鐘未完成、記憶體超過 256 MB 或被取消就整組終止，工作標為失敗。佇列與工作狀態只在記憶體，檔案放在 `<dataDir>/exports/`；主程序啟動時先清掉上次殘留的 ffmpeg 與暫存檔，完成或失敗 24 小時後自動刪除。
+- 單次上限 2 小時，同時只跑一個匯出，其餘排隊（最多 10 筆未完成）。匯出是 export worker（ffmpeg 子程序，自成程序群組）：10 分鐘未完成、記憶體超過 512 MB 或被取消就整組終止，工作標為失敗。佇列與工作狀態只在記憶體，檔案放在 `<dataDir>/exports/`；主程序啟動時先清掉上次殘留的 ffmpeg 與暫存檔，完成或失敗 24 小時後自動刪除。
 - 進度每秒輪詢 `GET /api/exports`；完成後瀏覽器直接下載 `/api/exports/:id/file`。一般使用者即可匯出，所有人看得到所有匯出工作。
+- 事件影片：`POST /api/events/:id/clip` 是同一種匯出工作，範圍固定為事件前後各 5 秒（進行中的事件收到現在）。帶 `boxes: true` 時把事件期間記下的物件框畫進影片，這是整個系統唯一會重新編碼影片的地方，而且只在有人要的時候才做，錄影路徑永遠是 `-c copy`。沒有記到框的事件照一般方式複製。
+  - 重新編碼：H.264（libx264 veryfast、CRF 26）、最高 720 行、AAC 音訊、`+faststart`；解碼與編碼各 2 個執行緒、lookahead 10 張，4K HEVC 來源實測約 275 MB（預設參數在 18 核心上要 760 MB）。
+  - 框用串接的 `drawbox` 濾鏡，每個框只在 `enable='between(t,a,b)'` 的時間畫；映像的 ffmpeg 沒有字型（沒有 drawtext），類別只用顏色分（人紅、車藍、動物綠）。濾鏡圖寫成工作目錄裡的檔案，用 `-/filter:v` 讀，不放命令列。
+  - 每筆辨識結果從它的時間畫到下一筆為止，最多停留 2 秒；同類別、位置幾乎沒變的連續框合成一段；超過 300 個濾鏡就隔筆抽樣，10 分鐘的事件也不會組出巨大的濾鏡圖。
+  - 時間對應：牆上時間經過匯出計畫的各段換成影片時間（前面各段的長度加上段內位移，缺片跳過）。concat 的 inpoint 在關鍵幀之間時，解出來的影片會從前一個關鍵幀開始，ffmpeg 預設把整條時間軸往後推一個 GOP 以內，框就會晚出現；所以加 `-copyts` 讓濾鏡看到 concat 的時間，`trim=start=0` 丟掉 inpoint 之前的畫面，最後 `setpts` 從 0 開始。每段也一律寫 outpoint，否則下一段的起點是上一個檔案最長串流的結尾，每段漂移幾張。合成的測試錄影（每秒移動的方塊、GOP 2 秒、三段含一個缺片）實測框與畫面的誤差在 2 張（80 毫秒）以內。
+  - 辨識時間是子碼流 640 寬 JPEG 到主程序的時間，比主碼流的錄影晚多少還沒量，修正值（`DETECTION_LAG_MS`）暫為 0。
 
 ## Tapo 鏡頭控制（PTZ）
 
@@ -651,10 +658,11 @@ NVR 本身另有一個裝置：磁碟用量、錄影總量、正常 worker 數�
 - `cookienvr.ptz_move`：`pan`、`tilt`、`zoom`（−1 至 1）、`mode`（continuous / relative）、`duration`。
 - `cookienvr.ptz_preset`：前往、儲存、刪除預置點。
 - `cookienvr.export_clip`：匯出一段影片到 HA 的 media 目錄，可用在通知。
+- `cookienvr.export_event_clip`：匯出一筆事件的影片（事件前後各 5 秒，`POST /api/events/:id/clip`），可選擇把物件框畫進影片；完成後一樣放到 media 目錄。常見用法是事件結束時把加框縮圖與影片一起推播（例如 Telegram）。
 
 ### HA 事件
 
-每筆事件開始與結束都發出 `cookienvr_event`，帶 `camera`、`event_id`、`state`（start / end）、`score`、`labels`（物件類別，沒開物件辨識時為空）、`thumbnail_url`、`playback_url`，可以直接做「有人就推播縮圖」的自動化。
+每筆事件開始與結束都發出 `cookienvr_event`，帶 `camera`、`event_id`、`state`（start / end）、`score`、`labels`（物件類別，沒開物件辨識時為空）、`thumbnail_url`、`playback_url`，可以直接做「有人就推播縮圖」的自動化。`thumbnail_url` 帶 `?boxes=1`，縮圖是辨識畫面時會畫上物件框。
 
 ### 連線可靠性
 
@@ -800,7 +808,8 @@ cookienvr-ha/
 | GET | `/api/objects` | 物件辨識狀態（實際裝置、退回原因、延遲、速率、丟棄、負載提醒、GPU 使用率）、可選模型、偵測到的裝置、上次測速 | 管理員 |
 | POST / DELETE | `/api/objects/benchmark` | 開始測速（`{devices?, seconds?}`，回 202）／取消 | 管理員 |
 | GET | `/api/objects/labels` | 目前模型支援的類別：每個 `{key, zh, en}` 與常用類別；前端勾選清單與 HA 感應器名稱用 | 一般使用者 |
-| GET | `/api/events/:id` · `/thumb.jpg` | 事件詳情、縮圖 | 一般使用者 |
+| GET | `/api/events/:id` · `/thumb.jpg?boxes=` | 事件詳情（含 `thumbBoxes`：縮圖那張畫面的物件框，一般快照為 null）、縮圖；`boxes=1` 時用 ffmpeg 即時把框畫上去（不存檔），沒有框就回原本的縮圖 | 一般使用者 |
+| POST | `/api/events/:id/clip` | 建立事件影片的匯出工作（`{boxes?, tz?}`，範圍是事件前後各 5 秒；回 201 與工作，之後照 `/api/exports/:id` 查進度與下載；找不到事件 404，其餘錯誤與 `/api/exports` 相同） | 一般使用者 |
 | DELETE | `/api/events/:id` | 刪除事件與縮圖；進行中的回 409 | 管理員 |
 | POST / GET | `/api/exports` | 建立匯出工作（`{cameraId, startMs, endMs, tz}`，回 201 與工作；無錄影 422、超過 2 小時 400、佇列滿 429、磁碟不足 507）／列出所有工作 | 一般使用者 |
 | GET / DELETE | `/api/exports/:id` · `/:id/file` | 查進度；下載完成的 MP4（支援 Range）；DELETE 取消排隊中或執行中的工作，已完成的則移除 | 一般使用者 |
@@ -827,7 +836,8 @@ SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:
 | `settings` | key, value（JSON） | 系統設定，沒有的 key 用預設值 |
 | `cameras` | id, position, config（JSON）, created\_at, updated\_at | config 含連線、錄影、偵測、遮罩、物件辨識、PTZ、HKSV |
 | `segments` | id, camera\_id, path, start\_ms, end\_ms, size | 索引 (camera\_id, start\_ms)；錄製中的片段 end\_ms 為 NULL |
-| `events` | id（AUTOINCREMENT，刪掉的 id 不重用，瀏覽器才不會拿到快取的舊縮圖）, camera\_id, source（pixel / onvif / both）, start\_ms, end\_ms, score, labels（JSON）, has\_thumb | 索引 (camera\_id, start\_ms)、(start\_ms)；labels 為類別鍵（物件辨識與 ONVIF 的 person、vehicle、pet，見「物件辨識 → 模型」） |
+| `events` | id（AUTOINCREMENT，刪掉的 id 不重用，瀏覽器才不會拿到快取的舊縮圖）, camera\_id, source（pixel / onvif / both）, start\_ms, end\_ms, score, labels（JSON）, has\_thumb, thumb\_boxes（JSON，可為 NULL） | 索引 (camera\_id, start\_ms)、(start\_ms)；labels 為類別鍵（物件辨識與 ONVIF 的 person、vehicle、pet，見「物件辨識 → 模型」）；thumb\_boxes 是縮圖那張辨識畫面的物件框 `[{label, score, box: [x1, y1, x2, y2]}]`，縮圖是一般快照時為 NULL |
+| `event_boxes` | event\_id（外鍵，ON DELETE CASCADE）, at\_ms, boxes（JSON） | 索引 (event\_id, at\_ms)；事件進行中每張有算數物件的辨識結果一列。刪事件（手動、保留期限、刪攝影機）都經過 `DELETE FROM events`，框跟著刪 |
 
 - 匯出工作佇列只在記憶體；worker 重啟紀錄寫入 `/data/logs/` 的日誌檔，保留 30 天，給狀態頁與排錯。
 - 使用者自備的物件辨識模型放在 `/data/models/`。
@@ -851,7 +861,7 @@ SSE 訊息格式（型別在 `src/api-types.ts` 的 `StreamMessage`）：`event:
 | live | 每台每畫質 0–1 | ffmpeg fMP4 封裝（有人看才跑） | 128 MB | 15 秒沒有新 fragment |
 | homekit | 0–1 | HAP-NodeJS（開啟 HKSV 才跑；實測常駐約 80 MB） | 256 MB | 心跳 10 秒無回應 |
 | hksv-stream | 每台 0–3 | 家庭 App 觀看（最多 2 路）與 HKSV 錄影（1 路）用的 ffmpeg | 256 MB | 15 秒無進度輸出 |
-| export | 0–1 | ffmpeg concat 匯出 | 256 MB | 10 分鐘未完成 |
+| export | 0–1 | ffmpeg concat 匯出（加框的事件影片會重新編碼，4K HEVC 來源實測約 275 MB） | 512 MB | 10 分鐘未完成 |
 
 上限是每類 worker 的固定值，第一版不提供調整；實測不合適就改預設值。detector 的上限只算主記憶體，不含顯示卡記憶體。
 
