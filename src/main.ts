@@ -403,7 +403,7 @@ const routes = [
   }),
   ...linkRoutes(links, { proveToken: auth.proveToken, instanceId }),
   ...eventRoutes({ db, dataDir: env.dataDir, ffmpegBin: env.ffmpegBin, events }),
-  ...exportRoutes(exportJobs),
+  ...exportRoutes(exportJobs, db),
   ...ptzRoutes({ hub: ptz }),
   ...detection.routes(),
   ...objects.routes(),

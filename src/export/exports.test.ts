@@ -238,10 +238,10 @@ describe("export manager", () => {
 describe("export API", () => {
   const user: Principal = { userId: 2, username: "viewer", role: "user", via: "session" };
 
-  function api(authed = true) {
+  function api(authed = true, now?: number) {
     seed();
-    const exports = make();
-    const handle = createRouter(exportRoutes(exports), { authenticate: () => (authed ? user : null) });
+    const exports = make({}, now);
+    const handle = createRouter(exportRoutes(exports, db), { authenticate: () => (authed ? user : null) });
     const call = (method: string, path: string, body?: unknown, headers: Record<string, string> = {}) =>
       handle(
         new Request(`http://x${path}`, {
@@ -252,6 +252,9 @@ describe("export API", () => {
       );
     return { exports, call };
   }
+
+  const insertEvent = (startMs: number, endMs: number | null) =>
+    (db.query(`INSERT INTO events (camera_id, source, start_ms, end_ms) VALUES (?, 'pixel', ?, ?) RETURNING id`).get(CAM, startMs, endMs) as { id: number }).id;
 
   test("a regular user creates an export, polls it, and downloads a file ffprobe accepts", async () => {
     const { exports, call } = api();
@@ -286,6 +289,43 @@ describe("export API", () => {
     expect((await call("DELETE", `/api/exports/${job.id}`)).status).toBe(204);
     expect((await call("GET", `/api/exports/${job.id}`)).status).toBe(404);
   }, 30_000);
+
+  test("an event clip covers the event with five seconds either side, boxed or not, and polls like any export", async () => {
+    const { exports, call } = api();
+    const id = insertEvent(T + 12_000, T + 15_000);
+    db.query(`INSERT INTO event_boxes (event_id, at_ms, boxes) VALUES (?, ?, ?)`).run(id, T + 13_000, JSON.stringify([{ label: "person", score: 0.9, box: [0.1, 0.1, 0.5, 0.9] }]));
+    const plain = await call("POST", `/api/events/${id}/clip`, { tz: "Asia/Taipei" });
+    expect(plain.status).toBe(201);
+    const job = (await plain.json()) as ExportDto;
+    expect([job.cameraId, job.startMs, job.endMs, job.durationMs]).toEqual([CAM, T + 7_000, T + 20_000, 13_000]);
+    expect(job.fileName).toBe("客廳_20261119-160007.mp4");
+    const boxed = (await (await call("POST", `/api/events/${id}/clip`, { boxes: true })).json()) as ExportDto;
+    for (const j of [job, boxed]) {
+      expect((await finished(exports, j.id)).state).toBe("done");
+      expect((await call("GET", `/api/exports/${j.id}/file`)).status).toBe(200);
+    }
+    expect(Math.abs((await probe(exports.file(boxed.id)!.path)).durationS - 13)).toBeLessThan(0.3);
+  }, 30_000);
+
+  test("a clip of an event still running stops at now", async () => {
+    const { call } = api(true, T + 46_000);
+    const running = insertEvent(T + 42_000, null);
+    const res = await call("POST", `/api/events/${running}/clip`, { boxes: true });
+    expect(res.status).toBe(201);
+    const live = (await res.json()) as ExportDto;
+    expect([live.startMs, live.endMs, live.includesRecording]).toEqual([T + 37_000, T + 46_000, false]);
+  });
+
+  test("an event clip is refused for an unknown event, a bad body, or an event with no recording", async () => {
+    const { call } = api();
+    const code = async (res: Response) => [res.status, ((await res.json()) as { code: string }).code];
+    expect(await code(await call("POST", "/api/events/999/clip", {}))).toEqual([404, "events.notFound"]);
+    expect(await code(await call("POST", "/api/events/x/clip", {}))).toEqual([404, "events.notFound"]);
+    const id = insertEvent(T + 25_000, T + 30_000);
+    expect(await code(await call("POST", `/api/events/${id}/clip`, { boxes: "yes" }))).toEqual([400, "field.notBool"]);
+    expect(await code(await call("POST", `/api/events/${id}/clip`, { tz: "Mars/Base" }))).toEqual([400, "export.badTimeZone"]);
+    expect(await code(await call("POST", `/api/events/${id}/clip`, {}))).toEqual([422, "export.empty"]);
+  });
 
   test("reports clear errors for bad input, an empty range, and a missing login", async () => {
     const { call } = api();

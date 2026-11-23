@@ -1,11 +1,14 @@
+import type { Database } from "bun:sqlite";
+import { eventBoxes, getEvent } from "../events/store.ts";
 import { contentDisposition, isTimeZone } from "./filename.ts";
+import type { ExportDto } from "../api-types.ts";
 import { ExportError, type Exports } from "./manager.ts";
 import { parseRange } from "../recording/routes.ts";
 import { HttpError } from "../http/errors.ts";
 import { msg } from "../messages/index.ts";
 import { json, noContent } from "../http/respond.ts";
-import { asObject, optStr, readJson, str } from "../http/validate.ts";
-import type { CameraId, Route } from "../types.ts";
+import { asObject, bool, optStr, parseIdParam, readJson, str } from "../http/validate.ts";
+import { EVENT_BUFFER_MS, type CameraId, type Route } from "../types.ts";
 
 const STATUS = { "not-found": 404, invalid: 400, empty: 422, busy: 429, disk: 507 } as const;
 
@@ -17,7 +20,22 @@ function timeMs(obj: Record<string, unknown>, key: string): number {
   return v;
 }
 
-export function exportRoutes(exports: Exports): Route[] {
+function readTz(body: Record<string, unknown>): string {
+  const tz = optStr(body, "tz", { max: 64 }) ?? "UTC";
+  if (!isTimeZone(tz)) throw new HttpError(400, msg("export.badTimeZone"));
+  return tz;
+}
+
+async function created(job: Promise<ExportDto>): Promise<Response> {
+  try {
+    return json(await job, 201);
+  } catch (e) {
+    if (e instanceof ExportError) throw new HttpError(STATUS[e.kind], e.msg);
+    throw e;
+  }
+}
+
+export function exportRoutes(exports: Exports, db: Database): Route[] {
   const find = (id: string | undefined) => {
     const dto = exports.get(id ?? "");
     if (!dto) throw new HttpError(404, msg("export.notFound"));
@@ -30,20 +48,28 @@ export function exportRoutes(exports: Exports): Route[] {
       access: "user",
       async handler({ req }) {
         const body = asObject(await readJson(req));
-        const tz = optStr(body, "tz", { max: 64 }) ?? "UTC";
-        if (!isTimeZone(tz)) throw new HttpError(400, msg("export.badTimeZone"));
-        try {
-          const dto = await exports.create({
-            cameraId: str(body, "cameraId", { max: 64 }) as CameraId,
-            startMs: timeMs(body, "startMs"),
-            endMs: timeMs(body, "endMs"),
-            tz,
-          });
-          return json(dto, 201);
-        } catch (e) {
-          if (e instanceof ExportError) throw new HttpError(STATUS[e.kind], e.msg);
-          throw e;
-        }
+        const tz = readTz(body);
+        const cameraId = str(body, "cameraId", { max: 64 }) as CameraId;
+        const startMs = timeMs(body, "startMs");
+        const endMs = timeMs(body, "endMs");
+        return created(exports.create({ cameraId, startMs, endMs, tz }));
+      },
+    },
+    {
+      // The event with the fixed buffer either side; one still running is cut at now.
+      method: "POST",
+      path: "/api/events/:id/clip",
+      access: "user",
+      async handler({ req, params }) {
+        const id = parseIdParam(params.id);
+        const event = id === null ? null : getEvent(db, id);
+        if (!event) throw new HttpError(404, msg("events.notFound"));
+        const body = asObject(await readJson(req));
+        const tz = readTz(body);
+        const boxes = body.boxes !== undefined && bool(body, "boxes") ? eventBoxes(db, event.id) : [];
+        const startMs = Math.max(0, event.startMs - EVENT_BUFFER_MS);
+        const endMs = event.endMs === null ? Number.MAX_SAFE_INTEGER : event.endMs + EVENT_BUFFER_MS;
+        return created(exports.create({ cameraId: event.cameraId, startMs, endMs, tz }, { boxes }));
       },
     },
     { method: "GET", path: "/api/exports", access: "user", handler: () => json(exports.list()) },
