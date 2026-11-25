@@ -49,6 +49,12 @@ export const states: Translations<typeof zh> = {
   "states.trainDoneNoValidation": () => t`Training finished (each class needs at least 2 images to estimate accuracy)`,
   "states.modelMissing": () => t`Training finished but the model file couldn't be read`,
   "states.collectDone": ({ count }) => t`Picked ${count} frames from recordings and added them to unlabeled`,
+  "states.collectUnsureDone": ({ count, sure }) =>
+    count
+      ? sure
+        ? t`Picked ${count} frames detection isn’t sure about and added them to unlabeled. Skipped ${sure} it’s already sure about`
+        : t`Picked ${count} frames detection isn’t sure about and added them to unlabeled`
+      : t`Detection is sure about all ${sure} sampled frames, so there’s nothing new to label`,
   "states.collectNoFrames": () => t`Couldn't get any frames from recordings. The files may still be writing or already removed`,
   "states.collectNoRecordings": () => t`This camera has no recordings to sample yet. Try again after it has recorded for a while, or import a dataset`,
   "states.importNoImages": () => t`No usable images found in the zip (expected png, jpg or webp under <name>/dataset/<class>/ or <name>/train/)`,

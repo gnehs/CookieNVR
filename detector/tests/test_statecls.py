@@ -107,6 +107,23 @@ class DiverseTest(unittest.TestCase):
         self.assertEqual(sc.diverse(feats, 10), [0, 1, 2, 3])
 
 
+class PickUnsureTest(unittest.TestCase):
+    def test_keeps_only_frames_the_model_is_unsure_about(self):
+        # 兩類：第 0 維大是 a、第 1 維大是 b；斜 45 度的兩張模型沒把握
+        model = sc.Model(["a", "b"], np.array([[1, -1], [-1, 1]], np.float32), np.zeros(2, np.float32))
+        feats = np.array([[1, 0], [0, 1], [0.7, 0.71], [0.71, 0.7], [0.98, 0.02]], np.float32)
+        picked, sure = sc.pick_unsure(feats, model, 24, 0.95)
+        self.assertEqual(sorted(i for i, _, _ in picked), [2, 3])
+        self.assertEqual(sure, 3)
+        self.assertTrue(all(score < 0.95 for _, _, score in picked))
+        self.assertEqual({i: label for i, label, _ in picked}, {2: "b", 3: "a"})
+
+    def test_all_sure_picks_nothing(self):
+        model = sc.Model(["a", "b"], np.array([[1, -1], [-1, 1]], np.float32), np.zeros(2, np.float32))
+        picked, sure = sc.pick_unsure(np.array([[1, 0], [0, 1]], np.float32), model, 24, 0.95)
+        self.assertEqual((picked, sure), ([], 2))
+
+
 class ZipImportTest(unittest.TestCase):
     def png(self, color=(10, 20, 30)):
         buf = io.BytesIO()

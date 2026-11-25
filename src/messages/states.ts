@@ -50,6 +50,8 @@ export const states = {
   "states.trainDoneNoValidation": () => "訓練完成（每一類至少要 2 張才能估計準確度）",
   "states.modelMissing": () => "訓練完成但讀不到模型檔",
   "states.collectDone": ({ count }: { count: number }) => `從錄影挑了 ${count} 張畫面放進待標記`,
+  "states.collectUnsureDone": ({ count, sure }: { count: number; sure: number }) =>
+    count ? `從錄影挑了 ${count} 張辨識沒把握的畫面放進待標記${sure ? `，另外 ${sure} 張辨識有把握，略過` : ""}` : `抽樣的 ${sure} 張畫面辨識都有把握，沒有要標記的`,
   "states.collectNoFrames": () => "從錄影抽不到畫面，錄影檔可能還沒寫完或已被清除",
   "states.collectNoRecordings": () => "這台還沒有錄影可以抽樣；等錄一段時間後再試，或匯入資料集",
   "states.importNoImages": () => "zip 裡找不到可以用的圖片（需要 <名稱>/dataset/<類別>/ 或 <名稱>/train/ 底下的 png、jpg、webp）",

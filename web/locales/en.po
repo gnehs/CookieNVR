@@ -535,8 +535,12 @@ msgid "{source}: {label} ({percent}%)"
 msgstr "{source}: {label} ({percent}%)"
 
 #: web/pages/states/LabelBoard.tsx
-msgid "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
-msgstr "{suggestedCount, plural, one {# picture has a suggested class (dashed outline). If it looks right, label it in one go.} other {# pictures have a suggested class (dashed outline). If they look right, label them all in one go.}}"
+msgid "{sureCount, plural, one {# picture detection is already sure about is hidden, so you only need to label the ones it isn’t sure about.} other {# pictures detection is already sure about are hidden, so you only need to label the ones it isn’t sure about.}}"
+msgstr "{sureCount, plural, one {# picture detection is already sure about is hidden, so you only need to label the ones it isn’t sure about.} other {# pictures detection is already sure about are hidden, so you only need to label the ones it isn’t sure about.}}"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "{sureCount, plural, one {The last # picture is one detection is already sure about. If its suggestion looks right, label it in one go.} other {The last # pictures are ones detection is already sure about. If the suggestions look right, label them all in one go.}}"
+msgstr "{sureCount, plural, one {The last # picture is one detection is already sure about. If its suggestion looks right, label it in one go.} other {The last # pictures are ones detection is already sure about. If the suggestions look right, label them all in one go.}}"
 
 #: web/server-messages/detection.ts
 msgid "{text} ({forCodec})"
@@ -2083,6 +2087,10 @@ msgstr "Detection area. Move it with the arrow keys; hold Shift to move further.
 msgid "Detection interval must be an integer from {min} to {max}"
 msgstr "Detection interval must be an integer from {min} to {max}"
 
+#: web/server-messages/states.ts
+msgid "Detection is sure about all {sure} sampled frames, so there’s nothing new to label"
+msgstr "Detection is sure about all {sure} sampled frames, so there’s nothing new to label"
+
 #: web/states/model.ts
 msgid "Detection isn't running"
 msgstr "Detection isn't running"
@@ -2866,6 +2874,10 @@ msgstr "Has recordings"
 #: web/pages/settings-cameras/form-model.ts
 msgid "Has sound"
 msgstr "Has sound"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Hide"
+msgstr "Hide"
 
 #: web/pages/settings-cameras/DetectSection.tsx
 #: web/pages/settings-cameras/form-model.ts
@@ -3822,6 +3834,10 @@ msgstr "Not trained yet"
 msgid "Not trained yet: label frames for every class, then press Train"
 msgstr "Not trained yet: label frames for every class, then press Train"
 
+#: web/pages/states/LabelBoard.tsx
+msgid "Nothing left that detection isn’t sure about"
+msgstr "Nothing left that detection isn’t sure about"
+
 #: web/pages/settings-cameras/ObjectSection.tsx
 #: web/pages/settings/SettingsLayout.tsx
 #: web/pages/status/explain.ts
@@ -4130,6 +4146,14 @@ msgstr "Pick from recordings automatically"
 #: web/pages/states/LabelBoard.tsx
 msgid "Pick more from recordings"
 msgstr "Pick more from recordings"
+
+#: web/server-messages/states.ts
+msgid "Picked {count} frames detection isn’t sure about and added them to unlabeled"
+msgstr "Picked {count} frames detection isn’t sure about and added them to unlabeled"
+
+#: web/server-messages/states.ts
+msgid "Picked {count} frames detection isn’t sure about and added them to unlabeled. Skipped {sure} it’s already sure about"
+msgstr "Picked {count} frames detection isn’t sure about and added them to unlabeled. Skipped {sure} it’s already sure about"
 
 #: web/server-messages/states.ts
 msgid "Picked {count} frames from recordings and added them to unlabeled"
@@ -4788,6 +4812,10 @@ msgstr "Sheep"
 #: web/pages/status/explain.ts
 msgid "Shorten the retention period or get a bigger disk"
 msgstr "Shorten the retention period or get a bigger disk"
+
+#: web/pages/states/LabelBoard.tsx
+msgid "Show"
+msgstr "Show"
 
 #: web/pages/events/EventsPage.tsx
 msgid "Show all cameras"

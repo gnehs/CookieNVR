@@ -272,6 +272,17 @@ def diverse(feats: np.ndarray, count: int) -> list[int]:
     return chosen
 
 
+def pick_unsure(feats: np.ndarray, model: Model, count: int, below: float) -> tuple[list[tuple[int, str, float]], int]:
+    """已有模型時從錄影挑圖：只留模型信心低於 below 的畫面，再從中挑 count 張彼此差異最大的。
+    回傳 [(索引, 判斷, 信心)] 與有把握而略過的張數；模型已經有把握的畫面標了也學不到新東西"""
+    p = predict(model.w, model.b, feats)
+    best = p.argmax(axis=1)
+    score = p[np.arange(len(p)), best]
+    unsure = np.flatnonzero(score < below)
+    picked = [int(unsure[i]) for i in diverse(feats[unsure], count)] if len(unsure) else []
+    return [(i, model.classes[int(best[i])], round(float(score[i]), 4)) for i in picked], len(feats) - len(unsure)
+
+
 # ─── 匯入 Frigate 的資料集 zip ─────────────────────────────────────────────────────
 
 MAX_MEMBERS = 5000

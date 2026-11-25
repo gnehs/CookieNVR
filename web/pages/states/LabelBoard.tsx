@@ -3,7 +3,7 @@ import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyHints } from "../../ui/Kbd.tsx";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
-import type { StateImageDto, StateSensorDto } from "../../../src/api-types.ts";
+import { STATE_UNSURE_BELOW, type StateImageDto, type StateSensorDto } from "../../../src/api-types.ts";
 import { api } from "../../api.ts";
 import { errMsg } from "../../format.ts";
 import { classIndexOfKey, jobActive } from "../../states/model.ts";
@@ -34,10 +34,14 @@ function tileLabel(n: number, label: string | null, guess: string | null): strin
 const guessText = (source: string, label: string) => tc`${source}: ${label}`;
 const guessTitle = (source: string, label: string, percent: number) => tc`${source}: ${label} (${percent}%)`;
 
+/** 判斷的信心夠高：標了也學不到新東西，待標記裡先收起來 */
+const isSure = (img: StateImageDto, classes: readonly string[]) => !!img.guess && classes.includes(img.guess.label) && img.guess.score >= STATE_UNSURE_BELOW;
+
 const sourceText = (img: StateImageDto) => (img.source === "import" ? tc`Frigate’s guess` : tc`Last guess`);
 
 /**
  * 標記畫面：分頁是「待標記」與每一類；網格裡每張圖下面是類別按鈕，按一下就標好。
+ * 待標記只先列出判斷沒把握的圖；有把握的收起來，可以展開檢查或一次照建議標好。
  * 鍵盤：方向鍵移動、數字鍵標記（有選取時標記全部選取的）、Enter 採用預選、空白鍵選取、Delete 刪除、Esc 取消選取。
  */
 export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
@@ -52,6 +56,7 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
   const [focusId, setFocusId] = useState<string | null>(null);
   const grid = useRef<HTMLDivElement>(null);
   const anchor = useRef<string | null>(null);
+  const [showSure, setShowSure] = useState(false);
 
   // 伺服器的清單跟上之後，拿掉已經反映的變更
   const server = q.data;
@@ -64,7 +69,7 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
     });
   }, [server, activeView]);
 
-  const images = useMemo(() => {
+  const all = useMemo(() => {
     const list = (server ?? []).filter((img) => {
       const o = overrides.get(img.id);
       if (!o) return true;
@@ -77,6 +82,13 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
     });
   }, [server, overrides, activeView]);
 
+  const sure = useMemo(() => (activeView === PENDING ? all.filter((img) => isSure(img, classes)) : []), [all, activeView, classes]);
+  const images = useMemo(() => {
+    if (!sure.length) return all;
+    const unsure = all.filter((img) => !sure.includes(img));
+    return showSure ? [...unsure, ...sure] : unsure;
+  }, [all, sure, showSure]);
+
   // 切換分頁時清掉選取
   useEffect(() => {
     setSelected(new Set());
@@ -86,7 +98,6 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
   const ids = images.map((i) => i.id);
   const focusIndex = focusId ? ids.indexOf(focusId) : -1;
   const chosen = [...selected].filter((id) => ids.includes(id));
-  const suggested = activeView === PENDING ? images.filter((i) => i.guess && classes.includes(i.guess.label)) : [];
 
   // 要移過去的焦點：等這次重畫完（被標走的那張已經拿掉）再移
   const focusNext = useRef<string | null>(null);
@@ -132,9 +143,9 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
     if (ok) void apply(targets, { deleted: true }, () => api.deleteStateImages(sensor.id, targets));
   };
 
-  const acceptSuggestions = () => {
+  const acceptSure = () => {
     const groups = new Map<string, string[]>();
-    for (const img of suggested) groups.set(img.guess!.label, [...(groups.get(img.guess!.label) ?? []), img.id]);
+    for (const img of sure) groups.set(img.guess!.label, [...(groups.get(img.guess!.label) ?? []), img.id]);
     for (const [to, list] of groups) label(list, to);
   };
 
@@ -211,11 +222,11 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
     }
   };
 
-  const pendingCount = activeView === PENDING ? images.length : sensor.images.pending;
+  const pendingCount = activeView === PENDING ? all.length : sensor.images.pending;
   const countOf = (c: string) => sensor.images.labeled.find((l) => l.label === c)?.count ?? 0;
   const busy = jobActive(sensor);
   const chosenCount = chosen.length;
-  const suggestedCount = suggested.length;
+  const sureCount = sure.length;
   // 2、3 類排一列；4 類 2×2；更多時每列 3 個
   const classCols = classes.length <= 3 ? classes.length : classes.length === 4 ? 2 : 3;
   const fine = typeof matchMedia !== "undefined" && matchMedia("(pointer: fine)").matches;
@@ -251,13 +262,20 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
         ))}
       </div>
 
-      {suggested.length > 0 ? (
+      {sure.length > 0 ? (
         <div className="lb-suggest">
           <Icon name="info" size={16} />
           <span className="lb-suggest-text">
-            <Plural value={suggestedCount} one="# picture has a suggested class (dashed outline). If it looks right, label it in one go." other="# pictures have a suggested class (dashed outline). If they look right, label them all in one go." />
+            {showSure ? (
+              <Plural value={sureCount} one="The last # picture is one detection is already sure about. If its suggestion looks right, label it in one go." other="The last # pictures are ones detection is already sure about. If the suggestions look right, label them all in one go." />
+            ) : (
+              <Plural value={sureCount} one="# picture detection is already sure about is hidden, so you only need to label the ones it isn’t sure about." other="# pictures detection is already sure about are hidden, so you only need to label the ones it isn’t sure about." />
+            )}
           </span>
-          <Button small onClick={acceptSuggestions}>
+          <Button small variant="ghost" onClick={() => setShowSure((v) => !v)}>
+            {showSure ? <Trans>Hide</Trans> : <Trans>Show</Trans>}
+          </Button>
+          <Button small onClick={acceptSure}>
             <Trans>Label all as suggested</Trans>
           </Button>
         </div>
@@ -274,7 +292,7 @@ export function LabelBoard({ sensor }: { sensor: StateSensorDto }) {
           {activeView === PENDING ? (
             <>
               <Icon name="check-circle" size={22} />
-              <b>{busy ? t`Pictures will show up here when they’re ready` : t`All labeled`}</b>
+              <b>{busy ? t`Pictures will show up here when they’re ready` : sure.length ? t`Nothing left that detection isn’t sure about` : t`All labeled`}</b>
               {busy ? null : <span>{t`Pictures detection isn’t sure about are added here automatically.`}</span>}
             </>
           ) : (

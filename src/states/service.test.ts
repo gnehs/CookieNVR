@@ -87,6 +87,34 @@ test("a collect job finishes with the frames it found, or fails when it found no
   await h.states.stop();
 });
 
+test("with a trained model, collect asks only for frames detection isn't sure about and keeps its guesses", async () => {
+  const h = harness();
+  h.states.workerSpecs();
+  const w = await fakeWorker(h.socketPath);
+  w.ready();
+  await h.settle();
+
+  await h.call("POST", "/api/states/:id/collect");
+  await h.settle();
+  const cmd = w.received[0]!.json;
+  expect(cmd).toMatchObject({ type: "collect", model: `${h.dir}/model.json`, unsure: 0.95 });
+  w.send(jsonFrame({ type: "job-result", job: cmd.job, ok: true, result: { images: [{ file: "u1.jpg", at: 5, guess: { label: "開", score: 0.61 } }], sure: 99 } }));
+  await h.settle();
+  expect(h.sensor().job).toMatchObject({ state: "done", msg: { code: "states.collectUnsureDone", params: { count: 1, sure: 99 } } });
+  const res = await h.call("GET", "/api/states/:id/images", { query: "label=pending" });
+  expect(((await res.json()) as { images: { guess: unknown }[] }).images.map((i) => i.guess)).toEqual([{ label: "開", score: 0.61 }]);
+
+  // 全部都有把握：沒有新圖，但不算失敗
+  await h.call("POST", "/api/states/:id/collect");
+  await h.settle();
+  w.send(jsonFrame({ type: "job-result", job: w.received[1]!.json.job, ok: true, result: { images: [], sure: 100 } }));
+  await h.settle();
+  expect(h.sensor().job).toMatchObject({ state: "done", msg: { code: "states.collectUnsureDone", params: { count: 0, sure: 100 } } });
+
+  w.end();
+  await h.states.stop();
+});
+
 test("the uploaded zip is deleted once its import job finishes", async () => {
   const h = harness();
   h.states.workerSpecs();

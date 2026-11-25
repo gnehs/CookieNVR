@@ -675,6 +675,8 @@ export interface ObjectLabelsDto {
 
 /** 每一類至少要幾張已標記的圖才能訓練 */
 export const MIN_STATE_IMAGES_PER_CLASS = 2;
+/** 模型判斷的信心低於這個值就算「沒把握」：辨識時存進待標記、有模型時從錄影只挑這些，標記畫面也只先列出這些 */
+export const STATE_UNSURE_BELOW = 0.95;
 /** 辨識時自動存下的待標記圖片上限；超過時刪最舊的自動存圖（從錄影抽樣與匯入的不算在內） */
 export const MAX_PENDING_STATE_IMAGES = 100;
 

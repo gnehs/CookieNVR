@@ -9,7 +9,8 @@
     changed：裁切區塊和這個感應器上次辨識時差不多就不推論，回 skipped。
   種類 1 背景工作（一次一個，依序執行，不擋辨識）：
     {"type":"train","job":n,"items":[{path,label}],"classes":[…],"out":模型檔}
-    {"type":"collect","job":n,"ffmpeg":…,"points":[{path,offset,at}],"crop":[…],"outDir":…,"count":24}
+    {"type":"collect","job":n,"ffmpeg":…,"points":[{path,offset,at}],"crop":[…],"outDir":…,"count":24,"model"?:模型檔,"unsure"?:0.95}
+      有 model 時只挑信心低於 unsure 的畫面，結果的 sure 是有把握而略過的張數
     {"type":"import","job":n,"zip":…,"outDir":…}
 - worker → 主程序：
   種類 1 {"type":"status","state":"loading"|"ready"|"error",…}、{"type":"heartbeat","busyMs":…,"job":bool}（每 2 秒）
@@ -138,15 +139,26 @@ def run_job(ch: ClassifyChannel, clf: Classifier, cache: sc.EmbeddingCache, cmd:
             return {"images": [], "tried": len(points)}
         crops = [sc.crop_image(im, cmd["crop"]) for _, im in frames]
         feats = clf.backbone.embed(crops)
-        picked = sc.diverse(feats, int(cmd.get("count", 24)))
+        count = int(cmd.get("count", 24))
+        model = None
+        if cmd.get("model"):
+            try:
+                model = clf.model(cmd["model"])
+            except (OSError, ValueError, KeyError):
+                model = None  # 模型讀不到或骨幹換了：照沒有模型的方式挑
+        if model is not None:
+            picked, sure = sc.pick_unsure(feats, model, count, float(cmd.get("unsure", 0.95)))
+        else:
+            picked, sure = [(i, None, None) for i in sc.diverse(feats, count)], None
         images = []
-        for i in picked:
+        for i, label, score in picked:
             name = new_name(".jpg")
             with open(os.path.join(cmd["outDir"], name), "wb") as fh:
                 fh.write(sc.encode_jpeg(crops[i]))
-            images.append({"file": name, "at": frames[i][0].get("at")})
+            guess = {"label": label, "score": score} if label is not None else None
+            images.append({"file": name, "at": frames[i][0].get("at"), "guess": guess})
         progress(1)
-        return {"images": images, "tried": len(points)}
+        return {"images": images, "tried": len(points), "sure": sure}
     raise ValueError(f"unknown job {kind}")
 
 

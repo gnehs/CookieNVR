@@ -6,6 +6,7 @@ import backboneModel from "../../detector/backbone-model.json";
 import {
   MAX_PENDING_STATE_IMAGES,
   MIN_STATE_IMAGES_PER_CLASS,
+  STATE_UNSURE_BELOW,
   type StateChangeDto,
   type StateImageDto,
   type StateJobDto,
@@ -42,7 +43,6 @@ const UNKNOWN_AFTER_MS = 60_000;
 const BLOCKED_HOLD_MS = 3_000;
 /** 信心低或驗證中的畫面，每個感應器最多這麼久存一張到待標記 */
 const SAVE_EVERY_MS = 60_000;
-const LOW_CONFIDENCE = 0.95;
 const STALL_MS = 10_000;
 const LOAD_LIMIT_MS = 120_000;
 const PROGRESS_PUSH_MS = 500;
@@ -431,7 +431,7 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       rt.score = r.score;
       recordSwitch(rt, r, at);
     }
-    const save = first || s.kind === "switched" || ((s.kind === "verifying" || r.score < LOW_CONFIDENCE) && at - rt.lastSavedAt >= SAVE_EVERY_MS);
+    const save = first || s.kind === "switched" || ((s.kind === "verifying" || r.score < STATE_UNSURE_BELOW) && at - rt.lastSavedAt >= SAVE_EVERY_MS);
     if (save) saveLive(rt, r, at);
     const candidateChanged = JSON.stringify(before.candidate) !== JSON.stringify(s.next.candidate);
     if (s.kind === "switched" || candidateChanged) publishSensor(rt);
@@ -559,13 +559,18 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       return { ok: true, msg: v ? msg("states.trainDone", { accuracy: Math.round(v.accuracy * 1000) / 10 }) : msg("states.trainDoneNoValidation") };
     }
     if (kind === "collect") {
-      const images = (result.images as { file: string; at: number | null }[] | undefined) ?? [];
+      const images = (result.images as { file: string; at: number | null; guess?: { label: string; score: number } | null }[] | undefined) ?? [];
+      const sure = typeof result.sure === "number" ? result.sure : null;
       store.insertImages(
         db,
-        images.map((im, i) => ({ id: im.file.replace(/\.[^.]+$/, ""), sensorId, file: im.file, label: null, source: "recording", createdAt: at - i, guess: null })),
+        images.map((im, i) => ({ id: im.file.replace(/\.[^.]+$/, ""), sensorId, file: im.file, label: null, source: "recording", createdAt: at - i, guess: im.guess ?? null })),
       );
-      if (!images.length) return { ok: false, error: msg("states.collectNoFrames") };
-      return { ok: true, msg: msg("states.collectDone", { count: images.length }) };
+      if (sure === null) {
+        if (!images.length) return { ok: false, error: msg("states.collectNoFrames") };
+        return { ok: true, msg: msg("states.collectDone", { count: images.length }) };
+      }
+      if (!images.length && !sure) return { ok: false, error: msg("states.collectNoFrames") };
+      return { ok: true, msg: msg("states.collectUnsureDone", { count: images.length, sure }) };
     }
     const labeled = (result.labeled as { file: string; label: string }[] | undefined) ?? [];
     const pendingImages = (result.pending as { file: string; guess: { label: string; score: number } | null }[] | undefined) ?? [];
@@ -651,7 +656,9 @@ export function createStateClassification(opts: StateClassificationOptions): Sta
       return;
     }
     const outDir = imagesDir(rt.row.id);
-    startJob(rt, "collect", (job) => ({ type: "collect", job, ffmpeg: opts.env.ffmpegBin, points, crop: rt.row.config.crop, outDir, count: COLLECT_COUNT }));
+    // 已有能用的模型時只挑它沒把握的畫面：有把握的標了也學不到新東西
+    const model = rt.model && sameSet(rt.model.classes, rt.row.config.classes) ? { model: modelPath(rt.row.id), unsure: STATE_UNSURE_BELOW } : {};
+    startJob(rt, "collect", (job) => ({ type: "collect", job, ffmpeg: opts.env.ffmpegBin, points, crop: rt.row.config.crop, outDir, count: COLLECT_COUNT, ...model }));
   }
 
   function create(cameraId: CameraId, config: unknown, collect: boolean): StateSensorDto {

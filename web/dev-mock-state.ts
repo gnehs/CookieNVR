@@ -9,6 +9,7 @@ import { parseClassName, parseFrigateConfig, parseSensorConfig } from "../src/st
 import {
   MAX_PENDING_STATE_IMAGES,
   MIN_STATE_IMAGES_PER_CLASS,
+  STATE_UNSURE_BELOW,
   type CropBox,
   type FrigateConfigResultDto,
   type StateChangeDto,
@@ -348,10 +349,16 @@ export function createMockStates(deps: MockStatesDeps) {
       const cam = camOf(s.cameraId);
       if (!cam?.config.record.enabled) return { ok: false, error: msg("states.collectNoRecordings") };
       const r = rng(Date.now());
-      for (let i = 0; i < COLLECT_COUNT; i++) {
-        s.images.push(newImage(r(), null, "recording", Date.now() - i * 5 * MIN, null));
+      if (!s.model) {
+        for (let i = 0; i < COLLECT_COUNT; i++) s.images.push(newImage(r(), null, "recording", Date.now() - i * 5 * MIN, null));
+        return { ok: true, value: msg("states.collectDone", { count: COLLECT_COUNT }) };
       }
-      return { ok: true, value: msg("states.collectDone", { count: COLLECT_COUNT }) };
+      // 有模型：抽 100 張，門越接近全開或全關越有把握，只留沒把握的
+      const looks = Array.from({ length: 100 }, () => r());
+      const unsure = looks.filter((look) => 0.5 + Math.abs(look - 0.5) * 0.98 < STATE_UNSURE_BELOW);
+      const picked = unsure.slice(0, COLLECT_COUNT);
+      picked.forEach((look, i) => s.images.push(newImage(look, null, "recording", Date.now() - i * 5 * MIN, { label: labelAt(s.config.classes, look), score: 0.5 + Math.abs(look - 0.5) * 0.98 })));
+      return { ok: true, value: msg("states.collectUnsureDone", { count: picked.length, sure: looks.length - unsure.length }) };
     });
   }
 
@@ -425,7 +432,9 @@ export function createMockStates(deps: MockStatesDeps) {
       for (let i = 0; i < 20; i++) {
         const look = r();
         const source: StateImageSource = i % 5 === 0 ? "recording" : "live";
-        const guess = source === "live" ? { label: labelAt(config.classes, i % 4 === 0 ? 1 - look : look), score: between(r, 0.45, 0.8) } : null;
+        // 每三張 live 有一張是第一次或切換時存下、模型有把握的
+        const sure = i % 3 === 0;
+        const guess = source === "live" ? { label: labelAt(config.classes, sure ? look : i % 4 === 0 ? 1 - look : look), score: sure ? between(r, 0.96, 0.995) : between(r, 0.45, 0.8) } : null;
         s.images.push(newImage(look, null, source, t - i * 3 * HOUR, guess));
       }
       s.model = { ...buildModel(config, s.images, 5400), trainedAt: t - 4 * DAY + 12 * HOUR };
